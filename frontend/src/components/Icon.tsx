@@ -20,6 +20,13 @@ export type IconName =
     | 'newFolder'
     | 'copy'
     | 'panel'
+    | 'database'
+    | 'table'
+    | 'chevron-down'
+    | 'chevron-right'
+    | 'chevron-left'
+    | 'chevrons-left'
+    | 'chevrons-right'
 
 const PATHS: Record<IconName, React.ReactNode> = {
     server: (
@@ -112,6 +119,24 @@ const PATHS: Record<IconName, React.ReactNode> = {
             <path d="M14 4v16"/>
         </>
     ),
+    database: (
+        <>
+            <ellipse cx="12" cy="5" rx="8" ry="3"/>
+            <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/>
+            <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>
+        </>
+    ),
+    table: (
+        <>
+            <rect x="3" y="4" width="18" height="16" rx="2"/>
+            <path d="M3 9h18M3 14h18M9 4v16M15 4v16"/>
+        </>
+    ),
+    'chevron-down': <path d="M6 9l6 6 6-6"/>,
+    'chevron-right': <path d="M9 6l6 6-6 6"/>,
+    'chevron-left': <path d="M15 6l-6 6 6 6"/>,
+    'chevrons-left': <path d="M11 6l-6 6 6 6M18 6l-6 6 6 6"/>,
+    'chevrons-right': <path d="M6 6l6 6-6 6M13 6l6 6-6 6"/>,
 }
 
 interface Props {

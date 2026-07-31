@@ -70,6 +70,25 @@ export namespace main {
 	    privateKey: string;
 	    passphrase: string;
 	    remark: string;
+	    type: string;
+	    db?: number;
+	    database?: string;
+	    clientId?: string;
+	    useTLS?: boolean;
+	    mqttProto?: string;
+	    mqttKeepAlive?: number;
+	    mqttConnectTimeout?: number;
+	    mqttCleanSession?: boolean;
+	    mqttAutoReconnect?: boolean;
+	    mqttReconnectIntvl?: number;
+	    mqttInsecure?: boolean;
+	    mqttCaCert?: string;
+	    mqttClientCert?: string;
+	    mqttClientKey?: string;
+	    mqttWillTopic?: string;
+	    mqttWillPayload?: string;
+	    mqttWillQos?: number;
+	    mqttWillRetained?: boolean;
 	    updatedAt: number;
 	
 	    static createFrom(source: any = {}) {
@@ -88,6 +107,25 @@ export namespace main {
 	        this.privateKey = source["privateKey"];
 	        this.passphrase = source["passphrase"];
 	        this.remark = source["remark"];
+	        this.type = source["type"];
+	        this.db = source["db"];
+	        this.database = source["database"];
+	        this.clientId = source["clientId"];
+	        this.useTLS = source["useTLS"];
+	        this.mqttProto = source["mqttProto"];
+	        this.mqttKeepAlive = source["mqttKeepAlive"];
+	        this.mqttConnectTimeout = source["mqttConnectTimeout"];
+	        this.mqttCleanSession = source["mqttCleanSession"];
+	        this.mqttAutoReconnect = source["mqttAutoReconnect"];
+	        this.mqttReconnectIntvl = source["mqttReconnectIntvl"];
+	        this.mqttInsecure = source["mqttInsecure"];
+	        this.mqttCaCert = source["mqttCaCert"];
+	        this.mqttClientCert = source["mqttClientCert"];
+	        this.mqttClientKey = source["mqttClientKey"];
+	        this.mqttWillTopic = source["mqttWillTopic"];
+	        this.mqttWillPayload = source["mqttWillPayload"];
+	        this.mqttWillQos = source["mqttWillQos"];
+	        this.mqttWillRetained = source["mqttWillRetained"];
 	        this.updatedAt = source["updatedAt"];
 	    }
 	}

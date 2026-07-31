@@ -1,4 +1,15 @@
-import type {DirListing, ServerConfig, SessionInfo, Transfer} from './types'
+import type {
+    DirListing,
+    MysqlQueryResult,
+    RedisKeysResult,
+    RedisSessionInfo,
+    RedisValue,
+    ServerConfig,
+    SessionInfo,
+    Transfer,
+    MqttSessionInfo,
+    MqttSubscription,
+} from './types'
 
 type AnyFn = (...args: any[]) => void
 
@@ -58,6 +69,112 @@ export const API = {
     listTransfers: (): Promise<Transfer[]> => app().ListTransfers(),
     cancelTransfer: (id: string): Promise<void> => app().CancelTransfer(id),
     clearFinishedTransfers: (): Promise<void> => app().ClearFinishedTransfers(),
+
+    // Redis
+    redisConnect: (id: string): Promise<boolean> => app().RedisConnect(id),
+    redisClose: (id: string): Promise<void> => app().RedisClose(id),
+    redisSelectDB: (id: string, db: number): Promise<void> => app().RedisSelectDB(id, db),
+    redisKeys: (id: string, pattern: string, cursor: string): Promise<RedisKeysResult> =>
+        app().RedisKeys(id, pattern, cursor),
+    redisGet: (id: string, key: string): Promise<RedisValue> => app().RedisGet(id, key),
+    redisSet: (
+        id: string,
+        key: string,
+        type: string,
+        value: string,
+        ttl: number
+    ): Promise<void> => app().RedisSet(id, key, type, value, ttl),
+    redisDelete: (id: string, key: string): Promise<void> => app().RedisDelete(id, key),
+    redisExpire: (id: string, key: string, ttl: number): Promise<void> =>
+        app().RedisExpire(id, key, ttl),
+    redisRaw: (id: string, command: string): Promise<{ result: string }> =>
+        app().RedisRaw(id, command),
+    redisDBSize: (id: string): Promise<number> => app().RedisDBSize(id),
+
+    // MySQL
+    mysqlConnect: (id: string): Promise<boolean> => app().MysqlConnect(id),
+    mysqlClose: (id: string): Promise<void> => app().MysqlClose(id),
+    mysqlDatabases: (id: string): Promise<string[]> => app().MysqlDatabases(id),
+    mysqlTables: (id: string, db: string): Promise<string[]> => app().MysqlTables(id, db),
+    mysqlSelect: (id: string, db: string, table: string, limit: number, offset: number): Promise<MysqlQueryResult> =>
+        app().MysqlSelect(id, db, table, limit, offset),
+    mysqlCount: (id: string, db: string, table: string): Promise<number> =>
+        app().MysqlCount(id, db, table),
+    mysqlDescribe: (id: string, db: string, table: string): Promise<MysqlQueryResult> =>
+        app().MysqlDescribe(id, db, table),
+    mysqlRun: (id: string, db: string, sql: string): Promise<MysqlQueryResult> =>
+        app().MysqlRun(id, db, sql),
+    mysqlInsert: (
+        id: string,
+        db: string,
+        table: string,
+        columns: string[],
+        values: any[]
+    ): Promise<number> => app().MysqlInsert(id, db, table, columns, values),
+    mysqlUpdate: (
+        id: string,
+        db: string,
+        table: string,
+        setCols: string[],
+        setVals: any[],
+        whereCols: string[],
+        whereVals: any[]
+    ): Promise<number> => app().MysqlUpdate(id, db, table, setCols, setVals, whereCols, whereVals),
+    mysqlDelete: (
+        id: string,
+        db: string,
+        table: string,
+        whereCols: string[],
+        whereVals: any[]
+    ): Promise<number> => app().MysqlDelete(id, db, table, whereCols, whereVals),
+    mysqlExport: (
+        id: string,
+        db: string,
+        mode: string,
+        source: string,
+        table: string,
+        sqlText: string,
+        limit: number
+    ): Promise<string> => app().MysqlExport(id, db, mode, source, table, sqlText, limit),
+    mysqlExportToFile: (
+        id: string,
+        db: string,
+        mode: string,
+        source: string,
+        table: string,
+        sqlText: string,
+        limit: number
+    ): Promise<string> => app().MysqlExportToFile(id, db, mode, source, table, sqlText, limit),
+    mysqlImport: (
+        id: string,
+        db: string,
+        mode: string,
+        table: string,
+        content: string
+    ): Promise<string> => app().MysqlImport(id, db, mode, table, content),
+    mysqlImportFromFile: (
+        id: string,
+        db: string,
+        mode: string,
+        table: string
+    ): Promise<string> => app().MysqlImportFromFile(id, db, mode, table),
+    readLocalFile: (filePath: string): Promise<string> => app().ReadLocalFile(filePath),
+    writeLocalFile: (filePath: string, content: string): Promise<void> => app().WriteLocalFile(filePath, content),
+    mqttConnect: (id: string): Promise<MqttSessionInfo> => app().MqttConnect(id),
+    mqttClose: (id: string): Promise<void> => app().MqttClose(id),
+    mqttPublish: (
+        id: string,
+        topic: string,
+        payload: string,
+        qos: number,
+        retained: boolean
+    ): Promise<void> => app().MqttPublish(id, topic, payload, qos, retained),
+    mqttSubscribe: (id: string, topic: string, qos: number): Promise<void> =>
+        app().MqttSubscribe(id, topic, qos),
+    mqttUnsubscribe: (id: string, topic: string): Promise<void> =>
+        app().MqttUnsubscribe(id, topic),
+    mqttSubscriptions: (id: string): Promise<MqttSubscription[]> =>
+        app().MqttSubscriptions(id),
 }
 
 /* ------------------------------------------------------------------ */

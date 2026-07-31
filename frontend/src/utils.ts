@@ -54,3 +54,33 @@ export function errorMessage(err: unknown): string {
     if (err instanceof Error) return err.message
     return String(err)
 }
+
+// w 访问 Wails runtime（对话框等）
+export const w: any = (window as any).runtime || (window as any).go?.runtime
+
+// openFileDialog 弹出打开文件对话框，返回选中的文件路径（取消则返回 null）
+export async function openFileDialog(title: string, filters?: { displayName: string; pattern: string }[]): Promise<string | null> {
+    if (!w) {
+        throw new Error('当前环境不支持文件对话框')
+    }
+    const opts: any = { Title: title }
+    if (filters && filters.length) {
+        opts.Filters = filters.map((f) => [f.displayName, f.pattern])
+    }
+    const fn = w.OpenFileDialog || (w.Window && w.Window.OpenFileDialog)
+    if (!fn) throw new Error('当前环境不支持文件对话框')
+    const path = await fn(opts)
+    return path || null
+}
+
+// saveFileDialog 弹出保存文件对话框，返回目标路径（取消则返回 null）
+export async function saveFileDialog(title: string, defaultName: string): Promise<string | null> {
+    if (!w) {
+        throw new Error('当前环境不支持文件对话框')
+    }
+    const opts: any = { Title: title, DefaultFilename: defaultName }
+    const fn = w.SaveFileDialog || (w.Window && w.Window.SaveFileDialog)
+    if (!fn) throw new Error('当前环境不支持文件对话框')
+    const path = await fn(opts)
+    return path || null
+}

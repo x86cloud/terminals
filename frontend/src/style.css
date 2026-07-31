@@ -67,6 +67,7 @@ input {
 .stage {
     flex: 1;
     min-height: 0;
+    min-width: 0;
     position: relative;
     display: flex;
 }
@@ -851,6 +852,37 @@ input {
     line-height: 1.8;
 }
 
+/* ---------------- 导入/导出弹窗 ---------------- */
+.io-modal {
+    width: 460px;
+    max-width: 92vw;
+}
+
+.io-hint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--text-3);
+    line-height: 1.6;
+}
+
+.io-msg {
+    margin-top: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.io-msg.ok {
+    background: rgba(34, 197, 94, .12);
+    color: #4ade80;
+}
+
+.io-msg.err {
+    background: rgba(239, 68, 68, .12);
+    color: #f87171;
+}
+
 .form-grid {
     display: flex;
     flex-direction: column;
@@ -920,6 +952,1124 @@ input {
 .form-error {
     color: var(--danger);
     font-size: 12px;
+}
+
+/* MQTT 高级参数折叠区 */
+.adv-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    cursor: pointer;
+    padding: 4px 0;
+    font-size: 12px;
+}
+
+.adv-toggle:hover {
+    text-decoration: underline;
+}
+
+.field .group-title {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-weight: 600;
+    margin-top: 4px;
+}
+
+.field select {
+    width: 100%;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-size: 13px;
+    height: 30px;
+}
+
+.field textarea {
+    width: 100%;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    padding: 6px 8px;
+    font-family: inherit;
+    font-size: 13px;
+    resize: vertical;
+    line-height: 1.5;
+}
+
+/* 开关式 Toggle */
+.switch-field {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+}
+
+.switch-field.inline {
+    justify-content: flex-start;
+    flex: 1;
+    min-width: 0;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 20px;
+    flex: 0 0 auto;
+}
+
+.switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    margin: 0;
+}
+
+.switch .slider {
+    position: absolute;
+    inset: 0;
+    background: var(--bg-elev);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    transition: background .2s, border-color .2s;
+    cursor: pointer;
+}
+
+.switch .slider::before {
+    content: "";
+    position: absolute;
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    top: 2px;
+    background: var(--text-dim);
+    border-radius: 50%;
+    transition: transform .2s, background .2s;
+}
+
+.switch input:checked + .slider {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.switch input:checked + .slider::before {
+    transform: translateX(20px);
+    background: #fff;
+}
+
+.switch input:focus-visible + .slider {
+    box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+/* ---------------- 侧边栏类型图标 ---------------- */
+
+.server-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.server-icon .client-icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+}
+
+.client-icon {
+    display: block;
+    flex: 0 0 auto;
+}
+
+.tab .client-icon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+}
+
+.segmented button .client-icon {
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    vertical-align: -2px;
+}
+
+/* ---------------- 按钮尺寸 ---------------- */
+
+.btn.small,
+.btn.sm {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+/* ---------------- Redis 客户端 ---------------- */
+
+.redis-pane {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+}
+
+.redis-side {
+    width: 240px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg-1);
+}
+
+.redis-side-head {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.redis-search {
+    flex: 1;
+    min-width: 0;
+    padding: 4px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+}
+
+.redis-search:focus {
+    border-color: var(--border);
+}
+
+.redis-keys {
+    flex: 1;
+    overflow: auto;
+    padding: 4px;
+}
+
+.redis-db-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.redis-db-label {
+    font-weight: 600;
+    color: var(--text);
+}
+
+.redis-db-input {
+    width: 56px;
+    padding: 3px 6px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+}
+
+.redis-db-input:focus {
+    border-color: var(--border);
+}
+
+.redis-db-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.redis-key {
+    padding: 5px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text);
+}
+
+.redis-key:hover {
+    background: var(--bg);
+}
+
+.redis-key.active {
+    background: var(--accent-dim);
+    color: #fff;
+}
+
+.redis-empty {
+    padding: 18px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+}
+
+.redis-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    padding: 12px;
+    gap: 10px;
+}
+
+.redis-msg {
+    font-size: 12px;
+    color: var(--accent);
+    padding: 4px 8px;
+    background: var(--accent-dim-2, rgba(28, 143, 196, 0.12));
+    border-radius: 4px;
+}
+
+.redis-value-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.redis-key-name {
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 50%;
+}
+
+.redis-type-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: var(--accent-dim);
+    color: #fff;
+    border-radius: 10px;
+}
+
+.redis-ttl {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.redis-editor {
+    flex: 1;
+    min-height: 120px;
+    resize: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px;
+    background: var(--bg-1);
+    color: var(--text);
+    font-family: var(--mono, monospace);
+    font-size: 12px;
+    line-height: 1.5;
+    outline: none;
+}
+
+.redis-editor:focus {
+    border-color: var(--border);
+}
+
+.redis-value-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.redis-ttl-input {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.redis-ttl-input input {
+    width: 80px;
+    padding: 4px 6px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg-1);
+    color: var(--text);
+    outline: none;
+}
+
+.redis-ttl-input input:focus {
+    border-color: var(--border);
+}
+
+.redis-cli {
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.redis-cli-head {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.redis-cli-row {
+    display: flex;
+    gap: 6px;
+}
+
+.redis-cli-row input {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    background: var(--bg-1);
+    color: var(--text);
+    font-family: var(--mono, monospace);
+    font-size: 12px;
+    outline: none;
+}
+
+.redis-cli-row input:focus {
+    border-color: var(--border);
+}
+
+.redis-cli-result {
+    margin: 0;
+    min-height: 40px;
+    max-height: 160px;
+    overflow: auto;
+    padding: 8px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: var(--mono, monospace);
+    font-size: 12px;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* ---------------- MySQL 客户端 ---------------- */
+
+.mysql-pane {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+}
+
+.mysql-side {
+    width: 230px;
+    min-width: 200px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-1);
+}
+
+.mysql-db-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim);
+}
+
+.mysql-db-select {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 7px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    outline: none;
+    font-size: 13px;
+}
+
+.mysql-db-select:focus {
+    border-color: var(--border);
+}
+
+.mysql-tables {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 6px;
+}
+
+.mysql-table-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+}
+
+.mysql-table-item:hover {
+    background: var(--bg-2);
+}
+
+.mysql-table-item.active {
+    background: var(--bg-2);
+    color: var(--accent);
+}
+
+.mysql-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mysql-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.mysql-conn-title {
+    font-weight: 600;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+/* 工具栏按钮任何情况下不被压缩/遮挡，标题与错误信息优先收缩 */
+.mysql-toolbar .btn,
+.mysql-toolbar .icon-btn {
+    flex-shrink: 0;
+}
+
+.mysql-error {
+    color: var(--danger, #e06c75);
+    font-size: 12px;
+    background: color-mix(in srgb, var(--danger, #e06c75) 12%, transparent);
+    padding: 3px 8px;
+    border-radius: 6px;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mysql-table-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.mysql-table-name {
+    font-weight: 600;
+    font-family: var(--mono, monospace);
+    font-size: 13px;
+}
+
+.mysql-count {
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+.mysql-content {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 10px 12px;
+}
+
+.mysql-empty {
+    color: var(--text-dim);
+    font-size: 13px;
+    padding: 12px;
+    text-align: center;
+}
+
+.mysql-empty.small {
+    padding: 6px;
+    font-size: 12px;
+}
+
+.mysql-grid-wrap {
+    min-width: 0;
+}
+
+.mysql-table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    font-family: var(--mono, monospace);
+}
+
+.mysql-table th,
+.mysql-table td {
+    border: 1px solid var(--border);
+    padding: 5px 9px;
+    text-align: left;
+    white-space: nowrap;
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mysql-table th {
+    background: var(--bg-1);
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    color: var(--text-dim);
+    box-shadow: inset 0 -1px 0 var(--border);
+}
+
+.mysql-table tbody tr:nth-child(even) {
+    background: var(--bg-1);
+}
+
+.mysql-table tbody tr:hover {
+    background: var(--bg-2);
+}
+
+.mysql-null {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.mysql-sql {
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
+    max-height: 42%;
+    background: var(--bg-1);
+}
+
+.mysql-sql-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+}
+
+.mysql-sql-input {
+    flex: none;
+    height: 70px;
+    resize: vertical;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono, monospace);
+    font-size: 12px;
+    outline: none;
+}
+
+.mysql-sql-result {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 10px;
+}
+
+/* ---- MySQL 数据网格 / CRUD ---- */
+.mysql-table-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elev);
+    flex-wrap: wrap;
+}
+
+.mysql-table-name {
+    font-weight: 600;
+    color: var(--accent);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.mysql-count {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 表头区域控件不可压缩：空间不足时整体换行（flex-wrap），保证按钮可见 */
+.mysql-table-head .segmented {
+    flex-shrink: 0;
+}
+
+.mysql-crud-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.mysql-crud-actions .btn,
+.mysql-crud-actions .icon-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* ---- MySQL 分页栏 ---- */
+.mysql-pager {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+
+.mysql-pager .icon-btn {
+    flex-shrink: 0;
+}
+
+.mysql-page-jump {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.mysql-page-jump input {
+    width: 52px;
+    padding: 3px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-size: 12px;
+    text-align: center;
+    outline: none;
+    font-variant-numeric: tabular-nums;
+}
+
+.mysql-page-jump input:focus {
+    border-color: var(--accent);
+}
+
+.mysql-page-total {
+    font-size: 12px;
+    color: var(--text-dim);
+    white-space: nowrap;
+}
+
+.mysql-page-size {
+    padding: 3px 6px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text);
+    font-size: 12px;
+    outline: none;
+    flex-shrink: 0;
+}
+
+.mysql-edit-table th,
+.mysql-edit-table td {
+    position: relative;
+}
+
+.mysql-edit-table td {
+    cursor: text;
+}
+
+.mysql-edit-table td.cell-dirty {
+    background: rgba(240, 180, 40, 0.12);
+    box-shadow: inset 2px 0 0 #f0b428;
+}
+
+.mysql-edit-table td.cell-null .mysql-null {
+    color: var(--text-faint);
+}
+
+.mysql-rownum {
+    width: 38px;
+    text-align: center;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+    background: var(--bg-elev);
+}
+
+.mysql-rowact {
+    width: 38px;
+    text-align: center;
+}
+
+.row-new td {
+    background: rgba(72, 199, 116, 0.08);
+}
+
+.pk-badge {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10px;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--accent);
+    color: #fff;
+    vertical-align: middle;
+}
+
+.mysql-null {
+    color: var(--text-dim);
+    font-style: italic;
+}
+
+.mysql-cell-edit {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.mysql-cell-input {
+    width: 100%;
+    min-width: 60px;
+    border: 1px solid var(--accent);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 3px;
+    padding: 2px 4px;
+    font: inherit;
+    outline: none;
+}
+
+.mysql-cell-input.is-null {
+    color: var(--text-faint);
+    font-style: italic;
+}
+
+.null-toggle {
+    flex: 0 0 auto;
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 4px;
+    border: 1px solid var(--border);
+    background: var(--bg-elev);
+    color: var(--text-dim);
+    border-radius: 3px;
+    cursor: pointer;
+}
+
+.null-toggle.on {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+}
+
+.mysql-warn {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #c97a1a;
+    background: rgba(240, 180, 40, 0.12);
+    border-bottom: 1px solid var(--border);
+}
+
+.icon-btn.danger:hover {
+    color: #e05c5c;
+}
+
+/* ---- MQTT ---- */
+.mqtt-pane {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    background: var(--bg);
+}
+
+.mqtt-side {
+    width: 220px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    background: var(--bg-elev);
+}
+
+.mqtt-sub-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.mqtt-sub-list {
+    flex: 1;
+    overflow: auto;
+    padding: 6px;
+}
+
+.mqtt-sub-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    background: var(--bg);
+}
+
+.mqtt-sub-topic {
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.mqtt-sub-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.qos-badge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: var(--accent);
+    color: #fff;
+}
+
+.mqtt-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.mqtt-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elev);
+}
+
+.mqtt-conn-title {
+    font-weight: 600;
+}
+
+.mqtt-client-id {
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.mqtt-status {
+    font-size: 12px;
+    padding: 1px 8px;
+    border-radius: 10px;
+}
+
+.mqtt-status.on {
+    background: rgba(72, 199, 116, 0.2);
+    color: #48c774;
+}
+
+.mqtt-status.off {
+    background: rgba(224, 92, 92, 0.2);
+    color: #e05c5c;
+}
+
+.mqtt-error {
+    color: #e05c5c;
+    font-size: 12px;
+}
+
+.mqtt-pub {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mqtt-field-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.mqtt-input.topic {
+    flex: 1;
+    min-width: 0;
+}
+
+.mqtt-qos {
+    width: 92px;
+}
+
+.mqtt-retained {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-dim);
+}
+
+.mqtt-pub-payload {
+    width: 100%;
+    height: 80px;
+    resize: vertical;
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 8px;
+    outline: none;
+}
+
+.mqtt-pub-payload:focus {
+    border-color: var(--accent);
+}
+
+.mqtt-sub-bar {
+    display: flex;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elev);
+}
+
+.mqtt-log {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 12px;
+    min-height: 0;
+}
+
+.mqtt-msg {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    background: var(--bg-elev);
+}
+
+.mqtt-msg.in {
+    border-left: 3px solid var(--accent);
+}
+
+.mqtt-msg.out {
+    border-left: 3px solid #48c774;
+}
+
+.mqtt-msg-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+}
+
+.mqtt-dir {
+    font-size: 10px;
+    padding: 0 6px;
+    border-radius: 3px;
+    color: #fff;
+}
+
+.mqtt-dir.in {
+    background: var(--accent);
+}
+
+.mqtt-dir.out {
+    background: #48c774;
+}
+
+.mqtt-msg-topic {
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.mqtt-msg-time {
+    color: var(--text-faint);
+    margin-left: auto;
+}
+
+.retained-badge {
+    font-size: 10px;
+    padding: 0 5px;
+    border-radius: 3px;
+    background: #e0a91e;
+    color: #fff;
+}
+
+.mqtt-msg-payload {
+    margin: 0;
+    padding: 6px 8px;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 240px;
+    overflow: auto;
+}
+
+.mqtt-empty {
+    padding: 24px;
+    text-align: center;
+    color: var(--text-dim);
+}
+
+.mqtt-empty.small {
+    padding: 12px;
+    font-size: 12px;
+}
+
+.empty-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
 }
 
 /* ---------------- 提示 ---------------- */

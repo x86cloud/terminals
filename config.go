@@ -24,39 +24,113 @@ const (
 	encPrefix  = "enc:v1:"
 )
 
-// ServerConfig 描述一台远程 Linux 服务器的连接信息。
+// ConnType 区分连接类型。
+type ConnType string
+
+const (
+	// ConnSSH 远程 Linux 服务器（Shell + SFTP）。
+	ConnSSH ConnType = "ssh"
+	// ConnRedis Redis 实例，使用内置 Redis 客户端管理。
+	ConnRedis ConnType = "redis"
+	// ConnMysql MySQL 实例，使用内置 MySQL 客户端管理。
+	ConnMysql ConnType = "mysql"
+	// ConnMqtt MQTT 代理，使用内置 MQTT 客户端管理。
+	ConnMqtt ConnType = "mqtt"
+)
+
+// ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL。
 type ServerConfig struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
 	Host       string `json:"host"`
 	Port       int    `json:"port"`
 	Username   string `json:"username"`
-	AuthType   string `json:"authType"` // password | key
+	AuthType   string `json:"authType"` // password | key (SSH 专用)
 	Password   string `json:"password"`
 	PrivateKey string `json:"privateKey"` // 私钥文件路径或 PEM 内容
 	Passphrase string `json:"passphrase"`
 	Remark     string `json:"remark"`
-	UpdatedAt  int64  `json:"updatedAt"`
+	Type       string `json:"type"`        // ssh | redis | mysql | mqtt
+	DB         int    `json:"db,omitempty"` // Redis 数据库编号
+	Database   string `json:"database,omitempty"` // MySQL 默认数据库（可选）
+	ClientID   string `json:"clientId,omitempty"` // MQTT 客户端 ID（可选）
+	UseTLS     bool   `json:"useTLS,omitempty"`    // MQTT 是否使用 TLS
+
+	// MQTT 高级配置
+	MqttProto          string `json:"mqttProto,omitempty"`            // 协议版本："3.1.1" | "3.1"
+	MqttKeepAlive      int    `json:"mqttKeepAlive,omitempty"`        // 心跳间隔（秒）
+	MqttConnectTimeout int    `json:"mqttConnectTimeout,omitempty"`   // 连接超时（秒）
+	MqttCleanSession   bool   `json:"mqttCleanSession,omitempty"`     // 清除会话
+	MqttAutoReconnect  bool   `json:"mqttAutoReconnect,omitempty"`    // 自动重连
+	MqttReconnectIntvl int    `json:"mqttReconnectIntvl,omitempty"`   // 重连间隔（秒）
+	MqttInsecure       bool   `json:"mqttInsecure,omitempty"`         // TLS 跳过证书校验
+	MqttCACert         string `json:"mqttCaCert,omitempty"`           // TLS CA 证书（PEM 内容或文件路径）
+	MqttClientCert     string `json:"mqttClientCert,omitempty"`       // TLS 客户端证书（PEM 内容或文件路径）
+	MqttClientKey      string `json:"mqttClientKey,omitempty"`        // TLS 客户端私钥（PEM 内容或文件路径）
+	MqttWillTopic      string `json:"mqttWillTopic,omitempty"`        // 遗嘱主题
+	MqttWillPayload    string `json:"mqttWillPayload,omitempty"`      // 遗嘱消息
+	MqttWillQos        int    `json:"mqttWillQos,omitempty"`          // 遗嘱 QoS
+	MqttWillRetained   bool   `json:"mqttWillRetained,omitempty"`     // 遗嘱保留
+
+	UpdatedAt int64 `json:"updatedAt"`
+}
+
+func (c ServerConfig) connType() ConnType {
+	switch c.Type {
+	case string(ConnRedis):
+		return ConnRedis
+	case string(ConnMysql):
+		return ConnMysql
+	case string(ConnMqtt):
+		return ConnMqtt
+	}
+	return ConnSSH
 }
 
 func (c ServerConfig) label() string {
 	if strings.TrimSpace(c.Name) != "" {
 		return c.Name
 	}
+	switch c.connType() {
+	case ConnRedis, ConnMysql, ConnMqtt:
+		return fmt.Sprintf("%s:%d", c.Host, c.displayPort())
+	}
 	return fmt.Sprintf("%s@%s", c.Username, c.Host)
 }
 
-func (c ServerConfig) addr() string {
-	port := c.Port
-	if port <= 0 {
-		port = 22
+func (c ServerConfig) displayPort() int {
+	if c.Port > 0 {
+		return c.Port
 	}
-	return fmt.Sprintf("%s:%d", c.Host, port)
+	switch c.connType() {
+	case ConnRedis:
+		return 6379
+	case ConnMysql:
+		return 3306
+	case ConnMqtt:
+		return 1883
+	}
+	return 22
+}
+
+func (c ServerConfig) addr() string {
+	return fmt.Sprintf("%s:%d", c.Host, c.displayPort())
 }
 
 func (c ServerConfig) validate() error {
 	if strings.TrimSpace(c.Host) == "" {
 		return errors.New("主机地址不能为空")
+	}
+	switch c.connType() {
+	case ConnRedis:
+		return nil
+	case ConnMysql:
+		if strings.TrimSpace(c.Username) == "" {
+			return errors.New("用户名不能为空")
+		}
+		return nil
+	case ConnMqtt:
+		return nil
 	}
 	if strings.TrimSpace(c.Username) == "" {
 		return errors.New("用户名不能为空")
@@ -254,12 +328,36 @@ func (s *Store) Save(cfg ServerConfig) (ServerConfig, error) {
 	if err := cfg.validate(); err != nil {
 		return ServerConfig{}, err
 	}
+	ct := cfg.connType()
 	if cfg.Port <= 0 {
+	switch ct {
+	case ConnRedis:
+		cfg.Port = 6379
+	case ConnMysql:
+		cfg.Port = 3306
+	case ConnMqtt:
+		cfg.Port = 1883
+		if cfg.MqttKeepAlive <= 0 {
+			cfg.MqttKeepAlive = 30
+		}
+		if cfg.MqttConnectTimeout <= 0 {
+			cfg.MqttConnectTimeout = 10
+		}
+		if cfg.MqttReconnectIntvl <= 0 {
+			cfg.MqttReconnectIntvl = 5
+		}
+		if cfg.MqttProto != "3.1" {
+			cfg.MqttProto = "3.1.1"
+		}
+	default:
 		cfg.Port = 22
 	}
-	if cfg.AuthType != authTypeKey {
+	}
+	// 非私钥认证统一归为密码认证。
+	if ct == ConnSSH && cfg.AuthType != authTypeKey {
 		cfg.AuthType = authTypePassword
 	}
+	cfg.Type = string(ct)
 	cfg.UpdatedAt = time.Now().Unix()
 
 	s.mu.Lock()

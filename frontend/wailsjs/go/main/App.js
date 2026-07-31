@@ -66,6 +66,138 @@ export function MakeDir(arg1, arg2, arg3) {
   return window['go']['main']['App']['MakeDir'](arg1, arg2, arg3);
 }
 
+export function MqttClose(arg1) {
+  return window['go']['main']['App']['MqttClose'](arg1);
+}
+
+export function MqttConnect(arg1) {
+  return window['go']['main']['App']['MqttConnect'](arg1);
+}
+
+export function MqttPublish(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MqttPublish'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MqttSubscribe(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MqttSubscribe'](arg1, arg2, arg3);
+}
+
+export function MqttSubscriptions(arg1) {
+  return window['go']['main']['App']['MqttSubscriptions'](arg1);
+}
+
+export function MqttUnsubscribe(arg1, arg2) {
+  return window['go']['main']['App']['MqttUnsubscribe'](arg1, arg2);
+}
+
+export function MysqlClose(arg1) {
+  return window['go']['main']['App']['MysqlClose'](arg1);
+}
+
+export function MysqlConnect(arg1) {
+  return window['go']['main']['App']['MysqlConnect'](arg1);
+}
+
+export function MysqlCount(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlCount'](arg1, arg2, arg3);
+}
+
+export function MysqlDatabases(arg1) {
+  return window['go']['main']['App']['MysqlDatabases'](arg1);
+}
+
+export function MysqlDelete(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlDelete'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlDescribe(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlDescribe'](arg1, arg2, arg3);
+}
+
+export function MysqlExport(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['MysqlExport'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function MysqlExportToFile(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['MysqlExportToFile'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function MysqlImport(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlImport'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlImportFromFile(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MysqlImportFromFile'](arg1, arg2, arg3, arg4);
+}
+
+export function MysqlInsert(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlInsert'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlRun(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlRun'](arg1, arg2, arg3);
+}
+
+export function MysqlSelect(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlSelect'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlTables(arg1, arg2) {
+  return window['go']['main']['App']['MysqlTables'](arg1, arg2);
+}
+
+export function MysqlUpdate(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['MysqlUpdate'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function ReadLocalFile(arg1) {
+  return window['go']['main']['App']['ReadLocalFile'](arg1);
+}
+
+export function ReadLocalFileBase64(arg1) {
+  return window['go']['main']['App']['ReadLocalFileBase64'](arg1);
+}
+
+export function RedisClose(arg1) {
+  return window['go']['main']['App']['RedisClose'](arg1);
+}
+
+export function RedisConnect(arg1) {
+  return window['go']['main']['App']['RedisConnect'](arg1);
+}
+
+export function RedisDBSize(arg1) {
+  return window['go']['main']['App']['RedisDBSize'](arg1);
+}
+
+export function RedisDelete(arg1, arg2) {
+  return window['go']['main']['App']['RedisDelete'](arg1, arg2);
+}
+
+export function RedisExpire(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisExpire'](arg1, arg2, arg3);
+}
+
+export function RedisGet(arg1, arg2) {
+  return window['go']['main']['App']['RedisGet'](arg1, arg2);
+}
+
+export function RedisKeys(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisKeys'](arg1, arg2, arg3);
+}
+
+export function RedisRaw(arg1, arg2) {
+  return window['go']['main']['App']['RedisRaw'](arg1, arg2);
+}
+
+export function RedisSelectDB(arg1, arg2) {
+  return window['go']['main']['App']['RedisSelectDB'](arg1, arg2);
+}
+
+export function RedisSet(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['RedisSet'](arg1, arg2, arg3, arg4, arg5);
+}
+
 export function RemovePath(arg1, arg2) {
   return window['go']['main']['App']['RemovePath'](arg1, arg2);
 }
@@ -80,6 +212,10 @@ export function RenamePath(arg1, arg2, arg3) {
 
 export function ResizeTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
+}
+
+export function SaveMysqlFile(arg1) {
+  return window['go']['main']['App']['SaveMysqlFile'](arg1);
 }
 
 export function SaveServer(arg1) {
@@ -100,4 +236,8 @@ export function UploadData(arg1, arg2, arg3, arg4) {
 
 export function UploadPaths(arg1, arg2, arg3) {
   return window['go']['main']['App']['UploadPaths'](arg1, arg2, arg3);
+}
+
+export function WriteLocalFile(arg1, arg2) {
+  return window['go']['main']['App']['WriteLocalFile'](arg1, arg2);
 }

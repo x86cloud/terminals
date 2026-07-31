@@ -2,11 +2,15 @@ import React, {useCallback, useEffect, useRef, useState} from 'react'
 import Sidebar from './components/Sidebar'
 import SessionWorkspace from './components/SessionWorkspace'
 import ServerDialog from './components/ServerDialog'
+import RedisClient from './components/RedisClient'
+import MysqlClient from './components/MysqlClient'
+import MqttClient from './components/MqttClient'
 import TransferBar from './components/TransferBar'
 import Icon from './components/Icon'
+import ClientIcon from './components/ClientIcon'
 import {ConfirmModal, ConfirmState} from './components/Modal'
 import {API, registerNativeFileDrop, subscribe, unregisterNativeFileDrop} from './api'
-import {ServerConfig, SessionInfo, Transfer} from './types'
+import {ServerConfig, SessionInfo, Transfer, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, ConnType} from './types'
 import {errorMessage} from './utils'
 
 interface Toast {
@@ -30,6 +34,16 @@ export default function App() {
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [toasts, setToasts] = useState<Toast[]>([])
     const [nativeDrop, setNativeDrop] = useState(true)
+
+    // Redis 会话
+    const [redisSessions, setRedisSessions] = useState<RedisSessionInfo[]>([])
+    const [activeRedisId, setActiveRedisId] = useState<string | null>(null)
+
+    // MySQL 会话
+const [mysqlSessions, setMysqlSessions] = useState<MysqlSessionInfo[]>([])
+const [activeMysqlId, setActiveMysqlId] = useState<string | null>(null)
+const [mqttSessions, setMqttSessions] = useState<MqttSessionInfo[]>([])
+const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
 
     const activeIdRef = useRef<string | null>(null)
     const pathsRef = useRef<Record<string, string>>({})
@@ -107,6 +121,17 @@ export default function App() {
         pathsRef.current[sessionId] = p
     }, [])
 
+    /* ---------------- 新建 / 编辑 ---------------- */
+
+    // 新建与编辑均走同一个对话框，类型（SSH/Redis）在表单内部选择。
+    const addServer = useCallback(() => {
+        setDialog({open: true, initial: null})
+    }, [])
+
+    const editServer = useCallback((cfg: ServerConfig) => {
+        setDialog({open: true, initial: cfg})
+    }, [])
+
     /* ---------------- 会话操作 ---------------- */
 
     const connect = useCallback(
@@ -115,11 +140,78 @@ export default function App() {
             connectingRef.current.add(cfg.id)
             setConnectingId(cfg.id)
             try {
-                const info = await API.connect(cfg.id, 120, 32)
-                setSessions((prev) => [...prev, info])
-                setActiveId(info.id)
-                pathsRef.current[info.id] = info.homeDir || '/'
-                notify(`已连接 ${info.title}`)
+                if (cfg.type === 'redis') {
+                    const ok = await API.redisConnect(cfg.id)
+                    if (!ok) throw new Error('Redis 连接失败')
+                    const dbSize = await API.redisDBSize(cfg.id).catch(() => 0)
+                    const info: RedisSessionInfo = {
+                        id: cfg.id,
+                        serverId: cfg.id,
+                        title: cfg.name || `${cfg.host}:${cfg.port || 6379}`,
+                        host: cfg.host,
+                        port: cfg.port || 6379,
+                        connected: true,
+                        db: cfg.db ?? 0,
+                        dbSize,
+                    }
+                    setRedisSessions((prev) => [
+                        ...prev.filter((s) => s.id !== cfg.id),
+                        info,
+                    ])
+                    setActiveRedisId(cfg.id)
+                    setActiveId(null)
+                    setActiveMysqlId(null)
+                    setActiveMqttId(null)
+                    notify(`已连接 Redis ${info.title}`)
+                } else if (cfg.type === 'mysql') {
+                    const ok = await API.mysqlConnect(cfg.id)
+                    if (!ok) throw new Error('MySQL 连接失败')
+                    const info: MysqlSessionInfo = {
+                        id: cfg.id,
+                        serverId: cfg.id,
+                        title: cfg.name || `${cfg.host}:${cfg.port || 3306}`,
+                        host: cfg.host,
+                        port: cfg.port || 3306,
+                        connected: true,
+                        database: cfg.database || '',
+                    }
+                    setMysqlSessions((prev) => [
+                        ...prev.filter((s) => s.id !== cfg.id),
+                        info,
+                    ])
+                    setActiveMysqlId(cfg.id)
+                    setActiveId(null)
+                    setActiveRedisId(null)
+                    setActiveMqttId(null)
+                    notify(`已连接 MySQL ${info.title}`)
+                } else if (cfg.type === 'mqtt') {
+                    const ok = await API.mqttConnect(cfg.id)
+                    if (!ok) throw new Error('MQTT 连接失败')
+                    const info: MqttSessionInfo = {
+                        id: cfg.id,
+                        serverId: cfg.id,
+                        host: cfg.host,
+                        port: cfg.port || 1883,
+                        username: cfg.username,
+                        clientId: cfg.clientId || '',
+                        connected: true,
+                    }
+                    setMqttSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
+                    setActiveMqttId(cfg.id)
+                    setActiveId(null)
+                    setActiveRedisId(null)
+                    setActiveMysqlId(null)
+                    notify(`已连接 MQTT ${info.host}:${info.port}`)
+                } else {
+                    const info = await API.connect(cfg.id, 120, 32)
+                    setSessions((prev) => [...prev, info])
+                    setActiveId(info.id)
+                    setActiveRedisId(null)
+                    setActiveMysqlId(null)
+                    setActiveMqttId(null)
+                    pathsRef.current[info.id] = info.homeDir || '/'
+                    notify(`已连接 ${info.title}`)
+                }
             } catch (err) {
                 notify(errorMessage(err), 'error')
             } finally {
@@ -130,6 +222,28 @@ export default function App() {
         [notify]
     )
 
+    // 将激活指针同步为唯一一个会话（其余类型置空），无目标则全部置空
+    const applyActive = useCallback((target: { kind: ConnType; id: string } | null) => {
+        setActiveId(target && target.kind === 'ssh' ? target.id : null)
+        setActiveRedisId(target && target.kind === 'redis' ? target.id : null)
+        setActiveMysqlId(target && target.kind === 'mysql' ? target.id : null)
+        setActiveMqttId(target && target.kind === 'mqtt' ? target.id : null)
+    }, [])
+
+    // 关闭激活会话后挑选唯一的回退目标：优先同类型剩余会话，其次按 ssh > redis > mysql > mqtt 顺序
+    // lists 中被关闭类型需传入已过滤的 remaining，避免读取到陈旧（未删除）的会话
+    const pickFallback = useCallback(
+        (kind: ConnType, lists: Record<ConnType, Array<{ id: string }>>): { kind: ConnType; id: string } | null => {
+            const rest = (['ssh', 'redis', 'mysql', 'mqtt'] as ConnType[]).filter((k) => k !== kind)
+            for (const k of [kind, ...rest]) {
+                const list = lists[k]
+                if (list.length) return { kind: k, id: list[list.length - 1].id }
+            }
+            return null
+        },
+        []
+    )
+
     const closeSession = useCallback(
         async (sessionId: string) => {
             try {
@@ -137,18 +251,50 @@ export default function App() {
             } catch {
                 /* ignore */
             }
-            setSessions((prev) => {
-                const next = prev.filter((s) => s.id !== sessionId)
-                setActiveId((current) => {
-                    if (current !== sessionId) return current
-                    return next.length ? next[next.length - 1].id : null
-                })
-                return next
-            })
+            const remaining = sessions.filter((s) => s.id !== sessionId)
+            setSessions(remaining)
             delete pathsRef.current[sessionId]
+            if (activeId !== sessionId) return
+            applyActive(pickFallback('ssh', { ssh: remaining, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions }))
         },
-        []
+        [sessions, redisSessions, mysqlSessions, mqttSessions, activeId, applyActive, pickFallback]
     )
+
+    const closeRedisSession = useCallback(async (id: string) => {
+        try {
+            await API.redisClose(id)
+        } catch {
+            /* ignore */
+        }
+        const remaining = redisSessions.filter((s) => s.id !== id)
+        setRedisSessions(remaining)
+        if (activeRedisId !== id) return
+        applyActive(pickFallback('redis', { ssh: sessions, redis: remaining, mysql: mysqlSessions, mqtt: mqttSessions }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, activeRedisId, applyActive, pickFallback])
+
+    const closeMysqlSession = useCallback(async (id: string) => {
+        try {
+            await API.mysqlClose(id)
+        } catch {
+            /* ignore */
+        }
+        const remaining = mysqlSessions.filter((s) => s.id !== id)
+        setMysqlSessions(remaining)
+        if (activeMysqlId !== id) return
+        applyActive(pickFallback('mysql', { ssh: sessions, redis: redisSessions, mysql: remaining, mqtt: mqttSessions }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, activeMysqlId, applyActive, pickFallback])
+
+    const closeMqttSession = useCallback(async (id: string) => {
+        try {
+            await API.mqttClose(id)
+        } catch {
+            /* ignore */
+        }
+        const remaining = mqttSessions.filter((s) => s.id !== id)
+        setMqttSessions(remaining)
+        if (activeMqttId !== id) return
+        applyActive(pickFallback('mqtt', { ssh: sessions, redis: redisSessions, mysql: mysqlSessions, mqtt: remaining }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, activeMqttId, applyActive, pickFallback])
 
     const deleteServer = useCallback(
         (cfg: ServerConfig) => {
@@ -171,6 +317,17 @@ export default function App() {
         [notify, reloadServers]
     )
 
+    const activeRedis = redisSessions.find((s) => s.id === activeRedisId) || null
+
+    // 同一时刻只显示一个操作窗口：聚焦某一类会话时清空其它类型的 active。
+    const focusSession = useCallback((id: string, kind: ConnType) => {
+        // 任意时刻只激活一种会话：目标类型置为 id，其余全部置空
+        setActiveId(kind === 'ssh' ? id : null)
+        setActiveRedisId(kind === 'redis' ? id : null)
+        setActiveMysqlId(kind === 'mysql' ? id : null)
+        setActiveMqttId(kind === 'mqtt' ? id : null)
+    }, [])
+
     return (
         <div className="app">
             <Sidebar
@@ -178,11 +335,17 @@ export default function App() {
                 sessions={sessions}
                 activeSessionId={activeId}
                 connectingId={connectingId}
-                onNew={() => setDialog({open: true, initial: null})}
-                onEdit={(cfg) => setDialog({open: true, initial: cfg})}
+                redisSessions={redisSessions}
+                activeRedisId={activeRedisId}
+                mysqlSessions={mysqlSessions}
+                activeMysqlId={activeMysqlId}
+                mqttSessions={mqttSessions}
+                activeMqttId={activeMqttId}
+                onNew={addServer}
+                onEdit={editServer}
                 onDelete={deleteServer}
                 onConnect={connect}
-                onFocusSession={setActiveId}
+                onFocusSession={(id, kind) => focusSession(id, kind)}
             />
 
             <main className="main">
@@ -191,8 +354,9 @@ export default function App() {
                         <div
                             key={s.id}
                             className={`tab${s.id === activeId ? ' active' : ''}`}
-                            onClick={() => setActiveId(s.id)}
+                            onClick={() => focusSession(s.id, 'ssh')}
                         >
+                            <ClientIcon kind="ssh" size={12}/>
                             <span className={`dot${s.connected ? ' on' : ''}`}/>
                             <span className="tab-title">{s.title}</span>
                             <button
@@ -201,6 +365,69 @@ export default function App() {
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     void closeSession(s.id)
+                                }}
+                            >
+                                <Icon name="close" size={13}/>
+                            </button>
+                        </div>
+                    ))}
+                    {redisSessions.map((s) => (
+                        <div
+                            key={s.id}
+                            className={`tab${s.id === activeRedisId ? ' active' : ''}`}
+                            onClick={() => focusSession(s.id, 'redis')}
+                        >
+                            <ClientIcon kind="redis" size={12}/>
+                            <span className={`dot on`}/>
+                            <span className="tab-title">{s.title} · DB{s.db}</span>
+                            <button
+                                className="tab-close"
+                                title="关闭连接"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    void closeRedisSession(s.id)
+                                }}
+                            >
+                                <Icon name="close" size={13}/>
+                            </button>
+                        </div>
+                    ))}
+                    {mysqlSessions.map((s) => (
+                        <div
+                            key={s.id}
+                            className={`tab${s.id === activeMysqlId ? ' active' : ''}`}
+                            onClick={() => focusSession(s.id, 'mysql')}
+                        >
+                            <ClientIcon kind="mysql" size={12}/>
+                            <span className={`dot on`}/>
+                            <span className="tab-title">{s.title}{s.database ? ` · ${s.database}` : ''}</span>
+                            <button
+                                className="tab-close"
+                                title="关闭连接"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    void closeMysqlSession(s.id)
+                                }}
+                            >
+                                <Icon name="close" size={13}/>
+                            </button>
+                        </div>
+                    ))}
+                    {mqttSessions.map((s) => (
+                        <div
+                            key={s.id}
+                            className={`tab${s.id === activeMqttId ? ' active' : ''}`}
+                            onClick={() => focusSession(s.id, 'mqtt')}
+                        >
+                            <ClientIcon kind="mqtt" size={12}/>
+                            <span className={`dot on`}/>
+                            <span className="tab-title">{s.host}:{s.port}</span>
+                            <button
+                                className="tab-close"
+                                title="关闭连接"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    void closeMqttSession(s.id)
                                 }}
                             >
                                 <Icon name="close" size={13}/>
@@ -222,14 +449,51 @@ export default function App() {
                         />
                     ))}
 
-                    {sessions.length === 0 && (
+                    {redisSessions.map((s) => (
+                        <div key={s.id} style={{display: s.id === activeRedisId ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
+                            <RedisClient
+                                session={s}
+                                onClose={() => void closeRedisSession(s.id)}
+                                onDbChange={(id, db, dbSize) =>
+                                    setRedisSessions((prev) =>
+                                        prev.map((x) => (x.id === id ? {...x, db, dbSize} : x))
+                                    )
+                                }
+                            />
+                        </div>
+                    ))}
+
+                    {mysqlSessions.map((s) => (
+                        <div key={s.id} style={{display: s.id === activeMysqlId ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
+                            <MysqlClient
+                                session={s}
+                                onClose={() => void closeMysqlSession(s.id)}
+                                onChange={(id, database) =>
+                                    setMysqlSessions((prev) =>
+                                        prev.map((x) => (x.id === id ? {...x, database} : x))
+                                    )
+                                }
+                            />
+                        </div>
+                    ))}
+
+                    {mqttSessions.map((s) => (
+                        <div key={s.id} style={{display: s.id === activeMqttId ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
+                            <MqttClient
+                                session={s}
+                                onClose={() => void closeMqttSession(s.id)}
+                            />
+                        </div>
+                    ))}
+
+                    {sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && (
                         <div className="empty-stage">
                             <Icon name="terminal" size={44}/>
                             <h2>SSH 终端 + SFTP 文件管理</h2>
-                            <p>在左侧添加服务器后双击即可连接；连接后右侧文件面板支持拖拽上传、右键下载/删除。</p>
-                            <button className="btn primary" onClick={() => setDialog({open: true, initial: null})}>
-                                新建服务器
-                            </button>
+                            <p>在左侧添加服务器（SSH、Redis、MySQL 或 MQTT）后双击即可连接。MQTT 客户端支持主题订阅、消息发布与实时收发。</p>
+                            <div className="empty-actions">
+                                <button className="btn primary" onClick={() => addServer()}>新建服务器</button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -250,7 +514,7 @@ export default function App() {
                 initial={dialog.initial}
                 onClose={() => setDialog({open: false, initial: null})}
                 onSaved={() => void reloadServers()}
-                onSaveAndConnect={async (cfg) => {
+                onSaveAndConnect={async (cfg: ServerConfig) => {
                     await reloadServers()
                     void connect(cfg)
                 }}

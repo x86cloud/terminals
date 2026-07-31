@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"errors"
+	"os"
 	"path"
 	"strings"
 
@@ -15,6 +17,9 @@ type App struct {
 	store     *Store
 	sessions  *SessionManager
 	transfers *transferManager
+	redisMgr  *redisManager
+	mysqlMgr  *mysqlManager
+	mqttMgr   *mqttManager
 }
 
 func NewApp() *App {
@@ -27,6 +32,9 @@ func NewApp() *App {
 		store:     store,
 		sessions:  NewSessionManager(),
 		transfers: newTransferManager(),
+		redisMgr:  newRedisManager(),
+		mysqlMgr:  newMysqlManager(),
+		mqttMgr:   newMqttManager(),
 	}
 }
 
@@ -39,6 +47,9 @@ func (a *App) startup(ctx context.Context) {
 
 func (a *App) shutdown(ctx context.Context) {
 	a.sessions.closeAll()
+	a.redisMgr.closeAll()
+	a.mysqlMgr.closeAll()
+	a.mqttMgr.closeAll()
 }
 
 // ---------- 服务器配置 ----------
@@ -208,6 +219,37 @@ func (a *App) ChooseLocalFolder() (string, error) {
 	return wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{
 		Title: "选择文件夹",
 	})
+}
+
+// SaveMysqlFile 弹出保存文件对话框，返回用户选择的路径（已含扩展名）。
+func (a *App) SaveMysqlFile(defaultName string) (string, error) {
+	return wruntime.SaveFileDialog(a.ctx, wruntime.SaveDialogOptions{
+		Title:           "导出文件",
+		DefaultFilename: defaultName,
+	})
+}
+
+// ReadLocalFile 读取本地文本文件内容并以 UTF-8 字符串返回（内容过大时返回 base64 编码的约定：此处直接返回文本）。
+func (a *App) ReadLocalFile(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
+}
+
+// WriteLocalFile 将文本内容写入本地文件。
+func (a *App) WriteLocalFile(filePath string, content string) error {
+	return os.WriteFile(filePath, []byte(content), 0o644)
+}
+
+// ReadLocalFileBase64 读取本地文件并以 base64 返回（用于二进制文件，预留）。
+func (a *App) ReadLocalFileBase64(filePath string) (string, error) {
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(data), nil
 }
 
 // UploadPaths 将本地文件/目录上传到远程目录。

@@ -34,6 +34,72 @@ export function ListTransfers():Promise<Array<main.Transfer>>;
 
 export function MakeDir(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function MqttClose(arg1:string):Promise<void>;
+
+export function MqttConnect(arg1:string):Promise<boolean>;
+
+export function MqttPublish(arg1:string,arg2:string,arg3:string,arg4:number,arg5:boolean):Promise<void>;
+
+export function MqttSubscribe(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function MqttSubscriptions(arg1:string):Promise<Array<Record<string, any>>>;
+
+export function MqttUnsubscribe(arg1:string,arg2:string):Promise<void>;
+
+export function MysqlClose(arg1:string):Promise<void>;
+
+export function MysqlConnect(arg1:string):Promise<boolean>;
+
+export function MysqlCount(arg1:string,arg2:string,arg3:string):Promise<number>;
+
+export function MysqlDatabases(arg1:string):Promise<Array<string>>;
+
+export function MysqlDelete(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:Array<any>):Promise<number>;
+
+export function MysqlDescribe(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
+
+export function MysqlExport(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:number):Promise<string>;
+
+export function MysqlExportToFile(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:number):Promise<string>;
+
+export function MysqlImport(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
+
+export function MysqlImportFromFile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MysqlInsert(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:Array<any>):Promise<number>;
+
+export function MysqlRun(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
+
+export function MysqlSelect(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<Record<string, any>>;
+
+export function MysqlTables(arg1:string,arg2:string):Promise<Array<string>>;
+
+export function MysqlUpdate(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:Array<any>,arg6:Array<string>,arg7:Array<any>):Promise<number>;
+
+export function ReadLocalFile(arg1:string):Promise<string>;
+
+export function ReadLocalFileBase64(arg1:string):Promise<string>;
+
+export function RedisClose(arg1:string):Promise<void>;
+
+export function RedisConnect(arg1:string):Promise<boolean>;
+
+export function RedisDBSize(arg1:string):Promise<number>;
+
+export function RedisDelete(arg1:string,arg2:string):Promise<void>;
+
+export function RedisExpire(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function RedisGet(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function RedisKeys(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
+
+export function RedisRaw(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function RedisSelectDB(arg1:string,arg2:number):Promise<void>;
+
+export function RedisSet(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<void>;
+
 export function RemovePath(arg1:string,arg2:string):Promise<void>;
 
 export function RemovePaths(arg1:string,arg2:Array<string>):Promise<void>;
@@ -41,6 +107,8 @@ export function RemovePaths(arg1:string,arg2:Array<string>):Promise<void>;
 export function RenamePath(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
+
+export function SaveMysqlFile(arg1:string):Promise<string>;
 
 export function SaveServer(arg1:main.ServerConfig):Promise<main.ServerConfig>;
 
@@ -51,3 +119,5 @@ export function SendInput(arg1:string,arg2:string):Promise<void>;
 export function UploadData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 
 export function UploadPaths(arg1:string,arg2:string,arg3:Array<string>):Promise<void>;
+
+export function WriteLocalFile(arg1:string,arg2:string):Promise<void>;
