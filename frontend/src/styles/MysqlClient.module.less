@@ -1,0 +1,409 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+.mysqlPane {
+    flex: 1;
+    .fill();
+    display: flex;
+}
+
+.mysqlSide {
+    width: 230px;
+    min-width: 200px;
+    border-right: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+}
+
+.mysqlDbHead {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid @border;
+    color: @text-dim;
+}
+
+.mysqlDbSelect {
+    flex: 1;
+    .fill();
+    .input-base();
+}
+
+.mysqlTables {
+    flex: 1;
+    .fill();
+    overflow: auto;
+    padding: 6px;
+}
+
+.mysqlTableItem {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.active {
+        background: @bg-2;
+        color: @accent;
+    }
+}
+
+.mysqlMain {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mysqlToolbar {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 8px 12px;
+    border-bottom: 1px solid @border;
+
+    /* 工具栏按钮任何情况下不被压缩/遮挡，标题与错误信息优先收缩 */
+    .btn, .iconBtn {
+        flex-shrink: 0;
+    }
+}
+
+.mysqlConnTitle {
+    font-weight: 600;
+    font-size: 13px;
+    .ellipsis();
+    min-width: 0;
+}
+
+.mysqlError {
+    color: @danger;
+    font-size: 12px;
+    background: color-mix(in srgb, @danger 12%, transparent);
+    padding: 3px 8px;
+    border-radius: @radius-md;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 数据/结构切换表头区 */
+.mysqlTableHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid @border;
+    background: @bg-elev;
+    flex-wrap: wrap;
+
+    .segmented {
+        flex-shrink: 0;
+    }
+}
+
+.mysqlTableName {
+    font-weight: 600;
+    font-family: @font-mono;
+    font-size: 13px;
+    color: @accent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+}
+
+.mysqlCount {
+    font-size: 12px;
+    color: @text-dim;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.mysqlCrudActions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+
+    .btn, .iconBtn {
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+}
+
+.mysqlPager {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+
+    .iconBtn {
+        flex-shrink: 0;
+    }
+}
+
+.mysqlPageJump {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+
+    input {
+        width: 52px;
+        padding: 3px 6px;
+        background: @bg;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        color: @text;
+        font-size: 12px;
+        text-align: center;
+        outline: none;
+        font-variant-numeric: tabular-nums;
+
+        &:focus {
+            border-color: @accent;
+        }
+    }
+}
+
+.mysqlPageTotal {
+    font-size: 12px;
+    color: @text-dim;
+    white-space: nowrap;
+}
+
+.mysqlPageSize {
+    padding: 3px 6px;
+    background: @bg;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    color: @text;
+    font-size: 12px;
+    outline: none;
+    flex-shrink: 0;
+}
+
+.mysqlContent {
+    flex: 1;
+    .fill();
+    overflow: auto;
+    padding: 10px 12px;
+}
+
+.mysqlEmpty {
+    color: @text-dim;
+    font-size: 13px;
+    padding: 12px;
+    text-align: center;
+
+    &.small {
+        padding: 6px;
+        font-size: 12px;
+    }
+}
+
+.mysqlGridWrap {
+    min-width: 0;
+}
+
+.mysqlTable {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    font-family: @font-mono;
+
+    th, td {
+        border: 1px solid @border;
+        padding: 5px 9px;
+        text-align: left;
+        white-space: nowrap;
+        max-width: 360px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    th {
+        background: @bg-1;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        color: @text-dim;
+        .sticky-divider();
+    }
+
+    tbody tr:nth-child(even) {
+        background: @bg-1;
+    }
+
+    tbody tr:hover {
+        background: @bg-2;
+    }
+}
+
+.mysqlNull {
+    color: @text-dim;
+    font-style: italic;
+}
+
+.mysqlSql {
+    border-top: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    min-height: 150px;
+    max-height: 42%;
+    background: @bg-1;
+}
+
+.mysqlSqlHead {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: @text-dim;
+    border-bottom: 1px solid @border;
+}
+
+.mysqlSqlInput {
+    flex: none;
+    height: 70px;
+    resize: vertical;
+    padding: 8px 10px;
+    background: @bg;
+    border: none;
+    border-bottom: 1px solid @border;
+    color: @text;
+    font-family: @font-mono;
+    font-size: 12px;
+    outline: none;
+}
+
+.mysqlSqlResult {
+    flex: 1;
+    .fill();
+    overflow: auto;
+    padding: 8px 10px;
+}
+
+/* ---- 数据网格 / CRUD ---- */
+.mysqlEditTable {
+    th, td {
+        position: relative;
+    }
+
+    td {
+        cursor: text;
+    }
+
+    td.cellDirty {
+        background: rgba(240, 180, 40, 0.12);
+        box-shadow: inset 2px 0 0 #f0b428;
+    }
+
+    td.cellNull .mysqlNull {
+        color: @text-faint;
+    }
+}
+
+.mysqlRownum {
+    width: 38px;
+    text-align: center;
+    color: @text-faint;
+    font-variant-numeric: tabular-nums;
+    background: @bg-elev;
+}
+
+.mysqlRowact {
+    width: 38px;
+    text-align: center;
+}
+
+.rowNew td {
+    background: rgba(72, 199, 116, 0.08);
+}
+
+.pkBadge {
+    display: inline-block;
+    margin-left: 6px;
+    font-size: 10px;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: @accent;
+    color: #fff;
+    vertical-align: middle;
+}
+
+.mysqlCellEdit {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+}
+
+.mysqlCellInput {
+    width: 100%;
+    min-width: 60px;
+    border: 1px solid @accent;
+    background: @bg;
+    color: @text;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font: inherit;
+    outline: none;
+
+    &.isNull {
+        color: @text-faint;
+        font-style: italic;
+    }
+}
+
+.nullToggle {
+    flex: 0 0 auto;
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 4px;
+    border: 1px solid @border;
+    background: @bg-elev;
+    color: @text-dim;
+    border-radius: 3px;
+    cursor: pointer;
+
+    &.on {
+        background: @accent;
+        border-color: @accent;
+        color: #fff;
+    }
+}
+
+.mysqlWarn {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: @warn;
+    background: @warn-bg;
+    border-bottom: 1px solid @border;
+}
+
+.iconBtn.danger:hover {
+    color: #e05c5c;
+}

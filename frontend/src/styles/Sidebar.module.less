@@ -1,0 +1,144 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+.sidebar {
+    width: 248px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    background: @bg;
+    border-right: 1px solid @border;
+}
+
+.sidebarHead {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 10px;
+}
+
+.sidebarSearch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    .fill();
+    padding: 0 8px;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    color: @text-dim;
+
+    input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: @text;
+        padding: 6px 0;
+    }
+}
+
+.serverList {
+    flex: 1;
+    overflow: auto;
+    padding: 0 8px 12px;
+}
+
+.sidebarEmpty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 32px 12px;
+    color: @text-dim;
+}
+
+.serverGroup {
+    margin-bottom: 2px;
+}
+
+.serverItem {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 7px 8px;
+    border-radius: @radius-md;
+    cursor: default;
+    user-select: none;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.connecting {
+        opacity: .65;
+    }
+}
+
+.serverText {
+    display: flex;
+    flex-direction: column;
+    .fill();
+    flex: 1;
+}
+
+.serverName {
+    .ellipsis();
+}
+
+.serverSub {
+    font-size: 11px;
+    color: @text-dim;
+    .ellipsis();
+}
+
+.serverActions {
+    opacity: 0;
+}
+
+.serverItem:hover .serverActions {
+    opacity: 1;
+}
+
+.sessionItem {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    margin: 1px 0 1px 22px;
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    border-radius: 5px;
+    color: @text-dim;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.active {
+        background: @bg-3;
+        color: @text;
+    }
+}
+
+.spinner {
+    width: 15px;
+    height: 15px;
+    border: 2px solid @border;
+    border-top-color: @accent;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    box-sizing: border-box;
+    flex: none;
+    margin: auto 0;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

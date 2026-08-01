@@ -3,6 +3,8 @@ import {API, subscribe} from '../api'
 import Icon from './Icon'
 import {errorMessage} from '../utils'
 import {MqttMessage, MqttSessionInfo, MqttSubscription} from '../types'
+import g from '../styles/global.module.less'
+import m from '../styles/MqttClient.module.less'
 
 interface Props {
     session: MqttSessionInfo
@@ -133,24 +135,24 @@ export default function MqttClient({session, onClose}: Props) {
     }
 
     return (
-        <div className="mqtt-pane">
-            <div className="mqtt-side">
-                <div className="mqtt-sub-head">
+        <div className={m.mqttPane}>
+            <div className={m.mqttSide}>
+                <div className={m.mqttSubHead}>
                     <span>订阅</span>
-                    <span className="spacer"/>
-                    <span className="mqtt-count">{subs.length}</span>
+                    <span className={g.spacer}/>
+                    <span className={m.mqttCount}>{subs.length}</span>
                 </div>
-                <div className="mqtt-sub-list">
-                    {subs.length === 0 && <div className="mqtt-empty small">尚未订阅任何主题</div>}
+                <div className={m.mqttSubList}>
+                    {subs.length === 0 && <div className={`${m.mqttEmpty} ${m.small}`}>尚未订阅任何主题</div>}
                     {subs.map((s) => (
-                        <div key={s.topic} className="mqtt-sub-item">
-                            <div className="mqtt-sub-topic" title={s.topic}>
+                        <div key={s.topic} className={m.mqttSubItem}>
+                            <div className={m.mqttSubTopic} title={s.topic}>
                                 {s.topic}
                             </div>
-                            <div className="mqtt-sub-meta">
-                                <span className="qos-badge">Q{s.qos}</span>
+                            <div className={m.mqttSubMeta}>
+                                <span className={m.qosBadge}>Q{s.qos}</span>
                                 <button
-                                    className="icon-btn danger"
+                                    className={`${g.iconBtn} ${g.danger}`}
                                     title="取消订阅"
                                     disabled={busy}
                                     onClick={() => doUnsubscribe(s.topic)}
@@ -163,26 +165,26 @@ export default function MqttClient({session, onClose}: Props) {
                 </div>
             </div>
 
-            <div className="mqtt-main">
-                <div className="mqtt-toolbar">
-                    <span className="mqtt-conn-title">MQTT · {session.host}:{session.port}</span>
+            <div className={m.mqttMain}>
+                <div className={m.mqttToolbar}>
+                    <span className={m.mqttConnTitle}>MQTT · {session.host}:{session.port}</span>
                     {session.clientId && (
-                        <span className="mqtt-client-id" title="客户端 ID">@{session.clientId}</span>
+                        <span className={m.mqttClientId} title="客户端 ID">@{session.clientId}</span>
                     )}
-                    <span className={`mqtt-status ${status.connected ? 'on' : 'off'}`}>
+                    <span className={`${m.mqttStatus} ${status.connected ? m.on : m.off}`}>
                         {status.connected ? '已连接' : '已断开'}
                     </span>
-                    <span className="spacer"/>
-                    {error && <span className="mqtt-error">{error}</span>}
-                    <button className="icon-btn" title="关闭" onClick={onClose}>
+                    <span className={g.spacer}/>
+                    {error && <span className={m.mqttError}>{error}</span>}
+                    <button className={g.iconBtn} title="关闭" onClick={onClose}>
                         <Icon name="close" size={15}/>
                     </button>
                 </div>
 
-                <div className="mqtt-pub">
-                    <div className="mqtt-field-row">
+                <div className={m.mqttPub}>
+                    <div className={m.mqttFieldRow}>
                         <input
-                            className="mqtt-input topic"
+                            className={`${m.mqttInput} ${m.topic}`}
                             placeholder="发布主题，如 home/light/1"
                             value={pubTopic}
                             onChange={(e) => setPubTopic(e.target.value)}
@@ -191,7 +193,7 @@ export default function MqttClient({session, onClose}: Props) {
                             }}
                         />
                         <select
-                            className="mqtt-qos"
+                            className={m.mqttQos}
                             value={pubQos}
                             onChange={(e) => setPubQos(Number(e.target.value))}
                         >
@@ -199,7 +201,7 @@ export default function MqttClient({session, onClose}: Props) {
                             <option value={1}>QoS 1</option>
                             <option value={2}>QoS 2</option>
                         </select>
-                        <label className="mqtt-retained" title="保留消息">
+                        <label className={m.mqttRetained} title="保留消息">
                             <input
                                 type="checkbox"
                                 checked={pubRetained}
@@ -208,7 +210,7 @@ export default function MqttClient({session, onClose}: Props) {
                             保留
                         </label>
                         <button
-                            className="btn sm primary"
+                            className={`${g.btn} ${g.sm} ${g.primary}`}
                             disabled={busy}
                             onClick={doPublish}
                         >
@@ -216,7 +218,7 @@ export default function MqttClient({session, onClose}: Props) {
                         </button>
                     </div>
                     <textarea
-                        className="mqtt-pub-payload"
+                        className={m.mqttPubPayload}
                         placeholder="消息内容（Ctrl/Cmd + Enter 发布）"
                         value={pubPayload}
                         spellCheck={false}
@@ -230,9 +232,9 @@ export default function MqttClient({session, onClose}: Props) {
                     />
                 </div>
 
-                <div className="mqtt-sub-bar">
+                <div className={m.mqttSubBar}>
                     <input
-                        className="mqtt-input topic"
+                        className={`${m.mqttInput} ${m.topic}`}
                         placeholder="订阅主题，支持通配符 # +，如 sensor/#"
                         value={subTopic}
                         onChange={(e) => setSubTopic(e.target.value)}
@@ -241,7 +243,7 @@ export default function MqttClient({session, onClose}: Props) {
                         }}
                     />
                     <select
-                        className="mqtt-qos"
+                        className={m.mqttQos}
                         value={subQos}
                         onChange={(e) => setSubQos(Number(e.target.value))}
                     >
@@ -249,27 +251,27 @@ export default function MqttClient({session, onClose}: Props) {
                         <option value={1}>QoS 1</option>
                         <option value={2}>QoS 2</option>
                     </select>
-                    <button className="btn sm" disabled={busy} onClick={doSubscribe}>
+                    <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={doSubscribe}>
                         订阅
                     </button>
                 </div>
 
-                <div className="mqtt-log" ref={logRef}>
+                <div className={m.mqttLog} ref={logRef}>
                     {messages.length === 0 && (
-                        <div className="mqtt-empty">订阅主题并发布/接收消息后，将在此显示</div>
+                        <div className={m.mqttEmpty}>订阅主题并发布/接收消息后，将在此显示</div>
                     )}
-                    {messages.map((m, i) => (
-                        <div key={i} className={`mqtt-msg ${m.dir}`}>
-                            <div className="mqtt-msg-head">
-                                <span className={`mqtt-dir ${m.dir}`}>
-                                    {m.dir === 'in' ? '收' : '发'}
+                    {messages.map((msg, i) => (
+                        <div key={i} className={`${m.mqttMsg} ${msg.dir}`}>
+                            <div className={m.mqttMsgHead}>
+                                <span className={`${m.mqttDir} ${msg.dir}`}>
+                                    {msg.dir === 'in' ? '收' : '发'}
                                 </span>
-                                <span className="mqtt-msg-topic">{m.topic}</span>
-                                <span className="mqtt-msg-time">{fmtTime(m.ts)}</span>
-                                <span className="qos-badge">Q{m.qos}</span>
-                                {m.retained && <span className="retained-badge">保留</span>}
+                                <span className={m.mqttMsgTopic}>{msg.topic}</span>
+                                <span className={m.mqttMsgTime}>{fmtTime(msg.ts)}</span>
+                                <span className={m.qosBadge}>Q{msg.qos}</span>
+                                {msg.retained && <span className={m.retainedBadge}>保留</span>}
                             </div>
-                            <pre className="mqtt-msg-payload">{m.payload}</pre>
+                            <pre className={m.mqttMsgPayload}>{msg.payload}</pre>
                         </div>
                     ))}
                 </div>

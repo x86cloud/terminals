@@ -3,6 +3,8 @@ import {API} from '../api'
 import Icon from './Icon'
 import {errorMessage} from '../utils'
 import {MysqlQueryResult, MysqlSessionInfo} from '../types'
+import g from '../styles/global.module.less'
+import my from '../styles/MysqlClient.module.less'
 
 interface Props {
     session: MysqlSessionInfo
@@ -20,18 +22,18 @@ type RowDrafts = Record<number, Record<string, CellEdit>>
 type NewRow = Record<string, CellEdit>
 
 function formatCell(v: any) {
-    if (v === null || v === undefined) return <span className="mysql-null">NULL</span>
+    if (v === null || v === undefined) return <span className={my.mysqlNull}>NULL</span>
     if (typeof v === 'object') return JSON.stringify(v)
     return String(v)
 }
 
 function Grid({columns, rows}: { columns: string[]; rows: Record<string, any>[] }) {
     if (!columns.length) {
-        return <div className="mysql-empty">无结果</div>
+        return <div className={my.mysqlEmpty}>无结果</div>
     }
     return (
-        <div className="mysql-grid-wrap">
-            <table className="mysql-table">
+        <div className={my.mysqlGridWrap}>
+            <table className={my.mysqlTable}>
                 <thead>
                 <tr>
                     {columns.map((c) => (
@@ -383,12 +385,12 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     }, [session.id, db, selected, onChange])
 
     return (
-        <div className="mysql-pane">
-            <div className="mysql-side">
-                <div className="mysql-db-head">
+        <div className={my.mysqlPane}>
+            <div className={my.mysqlSide}>
+                <div className={my.mysqlDbHead}>
                     <Icon name="database" size={13}/>
                     <select
-                        className="mysql-db-select"
+                        className={my.mysqlDbSelect}
                         value={db}
                         disabled={busy || databases.length === 0}
                         onChange={(e) => switchDb(e.target.value)}
@@ -399,7 +401,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                         ))}
                     </select>
                     <button
-                        className="icon-btn"
+                        className={g.iconBtn}
                         title="刷新"
                         disabled={busy}
                         onClick={() => loadDatabases()}
@@ -407,14 +409,14 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                         <Icon name="refresh" size={13}/>
                     </button>
                 </div>
-                <div className="mysql-tables">
+                <div className={my.mysqlTables}>
                     {tables.length === 0 && !busy && (
-                        <div className="mysql-empty small">暂无表</div>
+                        <div className={`${my.mysqlEmpty} ${my.small}`}>暂无表</div>
                     )}
                     {tables.map((t) => (
                         <button
                             key={t}
-                            className={`mysql-table-item${selected === t ? ' active' : ''}`}
+                            className={`${my.mysqlTableItem}${selected === t ? ' ' + my.active : ''}`}
                             onClick={() => openTable(t)}
                         >
                             <Icon name="table" size={13}/>
@@ -424,15 +426,15 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                 </div>
             </div>
 
-            <div className="mysql-main">
-                <div className="mysql-toolbar">
-                    <span className="mysql-conn-title">
+            <div className={my.mysqlMain}>
+                <div className={my.mysqlToolbar}>
+                    <span className={my.mysqlConnTitle}>
                         MySQL · {session.host}:{session.port}
                     </span>
-                    <span className="spacer"/>
-                    {error && <span className="mysql-error">{error}</span>}
+                    <span className={g.spacer}/>
+                    {error && <span className={my.mysqlError}>{error}</span>}
                     <button
-                        className="btn sm"
+                        className={`${g.btn} ${g.sm}`}
                         title="导入 SQL / CSV 文件"
                         disabled={busy}
                         onClick={() => {
@@ -443,7 +445,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                         <Icon name="download" size={13}/> 导入
                     </button>
                     <button
-                        className="btn sm"
+                        className={`${g.btn} ${g.sm}`}
                         title="导出数据为 SQL / CSV 文件"
                         disabled={busy || !selected}
                         onClick={() => {
@@ -454,7 +456,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                         <Icon name="upload" size={13}/> 导出
                     </button>
                     <button
-                        className="icon-btn"
+                        className={g.iconBtn}
                         title="关闭"
                         onClick={onClose}
                     >
@@ -463,31 +465,31 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                 </div>
 
                 {selected && (
-                    <div className="mysql-table-head">
-                        <span className="mysql-table-name">{selected}</span>
-                        <div className="segmented sm">
+                    <div className={my.mysqlTableHead}>
+                        <span className={my.mysqlTableName}>{selected}</span>
+                        <div className={`${g.segmented} ${g.sm}`}>
                             <button
-                                className={view === 'data' ? 'active' : ''}
+                                className={view === 'data' ? g.active : ''}
                                 onClick={() => setView('data')}
                             >
                                 数据
                             </button>
                             <button
-                                className={view === 'struct' ? 'active' : ''}
+                                className={view === 'struct' ? g.active : ''}
                                 onClick={() => setView('struct')}
                             >
                                 结构
                             </button>
                         </div>
-                        <span className="mysql-count">
+                        <span className={my.mysqlCount}>
                             {view === 'data'
                                 ? `${rows.length} 行${newRows.length ? ` +${newRows.length} 新` : ''}`
                                 : `${structData?.rowCount ?? 0} 列`}
                         </span>
                         {view === 'data' && (
-                            <span className="mysql-crud-actions">
+                            <span className={my.mysqlCrudActions}>
                                 <button
-                                    className="btn sm"
+                                    className={`${g.btn} ${g.sm}`}
                                     disabled={busy || saving}
                                     onClick={addRow}
                                     title="新增一行"
@@ -495,7 +497,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                     <Icon name="plus" size={13}/> 新建行
                                 </button>
                                 <button
-                                    className="btn sm primary"
+                                    className={`${g.btn} ${g.sm} ${g.primary}`}
                                     disabled={busy || saving || !dirtyCount}
                                     onClick={saveAll}
                                     title="保存所有修改"
@@ -503,7 +505,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                     {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
                                 </button>
                                 <button
-                                    className="icon-btn"
+                                    className={g.iconBtn}
                                     title="刷新数据"
                                     disabled={busy || saving}
                                     onClick={() => openTable(selected, page)}
@@ -516,13 +518,13 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                 )}
 
                 {selected && view === 'data' && (
-                    <div className="mysql-pager">
-                        <span className="mysql-count">
+                    <div className={my.mysqlPager}>
+                        <span className={my.mysqlCount}>
                             共 {totalRows} 行 · 第 {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} 行
                         </span>
-                        <span className="spacer"/>
+                        <span className={g.spacer}/>
                         <button
-                            className="icon-btn"
+                            className={g.iconBtn}
                             title="首页"
                             disabled={busy || page <= 1}
                             onClick={() => goPage(1)}
@@ -530,14 +532,14 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             <Icon name="chevrons-left" size={13}/>
                         </button>
                         <button
-                            className="icon-btn"
+                            className={g.iconBtn}
                             title="上一页"
                             disabled={busy || page <= 1}
                             onClick={() => goPage(page - 1)}
                         >
                             <Icon name="chevron-left" size={13}/>
                         </button>
-                        <span className="mysql-page-jump">
+                        <span className={my.mysqlPageJump}>
                             <input
                                 key={page}
                                 type="number"
@@ -556,10 +558,10 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                     if (v && v !== page) goPage(v)
                                 }}
                             />
-                            <span className="mysql-page-total">/ {totalPages} 页</span>
+                            <span className={my.mysqlPageTotal}>/ {totalPages} 页</span>
                         </span>
                         <button
-                            className="icon-btn"
+                            className={g.iconBtn}
                             title="下一页"
                             disabled={busy || page >= totalPages}
                             onClick={() => goPage(page + 1)}
@@ -567,7 +569,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             <Icon name="chevron-right" size={13}/>
                         </button>
                         <button
-                            className="icon-btn"
+                            className={g.iconBtn}
                             title="末页"
                             disabled={busy || page >= totalPages}
                             onClick={() => goPage(totalPages)}
@@ -575,7 +577,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             <Icon name="chevrons-right" size={13}/>
                         </button>
                         <select
-                            className="mysql-page-size"
+                            className={my.mysqlPageSize}
                             value={pageSize}
                             disabled={busy}
                             onChange={(e) => changePageSize(Number(e.target.value))}
@@ -589,38 +591,38 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     </div>
                 )}
 
-                <div className="mysql-content">
+                <div className={my.mysqlContent}>
                     {!selected && (
-                        <div className="mysql-empty">从左侧选择一个表查看数据，或在下方执行 SQL</div>
+                        <div className={my.mysqlEmpty}>从左侧选择一个表查看数据，或在下方执行 SQL</div>
                     )}
                     {selected && view === 'struct' && (
                         structData ? <Grid columns={structData.columns} rows={structData.rows}/> :
-                            <div className="mysql-empty">加载中…</div>
+                            <div className={my.mysqlEmpty}>加载中…</div>
                     )}
                     {selected && view === 'data' && (
-                        <div className="mysql-grid-wrap">
+                        <div className={my.mysqlGridWrap}>
                             {pkCols.length === 0 && (
-                                <div className="mysql-warn">
+                                <div className={my.mysqlWarn}>
                                     该表无主键，删除/更新将按整行匹配，请谨慎操作。
                                 </div>
                             )}
-                            <table className="mysql-table mysql-edit-table">
+                            <table className={`${my.mysqlTable} ${my.mysqlEditTable}`}>
                                 <thead>
                                 <tr>
-                                    <th className="mysql-rownum">#</th>
+                                    <th className={my.mysqlRownum}>#</th>
                                     {columns.map((c) => (
                                         <th key={c}>
                                             {c}
-                                            {pkCols.includes(c) && <span className="pk-badge">PK</span>}
+                                            {pkCols.includes(c) && <span className={my.pkBadge}>PK</span>}
                                         </th>
                                     ))}
-                                    <th className="mysql-rowact">操作</th>
+                                    <th className={my.mysqlRowact}>操作</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 {rows.map((_, i) => (
                                     <tr key={i}>
-                                        <td className="mysql-rownum">{(page - 1) * pageSize + i + 1}</td>
+                                        <td className={my.mysqlRownum}>{(page - 1) * pageSize + i + 1}</td>
                                         {columns.map((c) => {
                                             const disp = cellDisplay(i, c)
                                             const isEditing = editing?.row === i && editing?.col === c
@@ -628,7 +630,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                             return (
                                                 <td
                                                     key={c}
-                                                    className={`${dirty ? 'cell-dirty' : ''}${disp.isNull ? ' cell-null' : ''}`}
+                                                    className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + my.cellNull : ''}`}
                                                     onDoubleClick={() => !isEditing && setEditing({row: i, col: c})}
                                                     title="双击编辑"
                                                 >
@@ -640,16 +642,16 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                                             onCancel={() => setEditing(null)}
                                                         />
                                                     ) : disp.isNull ? (
-                                                        <span className="mysql-null">NULL</span>
+                                                        <span className={my.mysqlNull}>NULL</span>
                                                     ) : (
                                                         String(disp.text)
                                                     )}
                                                 </td>
                                             )
                                         })}
-                                        <td className="mysql-rowact">
+                                        <td className={my.mysqlRowact}>
                                             <button
-                                                className="icon-btn danger"
+                                                className={`${g.iconBtn} ${g.danger}`}
                                                 title="删除该行"
                                                 disabled={busy || saving}
                                                 onClick={() => deleteRow(i)}
@@ -660,14 +662,14 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                     </tr>
                                 ))}
                                 {newRows.map((nr, idx) => (
-                                    <tr key={`new-${idx}`} className="row-new">
-                                        <td className="mysql-rownum">+</td>
+                                    <tr key={`new-${idx}`} className={my.rowNew}>
+                                        <td className={my.mysqlRownum}>+</td>
                                         {columns.map((c) => {
                                             const cell = nr[c] || {value: '', isNull: false}
                                             return (
-                                                <td key={c} className={cell.isNull ? 'cell-null' : ''}>
+                                                <td key={c} className={cell.isNull ? my.cellNull : ''}>
                                                     <input
-                                                        className="mysql-cell-input"
+                                                        className={my.mysqlCellInput}
                                                         value={cell.isNull ? '' : cell.value}
                                                         disabled={cell.isNull}
                                                         placeholder=""
@@ -681,7 +683,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                                     />
                                                     <button
                                                         type="button"
-                                                        className={`null-toggle${cell.isNull ? ' on' : ''}`}
+                                                        className={`${my.nullToggle}${cell.isNull ? ' ' + my.on : ''}`}
                                                         title="切换为 NULL"
                                                         onClick={() => updateNewCell(idx, c, cell.value, !cell.isNull)}
                                                     >
@@ -690,9 +692,9 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                                 </td>
                                             )
                                         })}
-                                        <td className="mysql-rowact">
+                                        <td className={my.mysqlRowact}>
                                             <button
-                                                className="icon-btn danger"
+                                                className={`${g.iconBtn} ${g.danger}`}
                                                 title="移除该行"
                                                 disabled={busy || saving}
                                                 onClick={() => deleteNewRow(idx)}
@@ -704,7 +706,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                 ))}
                                 {!rows.length && !newRows.length && (
                                     <tr>
-                                        <td colSpan={columns.length + 2} className="mysql-empty small">
+                                        <td colSpan={columns.length + 2} className={`${my.mysqlEmpty} ${my.small}`}>
                                             无数据，可点击「新建行」插入
                                         </td>
                                     </tr>
@@ -715,12 +717,12 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     )}
                 </div>
 
-                <div className="mysql-sql">
-                    <div className="mysql-sql-head">
+                <div className={my.mysqlSql}>
+                    <div className={my.mysqlSqlHead}>
                         <span>SQL 执行</span>
-                        <span className="spacer"/>
+                        <span className={g.spacer}/>
                         <button
-                            className="btn sm primary"
+                            className={`${g.btn} ${g.sm} ${g.primary}`}
                             disabled={busy}
                             onClick={runSql}
                         >
@@ -728,7 +730,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                         </button>
                     </div>
                     <textarea
-                        className="mysql-sql-input"
+                        className={my.mysqlSqlInput}
                         value={sql}
                         placeholder="SELECT * FROM table LIMIT 100;"
                         spellCheck={false}
@@ -740,16 +742,16 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             }
                         }}
                     />
-                    <div className="mysql-sql-result">
+                    <div className={my.mysqlSqlResult}>
                         {sqlResult && sqlResult.columns.length > 0 ? (
                             <>
-                                <div className="mysql-count">{sqlResult.rowCount} 行</div>
+                                <div className={my.mysqlCount}>{sqlResult.rowCount} 行</div>
                                 <Grid columns={sqlResult.columns} rows={sqlResult.rows}/>
                             </>
                         ) : sqlResult ? (
-                            <div className="mysql-empty small">影响行数：{sqlResult.affected}</div>
+                            <div className={`${my.mysqlEmpty} ${my.small}`}>影响行数：{sqlResult.affected}</div>
                         ) : (
-                            <div className="mysql-empty small">执行结果将在此显示</div>
+                            <div className={`${my.mysqlEmpty} ${my.small}`}>执行结果将在此显示</div>
                         )}
                     </div>
                 </div>
@@ -794,51 +796,51 @@ function IoModal(props: {
     const canImport = mode === 'sql' ? true : tableName.trim() !== ''
 
     return (
-        <div className="modal-mask" onClick={() => !busy && onClose()}>
-            <div className="modal io-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="modal-head">
+        <div className={g.modalMask} onClick={() => !busy && onClose()}>
+            <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
+                <div className={g.modalHead}>
                     <span>{kind === 'export' ? '导出数据' : '导入数据'}</span>
-                    <button className="icon-btn" disabled={busy} onClick={onClose}>
+                    <button className={g.iconBtn} disabled={busy} onClick={onClose}>
                         <Icon name="close" size={14}/>
                     </button>
                 </div>
-                <div className="modal-body">
-                    <div className="field">
+                <div className={g.modalBody}>
+                    <div className={g.field}>
                         <label>格式</label>
-                        <div className="segmented sm">
-                            <button className={mode === 'sql' ? 'active' : ''} onClick={() => setMode('sql')}>SQL</button>
-                            <button className={mode === 'csv' ? 'active' : ''} onClick={() => setMode('csv')}>CSV</button>
+                        <div className={`${g.segmented} ${g.sm}`}>
+                            <button className={mode === 'sql' ? g.active : ''} onClick={() => setMode('sql')}>SQL</button>
+                            <button className={mode === 'csv' ? g.active : ''} onClick={() => setMode('csv')}>CSV</button>
                         </div>
                     </div>
 
                     {kind === 'export' ? (
                         <>
-                            <div className="field">
+                            <div className={g.field}>
                                 <label>来源</label>
-                                <div className="segmented sm">
+                                <div className={`${g.segmented} ${g.sm}`}>
                                     <button
-                                        className={source === 'table' ? 'active' : ''}
+                                        className={source === 'table' ? g.active : ''}
                                         onClick={() => setSource('table')}
                                         disabled={!table}
                                     >当前表</button>
                                     <button
-                                        className={source === 'query' ? 'active' : ''}
+                                        className={source === 'query' ? g.active : ''}
                                         onClick={() => setSource('query')}
                                     >查询结果</button>
                                 </div>
                             </div>
                             {source === 'table' ? (
-                                <div className="field">
+                                <div className={g.field}>
                                     <label>表名</label>
                                     <input value={tableName} onChange={(e) => setTableName(e.target.value)} placeholder="目标表名"/>
                                 </div>
                             ) : (
-                                <div className="field">
+                                <div className={g.field}>
                                     <label>查询语句（来自 SQL 执行框）</label>
-                                    <textarea value={sqlText} readOnly rows={4} className="mysql-sql-input"/>
+                                    <textarea value={sqlText} readOnly rows={4} className={my.mysqlSqlInput}/>
                                 </div>
                             )}
-                            <div className="field">
+                            <div className={g.field}>
                                 <label>限制行数（0 表示不限制）</label>
                                 <input
                                     type="number"
@@ -849,14 +851,14 @@ function IoModal(props: {
                             </div>
                         </>
                     ) : (
-                        <div className="field">
+                        <div className={g.field}>
                             <label>{mode === 'sql' ? '目标数据库' : '目标表名'}（CSV 必填）</label>
                             <input
                                 value={tableName}
                                 onChange={(e) => setTableName(e.target.value)}
                                 placeholder={mode === 'sql' ? '可选，留空使用当前库' : '导入到的表名'}
                             />
-                            <p className="io-hint">
+                            <p className={g.ioHint}>
                                 {mode === 'sql'
                                     ? '将逐条执行文件中的 SQL 语句（支持多语句）。'
                                     : 'CSV 首行为列名，其余为数据行，空单元格写入 NULL。'}
@@ -864,19 +866,19 @@ function IoModal(props: {
                         </div>
                     )}
 
-                    {msg && <div className={`io-msg ${msg.startsWith('失败') || msg.startsWith('导入失败') || msg.startsWith('导出失败') ? 'err' : 'ok'}`}>{msg}</div>}
+                    {msg && <div className={`${g.ioMsg} ${msg.startsWith('失败') || msg.startsWith('导入失败') || msg.startsWith('导出失败') ? g.err : g.ok}`}>{msg}</div>}
                 </div>
-                <div className="modal-foot">
-                    <button className="btn sm" disabled={busy} onClick={onClose}>取消</button>
+                <div className={g.modalFoot}>
+                    <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onClose}>取消</button>
                     {kind === 'export' ? (
                         <button
-                            className="btn sm primary"
+                            className={`${g.btn} ${g.sm} ${g.primary}`}
                             disabled={busy || !canExport}
                             onClick={() => onExport({ mode, source, table: tableName.trim(), sqlText, limit })}
                         >导出</button>
                     ) : (
                         <button
-                            className="btn sm primary"
+                            className={`${g.btn} ${g.sm} ${g.primary}`}
                             disabled={busy || !canImport}
                             onClick={() => onImport({ mode, table: tableName.trim() })}
                         >选择文件并导入</button>
@@ -902,10 +904,10 @@ function CellEditorInline({
     const [txt, setTxt] = useState(isNull ? '' : value)
     const [nulled, setNulled] = useState(isNull)
     return (
-        <span className="mysql-cell-edit">
+        <span className={my.mysqlCellEdit}>
             <input
                 autoFocus
-                className={`mysql-cell-input${nulled ? ' is-null' : ''}`}
+                className={`${my.mysqlCellInput}${nulled ? ' ' + my.isNull : ''}`}
                 value={nulled ? '' : txt}
                 disabled={nulled}
                 onChange={(e) => setTxt(e.target.value)}
@@ -922,7 +924,7 @@ function CellEditorInline({
             />
             <button
                 type="button"
-                className={`null-toggle${nulled ? ' on' : ''}`}
+                className={`${my.nullToggle}${nulled ? ' ' + my.on : ''}`}
                 title="切换为 NULL"
                 onClick={() => setNulled((n) => !n)}
             >

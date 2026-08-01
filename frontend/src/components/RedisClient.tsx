@@ -2,6 +2,8 @@ import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {API} from '../api'
 import type {RedisKeysResult, RedisSessionInfo, RedisValue, RedisValueType} from '../types'
 import Icon from './Icon'
+import g from '../styles/global.module.less'
+import r from '../styles/RedisClient.module.less'
 
 interface Props {
     session: RedisSessionInfo
@@ -167,25 +169,25 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
     }
 
     return (
-        <div className="redis-pane">
-            <div className="redis-side">
-                <div className="redis-side-head">
+        <div className={r.redisPane}>
+            <div className={r.redisSide}>
+                <div className={r.redisSideHead}>
                     <input
-                        className="redis-search"
+                        className={r.redisSearch}
                         placeholder="搜索 pattern"
                         value={pattern}
                         onChange={(e) => setPattern(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && loadKeys(true)}
                     />
-                    <button className="btn sm" onClick={() => loadKeys(true)}>刷新</button>
-                    <button className="btn sm" onClick={() => loadKeys(false)} disabled={data.cursor === '0'}>
+                    <button className={`${g.btn} ${g.sm}`} onClick={() => loadKeys(true)}>刷新</button>
+                    <button className={`${g.btn} ${g.sm}`} onClick={() => loadKeys(false)} disabled={data.cursor === '0'}>
                         更多
                     </button>
                 </div>
-                <div className="redis-db-bar">
-                    <span className="redis-db-label">DB</span>
+                <div className={r.redisDbBar}>
+                    <span className={r.redisDbLabel}>DB</span>
                     <input
-                        className="redis-db-input"
+                        className={r.redisDbInput}
                         type="number"
                         min={0}
                         value={dbInput}
@@ -193,20 +195,20 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
                         onKeyDown={(e) => e.key === 'Enter' && switchDb()}
                     />
                     <button
-                        className="btn sm"
+                        className={`${g.btn} ${g.sm}`}
                         onClick={switchDb}
                         disabled={busy || Number(dbInput) === db}
                     >
                         切换
                     </button>
-                    <span className="redis-db-count">{data.keys.length} 键 / 共 {session.dbSize}</span>
+                    <span className={r.redisDbCount}>{data.keys.length} 键 / 共 {session.dbSize}</span>
                 </div>
-                <div className="redis-keys">
-                    {data.keys.length === 0 && <div className="redis-empty">无键</div>}
+                <div className={r.redisKeys}>
+                    {data.keys.length === 0 && <div className={r.redisEmpty}>无键</div>}
                     {data.keys.map((k) => (
                         <div
                             key={k}
-                            className={`redis-key ${k === selected ? 'active' : ''}`}
+                            className={`${r.redisKey} ${k === selected ? ' ' + r.active : ''}`}
                             onClick={() => loadValue(k)}
                             title={k}
                         >
@@ -216,23 +218,23 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
                 </div>
             </div>
 
-            <div className="redis-main">
-                {msg && <div className="redis-msg">{msg}</div>}
+            <div className={r.redisMain}>
+                {msg && <div className={r.redisMsg}>{msg}</div>}
                 {selected && value ? (
                     <>
-                        <div className="redis-value-head">
-                            <span className="redis-key-name" title={selected}>{selected}</span>
-                            <span className="redis-type-badge">{TYPE_LABEL[value.type]}</span>
-                            <span className="redis-ttl">TTL: {ttl}</span>
+                        <div className={r.redisValueHead}>
+                            <span className={r.redisKeyName} title={selected}>{selected}</span>
+                            <span className={r.redisTypeBadge}>{TYPE_LABEL[value.type]}</span>
+                            <span className={r.redisTtl}>TTL: {ttl}</span>
                         </div>
                         <textarea
-                            className="redis-editor"
+                            className={r.redisEditor}
                             value={editor}
                             onChange={(e) => setEditor(e.target.value)}
                             spellCheck={false}
                         />
-                        <div className="redis-value-actions">
-                            <label className="redis-ttl-input">
+                        <div className={r.redisValueActions}>
+                            <label className={r.redisTtlInput}>
                                 TTL(秒)
                                 <input
                                     type="number"
@@ -240,26 +242,26 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
                                     onChange={(e) => setTtl(Number(e.target.value) || 0)}
                                 />
                             </label>
-                            <button className="btn primary sm" onClick={saveValue} disabled={busy}>保存</button>
-                            <button className="btn danger sm" onClick={delKey} disabled={busy}>删除</button>
+                            <button className={`${g.btn} ${g.primary} ${g.sm}`} onClick={saveValue} disabled={busy}>保存</button>
+                            <button className={`${g.btn} ${g.danger} ${g.sm}`} onClick={delKey} disabled={busy}>删除</button>
                         </div>
                     </>
                 ) : (
-                    <div className="redis-empty">从左侧选择一个键查看 / 编辑</div>
+                    <div className={r.redisEmpty}>从左侧选择一个键查看 / 编辑</div>
                 )}
 
-                <div className="redis-cli">
-                    <div className="redis-cli-head">命令行</div>
-                    <div className="redis-cli-row">
+                <div className={r.redisCli}>
+                    <div className={r.redisCliHead}>命令行</div>
+                    <div className={r.redisCliRow}>
                         <input
                             value={cmd}
                             placeholder="例如 GET foo / HGETALL myhash"
                             onChange={(e) => setCmd(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && runCmd()}
                         />
-                        <button className="btn sm" onClick={runCmd} disabled={busy}>执行</button>
+                        <button className={`${g.btn} ${g.sm}`} onClick={runCmd} disabled={busy}>执行</button>
                     </div>
-                    <pre className="redis-cli-result">{cmdResult}</pre>
+                    <pre className={r.redisCliResult}>{cmdResult}</pre>
                 </div>
             </div>
         </div>

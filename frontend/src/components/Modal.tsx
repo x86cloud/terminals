@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react'
+import g from '../styles/global.module.less'
 
 interface BaseProps {
     open: boolean
@@ -21,14 +22,14 @@ export function Modal({open, title, onClose, children, footer, width = 460}: Bas
 
     if (!open) return null
     return (
-        <div className="modal-mask" onMouseDown={onClose}>
-            <div className="modal" style={{width}} onMouseDown={(e) => e.stopPropagation()}>
-                <div className="modal-head">
+        <div className={g.modalMask} onMouseDown={onClose}>
+            <div className={g.modal} style={{width}} onMouseDown={(e) => e.stopPropagation()}>
+                <div className={g.modalHead}>
                     <span>{title}</span>
-                    <button className="icon-btn" onClick={onClose} title="关闭">✕</button>
+                    <button className={g.iconBtn} onClick={onClose} title="关闭">✕</button>
                 </div>
-                <div className="modal-body">{children}</div>
-                {footer && <div className="modal-foot">{footer}</div>}
+                <div className={g.modalBody}>{children}</div>
+                {footer && <div className={g.modalFoot}>{footer}</div>}
             </div>
         </div>
     )
@@ -77,12 +78,12 @@ export function PromptModal({
             onClose={onCancel}
             footer={
                 <>
-                    <button className="btn" onClick={onCancel}>取消</button>
-                    <button className="btn primary" onClick={submit}>{state.confirmText || '确定'}</button>
+                    <button className={g.btn} onClick={onCancel}>取消</button>
+                    <button className={`${g.btn} ${g.primary}`} onClick={submit}>{state.confirmText || '确定'}</button>
                 </>
             }
         >
-            <label className="field">
+            <label className={g.field}>
                 <span>{state.label || '名称'}</span>
                 <input
                     ref={inputRef}
@@ -113,9 +114,9 @@ export function ConfirmModal({state, onCancel}: { state: ConfirmState; onCancel:
             onClose={onCancel}
             footer={
                 <>
-                    <button className="btn" onClick={onCancel}>取消</button>
+                    <button className={g.btn} onClick={onCancel}>取消</button>
                     <button
-                        className={`btn ${state.danger ? 'danger' : 'primary'}`}
+                        className={`${g.btn} ${state.danger ? g.danger : g.primary}`}
                         onClick={() => state.onConfirm?.()}
                     >
                         确定
@@ -123,7 +124,7 @@ export function ConfirmModal({state, onCancel}: { state: ConfirmState; onCancel:
                 </>
             }
         >
-            <p className="confirm-text">{state.message}</p>
+            <p className={g.confirmText}>{state.message}</p>
         </Modal>
     )
 }

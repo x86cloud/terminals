@@ -6,6 +6,7 @@ import 'xterm/css/xterm.css'
 import {API, subscribe} from '../api'
 import {base64ToBytes} from '../utils'
 import ContextMenu, {closedMenu, MenuState} from './ContextMenu'
+import t from '../styles/Terminal.module.less'
 
 interface Props {
     sessionId: string
@@ -135,10 +136,10 @@ export default function TerminalView({sessionId, active}: Props) {
     }
 
     return (
-        <div className="terminal-wrap">
+        <div className={t.terminalWrap}>
             <div
                 ref={hostRef}
-                className="terminal-host"
+                className={t.terminalHost}
                 onContextMenu={(e) => {
                     e.preventDefault()
                     setMenu({

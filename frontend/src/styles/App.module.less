@@ -1,0 +1,73 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+.app {
+    display: flex;
+    height: 100%;
+}
+
+.main {
+    flex: 1;
+    .fill();
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+}
+
+.stage {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    position: relative;
+    display: flex;
+}
+
+/* 标签栏 */
+.tabbar {
+    display: flex;
+    align-items: stretch;
+    height: 36px;
+    background: @bg;
+    border-bottom: 1px solid @border;
+    overflow-x: auto;
+}
+
+.tab {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 0 10px 0 12px;
+    border-right: 1px solid @border;
+    color: @text-dim;
+    cursor: pointer;
+    max-width: 220px;
+    .ellipsis();
+
+    &.active {
+        background: @bg-1;
+        color: @text;
+        box-shadow: inset 0 2px 0 @accent;
+    }
+}
+
+.tabTitle {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tabClose {
+    display: flex;
+    align-items: center;
+    background: transparent;
+    border: none;
+    padding: 2px;
+    border-radius: 4px;
+    color: inherit;
+    opacity: .6;
+    cursor: pointer;
+
+    &:hover {
+        background: @bg-3;
+        opacity: 1;
+    }
+}

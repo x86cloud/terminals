@@ -3,6 +3,7 @@ import TerminalView from './TerminalView'
 import FilePanel from './FilePanel'
 import Icon from './Icon'
 import {SessionInfo} from '../types'
+import w from '../styles/SessionWorkspace.module.less'
 
 interface Props {
     session: SessionInfo
@@ -45,11 +46,11 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
     }, [])
 
     return (
-        <div ref={rootRef} className="workspace" style={{display: active ? 'flex' : 'none'}}>
-            <div className="terminal-pane">
+        <div ref={rootRef} className={w.workspace} style={{display: active ? 'flex' : 'none'}}>
+            <div className={w.terminalPane}>
                 <TerminalView sessionId={session.id} active={active}/>
                 <button
-                    className="panel-toggle"
+                    className={w.panelToggle}
                     title={showPanel ? '隐藏文件管理器' : '显示文件管理器'}
                     onClick={() => setShowPanel((v) => !v)}
                 >
@@ -60,13 +61,13 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
             {showPanel && (
                 <>
                     <div
-                        className="splitter"
+                        className={w.splitter}
                         onMouseDown={() => {
                             draggingRef.current = true
                             document.body.classList.add('resizing')
                         }}
                     />
-                    <div className="file-pane" style={{width: panelWidth}}>
+                    <div className={w.filePane} style={{width: panelWidth}}>
                         <FilePanel
                             sessionId={session.id}
                             homeDir={session.homeDir}

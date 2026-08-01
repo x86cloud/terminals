@@ -1,0 +1,17 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+.terminalWrap {
+    position: absolute;
+    inset: 0;
+    padding: 6px 4px 6px 8px;
+}
+
+.terminalHost {
+    width: 100%;
+    height: 100%;
+
+    .xterm .xterm-viewport::-webkit-scrollbar {
+        width: 10px;
+    }
+}

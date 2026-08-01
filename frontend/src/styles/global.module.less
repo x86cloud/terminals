@@ -1,0 +1,504 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+/* ============================================================
+ * 全局可组合样式基元（Composable Primitives）
+ * 其他组件通过 `composes: btn from './styles/global.module.less'` 复用，
+ * 既能保持 `className="btn"` 的书写习惯，又实现真正的样式隔离。
+ * ============================================================ */
+
+.btn {
+    padding: 5px 12px;
+    background: @bg-3;
+    border: 1px solid @border;
+    border-radius: @radius;
+    color: @text;
+
+    &:hover {
+        border-color: #c2ccd8;
+        background: #e8edf3;
+    }
+
+    &.primary {
+        background: @accent-dim;
+        border-color: @accent-dim;
+        color: #fff;
+
+        &:hover {
+            background: #0f6a96;
+        }
+    }
+
+    &.danger {
+        background: @danger;
+        border-color: @danger;
+        color: #fff;
+
+        &:hover {
+            background: #b73b35;
+            border-color: #b73b35;
+        }
+    }
+
+    &.small, &.sm {
+        padding: 4px 10px;
+        font-size: 12px;
+    }
+
+    &:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+}
+
+.iconBtn {
+    .icon-btn-base();
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* 分段控制器 */
+.segmented {
+    display: inline-flex;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    overflow: hidden;
+    width: fit-content;
+
+    button {
+        padding: 6px 18px;
+        background: transparent;
+        border: none;
+        color: @text-dim;
+        cursor: pointer;
+
+        &.active {
+            background: @accent-dim;
+            color: #fff;
+        }
+    }
+
+    &.sm button {
+        padding: 4px 12px;
+        font-size: 12px;
+    }
+}
+
+/* 连接状态圆点 */
+.dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #b6bfcc;
+    flex: none;
+
+    &.on {
+        background: @ok;
+    }
+}
+
+/* 表单字段 */
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    > span {
+        color: @text-dim;
+        font-size: 12px;
+    }
+
+    input {
+        .input-base();
+    }
+
+    select {
+        width: 100%;
+        background: @bg-1;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        color: @text;
+        padding: 6px 8px;
+        font-size: 13px;
+        height: 30px;
+    }
+
+    textarea {
+        width: 100%;
+        background: @bg-1;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        color: @text;
+        padding: 6px 8px;
+        font-family: inherit;
+        font-size: 13px;
+        resize: vertical;
+        line-height: 1.5;
+    }
+
+    &.grow {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &.port {
+        width: 96px;
+    }
+
+    .groupTitle {
+        font-size: 12px;
+        color: @text-dim;
+        font-weight: 600;
+        margin-top: 4px;
+    }
+}
+
+.fieldRow {
+    display: flex;
+    gap: @space-md;
+    align-items: flex-end;
+
+    .grow {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.formError {
+    color: @danger;
+    font-size: 12px;
+}
+
+.formGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* 开关 Toggle */
+.switchField {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: @text;
+    cursor: pointer;
+
+    &.inline {
+        justify-content: flex-start;
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 38px;
+    height: 20px;
+    flex: 0 0 auto;
+
+    input {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+        margin: 0;
+    }
+
+    .slider {
+        position: absolute;
+        inset: 0;
+        background: @bg-elev;
+        border: 1px solid @border;
+        border-radius: @radius-pill;
+        transition: background @transition, border-color @transition;
+        cursor: pointer;
+
+        &::before {
+            content: "";
+            position: absolute;
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            top: 2px;
+            background: @text-dim;
+            border-radius: 50%;
+            transition: transform @transition, background @transition;
+        }
+    }
+
+    input:checked + .slider {
+        background: @accent;
+        border-color: @accent;
+
+        &::before {
+            transform: translateX(20px);
+            background: #fff;
+        }
+    }
+
+    input:focus-visible + .slider {
+        box-shadow: 0 0 0 2px @accent-dim;
+    }
+}
+
+/* MQTT 高级参数折叠 */
+.advToggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: none;
+    color: @accent;
+    cursor: pointer;
+    padding: 4px 0;
+    font-size: 12px;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+/* ---------------- 弹窗 ---------------- */
+.modalMask {
+    position: fixed;
+    inset: 0;
+    z-index: @z-modal;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .5);
+}
+
+.modal {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-xl;
+    box-shadow: @shadow-modal;
+    overflow: hidden;
+}
+
+.modalHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    font-weight: 600;
+    border-bottom: 1px solid @border;
+}
+
+.modalBody {
+    padding: 14px;
+    max-height: 62vh;
+    overflow: auto;
+}
+
+.modalFoot {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 10px 14px;
+    border-top: 1px solid @border;
+
+    .btn:first-of-type {
+        margin-left: auto;
+    }
+
+    .spacer + .btn {
+        margin-left: 0;
+    }
+}
+
+.confirmText {
+    margin: 0;
+    line-height: 1.8;
+}
+
+/* ---------------- 导入/导出弹窗 ---------------- */
+.ioModal {
+    width: 460px;
+    max-width: 92vw;
+}
+
+.ioHint {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: @text-faint;
+    line-height: 1.6;
+}
+
+.ioMsg {
+    margin-top: 12px;
+    padding: 8px 10px;
+    border-radius: @radius-md;
+    font-size: 13px;
+    word-break: break-all;
+
+    &.ok {
+        background: @ok-bg;
+        color: @ok-text;
+    }
+
+    &.err {
+        background: @danger-bg;
+        color: @danger-text;
+    }
+}
+
+/* ---------------- 提示 ---------------- */
+.toasts {
+    position: fixed;
+    right: @space-xl;
+    bottom: @space-xl;
+    z-index: @z-toast;
+    display: flex;
+    flex-direction: column;
+    gap: @space-md;
+    pointer-events: none;
+}
+
+.toast {
+    padding: 8px 14px;
+    background: @bg-3;
+    border: 1px solid @border;
+    border-left: 3px solid @accent;
+    border-radius: @radius-md;
+    box-shadow: @shadow-toast;
+    max-width: 380px;
+
+    &.error {
+        border-left-color: @danger;
+    }
+}
+
+/* ---------------- 右键菜单 ---------------- */
+.contextMenu {
+    position: fixed;
+    z-index: @z-context-menu;
+    min-width: 180px;
+    padding: @space-xs;
+    background: @bg-3;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    box-shadow: @shadow-menu;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    width: 100%;
+    padding: 6px 9px;
+    background: transparent;
+    border: none;
+    border-radius: @radius;
+    text-align: left;
+    color: @text;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: @accent-dim;
+        color: #fff;
+    }
+
+    &:disabled {
+        opacity: .4;
+        cursor: not-allowed;
+    }
+
+    &.danger {
+        color: @danger;
+
+        &:hover {
+            background: @danger;
+            color: #fff;
+        }
+    }
+}
+
+.menuIcon {
+    display: flex;
+    width: 15px;
+    color: inherit;
+}
+
+.menuDivider {
+    height: 1px;
+    margin: 4px 6px;
+    background: @border;
+}
+
+/* ---------------- 空状态 ---------------- */
+.emptyStage {
+    margin: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: @space-md;
+    color: @text-dim;
+    text-align: center;
+    padding: 24px;
+
+    svg {
+        color: @accent-dim;
+    }
+
+    h2 {
+        margin: 4px 0 0;
+        font-size: 17px;
+        color: @text;
+        font-weight: 600;
+    }
+
+    p {
+        margin: 0 0 8px;
+        max-width: 460px;
+        line-height: 1.7;
+    }
+}
+
+.emptyActions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+/* ---------------- 客户端类型图标 ---------------- */
+.clientIcon {
+    display: block;
+    flex: 0 0 auto;
+}
+
+.serverIcon {
+    color: @text-dim;
+    display: flex;
+
+    svg {
+        width: 16px;
+        height: 16px;
+    }
+
+    .clientIcon {
+        width: 18px;
+        height: 18px;
+        object-fit: contain;
+    }
+}
+
+.tabClientIcon {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+}
+
+.segmentedClientIcon {
+    width: 13px;
+    height: 13px;
+    object-fit: contain;
+    vertical-align: -2px;
+}

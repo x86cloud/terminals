@@ -12,6 +12,8 @@ import {ConfirmModal, ConfirmState} from './components/Modal'
 import {API, registerNativeFileDrop, subscribe, unregisterNativeFileDrop} from './api'
 import {ServerConfig, SessionInfo, Transfer, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, ConnType} from './types'
 import {errorMessage} from './utils'
+import g from './styles/global.module.less'
+import a from './styles/App.module.less'
 
 interface Toast {
     id: number
@@ -329,7 +331,7 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
     }, [])
 
     return (
-        <div className="app">
+        <div className={a.app}>
             <Sidebar
                 servers={servers}
                 sessions={sessions}
@@ -348,19 +350,19 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                 onFocusSession={(id, kind) => focusSession(id, kind)}
             />
 
-            <main className="main">
-                <div className="tabbar">
+            <main className={a.main}>
+                <div className={a.tabbar}>
                     {sessions.map((s) => (
                         <div
                             key={s.id}
-                            className={`tab${s.id === activeId ? ' active' : ''}`}
+                            className={`${a.tab}${s.id === activeId ? ' ' + a.active : ''}`}
                             onClick={() => focusSession(s.id, 'ssh')}
                         >
                             <ClientIcon kind="ssh" size={12}/>
-                            <span className={`dot${s.connected ? ' on' : ''}`}/>
-                            <span className="tab-title">{s.title}</span>
+                            <span className={`${g.dot}${s.connected ? ' ' + g.on : ''}`}/>
+                            <span className={a.tabTitle}>{s.title}</span>
                             <button
-                                className="tab-close"
+                                className={a.tabClose}
                                 title="关闭会话"
                                 onClick={(e) => {
                                     e.stopPropagation()
@@ -374,14 +376,14 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                     {redisSessions.map((s) => (
                         <div
                             key={s.id}
-                            className={`tab${s.id === activeRedisId ? ' active' : ''}`}
+                            className={`${a.tab}${s.id === activeRedisId ? ' ' + a.active : ''}`}
                             onClick={() => focusSession(s.id, 'redis')}
                         >
                             <ClientIcon kind="redis" size={12}/>
-                            <span className={`dot on`}/>
-                            <span className="tab-title">{s.title} · DB{s.db}</span>
+                            <span className={`${g.dot} ${g.on}`}/>
+                            <span className={a.tabTitle}>{s.title} · DB{s.db}</span>
                             <button
-                                className="tab-close"
+                                className={a.tabClose}
                                 title="关闭连接"
                                 onClick={(e) => {
                                     e.stopPropagation()
@@ -395,14 +397,14 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                     {mysqlSessions.map((s) => (
                         <div
                             key={s.id}
-                            className={`tab${s.id === activeMysqlId ? ' active' : ''}`}
+                            className={`${a.tab}${s.id === activeMysqlId ? ' ' + a.active : ''}`}
                             onClick={() => focusSession(s.id, 'mysql')}
                         >
                             <ClientIcon kind="mysql" size={12}/>
-                            <span className={`dot on`}/>
-                            <span className="tab-title">{s.title}{s.database ? ` · ${s.database}` : ''}</span>
+                            <span className={`${g.dot} ${g.on}`}/>
+                            <span className={a.tabTitle}>{s.title}{s.database ? ` · ${s.database}` : ''}</span>
                             <button
-                                className="tab-close"
+                                className={a.tabClose}
                                 title="关闭连接"
                                 onClick={(e) => {
                                     e.stopPropagation()
@@ -416,14 +418,14 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                     {mqttSessions.map((s) => (
                         <div
                             key={s.id}
-                            className={`tab${s.id === activeMqttId ? ' active' : ''}`}
+                            className={`${a.tab}${s.id === activeMqttId ? ' ' + a.active : ''}`}
                             onClick={() => focusSession(s.id, 'mqtt')}
                         >
                             <ClientIcon kind="mqtt" size={12}/>
-                            <span className={`dot on`}/>
-                            <span className="tab-title">{s.host}:{s.port}</span>
+                            <span className={`${g.dot} ${g.on}`}/>
+                            <span className={a.tabTitle}>{s.host}:{s.port}</span>
                             <button
-                                className="tab-close"
+                                className={a.tabClose}
                                 title="关闭连接"
                                 onClick={(e) => {
                                     e.stopPropagation()
@@ -434,10 +436,10 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                             </button>
                         </div>
                     ))}
-                    <span className="spacer"/>
+                    <span className={g.spacer}/>
                 </div>
 
-                <div className="stage">
+                <div className={a.stage}>
                     {sessions.map((s) => (
                         <SessionWorkspace
                             key={s.id}
@@ -487,12 +489,12 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                     ))}
 
                     {sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && (
-                        <div className="empty-stage">
+                        <div className={g.emptyStage}>
                             <Icon name="terminal" size={44}/>
                             <h2>SSH 终端 + SFTP 文件管理</h2>
                             <p>在左侧添加服务器（SSH、Redis、MySQL 或 MQTT）后双击即可连接。MQTT 客户端支持主题订阅、消息发布与实时收发。</p>
-                            <div className="empty-actions">
-                                <button className="btn primary" onClick={() => addServer()}>新建服务器</button>
+                            <div className={g.emptyActions}>
+                                <button className={`${g.btn} ${g.primary}`} onClick={() => addServer()}>新建服务器</button>
                             </div>
                         </div>
                     )}
@@ -522,9 +524,9 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
 
             <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
 
-            <div className="toasts">
+            <div className={g.toasts}>
                 {toasts.map((t) => (
-                    <div key={t.id} className={`toast ${t.kind}`}>
+                    <div key={t.id} className={`${g.toast}${t.kind === 'error' ? ' ' + g.error : ''}`}>
                         {t.message}
                     </div>
                 ))}

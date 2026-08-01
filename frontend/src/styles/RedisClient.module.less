@@ -1,0 +1,235 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+.redisPane {
+    display: flex;
+    flex: 1;
+    .fill();
+    width: 100%;
+}
+
+.redisSide {
+    width: 240px;
+    border-right: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    .fill();
+    background: @bg-1;
+}
+
+.redisSideHead {
+    display: flex;
+    gap: 4px;
+    padding: 8px;
+    border-bottom: 1px solid @border;
+}
+
+.redisSearch {
+    flex: 1;
+    .fill();
+    padding: 4px 8px;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    background: @bg;
+    color: @text;
+    font-size: 12px;
+    outline: none;
+}
+
+.redisKeys {
+    flex: 1;
+    overflow: auto;
+    padding: 4px;
+}
+
+.redisDbBar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.redisDbLabel {
+    font-weight: 600;
+    color: @text;
+}
+
+.redisDbInput {
+    width: 56px;
+    padding: 3px 6px;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    background: @bg;
+    color: @text;
+    outline: none;
+}
+
+.redisDbCount {
+    margin-left: auto;
+    font-size: 11px;
+    color: @text-dim;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.redisKey {
+    padding: 5px 8px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: @text;
+
+    &:hover {
+        background: @bg;
+    }
+
+    &.active {
+        background: @accent-dim;
+        color: #fff;
+    }
+}
+
+.redisEmpty {
+    padding: 18px;
+    text-align: center;
+    color: @text-dim;
+    font-size: 13px;
+}
+
+.redisMain {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    .fill();
+    padding: 12px;
+    gap: 10px;
+}
+
+.redisMsg {
+    font-size: 12px;
+    color: @accent;
+    padding: 4px 8px;
+    background: @accent-dim-2;
+    border-radius: 4px;
+}
+
+.redisValueHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.redisKeyName {
+    font-weight: 600;
+    color: @text;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 50%;
+}
+
+.redisTypeBadge {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: @accent-dim;
+    color: #fff;
+    border-radius: 10px;
+}
+
+.redisTtl {
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.redisEditor {
+    flex: 1;
+    min-height: 120px;
+    resize: none;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 8px;
+    background: @bg-1;
+    color: @text;
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.5;
+    outline: none;
+}
+
+.redisValueActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.redisTtlInput {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: @text-dim;
+
+    input {
+        width: 80px;
+        padding: 4px 6px;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        background: @bg-1;
+        color: @text;
+        outline: none;
+    }
+}
+
+.redisCli {
+    border-top: 1px solid @border;
+    padding-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.redisCliHead {
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.redisCliRow {
+    display: flex;
+    gap: 6px;
+
+    input {
+        flex: 1;
+        padding: 6px 8px;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        background: @bg-1;
+        color: @text;
+        font-family: @font-mono;
+        font-size: 12px;
+        outline: none;
+    }
+}
+
+.redisCliResult {
+    margin: 0;
+    min-height: 40px;
+    max-height: 160px;
+    overflow: auto;
+    padding: 8px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    font-family: @font-mono;
+    font-size: 12px;
+    color: @text;
+    white-space: pre-wrap;
+    word-break: break-all;
+}

@@ -1,0 +1,78 @@
+/* ============================================================
+ * 全局样式（非组件作用域）
+ * 仅保留：CSS 变量定义、根节点布局、原生滚动条、第三方库 xterm
+ * 组件样式已全部迁移到各自的 .module.less（CSS Modules）
+ * ============================================================ */
+
+:root {
+    --bg: #eef1f6;
+    --bg-1: #ffffff;
+    --bg-2: #f3f6fa;
+    --bg-3: #e3e9f1;
+    --border: #d4dbe6;
+    --text: #1f2733;
+    --text-dim: #6b7686;
+    --text-faint: #aab3c0;
+    --accent: #1c8fc4;
+    --accent-dim: #1577a6;
+    --accent-dim-2: rgba(28, 143, 196, 0.12);
+    --danger: #d6453f;
+    --ok: #2f9e44;
+    --bg-elev: #f5f7fa;
+
+    font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 13px;
+    color: var(--text);
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body, #root {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background: var(--bg);
+}
+
+body.resizing {
+    cursor: col-resize;
+    user-select: none;
+}
+
+button {
+    font-family: inherit;
+    font-size: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+input {
+    font-family: inherit;
+    font-size: inherit;
+}
+
+/* ---------------- 滚动条 ---------------- */
+
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c2ccd8;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #aab6c4;
+    background-clip: content-box;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}

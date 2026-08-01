@@ -1,0 +1,262 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+.mqttPane {
+    display: flex;
+    flex: 1;
+    .fill();
+    background: @bg;
+}
+
+.mqttSide {
+    width: 220px;
+    border-right: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    .fill();
+    background: @bg-elev;
+}
+
+.mqttSubHead {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 8px 12px;
+    border-bottom: 1px solid @border;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.mqttSubList {
+    flex: 1;
+    overflow: auto;
+    padding: 6px;
+}
+
+.mqttSubItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 6px 8px;
+    border-radius: @radius-md;
+    border: 1px solid @border;
+    margin-bottom: 6px;
+    background: @bg;
+}
+
+.mqttSubTopic {
+    font-size: 12px;
+    word-break: break-all;
+}
+
+.mqttSubMeta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 0 0 auto;
+}
+
+.qosBadge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: @accent;
+    color: #fff;
+}
+
+.mqttMain {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    .fill();
+}
+
+.mqttToolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid @border;
+    background: @bg-elev;
+}
+
+.mqttConnTitle {
+    font-weight: 600;
+}
+
+.mqttClientId {
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.mqttStatus {
+    font-size: 12px;
+    padding: 1px 8px;
+    border-radius: 10px;
+
+    &.on {
+        background: rgba(72, 199, 116, 0.2);
+        color: #48c774;
+    }
+
+    &.off {
+        background: rgba(224, 92, 92, 0.2);
+        color: #e05c5c;
+    }
+}
+
+.mqttError {
+    color: #e05c5c;
+    font-size: 12px;
+}
+
+.mqttPub {
+    padding: 10px 12px;
+    border-bottom: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    gap: @space-md;
+}
+
+.mqttFieldRow {
+    display: flex;
+    gap: @space-md;
+    align-items: center;
+}
+
+.mqttInputTopic {
+    flex: 1;
+    .fill();
+    .input-base();
+}
+
+.mqttQos {
+    width: 92px;
+}
+
+.mqttRetained {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.mqttPubPayload {
+    width: 100%;
+    height: 80px;
+    resize: vertical;
+    font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    background: @bg;
+    color: @text;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 6px 8px;
+    outline: none;
+
+    &:focus {
+        border-color: @accent;
+    }
+}
+
+.mqttSubBar {
+    display: flex;
+    gap: @space-md;
+    padding: 10px 12px;
+    border-bottom: 1px solid @border;
+    background: @bg-elev;
+}
+
+.mqttLog {
+    flex: 1;
+    overflow: auto;
+    padding: 8px 12px;
+    .fill();
+}
+
+.mqttMsg {
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    margin-bottom: 8px;
+    background: @bg-elev;
+
+    &.in {
+        border-left: 3px solid @accent;
+    }
+
+    &.out {
+        border-left: 3px solid #48c774;
+    }
+}
+
+.mqttMsgHead {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 4px 8px;
+    border-bottom: 1px solid @border;
+    font-size: 12px;
+}
+
+.mqttDir {
+    font-size: 10px;
+    padding: 0 6px;
+    border-radius: 3px;
+    color: #fff;
+
+    &.in {
+        background: @accent;
+    }
+
+    &.out {
+        background: #48c774;
+    }
+}
+
+.mqttMsgTopic {
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.mqttMsgTime {
+    color: @text-faint;
+    margin-left: auto;
+}
+
+.retainedBadge {
+    font-size: 10px;
+    padding: 0 5px;
+    border-radius: 3px;
+    background: #e0a91e;
+    color: #fff;
+}
+
+.mqttMsgPayload {
+    margin: 0;
+    padding: 6px 8px;
+    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 240px;
+    overflow: auto;
+}
+
+.mqttEmpty {
+    padding: 24px;
+    text-align: center;
+    color: @text-dim;
+
+    &.small {
+        padding: 12px;
+        font-size: 12px;
+    }
+}
+
+.mqttCount {
+    font-size: 12px;
+    color: @text-dim;
+    white-space: nowrap;
+    flex-shrink: 0;
+}

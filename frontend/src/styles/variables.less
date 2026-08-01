@@ -1,0 +1,67 @@
+// ============================================================
+// 设计变量（Design Tokens）
+// 统一管理主题色、间距、字体、圆角、层级等设计规范
+// ============================================================
+
+// ---- 主题色 ----
+@bg: #eef1f6;                 // 页面最底层背景
+@bg-1: #ffffff;              // 卡片 / 浮层 / 侧栏背景
+@bg-2: #f3f6fa;              // 次级背景（悬浮、表头等）
+@bg-3: #e3e9f1;              // 按钮 / 边框底纹 / 凹陷背景
+@border: #d4dbe6;            // 主边框色
+@text: #1f2733;              // 主文字
+@text-dim: #6b7686;          // 次要文字
+@text-faint: #aab3c0;        // 极淡文字（行号、占位）
+@accent: #1c8fc4;            // 主题强调色
+@accent-dim: #1577a6;        // 强调色（按下 / 选中）
+@accent-dim-2: rgba(28, 143, 196, 0.12);
+@danger: #d6453f;            // 危险 / 错误
+@ok: #2f9e44;                // 成功
+@warn: #c97a1a;              // 警告
+@bg-elev: #f5f7fa;           // 抬升背景（输入框 / 列表项）
+
+// ---- 透明度辅助色 ----
+@danger-bg: rgba(239, 68, 68, 0.12);
+@danger-text: #f87171;
+@ok-bg: rgba(34, 197, 94, 0.12);
+@ok-text: #4ade80;
+@warn-bg: rgba(240, 180, 40, 0.12);
+@select-bg: rgba(28, 143, 196, 0.14);
+@drop-bg: rgba(76, 194, 255, 0.1);
+
+// ---- 间距 ----
+@space-xs: 4px;
+@space-sm: 6px;
+@space-md: 8px;
+@space-lg: 12px;
+@space-xl: 16px;
+
+// ---- 圆角 ----
+@radius-sm: 4px;
+@radius: 5px;
+@radius-md: 6px;
+@radius-lg: 8px;
+@radius-xl: 10px;
+@radius-pill: 999px;
+
+// ---- 字体 ----
+@font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif;
+@font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+@font-size: 13px;
+@font-size-sm: 11.5px;
+@font-size-xs: 11px;
+
+// ---- 层级 ----
+@z-context-menu: 100;
+@z-modal: 200;
+@z-toast: 300;
+
+// ---- 主题阴影 ----
+@shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.55);
+@shadow-menu: 0 12px 32px rgba(0, 0, 0, 0.45);
+@shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4);
+@shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+// ---- 过渡 ----
+@transition-fast: .15s;
+@transition: .2s;

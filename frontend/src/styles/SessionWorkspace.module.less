@@ -1,0 +1,53 @@
+@import (reference) 'variables.less';
+@import (reference) 'mixins.less';
+
+.workspace {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    .fill();
+}
+
+.terminalPane {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    background: @bg-1;
+}
+
+.filePane {
+    flex: none;
+    min-width: 320px;
+    border-left: 1px solid @border;
+    background: @bg-2;
+    display: flex;
+}
+
+.splitter {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+
+    &:hover {
+        background: @accent-dim;
+    }
+}
+
+.panelToggle {
+    position: absolute;
+    right: @space-md;
+    top: @space-md;
+    display: flex;
+    padding: 5px;
+    background: rgba(255, 255, 255, .9);
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    color: @text-dim;
+    opacity: .5;
+    cursor: pointer;
+
+    &:hover {
+        opacity: 1;
+        color: @text;
+    }
+}

@@ -1,5 +1,6 @@
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
 import Icon, {IconName} from './Icon'
+import g from '../styles/global.module.less'
 
 export interface MenuItem {
     key: string
@@ -58,25 +59,25 @@ export default function ContextMenu({state, onClose}: { state: MenuState; onClos
     return (
         <div
             ref={ref}
-            className="context-menu"
+            className={g.contextMenu}
             style={{left: pos.x, top: pos.y}}
             onMouseDown={(e) => e.stopPropagation()}
             onContextMenu={(e) => e.preventDefault()}
         >
             {state.items.map((item) =>
                 item.divider ? (
-                    <div key={item.key} className="menu-divider"/>
+                    <div key={item.key} className={g.menuDivider}/>
                 ) : (
                     <button
                         key={item.key}
-                        className={`menu-item${item.danger ? ' danger' : ''}`}
+                        className={`${g.menuItem}${item.danger ? ' ' + g.danger : ''}`}
                         disabled={item.disabled}
                         onClick={() => {
                             onClose()
                             item.onClick?.()
                         }}
                     >
-                        <span className="menu-icon">{item.icon && <Icon name={item.icon} size={15}/>}</span>
+                        <span className={g.menuIcon}>{item.icon && <Icon name={item.icon} size={15}/>}</span>
                         {item.label}
                     </button>
                 )

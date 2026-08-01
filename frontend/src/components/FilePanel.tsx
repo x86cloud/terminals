@@ -5,6 +5,8 @@ import {ConfirmModal, ConfirmState, PromptModal, PromptState} from './Modal'
 import {API, subscribe} from '../api'
 import {FileItem} from '../types'
 import {bytesToBase64, errorMessage, formatSize, formatTime, parentRemote} from '../utils'
+import g from '../styles/global.module.less'
+import fp from '../styles/FilePanel.module.less'
 
 interface Props {
     sessionId: string
@@ -249,7 +251,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
 
     return (
         <section
-            className={`file-panel${dragOver ? ' drag-over' : ''}`}
+            className={`${fp.filePanel}${dragOver ? ' ' + fp.dragOver : ''}`}
             data-session={sessionId}
             onDragOver={(e) => {
                 if (nativeDrop) return
@@ -259,18 +261,18 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
             onDragLeave={() => !nativeDrop && setDragOver(false)}
             onDrop={onDrop}
         >
-            <div className="file-toolbar">
-                <button className="icon-btn" title="上级目录" onClick={() => load(parentRemote(path))}>
+            <div className={fp.fileToolbar}>
+                <button className={g.iconBtn} title="上级目录" onClick={() => load(parentRemote(path))}>
                     <Icon name="up"/>
                 </button>
-                <button className="icon-btn" title="主目录" onClick={() => load(homeDir || '/')}>
+                <button className={g.iconBtn} title="主目录" onClick={() => load(homeDir || '/')}>
                     <Icon name="home"/>
                 </button>
-                <button className="icon-btn" title="刷新" onClick={() => load(path)}>
+                <button className={g.iconBtn} title="刷新" onClick={() => load(path)}>
                     <Icon name="refresh"/>
                 </button>
                 <input
-                    className="path-input"
+                    className={fp.pathInput}
                     value={pathInput}
                     onChange={(e) => setPathInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -278,32 +280,32 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     }}
                     spellCheck={false}
                 />
-                <button className="icon-btn" title="上传文件" onClick={uploadViaDialog}>
+                <button className={g.iconBtn} title="上传文件" onClick={uploadViaDialog}>
                     <Icon name="upload"/>
                 </button>
-                <button className="icon-btn" title="新建文件夹" onClick={askNewFolder}>
+                <button className={g.iconBtn} title="新建文件夹" onClick={askNewFolder}>
                     <Icon name="newFolder"/>
                 </button>
             </div>
 
-            <div className="file-subbar">
-                <div className="crumbs">
+            <div className={fp.fileSubbar}>
+                <div className={fp.crumbs}>
                     {breadcrumbs.map((crumb, i) => (
                         <React.Fragment key={crumb.full}>
-                            {i > 0 && <span className="crumb-sep">/</span>}
-                            <button className="crumb" onClick={() => load(crumb.full)}>
+                            {i > 0 && <span className={fp.crumbSep}>/</span>}
+                            <button className={fp.crumb} onClick={() => load(crumb.full)}>
                                 {crumb.name}
                             </button>
                         </React.Fragment>
                     ))}
                 </div>
                 <input
-                    className="filter-input"
+                    className={fp.filterInput}
                     value={filter}
                     placeholder="过滤"
                     onChange={(e) => setFilter(e.target.value)}
                 />
-                <label className="checkbox">
+                <label className={fp.checkbox}>
                     <input
                         type="checkbox"
                         checked={showHidden}
@@ -314,7 +316,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
             </div>
 
             <div
-                className="file-list"
+                className={fp.fileList}
                 onContextMenu={(e) => {
                     e.preventDefault()
                     setSelected([])
@@ -324,21 +326,21 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     if (e.target === e.currentTarget) setSelected([])
                 }}
             >
-                <div className="file-row head">
-                    <span className="col-name">名称</span>
-                    <span className="col-size">大小</span>
-                    <span className="col-time">修改时间</span>
-                    <span className="col-mode">权限</span>
+                <div className={`${fp.fileRow} ${fp.head}`}>
+                    <span className={fp.colName}>名称</span>
+                    <span className={fp.colSize}>大小</span>
+                    <span className={fp.colTime}>修改时间</span>
+                    <span className={fp.colMode}>权限</span>
                 </div>
 
-                {loading && <div className="file-empty">加载中…</div>}
-                {!loading && visible.length === 0 && <div className="file-empty">空目录，拖入文件即可上传</div>}
+                {loading && <div className={fp.fileEmpty}>加载中…</div>}
+                {!loading && visible.length === 0 && <div className={fp.fileEmpty}>空目录，拖入文件即可上传</div>}
 
                 {!loading &&
                     visible.map((item, index) => (
                         <div
                             key={item.path}
-                            className={`file-row${selected.includes(item.path) ? ' selected' : ''}`}
+                            className={`${fp.fileRow}${selected.includes(item.path) ? ' ' + fp.selected : ''}`}
                             onClick={(e) => onRowClick(e, item, index)}
                             onDoubleClick={() => open(item)}
                             onContextMenu={(e) => {
@@ -349,27 +351,27 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                                 setMenu({open: true, x: e.clientX, y: e.clientY, items: itemMenu(item, targets)})
                             }}
                         >
-                            <span className="col-name">
-                                <span className={`file-icon${item.isDir ? ' dir' : ''}`}>
+                            <span className={fp.colName}>
+                                <span className={`${fp.fileIcon}${item.isDir ? ' ' + fp.dir : ''}`}>
                                     <Icon name={item.isLink ? 'link' : item.isDir ? 'folder' : 'file'}/>
                                 </span>
-                                <span className="file-name" title={item.path}>{item.name}</span>
+                                <span className={fp.fileName} title={item.path}>{item.name}</span>
                             </span>
-                            <span className="col-size">{item.isDir ? '-' : formatSize(item.size)}</span>
-                            <span className="col-time">{formatTime(item.modTime)}</span>
-                            <span className="col-mode">{item.mode}</span>
+                            <span className={fp.colSize}>{item.isDir ? '-' : formatSize(item.size)}</span>
+                            <span className={fp.colTime}>{formatTime(item.modTime)}</span>
+                            <span className={fp.colMode}>{item.mode}</span>
                         </div>
                     ))}
             </div>
 
-            <div className="file-status">
+            <div className={fp.fileStatus}>
                 <span>{visible.length} 项</span>
                 {selectedItems.length > 0 && <span>已选 {selectedItems.length}</span>}
-                <span className="spacer"/>
-                <span className="hint">拖拽文件到此处上传 · 右键管理</span>
+                <span className={g.spacer}/>
+                <span className={fp.hint}>拖拽文件到此处上传 · 右键管理</span>
             </div>
 
-            <div className="drop-hint">
+            <div className={fp.dropHint}>
                 <Icon name="upload" size={28}/>
                 <span>释放以上传到 {path}</span>
             </div>

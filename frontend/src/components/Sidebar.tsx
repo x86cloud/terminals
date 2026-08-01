@@ -3,6 +3,8 @@ import Icon from './Icon'
 import ClientIcon from './ClientIcon'
 import ContextMenu, {closedMenu, MenuState, MenuItem} from './ContextMenu'
 import {ServerConfig, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, ConnType} from '../types'
+import g from '../styles/global.module.less'
+import s from '../styles/Sidebar.module.less'
 
 interface Props {
     servers: ServerConfig[]
@@ -93,9 +95,9 @@ export default function Sidebar({
     }
 
     return (
-        <aside className="sidebar">
-            <div className="sidebar-head">
-                <div className="sidebar-search">
+        <aside className={s.sidebar}>
+            <div className={s.sidebarHead}>
+                <div className={s.sidebarSearch}>
                     <Icon name="search" size={14}/>
                     <input
                         value={keyword}
@@ -104,7 +106,7 @@ export default function Sidebar({
                     />
                 </div>
                 <button
-                    className="icon-btn"
+                    className={g.iconBtn}
                     title="新建服务器"
                     onClick={() => onNew()}
                 >
@@ -112,11 +114,11 @@ export default function Sidebar({
                 </button>
             </div>
 
-            <div className="server-list">
+            <div className={s.serverList}>
                 {filtered.length === 0 && (
-                    <div className="sidebar-empty">
+                    <div className={s.sidebarEmpty}>
                         还没有服务器
-                        <button className="btn small primary" onClick={() => onNew()}>添加一个</button>
+                        <button className={`${g.btn} ${g.small} ${g.primary}`} onClick={() => onNew()}>添加一个</button>
                     </div>
                 )}
 
@@ -127,9 +129,9 @@ export default function Sidebar({
                     const isMysql = kind === 'mysql'
                     const activeId = activeIdOf(server)
                     return (
-                        <div key={server.id} className="server-group">
+                        <div key={server.id} className={s.serverGroup}>
                             <div
-                                className={`server-item${connectingId === server.id ? ' connecting' : ''}`}
+                                className={`${s.serverItem}${connectingId === server.id ? ' ' + s.connecting : ''}`}
                                 onDoubleClick={() => {
                                     if (connectingId === server.id) return
                                     onConnect(server)
@@ -157,25 +159,25 @@ export default function Sidebar({
                                     setMenu({open: true, x: e.clientX, y: e.clientY, items})
                                 }}
                             >
-                                <span className="server-icon">
+                                <span className={s.serverIcon}>
                                     <ClientIcon kind={kind} size={18}/>
                                 </span>
-                                <span className="server-text">
-                                    <span className="server-name">
+                                <span className={s.serverText}>
+                                    <span className={s.serverName}>
                                         {server.name || ((isRedis || isMysql || kind === 'mqtt') ? `${server.host}:${server.port}` : `${server.username}@${server.host}`)}
                                     </span>
-                                    <span className="server-sub">
+                                    <span className={s.serverSub}>
                                         {isRedis || isMysql || kind === 'mqtt'
                                             ? `${server.host}:${server.port}`
                                             : `${server.username}@${server.host}:${server.port}`}
                                     </span>
                                 </span>
-                                <span className="server-actions">
+                                <span className={s.serverActions}>
                                     {connectingId === server.id ? (
-                                        <span className="spinner" title="连接中…"/>
+                                        <span className={s.spinner} title="连接中…"/>
                                     ) : (
                                         <button
-                                            className="icon-btn"
+                                            className={g.iconBtn}
                                             title="连接"
                                             onClick={(e) => {
                                                 e.stopPropagation()
@@ -188,20 +190,20 @@ export default function Sidebar({
                                 </span>
                             </div>
 
-                            {active.map((s) => (
+                            {active.map((sess) => (
                                 <button
-                                    key={s.id}
-                                    className={`session-item${s.id === activeId ? ' active' : ''}`}
-                                    onClick={() => onFocusSession(s.id, kind)}
+                                    key={sess.id}
+                                    className={`${s.sessionItem}${sess.id === activeId ? ' ' + s.active : ''}`}
+                                    onClick={() => onFocusSession(sess.id, kind)}
                                 >
-                                    <span className={`dot${s.connected ? ' on' : ''}`}/>
+                                    <span className={`${g.dot}${sess.connected ? ' ' + g.on : ''}`}/>
                                     {isRedis
                                         ? `Redis ${server.host}:${server.port}`
                                         : isMysql
                                         ? `MySQL ${server.host}:${server.port}`
                                         : kind === 'mqtt'
                                         ? `MQTT ${server.host}:${server.port}`
-                                        : `会话 ${s.id.slice(0, 6)}`}
+                                        : `会话 ${sess.id.slice(0, 6)}`}
                                 </button>
                             ))}
                         </div>
