@@ -21,6 +21,7 @@ interface Props {
     onEdit: (cfg: ServerConfig) => void
     onDelete: (cfg: ServerConfig) => void
     onConnect: (cfg: ServerConfig) => void
+    onOpenApi: () => void
     onFocusSession: (id: string, kind: ConnType) => void
 }
 
@@ -39,6 +40,7 @@ export default function Sidebar({
                                     onEdit,
                                     onDelete,
                                     onConnect,
+                                    onOpenApi,
                                     onFocusSession,
                                 }: Props) {
     const [keyword, setKeyword] = useState('')
@@ -209,6 +211,13 @@ export default function Sidebar({
                         </div>
                     )
                 })}
+            </div>
+
+            <div className={s.tools}>
+                <button className={s.toolItem} onClick={onOpenApi}>
+                    <Icon name="link" size={15}/>
+                    <span>API 调试</span>
+                </button>
             </div>
 
             <ContextMenu state={menu} onClose={() => setMenu(closedMenu)}/>

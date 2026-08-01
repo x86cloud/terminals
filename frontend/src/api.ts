@@ -4,11 +4,24 @@ import type {
     RedisKeysResult,
     RedisSessionInfo,
     RedisValue,
+    RedisPipelineResult,
+    RedisTransactionResult,
+    RedisQueueItem,
+    RedisSlowLogEntry,
+    RedisMonitorInfo,
     ServerConfig,
     SessionInfo,
     Transfer,
     MqttSessionInfo,
     MqttSubscription,
+    ApiRequest,
+    ApiResponse,
+    ApiHeader,
+    ApiAuth,
+    ApiMode,
+    WsStatus,
+    WsConnectResult,
+    WsMessage,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -91,6 +104,54 @@ export const API = {
         app().RedisRaw(id, command),
     redisDBSize: (id: string): Promise<number> => app().RedisDBSize(id),
 
+    // Redis 扩展能力
+    redisModeInfo: (id: string): Promise<Record<string, any>> => app().RedisModeInfo(id),
+    redisStringAppend: (id: string, key: string, value: string): Promise<number> =>
+        app().RedisStringAppend(id, key, value),
+    redisHashFieldSet: (id: string, key: string, field: string, value: string): Promise<void> =>
+        app().RedisHashFieldSet(id, key, field, value),
+    redisHashFieldGet: (id: string, key: string, field: string): Promise<string> =>
+        app().RedisHashFieldGet(id, key, field),
+    redisHashFieldDel: (id: string, key: string, fields: string[]): Promise<number> =>
+        app().RedisHashFieldDel(id, key, fields),
+    redisListPush: (id: string, key: string, value: string, left: boolean): Promise<number> =>
+        app().RedisListPush(id, key, value, left),
+    redisListPop: (id: string, key: string, left: boolean): Promise<string> =>
+        app().RedisListPop(id, key, left),
+    redisSetAdd: (id: string, key: string, members: string[]): Promise<number> =>
+        app().RedisSetAdd(id, key, members),
+    redisSetRem: (id: string, key: string, members: string[]): Promise<number> =>
+        app().RedisSetRem(id, key, members),
+    redisZSetAdd: (id: string, key: string, member: string, score: number): Promise<number> =>
+        app().RedisZSetAdd(id, key, member, score),
+    redisZSetRem: (id: string, key: string, members: string[]): Promise<number> =>
+        app().RedisZSetRem(id, key, members),
+    redisPipeline: (id: string, commands: string[]): Promise<RedisPipelineResult> =>
+        app().RedisPipeline(id, commands),
+    redisTransaction: (id: string, watch: string[], commands: string[]): Promise<RedisTransactionResult> =>
+        app().RedisTransaction(id, watch, commands),
+    redisPublish: (id: string, channel: string, message: string): Promise<number> =>
+        app().RedisPublish(id, channel, message),
+    redisSubscribe: (id: string, channel: string): Promise<void> =>
+        app().RedisSubscribe(id, channel),
+    redisPSubscribe: (id: string, pattern: string): Promise<void> =>
+        app().RedisPSubscribe(id, pattern),
+    redisUnsubscribe: (id: string, channel: string): Promise<void> =>
+        app().RedisUnsubscribe(id, channel),
+    redisSubscriptions: (id: string): Promise<string[]> => app().RedisSubscriptions(id),
+    redisKeyspaceNotify: (id: string, db: number, event: string): Promise<void> =>
+        app().RedisKeyspaceNotify(id, db, event),
+    redisQueueEnqueue: (id: string, queue: string, payload: string, mode: string): Promise<string> =>
+        app().RedisQueueEnqueue(id, queue, payload, mode),
+    redisQueueDequeue: (id: string, queue: string, mode: string, timeout: number): Promise<RedisQueueItem> =>
+        app().RedisQueueDequeue(id, queue, mode, timeout),
+    redisQueueLength: (id: string, queue: string, mode: string): Promise<number> =>
+        app().RedisQueueLength(id, queue, mode),
+    redisSlowLog: (id: string, count: number): Promise<RedisSlowLogEntry[]> =>
+        app().RedisSlowLog(id, count),
+    redisInfo: (id: string, section: string): Promise<string> => app().RedisInfo(id, section),
+    redisMonitor: (id: string): Promise<RedisMonitorInfo> => app().RedisMonitor(id),
+
     // MySQL
     mysqlConnect: (id: string): Promise<boolean> => app().MysqlConnect(id),
     mysqlClose: (id: string): Promise<void> => app().MysqlClose(id),
@@ -158,6 +219,51 @@ export const API = {
         mode: string,
         table: string
     ): Promise<string> => app().MysqlImportFromFile(id, db, mode, table),
+
+    // MySQL 扩展能力（支持 SSH/SSL/连接池）
+    mysqlConnectEx: (id: string): Promise<boolean> => app().MysqlConnectEx(id),
+    mysqlCloseEx: (id: string): Promise<void> => app().MysqlCloseEx(id),
+    mysqlCreateDatabase: (id: string, name: string, charset: string): Promise<void> =>
+        app().MysqlCreateDatabase(id, name, charset),
+    mysqlDropDatabase: (id: string, name: string): Promise<void> =>
+        app().MysqlDropDatabase(id, name),
+    mysqlCreateTable: (id: string, db: string, table: string, defs: string): Promise<void> =>
+        app().MysqlCreateTable(id, db, table, defs),
+    mysqlDropTable: (id: string, db: string, table: string): Promise<void> =>
+        app().MysqlDropTable(id, db, table),
+    mysqlTruncateTable: (id: string, db: string, table: string): Promise<void> =>
+        app().MysqlTruncateTable(id, db, table),
+    mysqlTableStatus: (id: string, db: string): Promise<Record<string, any>[]> =>
+        app().MysqlTableStatus(id, db),
+    mysqlIndexes: (id: string, db: string, table: string): Promise<Record<string, any>[]> =>
+        app().MysqlIndexes(id, db, table),
+    mysqlCreateIndex: (
+        id: string, db: string, table: string, name: string, colsCSV: string, unique: boolean
+    ): Promise<void> => app().MysqlCreateIndex(id, db, table, name, colsCSV, unique),
+    mysqlDropIndex: (id: string, db: string, table: string, name: string): Promise<void> =>
+        app().MysqlDropIndex(id, db, table, name),
+    mysqlUsers: (id: string): Promise<Record<string, any>[]> => app().MysqlUsers(id),
+    mysqlGrants: (id: string, user: string, host: string): Promise<string> =>
+        app().MysqlGrants(id, user, host),
+    mysqlStatus: (id: string): Promise<Record<string, any>> => app().MysqlStatus(id),
+    mysqlVariables: (id: string): Promise<Record<string, any>> => app().MysqlVariables(id),
+    mysqlProcessList: (id: string): Promise<Record<string, any>[]> => app().MysqlProcessList(id),
+    mysqlSlowLog: (id: string, limit: number): Promise<Record<string, any>[]> =>
+        app().MysqlSlowLog(id, limit),
+    mysqlSchema: (id: string, db: string): Promise<Record<string, any>> => app().MysqlSchema(id, db),
+    mysqlExportJSON: (
+        id: string, db: string, source: string, table: string, sqlText: string, limit: number
+    ): Promise<string> => app().MysqlExportJSON(id, db, source, table, sqlText, limit),
+    mysqlImportJSON: (id: string, db: string, table: string, content: string): Promise<string> =>
+        app().MysqlImportJSON(id, db, table, content),
+    mysqlExportToFileEx: (
+        id: string, db: string, mode: string, source: string, table: string, sqlText: string, limit: number
+    ): Promise<string> => app().MysqlExportToFileEx(id, db, mode, source, table, sqlText, limit),
+    mysqlImportFromFileEx: (id: string, db: string, mode: string, table: string): Promise<string> =>
+        app().MysqlImportFromFileEx(id, db, mode, table),
+    mysqlQueryCSV: (id: string, db: string, sqlText: string, limit: number): Promise<string> =>
+        app().MysqlQueryCSV(id, db, sqlText, limit),
+    mysqlBackup: (id: string, db: string): Promise<string> => app().MysqlBackup(id, db),
     readLocalFile: (filePath: string): Promise<string> => app().ReadLocalFile(filePath),
     writeLocalFile: (filePath: string, content: string): Promise<void> => app().WriteLocalFile(filePath, content),
     mqttConnect: (id: string): Promise<MqttSessionInfo> => app().MqttConnect(id),
@@ -175,6 +281,15 @@ export const API = {
         app().MqttUnsubscribe(id, topic),
     mqttSubscriptions: (id: string): Promise<MqttSubscription[]> =>
         app().MqttSubscriptions(id),
+
+    // API 调试工具
+    apiRequest: (req: ApiRequest): Promise<ApiResponse> => app().ApiRequest(req),
+
+    // WebSocket
+    wsConnect: (url: string, headers: ApiHeader[], insecureTLS: boolean, auth?: ApiAuth, protocols?: string[]): Promise<WsConnectResult> =>
+        app().WsConnect({ url, headers, insecureTLS, auth, protocols }),
+    wsSend: (id: string, message: string): Promise<void> => app().WsSend(id, message),
+    wsClose: (id: string): Promise<void> => app().WsClose(id),
 }
 
 /* ------------------------------------------------------------------ */

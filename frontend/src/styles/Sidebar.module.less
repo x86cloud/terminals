@@ -2,12 +2,41 @@
 @import (reference) 'mixins.less';
 
 .sidebar {
-    width: 248px;
+    width: 280px;
     flex: none;
     display: flex;
     flex-direction: column;
     background: @bg;
     border-right: 1px solid @border;
+}
+
+.tools {
+    flex: none;
+    padding: 8px 10px;
+    border-top: 1px solid @border;
+}
+
+.toolItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 8px;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+        border-color: @accent;
+        color: @text;
+    }
+
+    svg {
+        color: @accent;
+    }
 }
 
 .sidebarHead {

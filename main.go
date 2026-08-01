@@ -16,7 +16,7 @@ func main() {
 	app := NewApp()
 
 	err := wails.Run(&options.App{
-		Title:     "Terminal - SSH / SFTP 客户端",
+		Title:     "xClient",
 		Width:     1360,
 		Height:    860,
 		MinWidth:  960,

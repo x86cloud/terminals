@@ -58,8 +58,10 @@
 }
 
 .qosBadge {
-    font-size: 10px;
-    padding: 1px 5px;
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
     border-radius: 3px;
     background: @accent;
     color: #fff;
@@ -179,55 +181,78 @@
 .mqttMsg {
     border: 1px solid @border;
     border-radius: @radius-md;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     background: @bg-elev;
+    overflow: hidden;
 
-    &.in {
+    &:global(.in) {
         border-left: 3px solid @accent;
     }
 
-    &.out {
+    &:global(.out) {
         border-left: 3px solid #48c774;
     }
 }
 
 .mqttMsgHead {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: @space-md;
-    padding: 4px 8px;
+    padding: 6px 10px;
     border-bottom: 1px solid @border;
-    font-size: 12px;
+    font-size: 13px;
+}
+
+.mqttMsg:global(.in) .mqttMsgHead {
+    background: @accent-dim-2;
+}
+
+.mqttMsg:global(.out) .mqttMsgHead {
+    background: rgba(72, 199, 116, 0.14);
 }
 
 .mqttDir {
-    font-size: 10px;
-    padding: 0 6px;
-    border-radius: 3px;
+    flex: none;
+    min-width: 28px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
     color: #fff;
+    text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 
-    &.in {
+    &:global(.in) {
         background: @accent;
     }
 
-    &.out {
-        background: #48c774;
+    &:global(.out) {
+        background: @ok;
     }
 }
 
 .mqttMsgTopic {
+    flex: 1;
     font-weight: 600;
+    font-size: 13px;
+    color: @text;
     word-break: break-all;
+    line-height: 1.5;
 }
 
 .mqttMsgTime {
-    color: @text-faint;
-    margin-left: auto;
+    flex: none;
+    font-size: 12px;
+    color: @text-dim;
+    white-space: nowrap;
 }
 
 .retainedBadge {
-    font-size: 10px;
-    padding: 0 5px;
+    flex: none;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
     border-radius: 3px;
     background: #e0a91e;
     color: #fff;
@@ -235,11 +260,13 @@
 
 .mqttMsgPayload {
     margin: 0;
-    padding: 6px 8px;
-    font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+    padding: 8px 10px;
+    font: 13px/1.6 @font-mono;
+    color: @text;
+    background: @bg-1;
     white-space: pre-wrap;
     word-break: break-all;
-    max-height: 240px;
+    max-height: 260px;
     overflow: auto;
 }
 

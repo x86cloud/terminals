@@ -141,7 +141,7 @@ func firstColumn(rows []map[string]any) []string {
 
 // queryMysql 执行一条查询并返回列名与行数据。
 func (m *mysqlManager) queryMysql(id, dbName, sqlText string) (columns []string, rows []map[string]any, err error) {
-	mc, ok := m.get(id)
+	mc, ok := mysqlExMgr.get(id)
 	if !ok {
 		return nil, nil, errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
@@ -209,7 +209,7 @@ func (a *App) MysqlConnect(id string) (bool, error) {
 	if cfg.connType() != ConnMysql {
 		return false, errors.New("该连接不是 MySQL 类型")
 	}
-	if err := a.mysqlMgr.open(id, cfg); err != nil {
+	if err := mysqlExMgr.open(id, cfg); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -217,7 +217,7 @@ func (a *App) MysqlConnect(id string) (bool, error) {
 
 // MysqlClose 关闭 MySQL 连接。
 func (a *App) MysqlClose(id string) {
-	a.mysqlMgr.close(id)
+	mysqlExMgr.close(id)
 }
 
 // MysqlDatabases 返回所有数据库名。
@@ -293,7 +293,7 @@ func (a *App) MysqlDescribe(id, db, table string) (map[string]any, error) {
 
 // MysqlRun 执行任意 SQL 语句。只读查询返回结果集，写操作返回影响行数。
 func (a *App) MysqlRun(id, db, sqlText string) (map[string]any, error) {
-	mc, ok := a.mysqlMgr.get(id)
+	mc, ok := mysqlExMgr.get(id)
 	if !ok {
 		return nil, errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
@@ -323,7 +323,7 @@ func (a *App) MysqlRun(id, db, sqlText string) (map[string]any, error) {
 
 // columnTypes 返回表各列的类型（用于写入前做类型转换）。
 func (m *mysqlManager) columnTypes(id, db, table string) (map[string]string, error) {
-	cols, rows, err := m.queryMysql(id, db, "DESCRIBE "+quoteIdent(table))
+	cols, rows, err := mysqlExMgr.queryEx(id, db, "DESCRIBE "+quoteIdent(table))
 	if err != nil {
 		return nil, err
 	}
@@ -455,7 +455,7 @@ func (a *App) MysqlInsert(id, db, table string, columns []string, values []any) 
 	}
 	sqlText := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
 		quoteIdent(table), strings.Join(cols, ","), strings.Join(ph, ","))
-	mc, ok := a.mysqlMgr.get(id)
+	mc, ok := mysqlExMgr.get(id)
 	if !ok {
 		return 0, errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
@@ -504,7 +504,7 @@ func (a *App) MysqlUpdate(id, db, table string, setCols []string, setVals []any,
 		w = " WHERE " + strings.Join(whereParts, " AND ")
 	}
 	sqlText := "UPDATE " + quoteIdent(table) + " SET " + strings.Join(setParts, ", ") + w
-	mc, ok := a.mysqlMgr.get(id)
+	mc, ok := mysqlExMgr.get(id)
 	if !ok {
 		return 0, errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
@@ -524,7 +524,7 @@ func (a *App) MysqlUpdate(id, db, table string, setCols []string, setVals []any,
 // mode: "sql" 导出为 INSERT 语句；"csv" 导出为逗号分隔值。
 // source: "table" 按表名整表导出；"query" 按自定义 SQL 语句导出。
 func (a *App) MysqlExport(id, db, mode, source, table, sqlText string, limit int) (string, error) {
-	mc, ok := a.mysqlMgr.get(id)
+	mc, ok := mysqlExMgr.get(id)
 	if !ok {
 		return "", errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
@@ -628,7 +628,7 @@ func (a *App) MysqlExport(id, db, mode, source, table, sqlText string, limit int
 // MysqlImport 导入数据。
 // mode: "sql" 按语句批量执行；"csv" 将 CSV 内容导入到指定表（首行为列名）。
 func (a *App) MysqlImport(id, db, mode, table, content string) (string, error) {
-	mc, ok := a.mysqlMgr.get(id)
+	mc, ok := mysqlExMgr.get(id)
 	if !ok {
 		return "", errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
@@ -879,7 +879,7 @@ func (a *App) MysqlDelete(id, db, table string, whereCols []string, whereVals []
 		args = append(args, v)
 	}
 	sqlText := "DELETE FROM " + quoteIdent(table) + " WHERE " + strings.Join(whereParts, " AND ")
-	mc, ok := a.mysqlMgr.get(id)
+	mc, ok := mysqlExMgr.get(id)
 	if !ok {
 		return 0, errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}

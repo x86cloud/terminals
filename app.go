@@ -20,6 +20,7 @@ type App struct {
 	redisMgr  *redisManager
 	mysqlMgr  *mysqlManager
 	mqttMgr   *mqttManager
+	wsMgr     *wsManager
 }
 
 func NewApp() *App {
@@ -35,6 +36,7 @@ func NewApp() *App {
 		redisMgr:  newRedisManager(),
 		mysqlMgr:  newMysqlManager(),
 		mqttMgr:   newMqttManager(),
+		wsMgr:     newWsManager(),
 	}
 }
 
@@ -48,7 +50,7 @@ func (a *App) startup(ctx context.Context) {
 func (a *App) shutdown(ctx context.Context) {
 	a.sessions.closeAll()
 	a.redisMgr.closeAll()
-	a.mysqlMgr.closeAll()
+	mysqlExMgr.closeAll()
 	a.mqttMgr.closeAll()
 }
 

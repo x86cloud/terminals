@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {API, subscribe} from '../api'
 import Icon from './Icon'
+import CodeEditor from './CodeEditor'
 import {errorMessage} from '../utils'
 import {MqttMessage, MqttSessionInfo, MqttSubscription} from '../types'
 import g from '../styles/global.module.less'
@@ -176,6 +177,9 @@ export default function MqttClient({session, onClose}: Props) {
                     </span>
                     <span className={g.spacer}/>
                     {error && <span className={m.mqttError}>{error}</span>}
+                    <button className={`${g.btn} ${g.sm}`} onClick={() => setMessages([])}>
+                        清空消息
+                    </button>
                     <button className={g.iconBtn} title="关闭" onClick={onClose}>
                         <Icon name="close" size={15}/>
                     </button>
@@ -184,7 +188,7 @@ export default function MqttClient({session, onClose}: Props) {
                 <div className={m.mqttPub}>
                     <div className={m.mqttFieldRow}>
                         <input
-                            className={`${m.mqttInput} ${m.topic}`}
+                            className={m.mqttInputTopic}
                             placeholder="发布主题，如 home/light/1"
                             value={pubTopic}
                             onChange={(e) => setPubTopic(e.target.value)}
@@ -217,24 +221,19 @@ export default function MqttClient({session, onClose}: Props) {
                             发布
                         </button>
                     </div>
-                    <textarea
-                        className={m.mqttPubPayload}
-                        placeholder="消息内容（Ctrl/Cmd + Enter 发布）"
+                    <CodeEditor
                         value={pubPayload}
-                        spellCheck={false}
-                        onChange={(e) => setPubPayload(e.target.value)}
-                        onKeyDown={(e) => {
-                            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                                e.preventDefault()
-                                doPublish()
-                            }
-                        }}
+                        onChange={setPubPayload}
+                        lang={/^\s*[[{]/.test(pubPayload) ? 'json' : 'plain'}
+                        height="120px"
+                        placeholder="消息内容（Ctrl/Cmd + Enter 发布）"
+                        onModEnter={() => doPublish()}
                     />
                 </div>
 
                 <div className={m.mqttSubBar}>
                     <input
-                        className={`${m.mqttInput} ${m.topic}`}
+                        className={m.mqttInputTopic}
                         placeholder="订阅主题，支持通配符 # +，如 sensor/#"
                         value={subTopic}
                         onChange={(e) => setSubTopic(e.target.value)}

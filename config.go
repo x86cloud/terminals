@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	appDirName = "WailsTerminal"
+	appDirName = "xClient"
 	encPrefix  = "enc:v1:"
 )
 
@@ -52,7 +52,45 @@ type ServerConfig struct {
 	Remark     string `json:"remark"`
 	Type       string `json:"type"`        // ssh | redis | mysql | mqtt
 	DB         int    `json:"db,omitempty"` // Redis 数据库编号
+
+	// Redis 高级配置
+	RedisMode            string `json:"redisMode,omitempty"`            // single | sentinel | cluster
+	RedisSentinels       string `json:"redisSentinels,omitempty"`       // 哨兵地址，逗号分隔
+	RedisMasterName      string `json:"redisMasterName,omitempty"`      // 哨兵 master 名称
+	RedisClusterNodes    string `json:"redisClusterNodes,omitempty"`    // 集群节点，逗号分隔
+	RedisUsername        string `json:"redisUsername,omitempty"`        // Redis 6 ACL 用户名
+	RedisSerialization   string `json:"redisSerialization,omitempty"`   // none | json
+	RedisPoolSize        int    `json:"redisPoolSize,omitempty"`         // 最大连接数
+	RedisMinIdleConns    int    `json:"redisMinIdleConns,omitempty"`     // 最小空闲连接
+	RedisMaxIdleConns    int    `json:"redisMaxIdleConns,omitempty"`     // 最大空闲连接
+	RedisPoolTimeout     int    `json:"redisPoolTimeout,omitempty"`      // 获取连接超时（秒）
+	RedisConnMaxIdleTime int    `json:"redisConnMaxIdleTime,omitempty"`  // 连接最大空闲时间（秒）
+	RedisConnMaxLifetime int    `json:"redisConnMaxLifetime,omitempty"`  // 连接最大存活时间（秒）
+	RedisDialTimeout     int    `json:"redisDialTimeout,omitempty"`      // 拨号超时（秒）
+	RedisReadTimeout     int    `json:"redisReadTimeout,omitempty"`      // 读超时（秒）
+	RedisWriteTimeout    int    `json:"redisWriteTimeout,omitempty"`     // 写超时（秒）
+	RedisMaxRetries      int    `json:"redisMaxRetries,omitempty"`       // 命令最大重试次数
+	RedisMinRetryBackoff int    `json:"redisMinRetryBackoff,omitempty"`  // 重试最小退避（秒）
+	RedisMaxRetryBackoff int    `json:"redisMaxRetryBackoff,omitempty"`  // 重试最大退避（秒）
+	RedisBreakerThreshold int   `json:"redisBreakerThreshold,omitempty"` // 熔断器打开阈值（连续失败次数）
+	RedisBreakerCooldown  int   `json:"redisBreakerCooldown,omitempty"`   // 熔断器冷却时间（秒）
+
+	// MySQL 高级配置
 	Database   string `json:"database,omitempty"` // MySQL 默认数据库（可选）
+	MysqlMaxOpenConns      int    `json:"mysqlMaxOpenConns,omitempty"`      // 连接池最大打开连接
+	MysqlMaxIdleConns      int    `json:"mysqlMaxIdleConns,omitempty"`      // 连接池最大空闲连接
+	MysqlConnMaxLifetime   int    `json:"mysqlConnMaxLifetime,omitempty"`   // 连接最大存活（秒）
+	MysqlTLS               string `json:"mysqlTLS,omitempty"`               // 空 / "true" / "skip-verify" / "preferred"
+	MysqlSSLEnabled        bool   `json:"mysqlSSLEnabled,omitempty"`        // 是否启用 SSL
+	MysqlSSHEnabled        bool   `json:"mysqlSSHEnabled,omitempty"`        // 是否启用 SSH 隧道
+	MysqlSSHHost           string `json:"mysqlSSHHost,omitempty"`           // 跳板机地址
+	MysqlSSHHostPort       int    `json:"mysqlSSHHostPort,omitempty"`       // 跳板机端口
+	MysqlSSHUser           string `json:"mysqlSSHUser,omitempty"`           // 跳板机用户名
+	MysqlSSHKeyPath        string `json:"mysqlSSHKeyPath,omitempty"`        // 跳板机私钥路径
+	MysqlSSHKeyData        string `json:"mysqlSSHKeyData,omitempty"`        // 跳板机私钥内容
+	MysqlSSHPassphrase     string `json:"mysqlSSHPassphrase,omitempty"`     // 私钥口令
+	MysqlSSHProxyLocalPort int    `json:"mysqlSSHProxyLocalPort,omitempty"` // 本地监听端口（0=自动）
+
 	ClientID   string `json:"clientId,omitempty"` // MQTT 客户端 ID（可选）
 	UseTLS     bool   `json:"useTLS,omitempty"`    // MQTT 是否使用 TLS
 

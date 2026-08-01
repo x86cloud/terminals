@@ -3,9 +3,70 @@
 
 .redisPane {
     display: flex;
+    flex-direction: column;
     flex: 1;
     .fill();
     width: 100%;
+    min-height: 0;
+}
+
+.redisTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+}
+
+.tabs {
+    display: flex;
+    gap: 2px;
+}
+
+.tab {
+    padding: 5px 12px;
+    border: 1px solid transparent;
+    border-radius: @radius-md;
+    background: transparent;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+        background: @bg;
+        color: @text;
+    }
+
+    &.active {
+        background: @accent-dim;
+        color: #fff;
+        border-color: @accent;
+    }
+}
+
+.modeTag {
+    display: flex;
+    gap: 6px;
+}
+
+.modeBadge {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: @bg-3;
+    color: @text;
+}
+
+.bk_closed { background: @ok; color: #fff; }
+.bk_open { background: @danger; color: #fff; }
+.bk_half-open { background: @warn; color: #fff; }
+
+.body {
+    flex: 1;
+    display: flex;
+    min-height: 0;
+    .fill();
 }
 
 .redisSide {
@@ -216,6 +277,11 @@
         font-size: 12px;
         outline: none;
     }
+
+    > :global(.cm-theme) {
+        flex: 1;
+        min-width: 0;
+    }
 }
 
 .redisCliResult {
@@ -232,4 +298,199 @@
     color: @text;
     white-space: pre-wrap;
     word-break: break-all;
+}
+
+.redisEditorMono {
+    flex: 1;
+    min-height: 120px;
+    margin: 0;
+    overflow: auto;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 8px;
+    background: @bg-1;
+    color: @text;
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+/* ---- 通用面板 ---- */
+.panel {
+    flex: 1;
+    .fill();
+    padding: 12px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.subHead {
+    font-size: 12px;
+    color: @text-dim;
+    font-weight: 600;
+}
+
+.input {
+    flex: 1;
+    min-width: 160px;
+    padding: 6px 8px;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    background: @bg-1;
+    color: @text;
+    outline: none;
+    font-size: 13px;
+}
+
+.inputSm {
+    width: 90px;
+    padding: 5px 6px;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    background: @bg-1;
+    color: @text;
+    outline: none;
+}
+
+.batchArea {
+    flex: 1;
+    min-height: 200px;
+    resize: vertical;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 8px;
+    background: @bg-1;
+    color: @text;
+    font-family: @font-mono;
+    font-size: 13px;
+    line-height: 1.5;
+    outline: none;
+}
+
+.subs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.subChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: @bg-3;
+    border: 1px solid @border;
+    border-radius: 10px;
+    color: @text;
+}
+
+.subX {
+    background: transparent;
+    border: none;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+
+    &:hover {
+        color: @danger;
+    }
+}
+
+.msgList {
+    flex: 1;
+    min-height: 120px;
+    overflow: auto;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    background: @bg-1;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.msgItem {
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    padding: 4px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: @font-mono;
+
+    &:hover {
+        background: @bg;
+    }
+}
+
+.msgChan {
+    flex: none;
+    color: @accent;
+}
+
+.msgKey {
+    color: @warn;
+}
+
+.msgPayload {
+    color: @text;
+    word-break: break-all;
+}
+
+.msgErr {
+    color: @danger;
+    margin-left: auto;
+}
+
+.miniEdit {
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 8px;
+    background: @bg-2;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.monitorGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+}
+
+.metric {
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 10px;
+    background: @bg-1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.metricLabel {
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.metricValue {
+    font-size: 18px;
+    font-weight: 700;
+    color: @text;
+    font-family: @font-mono;
 }

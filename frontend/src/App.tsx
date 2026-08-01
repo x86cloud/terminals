@@ -5,6 +5,7 @@ import ServerDialog from './components/ServerDialog'
 import RedisClient from './components/RedisClient'
 import MysqlClient from './components/MysqlClient'
 import MqttClient from './components/MqttClient'
+import ApiClient from './components/ApiClient'
 import TransferBar from './components/TransferBar'
 import Icon from './components/Icon'
 import ClientIcon from './components/ClientIcon'
@@ -46,6 +47,10 @@ const [mysqlSessions, setMysqlSessions] = useState<MysqlSessionInfo[]>([])
 const [activeMysqlId, setActiveMysqlId] = useState<string | null>(null)
 const [mqttSessions, setMqttSessions] = useState<MqttSessionInfo[]>([])
 const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
+
+    // API 调试工具（独立的工具面板，不依赖服务器配置）
+    const [apiOpen, setApiOpen] = useState(false)
+    const [apiActive, setApiActive] = useState(false)
 
     const activeIdRef = useRef<string | null>(null)
     const pathsRef = useRef<Record<string, string>>({})
@@ -141,11 +146,13 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
             if (connectingRef.current.has(cfg.id)) return
             connectingRef.current.add(cfg.id)
             setConnectingId(cfg.id)
+            setApiActive(false)
             try {
                 if (cfg.type === 'redis') {
                     const ok = await API.redisConnect(cfg.id)
                     if (!ok) throw new Error('Redis 连接失败')
                     const dbSize = await API.redisDBSize(cfg.id).catch(() => 0)
+                    const modeInfo = await API.redisModeInfo(cfg.id).catch(() => ({} as any))
                     const info: RedisSessionInfo = {
                         id: cfg.id,
                         serverId: cfg.id,
@@ -155,6 +162,9 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                         connected: true,
                         db: cfg.db ?? 0,
                         dbSize,
+                        mode: modeInfo?.mode || cfg.redisMode || 'single',
+                        breaker: modeInfo?.breaker || 'closed',
+                        serialization: modeInfo?.serialization || cfg.redisSerialization || 'none',
                     }
                     setRedisSessions((prev) => [
                         ...prev.filter((s) => s.id !== cfg.id),
@@ -166,7 +176,7 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                     setActiveMqttId(null)
                     notify(`已连接 Redis ${info.title}`)
                 } else if (cfg.type === 'mysql') {
-                    const ok = await API.mysqlConnect(cfg.id)
+                    const ok = await API.mysqlConnectEx(cfg.id)
                     if (!ok) throw new Error('MySQL 连接失败')
                     const info: MysqlSessionInfo = {
                         id: cfg.id,
@@ -230,6 +240,7 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
         setActiveRedisId(target && target.kind === 'redis' ? target.id : null)
         setActiveMysqlId(target && target.kind === 'mysql' ? target.id : null)
         setActiveMqttId(target && target.kind === 'mqtt' ? target.id : null)
+        setApiActive(false)
     }, [])
 
     // 关闭激活会话后挑选唯一的回退目标：优先同类型剩余会话，其次按 ssh > redis > mysql > mqtt 顺序
@@ -276,7 +287,7 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
 
     const closeMysqlSession = useCallback(async (id: string) => {
         try {
-            await API.mysqlClose(id)
+            await API.mysqlCloseEx(id)
         } catch {
             /* ignore */
         }
@@ -321,6 +332,21 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
 
     const activeRedis = redisSessions.find((s) => s.id === activeRedisId) || null
 
+    // 打开 / 关闭 API 调试工具面板
+    const openApiTool = useCallback(() => {
+        setApiOpen(true)
+        setApiActive(true)
+        setActiveId(null)
+        setActiveRedisId(null)
+        setActiveMysqlId(null)
+        setActiveMqttId(null)
+    }, [])
+
+    const closeApiTool = useCallback(() => {
+        setApiOpen(false)
+        setApiActive(false)
+    }, [])
+
     // 同一时刻只显示一个操作窗口：聚焦某一类会话时清空其它类型的 active。
     const focusSession = useCallback((id: string, kind: ConnType) => {
         // 任意时刻只激活一种会话：目标类型置为 id，其余全部置空
@@ -328,6 +354,7 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
         setActiveRedisId(kind === 'redis' ? id : null)
         setActiveMysqlId(kind === 'mysql' ? id : null)
         setActiveMqttId(kind === 'mqtt' ? id : null)
+        setApiActive(false)
     }, [])
 
     return (
@@ -347,6 +374,7 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                 onEdit={editServer}
                 onDelete={deleteServer}
                 onConnect={connect}
+                onOpenApi={openApiTool}
                 onFocusSession={(id, kind) => focusSession(id, kind)}
             />
 
@@ -436,6 +464,31 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                             </button>
                         </div>
                     ))}
+
+                    {apiOpen && (
+                        <div
+                            className={`${a.tab}${apiActive ? ' ' + a.active : ''}`}
+                            onClick={() => {
+                                setApiActive(true)
+                                setActiveId(null)
+                                setActiveRedisId(null)
+                                setActiveMysqlId(null)
+                                setActiveMqttId(null)
+                            }}
+                        >
+                            <Icon name="link" size={12}/>
+                            <span className={a.tabTitle}>API 调试</span>
+                            <button
+                                className={a.tabClose}
+                                title="关闭"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    closeApiTool()
+                                }}
+                            >×</button>
+                        </div>
+                    )}
+
                     <span className={g.spacer}/>
                 </div>
 
@@ -488,11 +541,17 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
                         </div>
                     ))}
 
-                    {sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && (
+                    {apiOpen && (
+                        <div style={{display: apiActive ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
+                            <ApiClient onClose={closeApiTool}/>
+                        </div>
+                    )}
+
+                    {sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && !apiOpen && (
                         <div className={g.emptyStage}>
                             <Icon name="terminal" size={44}/>
-                            <h2>SSH 终端 + SFTP 文件管理</h2>
-                            <p>在左侧添加服务器（SSH、Redis、MySQL 或 MQTT）后双击即可连接。MQTT 客户端支持主题订阅、消息发布与实时收发。</p>
+                            <h2>多协议开发运维客户端</h2>
+                            <p>在左侧添加服务器（SSH、Redis、MySQL 或 MQTT）后双击即可连接：SSH 提供终端与 SFTP 文件管理，Redis / MySQL 支持键值与数据浏览编辑，MQTT 支持主题订阅、消息发布与实时收发。点击左侧「API 调试」可打开内置的 HTTP 接口调试工具。</p>
                             <div className={g.emptyActions}>
                                 <button className={`${g.btn} ${g.primary}`} onClick={() => addServer()}>新建服务器</button>
                             </div>

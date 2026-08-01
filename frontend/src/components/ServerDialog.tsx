@@ -238,6 +238,132 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
                                 onChange={(e) => update({database: e.target.value})}
                             />
                         </label>
+                        <div className={g.field}>
+                            <button type="button" className={g.advToggle} onClick={() => setShowAdv(v => !v)}>
+                                <Icon name={showAdv ? 'chevron-down' : 'chevron-right'} size={14}/>
+                                高级参数（SSL / SSH 隧道 / 连接池）
+                            </button>
+                        </div>
+                        {showAdv && (
+                            <>
+                                <label className={g.switchField}>
+                                    <span>启用 SSL 加密连接</span>
+                                    <span className={g.switch}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!!form.mysqlSSLEnabled}
+                                            onChange={(e) => update({mysqlSSLEnabled: e.target.checked})}
+                                        />
+                                        <span className={g.slider} />
+                                    </span>
+                                </label>
+                                <label className={g.field}>
+                                    <span>TLS 模式</span>
+                                    <select
+                                        value={form.mysqlTLS ?? ''}
+                                        onChange={(e) => update({mysqlTLS: e.target.value})}
+                                    >
+                                        <option value="">默认（按服务器要求）</option>
+                                        <option value="skip-verify">skip-verify（跳过校验）</option>
+                                        <option value="preferred">preferred（优先加密）</option>
+                                        <option value="required">required（强制校验）</option>
+                                    </select>
+                                </label>
+                                <label className={g.switchField}>
+                                    <span>通过 SSH 隧道连接</span>
+                                    <span className={g.switch}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!!form.mysqlSSHEnabled}
+                                            onChange={(e) => update({mysqlSSHEnabled: e.target.checked})}
+                                        />
+                                        <span className={g.slider} />
+                                    </span>
+                                </label>
+                                {form.mysqlSSHEnabled && (
+                                    <>
+                                        <div className={g.fieldRow}>
+                                            <label className={`${g.field} ${g.grow}`}>
+                                                <span>SSH 主机</span>
+                                                <input
+                                                    value={form.mysqlSSHHost ?? ''}
+                                                    placeholder="跳板机 IP"
+                                                    onChange={(e) => update({mysqlSSHHost: e.target.value})}
+                                                />
+                                            </label>
+                                            <label className={g.field}>
+                                                <span>SSH 端口</span>
+                                                <input
+                                                    type="number"
+                                                    value={form.mysqlSSHHostPort ?? 22}
+                                                    onChange={(e) => update({mysqlSSHHostPort: Number(e.target.value) || 22})}
+                                                />
+                                            </label>
+                                        </div>
+                                        <div className={g.fieldRow}>
+                                            <label className={`${g.field} ${g.grow}`}>
+                                                <span>SSH 用户名</span>
+                                                <input
+                                                    value={form.mysqlSSHUser ?? ''}
+                                                    onChange={(e) => update({mysqlSSHUser: e.target.value})}
+                                                />
+                                            </label>
+                                            <label className={g.field}>
+                                                <span>本地代理端口</span>
+                                                <input
+                                                    type="number"
+                                                    value={form.mysqlSSHProxyLocalPort ?? 13306}
+                                                    onChange={(e) => update({mysqlSSHProxyLocalPort: Number(e.target.value) || 13306})}
+                                                />
+                                            </label>
+                                        </div>
+                                        <label className={g.field}>
+                                            <span>SSH 私钥路径（可选，留空用密码）</span>
+                                            <input
+                                                value={form.mysqlSSHKeyPath ?? ''}
+                                                placeholder="私钥文件路径；留空则用下方密码"
+                                                onChange={(e) => update({mysqlSSHKeyPath: e.target.value})}
+                                            />
+                                        </label>
+                                        <label className={g.field}>
+                                            <span>SSH 密码 / 私钥口令</span>
+                                            <input
+                                                type="password"
+                                                value={form.mysqlSSHPassphrase ?? ''}
+                                                autoComplete="new-password"
+                                                onChange={(e) => update({mysqlSSHPassphrase: e.target.value})}
+                                            />
+                                        </label>
+                                    </>
+                                )}
+                                <div className={g.fieldRow}>
+                                    <label className={`${g.field} ${g.grow}`}>
+                                        <span>最大连接数</span>
+                                        <input
+                                            type="number"
+                                            value={form.mysqlMaxOpenConns ?? 10}
+                                            onChange={(e) => update({mysqlMaxOpenConns: Number(e.target.value) || 10})}
+                                        />
+                                    </label>
+                                    <label className={g.field}>
+                                        <span>空闲连接数</span>
+                                        <input
+                                            type="number"
+                                            value={form.mysqlMaxIdleConns ?? 5}
+                                            onChange={(e) => update({mysqlMaxIdleConns: Number(e.target.value) || 5})}
+                                        />
+                                    </label>
+                                </div>
+                                <label className={g.field}>
+                                    <span>连接最大存活时间（秒）</span>
+                                    <input
+                                        type="number"
+                                        value={form.mysqlConnMaxLifetime ?? 3600}
+                                        onChange={(e) => update({mysqlConnMaxLifetime: Number(e.target.value) || 3600})}
+                                    />
+                                </label>
+                            </>
+                        )}
                     </>
                 )}
 
@@ -262,6 +388,92 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
                                 placeholder="0"
                                 onChange={(e) => update({db: Number(e.target.value) || 0})}
                             />
+                        </label>
+                        <label className={g.field}>
+                            <span>ACL 用户名（Redis 6+，可选）</span>
+                            <input
+                                value={form.redisUsername ?? ''}
+                                onChange={(e) => update({redisUsername: e.target.value})}
+                            />
+                        </label>
+                        <label className={g.field}>
+                            <span>部署模式</span>
+                            <select
+                                value={form.redisMode ?? 'single'}
+                                onChange={(e) => update({redisMode: e.target.value})}
+                            >
+                                <option value="single">单机</option>
+                                <option value="sentinel">哨兵</option>
+                                <option value="cluster">集群</option>
+                            </select>
+                        </label>
+                        {form.redisMode === 'sentinel' && (
+                            <>
+                                <label className={g.field}>
+                                    <span>哨兵节点（逗号分隔 host:port）</span>
+                                    <input
+                                        value={form.redisSentinels ?? ''}
+                                        placeholder="127.0.0.1:26379,127.0.0.1:26380"
+                                        onChange={(e) => update({redisSentinels: e.target.value})}
+                                    />
+                                </label>
+                                <label className={g.field}>
+                                    <span>Master 名称</span>
+                                    <input
+                                        value={form.redisMasterName ?? ''}
+                                        placeholder="mymaster"
+                                        onChange={(e) => update({redisMasterName: e.target.value})}
+                                    />
+                                </label>
+                            </>
+                        )}
+                        {form.redisMode === 'cluster' && (
+                            <label className={g.field}>
+                                <span>集群节点（逗号分隔 host:port）</span>
+                                <input
+                                    value={form.redisClusterNodes ?? ''}
+                                    placeholder="127.0.0.1:7000,127.0.0.1:7001"
+                                    onChange={(e) => update({redisClusterNodes: e.target.value})}
+                                />
+                            </label>
+                        )}
+                        <label className={g.field}>
+                            <span>序列化方式</span>
+                            <select
+                                value={form.redisSerialization ?? 'none'}
+                                onChange={(e) => update({redisSerialization: e.target.value})}
+                            >
+                                <option value="none">原样（无）</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </label>
+                        <label className={g.field}>
+                            <span>连接池大小（0=默认）</span>
+                            <input
+                                type="number"
+                                value={form.redisPoolSize ?? 0}
+                                onChange={(e) => update({redisPoolSize: Number(e.target.value) || 0})}
+                            />
+                        </label>
+                        <label className={g.field}>
+                            <span>读超时 / 写超时 / 拨号超时（秒，0=默认）</span>
+                            <div className={g.fieldRow}>
+                                <input type="number" value={form.redisReadTimeout ?? 0}
+                                       onChange={(e) => update({redisReadTimeout: Number(e.target.value) || 0})}/>
+                                <input type="number" value={form.redisWriteTimeout ?? 0}
+                                       onChange={(e) => update({redisWriteTimeout: Number(e.target.value) || 0})}/>
+                                <input type="number" value={form.redisDialTimeout ?? 0}
+                                       onChange={(e) => update({redisDialTimeout: Number(e.target.value) || 0})}/>
+                            </div>
+                        </label>
+                        <label className={g.field}>
+                            <span>命令重试次数 / 熔断阈值（连续失败，0=默认）</span>
+                            <div className={g.fieldRow}>
+                                <input type="number" value={form.redisMaxRetries ?? 0}
+                                       onChange={(e) => update({redisMaxRetries: Number(e.target.value) || 0})}/>
+                                <input type="number" value={form.redisBreakerThreshold ?? 0}
+                                       onChange={(e) => update({redisBreakerThreshold: Number(e.target.value) || 0})}/>
+                            </div>
                         </label>
                     </>
                 )}
