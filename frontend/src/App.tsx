@@ -10,11 +10,13 @@ import TransferBar from './components/TransferBar'
 import Icon from './components/Icon'
 import ClientIcon from './components/ClientIcon'
 import {ConfirmModal, ConfirmState} from './components/Modal'
+import SessionTabs from './components/app/SessionTabs'
+import Stage from './components/app/Stage'
 import {API, registerNativeFileDrop, subscribe, unregisterNativeFileDrop} from './api'
 import {ServerConfig, SessionInfo, Transfer, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, ConnType} from './types'
 import {errorMessage} from './utils'
 import g from './styles/global.module.less'
-import a from './styles/App.module.less'
+import a from './components/App.module.less'
 
 interface Toast {
     id: number
@@ -43,10 +45,10 @@ export default function App() {
     const [activeRedisId, setActiveRedisId] = useState<string | null>(null)
 
     // MySQL 会话
-const [mysqlSessions, setMysqlSessions] = useState<MysqlSessionInfo[]>([])
-const [activeMysqlId, setActiveMysqlId] = useState<string | null>(null)
-const [mqttSessions, setMqttSessions] = useState<MqttSessionInfo[]>([])
-const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
+    const [mysqlSessions, setMysqlSessions] = useState<MysqlSessionInfo[]>([])
+    const [activeMysqlId, setActiveMysqlId] = useState<string | null>(null)
+    const [mqttSessions, setMqttSessions] = useState<MqttSessionInfo[]>([])
+    const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
 
     // API 调试工具（独立的工具面板，不依赖服务器配置）
     const [apiOpen, setApiOpen] = useState(false)
@@ -379,185 +381,52 @@ const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
             />
 
             <main className={a.main}>
-                <div className={a.tabbar}>
-                    {sessions.map((s) => (
-                        <div
-                            key={s.id}
-                            className={`${a.tab}${s.id === activeId ? ' ' + a.active : ''}`}
-                            onClick={() => focusSession(s.id, 'ssh')}
-                        >
-                            <ClientIcon kind="ssh" size={12}/>
-                            <span className={`${g.dot}${s.connected ? ' ' + g.on : ''}`}/>
-                            <span className={a.tabTitle}>{s.title}</span>
-                            <button
-                                className={a.tabClose}
-                                title="关闭会话"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    void closeSession(s.id)
-                                }}
-                            >
-                                <Icon name="close" size={13}/>
-                            </button>
-                        </div>
-                    ))}
-                    {redisSessions.map((s) => (
-                        <div
-                            key={s.id}
-                            className={`${a.tab}${s.id === activeRedisId ? ' ' + a.active : ''}`}
-                            onClick={() => focusSession(s.id, 'redis')}
-                        >
-                            <ClientIcon kind="redis" size={12}/>
-                            <span className={`${g.dot} ${g.on}`}/>
-                            <span className={a.tabTitle}>{s.title} · DB{s.db}</span>
-                            <button
-                                className={a.tabClose}
-                                title="关闭连接"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    void closeRedisSession(s.id)
-                                }}
-                            >
-                                <Icon name="close" size={13}/>
-                            </button>
-                        </div>
-                    ))}
-                    {mysqlSessions.map((s) => (
-                        <div
-                            key={s.id}
-                            className={`${a.tab}${s.id === activeMysqlId ? ' ' + a.active : ''}`}
-                            onClick={() => focusSession(s.id, 'mysql')}
-                        >
-                            <ClientIcon kind="mysql" size={12}/>
-                            <span className={`${g.dot} ${g.on}`}/>
-                            <span className={a.tabTitle}>{s.title}{s.database ? ` · ${s.database}` : ''}</span>
-                            <button
-                                className={a.tabClose}
-                                title="关闭连接"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    void closeMysqlSession(s.id)
-                                }}
-                            >
-                                <Icon name="close" size={13}/>
-                            </button>
-                        </div>
-                    ))}
-                    {mqttSessions.map((s) => (
-                        <div
-                            key={s.id}
-                            className={`${a.tab}${s.id === activeMqttId ? ' ' + a.active : ''}`}
-                            onClick={() => focusSession(s.id, 'mqtt')}
-                        >
-                            <ClientIcon kind="mqtt" size={12}/>
-                            <span className={`${g.dot} ${g.on}`}/>
-                            <span className={a.tabTitle}>{s.host}:{s.port}</span>
-                            <button
-                                className={a.tabClose}
-                                title="关闭连接"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    void closeMqttSession(s.id)
-                                }}
-                            >
-                                <Icon name="close" size={13}/>
-                            </button>
-                        </div>
-                    ))}
+                <SessionTabs
+                    sessions={sessions}
+                    activeId={activeId}
+                    redisSessions={redisSessions}
+                    activeRedisId={activeRedisId}
+                    mysqlSessions={mysqlSessions}
+                    activeMysqlId={activeMysqlId}
+                    mqttSessions={mqttSessions}
+                    activeMqttId={activeMqttId}
+                    apiOpen={apiOpen}
+                    apiActive={apiActive}
+                    onFocusSession={focusSession}
+                    onCloseSession={(id) => void closeSession(id)}
+                    onCloseRedis={(id) => void closeRedisSession(id)}
+                    onCloseMysql={(id) => void closeMysqlSession(id)}
+                    onCloseMqtt={(id) => void closeMqttSession(id)}
+                    onActivateApi={openApiTool}
+                    onCloseApi={closeApiTool}
+                />
 
-                    {apiOpen && (
-                        <div
-                            className={`${a.tab}${apiActive ? ' ' + a.active : ''}`}
-                            onClick={() => {
-                                setApiActive(true)
-                                setActiveId(null)
-                                setActiveRedisId(null)
-                                setActiveMysqlId(null)
-                                setActiveMqttId(null)
-                            }}
-                        >
-                            <Icon name="link" size={12}/>
-                            <span className={a.tabTitle}>API 调试</span>
-                            <button
-                                className={a.tabClose}
-                                title="关闭"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    closeApiTool()
-                                }}
-                            >×</button>
-                        </div>
-                    )}
-
-                    <span className={g.spacer}/>
-                </div>
-
-                <div className={a.stage}>
-                    {sessions.map((s) => (
-                        <SessionWorkspace
-                            key={s.id}
-                            session={s}
-                            active={s.id === activeId}
-                            nativeDrop={nativeDrop}
-                            onPathChange={handlePathChange}
-                            onNotify={notify}
-                        />
-                    ))}
-
-                    {redisSessions.map((s) => (
-                        <div key={s.id} style={{display: s.id === activeRedisId ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
-                            <RedisClient
-                                session={s}
-                                onClose={() => void closeRedisSession(s.id)}
-                                onDbChange={(id, db, dbSize) =>
-                                    setRedisSessions((prev) =>
-                                        prev.map((x) => (x.id === id ? {...x, db, dbSize} : x))
-                                    )
-                                }
-                            />
-                        </div>
-                    ))}
-
-                    {mysqlSessions.map((s) => (
-                        <div key={s.id} style={{display: s.id === activeMysqlId ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
-                            <MysqlClient
-                                session={s}
-                                onClose={() => void closeMysqlSession(s.id)}
-                                onChange={(id, database) =>
-                                    setMysqlSessions((prev) =>
-                                        prev.map((x) => (x.id === id ? {...x, database} : x))
-                                    )
-                                }
-                            />
-                        </div>
-                    ))}
-
-                    {mqttSessions.map((s) => (
-                        <div key={s.id} style={{display: s.id === activeMqttId ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
-                            <MqttClient
-                                session={s}
-                                onClose={() => void closeMqttSession(s.id)}
-                            />
-                        </div>
-                    ))}
-
-                    {apiOpen && (
-                        <div style={{display: apiActive ? 'flex' : 'none', flex: 1, minHeight: 0, minWidth: 0}}>
-                            <ApiClient onClose={closeApiTool}/>
-                        </div>
-                    )}
-
-                    {sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && !apiOpen && (
-                        <div className={g.emptyStage}>
-                            <Icon name="terminal" size={44}/>
-                            <h2>多协议开发运维客户端</h2>
-                            <p>在左侧添加服务器（SSH、Redis、MySQL 或 MQTT）后双击即可连接：SSH 提供终端与 SFTP 文件管理，Redis / MySQL 支持键值与数据浏览编辑，MQTT 支持主题订阅、消息发布与实时收发。点击左侧「API 调试」可打开内置的 HTTP 接口调试工具。</p>
-                            <div className={g.emptyActions}>
-                                <button className={`${g.btn} ${g.primary}`} onClick={() => addServer()}>新建服务器</button>
-                            </div>
-                        </div>
-                    )}
-                </div>
+                <Stage
+                    sessions={sessions}
+                    activeId={activeId}
+                    nativeDrop={nativeDrop}
+                    redisSessions={redisSessions}
+                    activeRedisId={activeRedisId}
+                    mysqlSessions={mysqlSessions}
+                    activeMysqlId={activeMysqlId}
+                    mqttSessions={mqttSessions}
+                    activeMqttId={activeMqttId}
+                    apiOpen={apiOpen}
+                    apiActive={apiActive}
+                    onPathChange={handlePathChange}
+                    onNotify={notify}
+                    onCloseRedis={(id) => void closeRedisSession(id)}
+                    onRedisDbChange={(id, db, dbSize) =>
+                        setRedisSessions((prev) => prev.map((x) => (x.id === id ? {...x, db, dbSize} : x)))
+                    }
+                    onCloseMysql={(id) => void closeMysqlSession(id)}
+                    onMysqlChange={(id, database) =>
+                        setMysqlSessions((prev) => prev.map((x) => (x.id === id ? {...x, database} : x)))
+                    }
+                    onCloseMqtt={(id) => void closeMqttSession(id)}
+                    onCloseApi={closeApiTool}
+                    onNewServer={addServer}
+                />
 
                 <TransferBar
                     transfers={transfers}

@@ -1,0 +1,99 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.mgmtWrap {
+    .fill();
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.mgmtHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid @border;
+    background: @bg-elev;
+    flex-shrink: 0;
+}
+
+.mgmtBody {
+    flex: 1;
+    .fill();
+    display: flex;
+    min-height: 0;
+}
+
+.userList {
+    width: 240px;
+    min-width: 200px;
+    border-right: 1px solid @border;
+    overflow: auto;
+    padding: 6px;
+}
+
+.userItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.active {
+        background: @bg-2;
+        color: @accent;
+    }
+}
+
+.userHost {
+    color: @text-faint;
+    font-size: 11px;
+}
+
+.lockBadge {
+    margin-left: auto;
+    font-size: 10px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: @warn-bg;
+    color: @warn;
+}
+
+.grantsBox {
+    flex: 1;
+    min-width: 0;
+    padding: 10px 12px;
+    overflow: auto;
+}
+
+.grantsHead {
+    font-size: 13px;
+    font-weight: 600;
+    color: @accent;
+    margin-bottom: 8px;
+}
+
+.grantsPre {
+    white-space: pre-wrap;
+    font-family: @font-mono;
+    font-size: 12px;
+    background: @bg;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 10px;
+    color: @text;
+}

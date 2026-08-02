@@ -1,0 +1,170 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+/* 容器布局：仅保留 MysqlClient 顶层框架类，子组件样式已拆分到各自 co-located 模块 */
+
+.mysqlPane {
+    flex: 1;
+    .fill();
+    display: flex;
+}
+
+.mysqlSide {
+    width: 230px;
+    min-width: 200px;
+    border-right: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+}
+
+.mysqlDbHead {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid @border;
+    color: @text-dim;
+}
+
+.mysqlDbSelect {
+    flex: 1;
+    .fill();
+    .input-base();
+}
+
+.mysqlDbActions {
+    display: flex;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid @border;
+}
+
+.mysqlTables {
+    flex: 1;
+    .fill();
+    overflow: auto;
+    padding: 6px;
+}
+
+.mysqlTableRow {
+    display: flex;
+    align-items: center;
+
+    &:hover .mysqlTableMenu {
+        opacity: 1;
+    }
+}
+
+.mysqlTableItem {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.active {
+        background: @bg-2;
+        color: @accent;
+    }
+}
+
+.mysqlTableMenu {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+    padding-right: 6px;
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    .iconBtn {
+        width: 22px;
+        height: 22px;
+    }
+}
+
+.mysqlMain {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mysqlToolbar {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 8px 12px;
+    border-bottom: 1px solid @border;
+
+    /* 工具栏按钮任何情况下不被压缩/遮挡，标题与错误信息优先收缩 */
+    .btn, .iconBtn {
+        flex-shrink: 0;
+    }
+}
+
+.mysqlConnTitle {
+    font-weight: 600;
+    font-size: 13px;
+    .ellipsis();
+    min-width: 0;
+}
+
+.mysqlError {
+    color: @danger;
+    font-size: 12px;
+    background: color-mix(in srgb, @danger 12%, transparent);
+    padding: 3px 8px;
+    border-radius: @radius-md;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mysqlTabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 12px;
+    border-bottom: 1px solid @border;
+    background: @bg-elev;
+    flex-shrink: 0;
+}
+
+.mysqlTab {
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+        color: @text;
+    }
+
+    &.active {
+        color: @accent;
+        border-bottom-color: @accent;
+    }
+}
+
+.mysqlContent {
+    flex: 1;
+    .fill();
+    overflow: auto;
+    padding: 10px 12px;
+}

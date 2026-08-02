@@ -1,0 +1,15 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+.app {
+    display: flex;
+    height: 100%;
+}
+
+.main {
+    flex: 1;
+    .fill();
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+}

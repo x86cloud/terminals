@@ -18,7 +18,7 @@ import type {
 import Icon from './Icon'
 import CodeEditor from './CodeEditor'
 import g from '../styles/global.module.less'
-import r from '../styles/RedisClient.module.less'
+import r from './RedisClient.module.less'
 
 interface Props {
     session: RedisSessionInfo

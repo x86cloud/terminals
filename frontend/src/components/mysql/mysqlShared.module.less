@@ -1,0 +1,94 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+/* 跨子组件共享的 MySQL 通用样式 */
+.mysqlNull {
+    color: @text-dim;
+    font-style: italic;
+}
+
+.mysqlEmpty {
+    color: @text-dim;
+    font-size: 13px;
+    padding: 12px;
+    text-align: center;
+
+    &.small {
+        padding: 6px;
+        font-size: 12px;
+    }
+}
+
+.mysqlGridWrap {
+    min-width: 0;
+}
+
+.mysqlTable {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    font-family: @font-mono;
+
+    th, td {
+        border: 1px solid @border;
+        padding: 5px 9px;
+        text-align: left;
+        white-space: nowrap;
+        max-width: 360px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    th {
+        background: @bg-1;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        color: @text-dim;
+        .sticky-divider();
+    }
+
+    tbody tr:nth-child(even) {
+        background: @bg-1;
+    }
+
+    tbody tr:hover {
+        background: @bg-2;
+    }
+}
+
+/* 单元格内联编辑器（DataTab / CellEditorInline 共用） */
+.mysqlCellInput {
+    width: 100%;
+    min-width: 60px;
+    border: 1px solid @accent;
+    background: @bg;
+    color: @text;
+    border-radius: 3px;
+    padding: 2px 4px;
+    font: inherit;
+    outline: none;
+
+    &.isNull {
+        color: @text-faint;
+        font-style: italic;
+    }
+}
+
+.nullToggle {
+    flex: 0 0 auto;
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 4px;
+    border: 1px solid @border;
+    background: @bg-elev;
+    color: @text-dim;
+    border-radius: 3px;
+    cursor: pointer;
+
+    &.on {
+        background: @accent;
+        border-color: @accent;
+        color: #fff;
+    }
+}

@@ -5,7 +5,7 @@ import CodeEditor from './CodeEditor'
 import {errorMessage} from '../utils'
 import {MqttMessage, MqttSessionInfo, MqttSubscription} from '../types'
 import g from '../styles/global.module.less'
-import m from '../styles/MqttClient.module.less'
+import m from './MqttClient.module.less'
 
 interface Props {
     session: MqttSessionInfo

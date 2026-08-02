@@ -6,6 +6,7 @@ import {errorMessage} from '../utils'
 import Icon from './Icon'
 import ClientIcon from './ClientIcon'
 import g from '../styles/global.module.less'
+import sd from './ServerDialog.module.less'
 
 interface Props {
     open: boolean

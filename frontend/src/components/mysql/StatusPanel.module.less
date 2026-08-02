@@ -1,0 +1,37 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+/* .mgmtWrap / .mgmtHead 由 UsersPanel.module.less 定义，StatusPanel 复用同一结构 */
+.mgmtWrap {
+    .fill();
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.mgmtHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid @border;
+    background: @bg-elev;
+    flex-shrink: 0;
+}
+
+.statusGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    padding: 12px;
+}
+
+.statusSection {
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 600;
+    color: @text-dim;
+    border-top: 1px solid @border;
+}

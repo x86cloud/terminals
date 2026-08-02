@@ -6,7 +6,7 @@ import {API, subscribe} from '../api'
 import {FileItem} from '../types'
 import {bytesToBase64, errorMessage, formatSize, formatTime, parentRemote} from '../utils'
 import g from '../styles/global.module.less'
-import fp from '../styles/FilePanel.module.less'
+import fp from './FilePanel.module.less'
 
 interface Props {
     sessionId: string

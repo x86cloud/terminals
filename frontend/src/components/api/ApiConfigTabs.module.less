@@ -1,0 +1,148 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.configBar {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 6px 10px;
+    border-bottom: 1px solid @border;
+}
+
+.configBody {
+    padding: 10px;
+    border-bottom: 1px solid @border;
+    max-height: 38%;
+    overflow: auto;
+}
+
+/* 请求头 */
+.headersEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.headerRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.headerName {
+    flex: 0 0 200px;
+    padding: 5px 8px;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    color: @text;
+    outline: none;
+    font-family: @font-mono;
+}
+
+.headerValue {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 8px;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    color: @text;
+    outline: none;
+    font-family: @font-mono;
+}
+
+.emptyHint {
+    color: @text-dim;
+    padding: 4px 0;
+
+    &.small {
+        font-size: 12px;
+    }
+}
+
+/* 请求体 */
+.bodyEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bodyTypeRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.label {
+    flex: none;
+    color: @text-dim;
+    font-size: 13px;
+}
+
+.bodyTypeSelect,
+.authTypeSelect,
+.optInput {
+    padding: 5px 8px;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    color: @text;
+    outline: none;
+}
+
+.warnText {
+    color: @warn;
+    font-size: 12px;
+}
+
+/* 鉴权 */
+.authEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-width: 460px;
+}
+
+.authRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.authInput {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 8px;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    color: @text;
+    outline: none;
+}
+
+/* 选项 */
+.optionsEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.optRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.optInput {
+    width: 140px;
+}
+
+.optCheck {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: @text-dim;
+    font-size: 13px;
+    cursor: pointer;
+}

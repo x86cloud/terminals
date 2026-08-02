@@ -1,75 +1,24 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import CodeMirror from '@uiw/react-codemirror'
-import {sql, SQLDialect} from '@codemirror/lang-sql'
-import {API} from '../api'
-import {lightEditorTheme} from './editorTheme'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import Icon from './Icon'
+import {API} from '../api'
 import {errorMessage} from '../utils'
-import {MysqlQueryResult, MysqlSessionInfo} from '../types'
+import {MysqlSessionInfo} from '../types'
 import g from '../styles/global.module.less'
-import my from '../styles/MysqlClient.module.less'
+import my from './MysqlClient.module.less'
+import sh from './mysql/mysqlShared.module.less'
+import {SqlTab, RowDrafts, NewRow, Schema, TabKey} from './mysql/mysqlTypes'
+import DataTab from './mysql/DataTab'
+import SqlEditor from './mysql/SqlEditor'
+import UsersPanel from './mysql/UsersPanel'
+import StatusPanel from './mysql/StatusPanel'
+import ErDiagram from './mysql/ErDiagram'
+import ObjModal, {ObjModalKind} from './mysql/ObjModal'
+import IoModal from './mysql/IoModal'
 
 interface Props {
     session: MysqlSessionInfo
     onClose: () => void
     onChange: (id: string, database: string) => void
-}
-
-type TabKey = 'data' | 'sql' | 'structure' | 'users' | 'status' | 'er'
-
-interface SqlTab {
-    id: string
-    title: string
-    content: string
-    result: MysqlQueryResult | null
-    error: string
-    history: { sql: string; at: number }[]
-}
-
-interface CellEdit {
-    value: string
-    isNull: boolean
-}
-
-type RowDrafts = Record<number, Record<string, CellEdit>>
-type NewRow = Record<string, CellEdit>
-
-const mysqlDialect = SQLDialect.define({
-    keywords: 'select from where insert into values update set delete create table drop alter index database use show describe join left right inner outer on group order by limit and or not null as distinct count sum avg max min between like in is primary key unique foreign references',
-})
-
-function formatCell(v: any) {
-    if (v === null || v === undefined) return <span className={my.mysqlNull}>NULL</span>
-    if (typeof v === 'object') return JSON.stringify(v)
-    return String(v)
-}
-
-function Grid({columns, rows}: { columns: string[]; rows: Record<string, any>[] }) {
-    if (!columns.length) {
-        return <div className={my.mysqlEmpty}>无结果</div>
-    }
-    return (
-        <div className={my.mysqlGridWrap}>
-            <table className={my.mysqlTable}>
-                <thead>
-                <tr>
-                    {columns.map((c) => (
-                        <th key={c}>{c}</th>
-                    ))}
-                </tr>
-                </thead>
-                <tbody>
-                {rows.map((r, i) => (
-                    <tr key={i}>
-                        {columns.map((c) => (
-                            <td key={c}>{formatCell(r[c])}</td>
-                        ))}
-                    </tr>
-                ))}
-                </tbody>
-            </table>
-        </div>
-    )
 }
 
 let tabSeq = 0
@@ -82,6 +31,12 @@ const newTab = (): SqlTab => ({
     history: [],
 })
 
+function notify(msg: string) {
+    // 轻量提示：复用全局 toast（若无可忽略）
+    if (typeof (window as any).__toast === 'function') (window as any).__toast(msg)
+    else console.log(msg)
+}
+
 export default function MysqlClient({session, onClose, onChange}: Props) {
     const [databases, setDatabases] = useState<string[]>([])
     const [db, setDb] = useState<string>(session.database || '')
@@ -89,14 +44,14 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     const [selected, setSelected] = useState<string | null>(null)
     const [dataView, setDataView] = useState<'data' | 'struct' | 'index'>('data')
     const [tab, setTab] = useState<TabKey>('data')
-    const [tableData, setTableData] = useState<MysqlQueryResult | null>(null)
-    const [structData, setStructData] = useState<MysqlQueryResult | null>(null)
+    const [tableData, setTableData] = useState<any>(null)
+    const [structData, setStructData] = useState<any>(null)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const [saving, setSaving] = useState(false)
 
     // 数据库对象管理弹窗
-    const [objModal, setObjModal] = useState<null | 'createdb' | 'createtable' | 'dropdb' | 'droptable' | 'truncate' | 'createindex' | 'dropindex'>(null)
+    const [objModal, setObjModal] = useState<ObjModalKind | null>(null)
     const [objName, setObjName] = useState('')
     const [objExtra, setObjExtra] = useState('')
     const [objUnique, setObjUnique] = useState(false)
@@ -139,15 +94,15 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     const [ioMsg, setIoMsg] = useState<string>('')
 
     // ER 图
-    const [schema, setSchema] = useState<{ tables: any[]; foreignKeys: any[] }>({tables: [], foreignKeys: []})
+    const [schema, setSchema] = useState<Schema>({tables: [], foreignKeys: []})
     const [erZoom, setErZoom] = useState(1)
 
     const columns = tableData?.columns ?? []
     const pkCols = useMemo(() => {
         if (!structData) return []
         return structData.rows
-            .filter((r) => r['Key'] === 'PRI')
-            .map((r) => r['Field'] as string)
+            .filter((r: any) => r['Key'] === 'PRI')
+            .map((r: any) => r['Field'] as string)
     }, [structData])
 
     const activeTabObj = sqlTabs.find((t) => t.id === activeSqlTab) || sqlTabs[0]
@@ -341,7 +296,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     const deleteRow = async (row: number) => {
         if (!selected) return
         const wCols = pkCols.length ? pkCols : columns
-        const wVals = wCols.map((c) => rows[row]?.[c] ?? null)
+        const wVals = wCols.map((c: string) => rows[row]?.[c] ?? null)
         const hint = pkCols.length ? '' : '（该表无主键，将按整行匹配，请谨慎操作）'
         if (!window.confirm(`确认删除该行？${hint}`)) return
         setBusy(true)
@@ -379,7 +334,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                 }
                 if (!setCols.length) continue
                 const wCols = pkCols.length ? pkCols : columns
-                const wVals = wCols.map((c) => rows[idx]?.[c] ?? null)
+                const wVals = wCols.map((c: string) => rows[idx]?.[c] ?? null)
                 const aff = await API.mysqlUpdate(session.id, db, selected, setCols, setVals, wCols, wVals)
                 total += aff
             }
@@ -590,49 +545,6 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
         }
     }, [session.id, db, selected, onChange, loadTables, openTable])
 
-    /* ----------------- ER 图布局（简单网格 + 外键连线） ----------------- */
-
-    const ER = useMemo(() => {
-        const colH = 20
-        const gapX = 40
-        const gapY = 36
-        const charW = 7.5
-        const padW = 20
-        // 根据最长文本行（表名或列定义）动态计算表格宽度，避免文字被截断
-        let maxLineLen = 0
-        schema.tables.forEach((t) => {
-            maxLineLen = Math.max(maxLineLen, String(t.name).length)
-            t.columns.forEach((c: any) => {
-                const label = `${c.key === 'PRI' ? '🔑 ' : ''}${c.name} ${c.type}`
-                maxLineLen = Math.max(maxLineLen, label.length)
-            })
-        })
-        const tblW = Math.max(160, maxLineLen * charW + padW)
-        const positions: Record<string, { x: number; y: number; h: number }> = {}
-        let x = 0
-        let y = 0
-        let rowBottom = 0
-        let contentRight = 0
-        let contentBottom = 0
-        schema.tables.forEach((t, i) => {
-            // 表头 22 + 首列偏移 14 + 行高 * 列数 + 底部留白 10
-            const h = 22 + 14 + t.columns.length * colH + 10
-            positions[t.name] = {x, y, h}
-            rowBottom = Math.max(rowBottom, y + h)
-            contentRight = Math.max(contentRight, x + tblW)
-            contentBottom = Math.max(contentBottom, y + h)
-            x += tblW + gapX
-            if ((i + 1) % 4 === 0) {
-                x = 0
-                y = rowBottom + gapY
-                rowBottom = 0
-            }
-        })
-        const svgW = Math.max(400, contentRight + gapX)
-        const svgH = Math.max(200, contentBottom + gapY)
-        return {positions, svgW, svgH, tblW}
-    }, [schema])
-
     const tabs: { key: TabKey; label: string }[] = [
         {key: 'data', label: '数据 / 结构'},
         {key: 'sql', label: 'SQL 编辑器'},
@@ -671,7 +583,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                 </div>
                 <div className={my.mysqlTables}>
                     {tables.length === 0 && !busy && (
-                        <div className={`${my.mysqlEmpty} ${my.small}`}>暂无表</div>
+                        <div className={`${sh.mysqlEmpty} ${sh.small}`}>暂无表</div>
                     )}
                     {tables.map((t) => (
                         <div key={t} className={my.mysqlTableRow}>
@@ -773,201 +685,38 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     )}
 
                     {tab === 'sql' && (
-                        <div className={my.sqlWrap}>
-                            <div className={my.sqlTabBar}>
-                                {sqlTabs.map((t) => (
-                                    <div
-                                        key={t.id}
-                                        className={`${my.sqlTab}${t.id === activeSqlTab ? ' ' + my.active : ''}`}
-                                        onClick={() => setActiveSqlTab(t.id)}
-                                    >
-                                        <span>{t.title}</span>
-                                        {sqlTabs.length > 1 && (
-                                            <button className={my.sqlTabClose} onClick={(e) => { e.stopPropagation(); closeSqlTab(t.id) }}>
-                                                <Icon name="close" size={11}/>
-                                            </button>
-                                        )}
-                                    </div>
-                                ))}
-                                <button className={my.sqlTabAdd} onClick={addSqlTab} title="新建查询标签">
-                                    <Icon name="plus" size={12}/>
-                                </button>
-                            </div>
-                            <CodeMirror
-                                value={activeTabObj.content}
-                                height="180px"
-                                theme={lightEditorTheme}
-                                extensions={[sql({dialect: mysqlDialect})]}
-                                onChange={(val) => updateActiveTab({content: val})}
-                                onKeyDown={(e) => {
-                                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-                                        e.preventDefault()
-                                        runSqlTab()
-                                    }
-                                }}
-                            />
-                            <div className={my.sqlRunBar}>
-                                <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy} onClick={runSqlTab}>
-                                    执行 (Ctrl+Enter)
-                                </button>
-                                <span className={my.mysqlCount}>库：{db || '（未选）'}</span>
-                                {activeTabObj.error && <span className={my.mysqlError}>{activeTabObj.error}</span>}
-                            </div>
-                            <div className={my.sqlResultArea}>
-                                {activeTabObj.result && activeTabObj.result.columns.length > 0 ? (
-                                    <>
-                                        <div className={my.mysqlCount}>{activeTabObj.result.rowCount} 行</div>
-                                        <Grid columns={activeTabObj.result.columns} rows={activeTabObj.result.rows}/>
-                                    </>
-                                ) : activeTabObj.result ? (
-                                    <div className={`${my.mysqlEmpty} ${my.small}`}>影响行数：{activeTabObj.result.affected}</div>
-                                ) : activeTabObj.error ? (
-                                    <div className={`${my.mysqlEmpty} ${my.small}`}>{activeTabObj.error}</div>
-                                ) : (
-                                    <div className={`${my.mysqlEmpty} ${my.small}`}>执行结果将在此显示</div>
-                                )}
-                            </div>
-                            <div className={my.sqlHistory}>
-                                <div className={my.sqlHistoryHead}>查询历史（{activeTabObj.history.length}）</div>
-                                {activeTabObj.history.length === 0 ? (
-                                    <div className={`${my.mysqlEmpty} ${my.small}`}>暂无历史</div>
-                                ) : (
-                                    activeTabObj.history.map((h, i) => (
-                                        <button key={i} className={my.sqlHistoryItem} title="点击载入到编辑器" onClick={() => loadHistoryIntoTab(h.sql)}>
-                                            <span className={my.sqlHistoryTime}>{new Date(h.at).toLocaleTimeString()}</span>
-                                            <code>{h.sql.slice(0, 80)}</code>
-                                        </button>
-                                    ))
-                                )}
-                            </div>
-                        </div>
+                        <SqlEditor
+                            sqlTabs={sqlTabs}
+                            activeSqlTab={activeSqlTab}
+                            activeTabObj={activeTabObj}
+                            busy={busy}
+                            db={db}
+                            onSelectTab={setActiveSqlTab}
+                            onAddTab={addSqlTab}
+                            onCloseTab={closeSqlTab}
+                            onContentChange={(val) => updateActiveTab({content: val})}
+                            onRun={runSqlTab}
+                            onLoadHistory={loadHistoryIntoTab}
+                        />
                     )}
 
                     {tab === 'users' && (
-                        <div className={my.mgmtWrap}>
-                            <div className={my.mgmtHead}>用户与权限</div>
-                            <div className={my.mgmtBody}>
-                                <div className={my.userList}>
-                                    {users.length === 0 && <div className={`${my.mysqlEmpty} ${my.small}`}>暂无用户（需 mysql 库权限）</div>}
-                                    {users.map((u, i) => (
-                                        <button
-                                            key={i}
-                                            className={`${my.userItem}${selUser?.user === u.User && selUser?.host === u.Host ? ' ' + my.active : ''}`}
-                                            onClick={() => viewGrants(u.User, u.Host)}
-                                        >
-                                            <Icon name="server" size={13}/>
-                                            <span>{u.User}</span>
-                                            <span className={my.userHost}>@{u.Host}</span>
-                                            {u.locked === 'Y' && <span className={my.lockBadge}>锁</span>}
-                                        </button>
-                                    ))}
-                                </div>
-                                <div className={my.grantsBox}>
-                                    {selUser ? (
-                                        <>
-                                            <div className={my.grantsHead}>{selUser.user}@{selUser.host} 的权限</div>
-                                            <pre className={my.grantsPre}>{grants || '加载中…'}</pre>
-                                        </>
-                                    ) : (
-                                        <div className={`${my.mysqlEmpty} ${my.small}`}>选择左侧用户查看权限</div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
+                        <UsersPanel users={users} selUser={selUser} grants={grants} onSelect={viewGrants}/>
                     )}
 
                     {tab === 'status' && (
-                        <div className={my.mgmtWrap}>
-                            <div className={my.mgmtHead}>
-                                服务器状态监控
-                                <span className={g.spacer}/>
-                                <button className={`${g.btn} ${g.xs}`} onClick={loadStatus} disabled={busy}>刷新</button>
-                            </div>
-                            <div className={my.statusGrid}>
-                                <StatusCard title="连接数 (Threads)" value={status['Threads_connected']}/>
-                                <StatusCard title="运行查询 (Running)" value={status['Threads_running']}/>
-                                <StatusCard title="慢查询数" value={status['Slow_queries']}/>
-                                <StatusCard title="QPS (Questions)" value={status['Questions']}/>
-                                <StatusCard title="查询缓存命中" value={status['Qcache_hits']}/>
-                                <StatusCard title="表锁等待" value={status['Table_locks_waited']}/>
-                            </div>
-                            <div className={my.statusSection}>当前进程 (SHOW PROCESSLIST)</div>
-                            <Grid columns={['Id', 'User', 'Host', 'db', 'Command', 'Time', 'State', 'Info']}
-                                  rows={processList.map((p) => ({
-                                      Id: p['Id'], User: p['User'], Host: p['Host'], db: p['db'],
-                                      Command: p['Command'], Time: p['Time'], State: p['State'], Info: p['Info'],
-                                  }))}/>
-                            <div className={my.statusSection}>慢查询日志</div>
-                            <Grid columns={['start_time', 'user_host', 'query_time', 'lock_time', 'rows_examined', 'sql_text']}
-                                  rows={slowLog.map((s) => ({
-                                      start_time: s['start_time'], user_host: s['user_host'], query_time: s['query_time'],
-                                      lock_time: s['lock_time'], rows_examined: s['rows_examined'], sql_text: s['sql_text'],
-                                  }))}/>
-                            <div className={my.statusSection}>关键变量</div>
-                            <Grid columns={['Variable_name', 'Value']}
-                                  rows={Object.entries(variables).filter(([k]) =>
-                                      /(max_connections|character_set_server|version|innodb_buffer_pool_size|slow_query_log|long_query_time)/i.test(k)
-                                  ).map(([k, v]) => ({Variable_name: k, Value: v}))}/>
-                        </div>
+                        <StatusPanel
+                            status={status}
+                            variables={variables}
+                            processList={processList}
+                            slowLog={slowLog}
+                            busy={busy}
+                            onRefresh={loadStatus}
+                        />
                     )}
 
                     {tab === 'er' && (
-                        <div className={my.erWrap}>
-                            <div className={my.erToolBar}>
-                                <button className={my.erZoomBtn} title="缩小"
-                                        onClick={() => setErZoom(z => Math.max(0.3, +(z - 0.1).toFixed(2)))}>−</button>
-                                <span className={my.erZoomVal}>{Math.round(erZoom * 100)}%</span>
-                                <button className={my.erZoomBtn} title="放大"
-                                        onClick={() => setErZoom(z => Math.min(3, +(z + 0.1).toFixed(2)))}>+</button>
-                                <button className={my.erZoomBtn} title="重置缩放" onClick={() => setErZoom(1)}>⤢</button>
-                                <span className={g.spacer}/>
-                                <span className={my.erHint}>缩放后可拖动滚动条查看细节</span>
-                            </div>
-                            {schema.tables.length === 0 ? (
-                                <div className={`${my.mysqlEmpty}`}>{busy ? '加载中…' : '该数据库暂无表'}</div>
-                            ) : (
-                                <div className={my.erCanvas}>
-                                    <svg
-                                        className={my.erSvg}
-                                        viewBox={`0 0 ${ER.svgW / erZoom} ${ER.svgH / erZoom}`}
-                                        preserveAspectRatio="xMidYMid meet">
-                                        {schema.foreignKeys.map((fk, i) => {
-                                            const from = ER.positions[fk.fromTable]
-                                            const to = ER.positions[fk.toTable]
-                                            if (!from || !to) return null
-                                            const x1 = from.x + ER.tblW
-                                            const y1 = from.y + (from.h / 2)
-                                            const x2 = to.x
-                                            const y2 = to.y + (to.h / 2)
-                                            return (
-                                                <path key={i} d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
-                                                      stroke="#5b9bff" strokeWidth={1.5} fill="none" opacity={0.7}/>
-                                            )
-                                        })}
-                                        {schema.tables.map((t) => {
-                                            const pos = ER.positions[t.name]
-                                            if (!pos) return null
-                                            return (
-                                                <g key={t.name} transform={`translate(${pos.x}, ${pos.y})`}>
-                                                    <rect width={ER.tblW} height={pos.h} rx={5} className={my.erTable}/>
-                                                    <rect width={ER.tblW} height={22} rx={5} className={my.erTableHead}/>
-                                                    <text x={8} y={15} className={my.erTableName}>
-                                                        <title>{t.name}</title>
-                                                        {t.name}
-                                                    </text>
-                                                    {t.columns.map((c: any, ci: number) => (
-                                                        <text key={ci} x={8} y={22 + 14 + ci * 18} className={my.erCol}>
-                                                            <title>{`${c.key === 'PRI' ? '🔑 ' : ''}${c.name} ${c.type}`}</title>
-                                                            {c.key === 'PRI' ? '🔑 ' : ''}{c.name} <tspan className={my.erType}>{c.type}</tspan>
-                                                        </text>
-                                                    ))}
-                                                </g>
-                                            )
-                                        })}
-                                    </svg>
-                                </div>
-                            )}
-                        </div>
+                        <ErDiagram schema={schema} busy={busy} zoom={erZoom} setZoom={setErZoom}/>
                     )}
                 </div>
             </div>
@@ -1002,434 +751,5 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                 />
             )}
         </div>
-    )
-}
-
-function notify(msg: string) {
-    // 轻量提示：复用全局 toast（若无可忽略）
-    if (typeof (window as any).__toast === 'function') (window as any).__toast(msg)
-    else console.log(msg)
-}
-
-/* ---------------- 数据/结构 子视图 ---------------- */
-
-function DataTab(props: {
-    busy: boolean
-    selected: string | null
-    dataView: 'data' | 'struct' | 'index'
-    setDataView: (v: 'data' | 'struct' | 'index') => void
-    columns: string[]
-    structData: MysqlQueryResult | null
-    pkCols: string[]
-    rows: Record<string, any>[]
-    newRows: NewRow[]
-    drafts: RowDrafts
-    editing: { row: number; col: string } | null
-    page: number
-    pageSize: number
-    totalRows: number
-    totalPages: number
-    indexData: Record<string, any>[]
-    tableStatus: Record<string, any>[]
-    onOpenTable: (t: string, p?: number, s?: number) => void
-    onCloseTable: () => void
-    onAddRow: () => void
-    onDeleteRow: (i: number) => void
-    onSaveAll: () => void
-    onCommitEdit: (row: number, col: string, value: string, isNull: boolean) => void
-    onUpdateNewCell: (idx: number, col: string, value: string, isNull: boolean) => void
-    onDeleteNewRow: (idx: number) => void
-    onCellDisplay: (row: number, col: string) => { text: string; isNull: boolean }
-    onSetEditing: (e: { row: number; col: string } | null) => void
-    saving: boolean
-    dirtyCount: number
-    onGoPage: (p: number) => void
-    onChangePageSize: (s: number) => void
-    onAddIndex: () => void
-    onDropIndex: (name: string) => void
-}) {
-    const {
-        busy, selected, dataView, setDataView, columns, structData, pkCols, rows, newRows, drafts,
-        editing, page, pageSize, totalRows, totalPages, indexData, tableStatus, onOpenTable, onCloseTable,
-        onAddRow, onDeleteRow, onSaveAll, onCommitEdit, onUpdateNewCell, onDeleteNewRow, onCellDisplay,
-        onSetEditing, saving, dirtyCount, onGoPage, onChangePageSize, onAddIndex, onDropIndex,
-    } = props
-
-    if (!selected) {
-        return <div className={my.mysqlEmpty}>从左侧选择一个表查看数据 / 结构，或在「SQL 编辑器」中执行任意 SQL</div>
-    }
-
-    return (
-        <div className={my.dataWrap}>
-            <div className={my.mysqlTableHead}>
-                <span className={my.mysqlTableName}>{selected}</span>
-                <div className={`${g.segmented} ${g.sm}`}>
-                    <button className={dataView === 'data' ? g.active : ''} onClick={() => setDataView('data')}>数据</button>
-                    <button className={dataView === 'struct' ? g.active : ''} onClick={() => setDataView('struct')}>结构</button>
-                    <button className={dataView === 'index' ? g.active : ''} onClick={() => setDataView('index')}>索引</button>
-                </div>
-                <span className={my.mysqlCount}>
-                    {dataView === 'data'
-                        ? `${rows.length} 行${newRows.length ? ` +${newRows.length} 新` : ''}`
-                        : dataView === 'struct' ? `${structData?.rowCount ?? 0} 列` : `${indexData.length} 个索引`}
-                </span>
-                {dataView === 'data' && (
-                    <span className={my.mysqlCrudActions}>
-                        <button className={`${g.btn} ${g.sm}`} disabled={busy || saving} onClick={onAddRow} title="新增一行">
-                            <Icon name="plus" size={13}/> 新建行
-                        </button>
-                        <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || saving || !dirtyCount} onClick={onSaveAll} title="保存所有修改">
-                            {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
-                        </button>
-                        <button className={g.iconBtn} title="刷新数据" disabled={busy || saving} onClick={() => onOpenTable(selected, page)}>
-                            <Icon name="refresh" size={13}/>
-                        </button>
-                    </span>
-                )}
-                {dataView === 'index' && (
-                    <span className={my.mysqlCrudActions}>
-                        <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onAddIndex}><Icon name="plus" size={13}/> 新建索引</button>
-                    </span>
-                )}
-                <button className={g.iconBtn} title="关闭表" onClick={onCloseTable}><Icon name="close" size={13}/></button>
-            </div>
-
-            {dataView === 'data' && (
-                <>
-                    <div className={my.mysqlPager}>
-                        <span className={my.mysqlCount}>
-                            共 {totalRows} 行 · 第 {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} 行
-                        </span>
-                        <span className={g.spacer}/>
-                        <button className={g.iconBtn} title="首页" disabled={busy || page <= 1} onClick={() => onGoPage(1)}><Icon name="chevrons-left" size={13}/></button>
-                        <button className={g.iconBtn} title="上一页" disabled={busy || page <= 1} onClick={() => onGoPage(page - 1)}><Icon name="chevron-left" size={13}/></button>
-                        <span className={my.mysqlPageJump}>
-                            <input key={page} type="number" min={1} max={totalPages} defaultValue={page} disabled={busy}
-                                   onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value); if (v) onGoPage(v) } }}
-                                   onBlur={(e) => { const v = Number(e.target.value); if (v && v !== page) onGoPage(v) }}/>
-                            <span className={my.mysqlPageTotal}>/ {totalPages} 页</span>
-                        </span>
-                        <button className={g.iconBtn} title="下一页" disabled={busy || page >= totalPages} onClick={() => onGoPage(page + 1)}><Icon name="chevron-right" size={13}/></button>
-                        <button className={g.iconBtn} title="末页" disabled={busy || page >= totalPages} onClick={() => onGoPage(totalPages)}><Icon name="chevrons-right" size={13}/></button>
-                        <select className={my.mysqlPageSize} value={pageSize} disabled={busy} onChange={(e) => onChangePageSize(Number(e.target.value))}>
-                            <option value={20}>20 行/页</option>
-                            <option value={50}>50 行/页</option>
-                            <option value={100}>100 行/页</option>
-                            <option value={200}>200 行/页</option>
-                            <option value={500}>500 行/页</option>
-                        </select>
-                    </div>
-                    <div className={my.dataGridScroll}>
-                        {pkCols.length === 0 && (
-                            <div className={my.mysqlWarn}>该表无主键，删除/更新将按整行匹配，请谨慎操作。</div>
-                        )}
-                        <table className={`${my.mysqlTable} ${my.mysqlEditTable}`}>
-                            <thead>
-                            <tr>
-                                <th className={my.mysqlRownum}>#</th>
-                                {columns.map((c) => (
-                                    <th key={c}>{c}{pkCols.includes(c) && <span className={my.pkBadge}>PK</span>}</th>
-                                ))}
-                                <th className={my.mysqlRowact}>操作</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {rows.map((_, i) => (
-                                <tr key={i}>
-                                    <td className={my.mysqlRownum}>{(page - 1) * pageSize + i + 1}</td>
-                                    {columns.map((c) => {
-                                        const disp = onCellDisplay(i, c)
-                                        const isEditing = editing?.row === i && editing?.col === c
-                                        const dirty = !!drafts[i]?.[c]
-                                        return (
-                                            <td key={c}
-                                                className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + my.cellNull : ''}`}
-                                                onDoubleClick={() => !isEditing && onSetEditing({row: i, col: c})}
-                                                title="双击编辑">
-                                                {isEditing ? (
-                                                    <CellEditorInline value={disp.text === 'NULL' ? '' : disp.text} isNull={disp.isNull}
-                                                                       onCommit={(v, n) => onCommitEdit(i, c, v, n)} onCancel={() => onSetEditing(null)}/>
-                                                ) : disp.isNull ? (
-                                                    <span className={my.mysqlNull}>NULL</span>
-                                                ) : (
-                                                    String(disp.text)
-                                                )}
-                                            </td>
-                                        )
-                                    })}
-                                    <td className={my.mysqlRowact}>
-                                        <button className={`${g.iconBtn} ${g.danger}`} title="删除该行" disabled={busy || saving} onClick={() => onDeleteRow(i)}>
-                                            <Icon name="trash" size={13}/>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {newRows.map((nr, idx) => (
-                                <tr key={`new-${idx}`} className={my.rowNew}>
-                                    <td className={my.mysqlRownum}>+</td>
-                                    {columns.map((c) => {
-                                        const cell = nr[c] || {value: '', isNull: false}
-                                        return (
-                                            <td key={c} className={cell.isNull ? my.cellNull : ''}>
-                                                <input className={my.mysqlCellInput} value={cell.isNull ? '' : cell.value} disabled={cell.isNull}
-                                                       onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
-                                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
-                                                <button type="button" className={`${my.nullToggle}${cell.isNull ? ' ' + my.on : ''}`} title="切换为 NULL"
-                                                        onClick={() => onUpdateNewCell(idx, c, cell.value, !cell.isNull)}>NULL</button>
-                                            </td>
-                                        )
-                                    })}
-                                    <td className={my.mysqlRowact}>
-                                        <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
-                                            <Icon name="trash" size={13}/>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {!rows.length && !newRows.length && (
-                                <tr><td colSpan={columns.length + 2} className={`${my.mysqlEmpty} ${my.small}`}>无数据，可点击「新建行」插入</td></tr>
-                            )}
-                            </tbody>
-                        </table>
-                    </div>
-                </>
-            )}
-
-            {dataView === 'struct' && (
-                <div className={my.dataGridScroll}>
-                    {structData ? <Grid columns={structData.columns} rows={structData.rows}/> :
-                        <div className={my.mysqlEmpty}>加载中…</div>}
-                </div>
-            )}
-
-            {dataView === 'index' && (
-                <div className={my.dataGridScroll}>
-                    <div className={my.mysqlCount}>{indexData.length} 个索引</div>
-                    <table className={my.mysqlTable}>
-                        <thead><tr><th>索引名</th><th>列</th><th>唯一</th><th>类型</th><th>操作</th></tr></thead>
-                        <tbody>
-                        {indexData.map((ix, i) => (
-                            <tr key={i}>
-                                <td>{ix['Key_name']}</td>
-                                <td>{ix['Column_name']}</td>
-                                <td>{ix['Non_unique'] === 0 ? '是' : '否'}</td>
-                                <td>{ix['Index_type']}</td>
-                                <td>
-                                    {ix['Key_name'] !== 'PRIMARY' && (
-                                        <button className={g.iconBtn} title="删除索引" onClick={() => onDropIndex(ix['Key_name'])}><Icon name="trash" size={13}/></button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                        {indexData.length === 0 && <tr><td colSpan={5} className={`${my.mysqlEmpty} ${my.small}`}>暂无索引</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-            )}
-        </div>
-    )
-}
-
-function StatusCard({title, value}: { title: string; value: any }) {
-    return (
-        <div className={my.statusCard}>
-            <div className={my.statusCardVal}>{value === undefined || value === null ? '-' : String(value)}</div>
-            <div className={my.statusCardTitle}>{title}</div>
-        </div>
-    )
-}
-
-/* ---------------- 数据库对象管理弹窗 ---------------- */
-
-function ObjModal(props: {
-    kind: string
-    db: string
-    busy: boolean
-    msg: string
-    name: string
-    extra: string
-    unique: boolean
-    onName: (v: string) => void
-    onExtra: (v: string) => void
-    onUnique: (v: boolean) => void
-    onClose: () => void
-    onConfirm: () => void
-}) {
-    const {kind, db, busy, msg, name, extra, unique, onName, onExtra, onUnique, onClose, onConfirm} = props
-    const titleMap: Record<string, string> = {
-        createdb: '新建数据库', dropdb: '删除数据库', createtable: `在 ${db} 中新建表`,
-        droptable: '删除表', truncate: '清空表数据', createindex: '新建索引', dropindex: '删除索引',
-    }
-    const needName = !['truncate', 'dropindex'].includes(kind)
-    const needDef = kind === 'createtable'
-    const needCols = kind === 'createindex'
-    const needConfirm = ['dropdb', 'droptable', 'truncate'].includes(kind)
-
-    return (
-        <div className={g.modalMask} onClick={() => !busy && onClose()}>
-            <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
-                <div className={g.modalHead}>
-                    <span>{titleMap[kind] || '数据库操作'}</span>
-                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><Icon name="close" size={14}/></button>
-                </div>
-                <div className={g.modalBody}>
-                    {msg && <div className={`${g.ioMsg} ${msg.startsWith('失败') ? g.err : g.ok}`}>{msg}</div>}
-                    {needName && (
-                        <div className={g.field}>
-                            <label>{kind === 'createindex' ? '索引名称' : kind === 'createdb' ? '数据库名' : '名称'}</label>
-                            <input value={name} onChange={(e) => onName(e.target.value)} placeholder={kind === 'createdb' ? '例如 app_db' : '名称'}/>
-                        </div>
-                    )}
-                    {needDef && (
-                        <div className={g.field}>
-                            <label>列定义（SQL）</label>
-                            <textarea className={my.mysqlSqlInput} rows={4} value={extra} onChange={(e) => onExtra(e.target.value)}
-                                      placeholder="`id` INT PRIMARY KEY AUTO_INCREMENT, `name` VARCHAR(64)"/>
-                        </div>
-                    )}
-                    {needCols && (
-                        <>
-                            <div className={g.field}>
-                                <label>索引列（逗号分隔）</label>
-                                <input value={extra} onChange={(e) => onExtra(e.target.value)} placeholder="col1, col2"/>
-                            </div>
-                            <label className={g.switchField}>
-                                <span>唯一索引 (UNIQUE)</span>
-                                <span className={g.switch}>
-                                    <input type="checkbox" checked={unique} onChange={(e) => onUnique(e.target.checked)}/>
-                                    <span className={g.slider}/>
-                                </span>
-                            </label>
-                        </>
-                    )}
-                    {needConfirm && <p className={g.ioHint}>该操作不可恢复，请确认。</p>}
-                </div>
-                <div className={g.modalFoot}>
-                    <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onClose}>取消</button>
-                    <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || ((needName || needDef || needCols) && !name && !extra)} onClick={onConfirm}>
-                        {busy ? '处理中…' : '确定'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    )
-}
-
-/* ---------------- 导入/导出弹窗 ---------------- */
-
-function IoModal(props: {
-    kind: 'export' | 'import'
-    table: string
-    sqlText: string
-    busy: boolean
-    msg: string
-    onClose: () => void
-    onExport: (o: { mode: 'sql' | 'csv' | 'json'; source: 'table' | 'query'; table: string; sqlText: string; limit: number }) => void
-    onImport: (o: { mode: 'sql' | 'csv' | 'json'; table: string }) => void
-}) {
-    const {kind, table, sqlText, busy, msg, onClose, onExport, onImport} = props
-    const [mode, setMode] = useState<'sql' | 'csv' | 'json'>(kind === 'export' ? 'sql' : 'sql')
-    const [source, setSource] = useState<'table' | 'query'>('table')
-    const [tableName, setTableName] = useState(table)
-    const [limit, setLimit] = useState(0)
-
-    const canExport = source === 'table' ? tableName.trim() !== '' : sqlText.trim() !== ''
-    const canImport = mode === 'sql' ? true : tableName.trim() !== ''
-
-    return (
-        <div className={g.modalMask} onClick={() => !busy && onClose()}>
-            <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
-                <div className={g.modalHead}>
-                    <span>{kind === 'export' ? '导出数据' : '导入数据'}</span>
-                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><Icon name="close" size={14}/></button>
-                </div>
-                <div className={g.modalBody}>
-                    <div className={g.field}>
-                        <label>格式</label>
-                        <div className={`${g.segmented} ${g.sm}`}>
-                            <button className={mode === 'sql' ? g.active : ''} onClick={() => setMode('sql')}>SQL</button>
-                            <button className={mode === 'csv' ? g.active : ''} onClick={() => setMode('csv')}>CSV</button>
-                            <button className={mode === 'json' ? g.active : ''} onClick={() => setMode('json')}>JSON</button>
-                        </div>
-                    </div>
-                    {kind === 'export' ? (
-                        <>
-                            <div className={g.field}>
-                                <label>来源</label>
-                                <div className={`${g.segmented} ${g.sm}`}>
-                                    <button className={source === 'table' ? g.active : ''} disabled={!table} onClick={() => setSource('table')}>当前表</button>
-                                    <button className={source === 'query' ? g.active : ''} onClick={() => setSource('query')}>查询结果</button>
-                                </div>
-                            </div>
-                            {source === 'table' ? (
-                                <div className={g.field}>
-                                    <label>表名</label>
-                                    <input value={tableName} onChange={(e) => setTableName(e.target.value)} placeholder="目标表名"/>
-                                </div>
-                            ) : (
-                                <div className={g.field}>
-                                    <label>查询语句（来自 SQL 编辑器）</label>
-                                    <textarea value={sqlText} readOnly rows={4} className={my.mysqlSqlInput}/>
-                                </div>
-                            )}
-                            <div className={g.field}>
-                                <label>限制行数（0 表示不限制）</label>
-                                <input type="number" min={0} value={limit} onChange={(e) => setLimit(Number(e.target.value) || 0)}/>
-                            </div>
-                        </>
-                    ) : (
-                        <div className={g.field}>
-                            <label>{mode === 'sql' ? '目标数据库' : '目标表名'}（CSV/JSON 必填）</label>
-                            <input value={tableName} onChange={(e) => setTableName(e.target.value)}
-                                   placeholder={mode === 'sql' ? '可选，留空使用当前库' : '导入到的表名'}/>
-                            <p className={g.ioHint}>
-                                {mode === 'sql' ? '将逐条执行文件中的 SQL 语句（支持多语句）。'
-                                    : mode === 'json' ? 'JSON 为对象数组，键对应列名。'
-                                        : 'CSV 首行为列名，其余为数据行，空单元格写入 NULL。'}
-                            </p>
-                        </div>
-                    )}
-                    {msg && <div className={`${g.ioMsg} ${msg.startsWith('失败') ? g.err : g.ok}`}>{msg}</div>}
-                </div>
-                <div className={g.modalFoot}>
-                    <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onClose}>取消</button>
-                    {kind === 'export' ? (
-                        <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || !canExport}
-                                onClick={() => onExport({mode, source, table: tableName.trim(), sqlText, limit})}>导出</button>
-                    ) : (
-                        <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || !canImport}
-                                onClick={() => onImport({mode, table: tableName.trim()})}>选择文件并导入</button>
-                    )}
-                </div>
-            </div>
-        </div>
-    )
-}
-
-// 单元格编辑器（双击现有单元格时弹出）
-function CellEditorInline({
-                              value,
-                              isNull,
-                              onCommit,
-                              onCancel,
-                          }: {
-    value: string
-    isNull: boolean
-    onCommit: (v: string, n: boolean) => void
-    onCancel: () => void
-}) {
-    const [txt, setTxt] = useState(isNull ? '' : value)
-    const [nulled, setNulled] = useState(isNull)
-    return (
-        <span className={my.mysqlCellEdit}>
-            <input autoFocus className={`${my.mysqlCellInput}${nulled ? ' ' + my.isNull : ''}`} value={nulled ? '' : txt} disabled={nulled}
-                   onChange={(e) => setTxt(e.target.value)}
-                   onKeyDown={(e) => {
-                       if (e.key === 'Enter') { e.preventDefault(); onCommit(txt, nulled) }
-                       else if (e.key === 'Escape') { e.preventDefault(); onCancel() }
-                   }}
-                   onBlur={() => onCommit(txt, nulled)}/>
-            <button type="button" className={`${my.nullToggle}${nulled ? ' ' + my.on : ''}`} title="切换为 NULL" onClick={() => setNulled((n) => !n)}>NULL</button>
-        </span>
     )
 }

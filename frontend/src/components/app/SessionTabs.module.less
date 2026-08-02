@@ -1,28 +1,6 @@
-@import (reference) 'variables.less';
-@import (reference) 'mixins.less';
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
 
-.app {
-    display: flex;
-    height: 100%;
-}
-
-.main {
-    flex: 1;
-    .fill();
-    display: flex;
-    flex-direction: column;
-    background: @bg-1;
-}
-
-.stage {
-    flex: 1;
-    min-height: 0;
-    min-width: 0;
-    position: relative;
-    display: flex;
-}
-
-/* 标签栏 */
 .tabbar {
     display: flex;
     align-items: stretch;

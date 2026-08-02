@@ -6,7 +6,7 @@ import 'xterm/css/xterm.css'
 import {API, subscribe} from '../api'
 import {base64ToBytes} from '../utils'
 import ContextMenu, {closedMenu, MenuState} from './ContextMenu'
-import t from '../styles/Terminal.module.less'
+import t from './Terminal.module.less'
 
 interface Props {
     sessionId: string

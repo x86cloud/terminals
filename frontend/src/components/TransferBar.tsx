@@ -3,7 +3,7 @@ import Icon from './Icon'
 import {Transfer} from '../types'
 import {formatSize} from '../utils'
 import g from '../styles/global.module.less'
-import tb from '../styles/TransferBar.module.less'
+import tb from './TransferBar.module.less'
 
 interface Props {
     transfers: Transfer[]

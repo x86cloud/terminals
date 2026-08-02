@@ -3,7 +3,7 @@ import TerminalView from './TerminalView'
 import FilePanel from './FilePanel'
 import Icon from './Icon'
 import {SessionInfo} from '../types'
-import w from '../styles/SessionWorkspace.module.less'
+import w from './SessionWorkspace.module.less'
 
 interface Props {
     session: SessionInfo

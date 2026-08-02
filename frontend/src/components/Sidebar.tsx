@@ -4,7 +4,7 @@ import ClientIcon from './ClientIcon'
 import ContextMenu, {closedMenu, MenuState, MenuItem} from './ContextMenu'
 import {ServerConfig, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, ConnType} from '../types'
 import g from '../styles/global.module.less'
-import s from '../styles/Sidebar.module.less'
+import s from './Sidebar.module.less'
 
 interface Props {
     servers: ServerConfig[]

@@ -1,0 +1,34 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+/* 跨子组件共享的通用样式（历史/请求/WS 面板共用） */
+.respEmpty {
+    padding: 24px;
+    color: @text-dim;
+    text-align: center;
+}
+
+.errorBar {
+    padding: 7px 10px;
+    background: @accent-dim-2;
+    color: @danger;
+    border-bottom: 1px solid @border;
+    font-size: 13px;
+}
+
+.prettyCheck {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: @text-dim;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.m_GET { background: @ok; }
+.m_POST { background: @accent; }
+.m_PUT { background: @warn; }
+.m_PATCH { background: #9b59b6; }
+.m_DELETE { background: @danger; }
+.m_HEAD { background: @text-faint; }
+.m_OPTIONS { background: #16a085; }
