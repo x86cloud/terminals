@@ -7,6 +7,7 @@ import MqttClient from '../MqttClient'
 import MongoClient from '../MongoClient'
 import SqliteClient from '../SqliteClient'
 import ApiClient from '../ApiClient'
+import DevTools from '../DevTools'
 import g from '../../styles/global.module.less'
 import a from './Stage.module.less'
 import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo} from '../../types'
@@ -28,6 +29,8 @@ export interface StageProps {
     activeMongoId: string | null
     sqliteSessions: SqliteSessionInfo[]
     activeSqliteId: string | null
+    devToolsOpen: boolean
+    devToolsActive: boolean
     apiOpen: boolean
     apiActive: boolean
     onPathChange: (sessionId: string, p: string) => void
@@ -40,6 +43,7 @@ export interface StageProps {
     onCloseMongo: (id: string) => void
     onMongoChange: (id: string, database: string) => void
     onCloseSqlite: (id: string) => void
+    onCloseDevTools: () => void
     onCloseApi: () => void
     onNewServer: () => void
 }
@@ -47,12 +51,12 @@ export interface StageProps {
 export default function Stage(props: StageProps) {
     const {
         sessions, activeId, nativeDrop, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, apiOpen, apiActive,
+        mqttSessions, activeMqttId,         mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, devToolsOpen, devToolsActive, apiOpen, apiActive,
         onPathChange, onNotify, onCloseRedis, onRedisDbChange, onCloseMysql, onMysqlChange,
-        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseApi, onNewServer,
+        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseDevTools, onCloseApi, onNewServer,
     } = props
 
-    const empty = sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !apiOpen
+    const empty = sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen
 
     return (
         <div className={a.stage}>
@@ -114,6 +118,12 @@ export default function Stage(props: StageProps) {
                     />
                 </div>
             ))}
+
+            {devToolsOpen && (
+                <div style={devToolsActive ? shownPane : hiddenPane}>
+                    <DevTools onClose={() => onCloseDevTools()}/>
+                </div>
+            )}
 
             {apiOpen && (
                 <div style={apiActive ? shownPane : hiddenPane}>

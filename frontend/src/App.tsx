@@ -8,6 +8,7 @@ import MqttClient from './components/MqttClient'
 import MongoClient from './components/MongoClient'
 import SqliteClient from './components/SqliteClient'
 import ApiClient from './components/ApiClient'
+import DevTools from './components/DevTools'
 import TransferBar from './components/TransferBar'
 import Icon from './components/Icon'
 import ClientIcon from './components/ClientIcon'
@@ -63,6 +64,24 @@ export default function App() {
     // API 调试工具（独立的工具面板，不依赖服务器配置）
     const [apiOpen, setApiOpen] = useState(false)
     const [apiActive, setApiActive] = useState(false)
+
+    // 常用开发工具集（独立的工具面板，位于 API 调试上方）
+    const [devToolsOpen, setDevToolsOpen] = useState(false)
+    const [devToolsActive, setDevToolsActive] = useState(false)
+
+    // 唯一激活描述符的来源（kind = 哪个 tab 类型，id = 该类型下的会话 id；工具类为 'api' / 'devtools'）
+    // 通过单一入口写入，确保任意时刻“最多且恰好一个”激活态，杜绝多 active 或全 inactive 异常。
+    type ActiveKind = ConnType | 'api' | 'devtools'
+    const activateTab = useCallback((kind: ActiveKind | null, id: string | null = null) => {
+        setActiveId(kind === 'ssh' ? id : null)
+        setActiveRedisId(kind === 'redis' ? id : null)
+        setActiveMysqlId(kind === 'mysql' ? id : null)
+        setActiveMqttId(kind === 'mqtt' ? id : null)
+        setActiveMongoId(kind === 'mongo' ? id : null)
+        setActiveSqliteId(kind === 'sqlite' ? id : null)
+        setApiActive(kind === 'api')
+        setDevToolsActive(kind === 'devtools')
+    }, [])
 
     const activeIdRef = useRef<string | null>(null)
     const pathsRef = useRef<Record<string, string>>({})
@@ -155,12 +174,11 @@ export default function App() {
 
     const connect = useCallback(
         async (cfg: ServerConfig) => {
-            if (connectingRef.current.has(cfg.id)) return
-            connectingRef.current.add(cfg.id)
-            setConnectingId(cfg.id)
-            setApiActive(false)
-            try {
-                if (cfg.type === 'redis') {
+        if (connectingRef.current.has(cfg.id)) return
+        connectingRef.current.add(cfg.id)
+        setConnectingId(cfg.id)
+        try {
+            if (cfg.type === 'redis') {
                     const ok = await API.redisConnect(cfg.id)
                     if (!ok) throw new Error('Redis 连接失败')
                     const dbSize = await API.redisDBSize(cfg.id).catch(() => 0)
@@ -183,10 +201,7 @@ export default function App() {
                         info,
                     ])
                     setActiveRedisId(cfg.id)
-                    setActiveId(null)
-                    setActiveMysqlId(null)
-                    setActiveMqttId(null)
-                    setActiveSqliteId(null)
+                    activateTab('redis', cfg.id)
                     notify(`已连接 Redis ${info.title}`)
                 } else if (cfg.type === 'mysql') {
                     const ok = await API.mysqlConnectEx(cfg.id)
@@ -205,10 +220,7 @@ export default function App() {
                         info,
                     ])
                     setActiveMysqlId(cfg.id)
-                    setActiveId(null)
-                    setActiveRedisId(null)
-                    setActiveMqttId(null)
-                    setActiveSqliteId(null)
+                    activateTab('mysql', cfg.id)
                     notify(`已连接 MySQL ${info.title}`)
                 } else if (cfg.type === 'mqtt') {
                     const ok = await API.mqttConnect(cfg.id)
@@ -224,10 +236,7 @@ export default function App() {
                     }
                     setMqttSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
                     setActiveMqttId(cfg.id)
-                    setActiveId(null)
-                    setActiveRedisId(null)
-                    setActiveMysqlId(null)
-                    setActiveSqliteId(null)
+                    activateTab('mqtt', cfg.id)
                     notify(`已连接 MQTT ${info.host}:${info.port}`)
                 } else if (cfg.type === 'mongo') {
                     const ok = await API.mongoConnect(cfg.id)
@@ -246,11 +255,7 @@ export default function App() {
                     }
                     setMongoSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
                     setActiveMongoId(cfg.id)
-                    setActiveId(null)
-                    setActiveRedisId(null)
-                    setActiveMysqlId(null)
-                    setActiveMqttId(null)
-                    setActiveSqliteId(null)
+                    activateTab('mongo', cfg.id)
                     notify(`已连接 MongoDB ${info.title}`)
                 } else if (cfg.type === 'sqlite') {
                     // SQLite 为本地文件连接：优先使用已保存的文件路径，否则再弹出文件选择器
@@ -278,20 +283,13 @@ export default function App() {
                         info,
                     ])
                     setActiveSqliteId(cfg.id)
-                    setActiveId(null)
-                    setActiveRedisId(null)
-                    setActiveMysqlId(null)
-                    setActiveMqttId(null)
-                    setActiveMongoId(null)
+                    activateTab('sqlite', cfg.id)
                     notify(`已打开 SQLite 文件：${info.title}`)
                 } else {
                     const info = await API.connect(cfg.id, 120, 32)
                     setSessions((prev) => [...prev, info])
                     setActiveId(info.id)
-                    setActiveRedisId(null)
-                    setActiveMysqlId(null)
-                    setActiveMqttId(null)
-                    setActiveSqliteId(null)
+                    activateTab('ssh', info.id)
                     pathsRef.current[info.id] = info.homeDir || '/'
                     notify(`已连接 ${info.title}`)
                 }
@@ -302,19 +300,14 @@ export default function App() {
                 setConnectingId(null)
             }
         },
-        [notify]
+        [notify, activateTab]
     )
 
-    // 将激活指针同步为唯一一个会话（其余类型置空），无目标则全部置空
+    // 将激活指针同步为唯一一个会话（其余类型置空），无目标则全部置空。
+    // 统一走 activateTab，确保关闭会话回退时也会取消 API / 开发工具的激活态。
     const applyActive = useCallback((target: { kind: ConnType; id: string } | null) => {
-        setActiveId(target && target.kind === 'ssh' ? target.id : null)
-        setActiveRedisId(target && target.kind === 'redis' ? target.id : null)
-        setActiveMysqlId(target && target.kind === 'mysql' ? target.id : null)
-        setActiveMqttId(target && target.kind === 'mqtt' ? target.id : null)
-        setActiveMongoId(target && target.kind === 'mongo' ? target.id : null)
-        setActiveSqliteId(target && target.kind === 'sqlite' ? target.id : null)
-        setApiActive(false)
-    }, [])
+        activateTab(target ? target.kind : null, target ? target.id : null)
+    }, [activateTab])
 
     // 关闭激活会话后挑选唯一的回退目标：优先同类型剩余会话，其次按 ssh > redis > mysql > mqtt > mongo 顺序
     // lists 中被关闭类型需传入已过滤的 remaining，避免读取到陈旧（未删除）的会话
@@ -432,29 +425,30 @@ export default function App() {
     // 打开 / 关闭 API 调试工具面板
     const openApiTool = useCallback(() => {
         setApiOpen(true)
-        setApiActive(true)
-        setActiveId(null)
-        setActiveRedisId(null)
-        setActiveMysqlId(null)
-        setActiveMqttId(null)
-    }, [])
+        activateTab('api')
+    }, [activateTab])
 
     const closeApiTool = useCallback(() => {
         setApiOpen(false)
         setApiActive(false)
     }, [])
 
-    // 同一时刻只显示一个操作窗口：聚焦某一类会话时清空其它类型的 active。
-    const focusSession = useCallback((id: string, kind: ConnType) => {
-        // 任意时刻只激活一种会话：目标类型置为 id，其余全部置空
-        setActiveId(kind === 'ssh' ? id : null)
-        setActiveRedisId(kind === 'redis' ? id : null)
-        setActiveMysqlId(kind === 'mysql' ? id : null)
-        setActiveMqttId(kind === 'mqtt' ? id : null)
-        setActiveMongoId(kind === 'mongo' ? id : null)
-        setActiveSqliteId(kind === 'sqlite' ? id : null)
-        setApiActive(false)
+    // 打开 / 关闭 常用开发工具集面板
+    const openDevTools = useCallback(() => {
+        setDevToolsOpen(true)
+        activateTab('devtools')
+    }, [activateTab])
+
+    const closeDevTools = useCallback(() => {
+        setDevToolsOpen(false)
+        setDevToolsActive(false)
     }, [])
+
+    // 任一 tab 被点击：通过单一入口激活目标，自动取消其余所有激活态（含 API / 开发工具）。
+    // 点击已激活的 tab 时 kind/id 不变，结果为幂等，不会产生副作用。
+    const focusSession = useCallback((id: string, kind: ConnType) => {
+        activateTab(kind, id)
+    }, [activateTab])
 
     return (
         <div className={a.app}>
@@ -478,6 +472,7 @@ export default function App() {
                 onDelete={deleteServer}
                 onConnect={connect}
                 onOpenApi={openApiTool}
+                onOpenDevTools={openDevTools}
                 onFocusSession={(id, kind) => focusSession(id, kind)}
             />
 
@@ -495,6 +490,8 @@ export default function App() {
                     activeMongoId={activeMongoId}
                     sqliteSessions={sqliteSessions}
                     activeSqliteId={activeSqliteId}
+                    devToolsOpen={devToolsOpen}
+                    devToolsActive={devToolsActive}
                     apiOpen={apiOpen}
                     apiActive={apiActive}
                     onFocusSession={focusSession}
@@ -504,6 +501,8 @@ export default function App() {
                     onCloseMqtt={(id) => void closeMqttSession(id)}
                     onCloseMongo={(id) => void closeMongoSession(id)}
                     onCloseSqlite={(id) => void closeSqliteSession(id)}
+                    onActivateDevTools={openDevTools}
+                    onCloseDevTools={closeDevTools}
                     onActivateApi={openApiTool}
                     onCloseApi={closeApiTool}
                 />
@@ -522,6 +521,8 @@ export default function App() {
                     activeMongoId={activeMongoId}
                     sqliteSessions={sqliteSessions}
                     activeSqliteId={activeSqliteId}
+                    devToolsOpen={devToolsOpen}
+                    devToolsActive={devToolsActive}
                     apiOpen={apiOpen}
                     apiActive={apiActive}
                     onPathChange={handlePathChange}
@@ -540,6 +541,7 @@ export default function App() {
                     onMongoChange={(id, database) =>
                         setMongoSessions((prev) => prev.map((x) => (x.id === id ? {...x, database} : x)))
                     }
+                    onCloseDevTools={closeDevTools}
                     onCloseApi={closeApiTool}
                     onNewServer={addServer}
                 />

@@ -18,6 +18,8 @@ export interface SessionTabsProps {
     activeMongoId: string | null
     sqliteSessions: SqliteSessionInfo[]
     activeSqliteId: string | null
+    devToolsOpen: boolean
+    devToolsActive: boolean
     apiOpen: boolean
     apiActive: boolean
     onFocusSession: (id: string, kind: 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite') => void
@@ -27,6 +29,8 @@ export interface SessionTabsProps {
     onCloseMqtt: (id: string) => void
     onCloseMongo: (id: string) => void
     onCloseSqlite: (id: string) => void
+    onActivateDevTools: () => void
+    onCloseDevTools: () => void
     onActivateApi: () => void
     onCloseApi: () => void
 }
@@ -61,8 +65,8 @@ function Tab({
 export default function SessionTabs(props: SessionTabsProps) {
     const {
         sessions, activeId, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, apiOpen, apiActive,
-        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onCloseMqtt, onCloseMongo, onCloseSqlite, onActivateApi, onCloseApi,
+        mqttSessions, activeMqttId,         mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, devToolsOpen, devToolsActive, apiOpen, apiActive,
+        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onCloseMqtt, onCloseMongo, onCloseSqlite, onActivateDevTools, onCloseDevTools, onActivateApi, onCloseApi,
     } = props
 
     return (
@@ -133,6 +137,16 @@ export default function SessionTabs(props: SessionTabsProps) {
                     title={s.title}
                 />
             ))}
+
+            {devToolsOpen && (
+                <Tab
+                    active={devToolsActive}
+                    onClick={onActivateDevTools}
+                    onClose={onCloseDevTools}
+                    icon={<Icon name="chart" size={12}/>}
+                    title="开发工具"
+                />
+            )}
 
             {apiOpen && (
                 <Tab
