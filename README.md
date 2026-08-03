@@ -4,6 +4,10 @@
 集成了 SSH 终端、SFTP 文件管理、Redis、MySQL、MQTT 与 HTTP 接口调试等常用运维工具，
 所有连接在同一窗口内以标签 / 侧栏形式管理，互不干扰。
 
+![xClient 主界面](docs/image.png)
+
+![xClient SSH 终端](docs/image-ssh.png)
+
 ## 功能
 
 **终端**
@@ -27,11 +31,27 @@
 - 显示各 DB 键数量（DBSize）
 
 **MySQL**
-- 多数据库、多数据表浏览，表结构（DESCRIBE）查看
-- 数据网格浏览，支持分页（limit / offset）、固定表头与底部滚动条
+- 多数据库、多数据表浏览，表结构（DESCRIBE）查看、索引与表状态查看
+- 数据网格浏览，支持分页（limit / offset）、切换每页行数、固定表头与斑马纹
 - 单元格在线编辑（新增/修改/删除行，NULL 处理），原表直写
-- 自定义 SQL 执行，结果以表格展示
-- 数据导入 / 导出：支持导出为 SQL 或 CSV（到剪贴板或本地文件），并支持从剪贴板 / 文件导入
+- 自定义 SQL 执行（多标签 + 历史），结果以统一的表格样式展示
+- 数据库对象管理：建库 / 删库、建表 / 删表、清空表、建索引 / 删索引
+- 用户权限：查看用户与授权（GRANT）
+- 服务器状态监控：状态变量、系统变量、进程列表、慢查询日志
+- ER 关系图：自动根据外键生成表关系图
+- 数据导入 / 导出：支持导出为 SQL / CSV / JSON（到剪贴板或本地文件），并支持从剪贴板 / 文件导入；整库 SQL 备份
+
+**SQLite**
+- 通过文件选择器从本地选取 `.db` / `.sqlite` 文件，无需填写主机 / 端口
+- 连接管理：打开 / 切换数据库文件，显示文件路径与大小、连接状态
+- 浏览库内所有表与视图，点击查看数据预览（分页）、表结构、索引
+- 统一的表格展示样式（独立滚动容器 + 吸顶表头 + 斑马纹），与 MySQL 客户端一致
+- 纯 Go 驱动（`modernc.org/sqlite`），无 cgo 依赖，跨平台开箱即用
+
+**常用开发工具集**（位于 API 调试上方）
+- **MD5 哈希**：输入文本实时计算 32 位 MD5，一键复制（零依赖实现）
+- **时间戳转换**：当前时间戳实时刷新（秒级 / 毫秒级），支持时间戳 ↔ 日期双向互转，一键复制
+- **Base64 编解码**：文本实时编码 / 解码，分段展示
 
 **MQTT**
 - 连接 MQTT Broker（支持账号密码等配置）
@@ -60,6 +80,8 @@ ssh.go        // SSH 连接、PTY shell、输出推流、会话管理
 sftp.go       // SFTP 目录/文件操作、上传下载、传输队列与进度
 redis.go      // Redis 连接、键值/命令操作
 mysql.go      // MySQL 连接、查询/编辑、导入导出
+mysqlx.go     // MySQL 扩展操作（导入/导出/备份等）
+sqlite.go     // SQLite 连接、表/结构/索引/数据查询
 mqtt.go       // MQTT 连接、发布/订阅
 httpapi.go    // HTTP 接口调试请求执行
 config.go     // 服务器配置持久化与敏感字段加密
@@ -74,8 +96,10 @@ frontend/src
     FilePanel.tsx      // SFTP 文件管理器
     TransferBar.tsx    // 传输任务栏
     RedisClient.tsx    // Redis 调试面板
-    MysqlClient.tsx    // MySQL 调试面板
-    MqttClient.tsx     // MQTT 调试面板
+    MysqlClient.tsx    // MySQL 调试面板（含 mysql/ 子组件：DataTab、SqlEditor、UsersPanel、StatusPanel、ErDiagram 等）
+    SqliteClient.tsx   // SQLite 调试面板
+    DevTools.tsx       // 常用开发工具集（MD5 / 时间戳 / Base64）
+    dbTable.module.less // 数据库表格统一展示样式（SQLite / MySQL 共用）
     ApiClient.tsx      // HTTP 接口调试面板
 ```
 

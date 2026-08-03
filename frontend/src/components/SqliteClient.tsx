@@ -5,6 +5,7 @@ import {errorMessage} from '../utils'
 import {SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteQueryResult, SqliteIndexInfo} from '../types'
 import g from '../styles/global.module.less'
 import sq from './SqliteClient.module.less'
+import db from './dbTable.module.less'
 import sh from './mysql/mysqlShared.module.less'
 
 interface Props {
@@ -241,8 +242,8 @@ export default function SqliteClient({session, onClose}: Props) {
                     {selected && dataView === 'data' && (
                         <div className={sq.sqliteDataWrap}>
                             {columns.length > 0 ? (
-                                <div className={sq.sqliteTableScroll}>
-                                    <table className={sq.sqliteTable}>
+                                <div className={db.dbTableScroll}>
+                                    <table className={db.dbTable}>
                                         <thead>
                                         <tr>
                                             {columns.map((c) => (
@@ -257,7 +258,7 @@ export default function SqliteClient({session, onClose}: Props) {
                                                     const v = r[c]
                                                     const isn = v === null || v === undefined
                                                     return (
-                                                        <td key={c} className={isn ? sq.nullCell : ''}>
+                                                        <td key={c} className={isn ? db.dbNullCell : ''}>
                                                             {isn ? 'NULL' : String(v)}
                                                         </td>
                                                     )
@@ -268,7 +269,7 @@ export default function SqliteClient({session, onClose}: Props) {
                                     </table>
                                 </div>
                             ) : (
-                                <div className={`${sh.mongoEmpty} ${sh.small}`}>该表暂无数据</div>
+                                <div className={db.dbEmpty}>该表暂无数据</div>
                             )}
                             <div className={sq.pager}>
                                 <button className={g.btn} disabled={page <= 1 || busy} onClick={() => goPage(1)}>首页</button>
@@ -282,8 +283,8 @@ export default function SqliteClient({session, onClose}: Props) {
                     {selected && dataView === 'struct' && (
                         <div className={sq.sqliteDataWrap}>
                             {structData.length > 0 ? (
-                                <div className={sq.sqliteTableScroll}>
-                                    <table className={sq.sqliteTable}>
+                                <div className={db.dbTableScroll}>
+                                    <table className={db.dbTable}>
                                         <thead>
                                         <tr>
                                             <th>列名</th>
@@ -315,8 +316,8 @@ export default function SqliteClient({session, onClose}: Props) {
                     {selected && dataView === 'index' && (
                         <div className={sq.sqliteDataWrap}>
                             {indexData.length > 0 ? (
-                                <div className={sq.sqliteTableScroll}>
-                                    <table className={sq.sqliteTable}>
+                                <div className={db.dbTableScroll}>
+                                    <table className={db.dbTable}>
                                         <thead>
                                         <tr>
                                             <th>索引名</th>

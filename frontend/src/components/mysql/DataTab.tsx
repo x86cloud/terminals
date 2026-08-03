@@ -3,6 +3,7 @@ import Icon from '../Icon'
 import g from '../../styles/global.module.less'
 import my from './DataTab.module.less'
 import sh from './mysqlShared.module.less'
+import db from '../dbTable.module.less'
 import {MysqlQueryResult} from '../../types'
 import {Grid} from './mysqlTypes'
 import {RowDrafts, NewRow} from './mysqlTypes'
@@ -114,11 +115,11 @@ export default function DataTab(props: {
                             <option value={500}>500 行/页</option>
                         </select>
                     </div>
-                    <div className={my.dataGridScroll}>
+                    <div className={db.dbTableScroll}>
                         {pkCols.length === 0 && (
                             <div className={my.mysqlWarn}>该表无主键，删除/更新将按整行匹配，请谨慎操作。</div>
                         )}
-                        <table className={`${my.mysqlTable} ${my.mysqlEditTable}`}>
+                        <table className={`${db.dbTable} ${my.mysqlEditTable}`}>
                             <thead>
                             <tr>
                                 <th className={my.mysqlRownum}>#</th>
@@ -138,7 +139,7 @@ export default function DataTab(props: {
                                         const dirty = !!drafts[i]?.[c]
                                         return (
                                             <td key={c}
-                                                className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + my.cellNull : ''}`}
+                                                className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + db.dbNullCell : ''}`}
                                                 onDoubleClick={() => !isEditing && onSetEditing({row: i, col: c})}
                                                 title="双击编辑">
                                                 {isEditing ? (
@@ -165,7 +166,7 @@ export default function DataTab(props: {
                                     {columns.map((c) => {
                                         const cell = nr[c] || {value: '', isNull: false}
                                         return (
-                                            <td key={c} className={cell.isNull ? my.cellNull : ''}>
+                                            <td key={c} className={cell.isNull ? db.dbNullCell : ''}>
                                                 <input className={sh.mysqlCellInput} value={cell.isNull ? '' : cell.value} disabled={cell.isNull}
                                                        onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
                                                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
@@ -182,7 +183,7 @@ export default function DataTab(props: {
                                 </tr>
                             ))}
                             {!rows.length && !newRows.length && (
-                                <tr><td colSpan={columns.length + 2} className={`${sh.mysqlEmpty} ${my.small}`}>无数据，可点击「新建行」插入</td></tr>
+                                <tr><td colSpan={columns.length + 2} className={db.dbEmpty}>无数据，可点击「新建行」插入</td></tr>
                             )}
                             </tbody>
                         </table>
@@ -191,16 +192,16 @@ export default function DataTab(props: {
             )}
 
             {dataView === 'struct' && (
-                <div className={my.dataGridScroll}>
+                <div className={db.dbTableScroll}>
                     {structData ? <Grid columns={structData.columns} rows={structData.rows}/> :
-                        <div className={sh.mysqlEmpty}>加载中…</div>}
+                        <div className={db.dbEmpty}>加载中…</div>}
                 </div>
             )}
 
             {dataView === 'index' && (
-                <div className={my.dataGridScroll}>
+                <div className={db.dbTableScroll}>
                     <div className={my.mysqlCount}>{indexData.length} 个索引</div>
-                    <table className={sh.mysqlTable}>
+                    <table className={db.dbTable}>
                         <thead><tr><th>索引名</th><th>列</th><th>唯一</th><th>类型</th><th>操作</th></tr></thead>
                         <tbody>
                         {indexData.map((ix, i) => (
@@ -216,7 +217,7 @@ export default function DataTab(props: {
                                 </td>
                             </tr>
                         ))}
-                        {indexData.length === 0 && <tr><td colSpan={5} className={`${sh.mysqlEmpty} ${my.small}`}>暂无索引</td></tr>}
+                        {indexData.length === 0 && <tr><td colSpan={5} className={db.dbEmpty}>暂无索引</td></tr>}
                         </tbody>
                     </table>
                 </div>

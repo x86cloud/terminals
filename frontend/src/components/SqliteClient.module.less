@@ -186,59 +186,6 @@
     gap: 10px;
 }
 
-.sqliteTableScroll {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    overflow: auto;
-    border: 1px solid @border;
-    border-radius: 6px;
-    background: @bg-1;
-}
-
-.sqliteTable {
-    border-collapse: separate;
-    border-spacing: 0;
-    width: 100%;
-    font-size: 13px;
-
-    th, td {
-        border-right: 1px solid @border;
-        border-bottom: 1px solid @border;
-        padding: 6px 10px;
-        text-align: left;
-        white-space: nowrap;
-        max-width: 360px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    th {
-        background: @bg-1;
-        color: @text-dim;
-        position: sticky;
-        top: 0;
-        z-index: 2;
-    }
-
-    th:first-child {
-        border-left: 1px solid @border;
-    }
-
-    td:first-child {
-        border-left: 1px solid @border;
-    }
-
-    tbody tr:nth-child(even) {
-        background: @bg-1;
-    }
-}
-
-.nullCell {
-    color: @text-faint;
-    font-style: italic;
-}
-
 .pager {
     display: flex;
     align-items: center;

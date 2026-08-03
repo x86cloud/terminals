@@ -2,6 +2,7 @@ import React from 'react'
 import {sql, SQLDialect} from '@codemirror/lang-sql'
 import {MysqlQueryResult} from '../../types'
 import my from './mysqlShared.module.less'
+import db from '../dbTable.module.less'
 
 // ---- 共享类型 ----
 export type TabKey = 'data' | 'sql' | 'structure' | 'users' | 'status' | 'er'
@@ -47,11 +48,11 @@ export function formatCell(v: any) {
 
 export function Grid({columns, rows}: { columns: string[]; rows: Record<string, any>[] }) {
     if (!columns.length) {
-        return <div className={my.mysqlEmpty}>无结果</div>
+        return <div className={db.dbEmpty}>无结果</div>
     }
     return (
         <div className={my.mysqlGridWrap}>
-            <table className={my.mysqlTable}>
+            <table className={db.dbTable}>
                 <thead>
                 <tr>
                     {columns.map((c) => (
