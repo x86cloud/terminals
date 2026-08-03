@@ -1,0 +1,188 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+/* 容器布局：仅保留 MongoClient 顶层框架类，子组件样式已拆分到各自 co-located 模块 */
+
+.mongoPane {
+    flex: 1;
+    .fill();
+    display: flex;
+}
+
+.mongoSide {
+    width: 240px;
+    min-width: 210px;
+    border-right: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+}
+
+.mongoDbHead {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid @border;
+    color: @text-dim;
+}
+
+.mongoDbSelect {
+    flex: 1;
+    .fill();
+    .input-base();
+}
+
+.mongoDbActions {
+    display: flex;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid @border;
+}
+
+.mongoTree {
+    flex: 1;
+    .fill();
+    overflow: auto;
+    padding: 6px;
+}
+
+.mongoDbGroup {
+    margin-bottom: 4px;
+}
+
+.mongoDbItem {
+    .row();
+    width: 100%;
+    gap: 6px;
+    padding: 5px 8px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    font-size: 13px;
+    text-align: left;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.active {
+        background: @bg-2;
+        color: @accent;
+    }
+}
+
+.mongoCollList {
+    padding: 2px 0 4px 18px;
+}
+
+.mongoCollRow {
+    .row();
+    width: 100%;
+    gap: 6px;
+    padding: 4px 8px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    font-size: 12.5px;
+    text-align: left;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.active {
+        background: @bg-2;
+        color: @accent;
+    }
+}
+
+.mongoCollMenu {
+    display: flex;
+    gap: 2px;
+    margin-left: auto;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.mongoCollRow:hover .mongoCollMenu {
+    opacity: 1;
+}
+
+.mongoMain {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.mongoToolbar {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 8px 12px;
+    border-bottom: 1px solid @border;
+
+    .btn, .iconBtn {
+        flex-shrink: 0;
+    }
+}
+
+.mongoConnTitle {
+    font-weight: 600;
+    font-size: 13px;
+    .ellipsis();
+    min-width: 0;
+}
+
+.mongoError {
+    color: @danger;
+    font-size: 12px;
+    background: color-mix(in srgb, @danger 12%, transparent);
+    padding: 3px 8px;
+    border-radius: @radius-md;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.mongoTabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 0 12px;
+    border-bottom: 1px solid @border;
+    background: @bg-elev;
+    flex-shrink: 0;
+}
+
+.mongoTab {
+    padding: 8px 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+        color: @text;
+    }
+
+    &.active {
+        color: @accent;
+        border-bottom-color: @accent;
+    }
+}
+
+.mongoContent {
+    flex: 1;
+    .fill();
+    overflow: auto;
+    padding: 10px 12px;
+}

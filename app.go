@@ -20,6 +20,7 @@ type App struct {
 	redisMgr  *redisManager
 	mysqlMgr  *mysqlManager
 	mqttMgr   *mqttManager
+	mongoMgr  *mongoManager
 	wsMgr     *wsManager
 }
 
@@ -36,6 +37,7 @@ func NewApp() *App {
 		redisMgr:  newRedisManager(),
 		mysqlMgr:  newMysqlManager(),
 		mqttMgr:   newMqttManager(),
+		mongoMgr:  newMongoManager(),
 		wsMgr:     newWsManager(),
 	}
 }
@@ -52,6 +54,8 @@ func (a *App) shutdown(ctx context.Context) {
 	a.redisMgr.closeAll()
 	mysqlExMgr.closeAll()
 	a.mqttMgr.closeAll()
+	a.mongoMgr.closeAll()
+	sqliteMgr.closeAll()
 }
 
 // ---------- 服务器配置 ----------

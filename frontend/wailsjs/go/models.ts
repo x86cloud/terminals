@@ -163,6 +163,124 @@ export namespace main {
 		}
 	}
 	
+	export class MongoBulkOp {
+	    type: string;
+	    filter: string;
+	    document: string;
+	    upsert: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoBulkOp(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.filter = source["filter"];
+	        this.document = source["document"];
+	        this.upsert = source["upsert"];
+	    }
+	}
+	export class MongoFindResult {
+	    documents: string[];
+	    count: number;
+	    total: number;
+	    durationMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoFindResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.documents = source["documents"];
+	        this.count = source["count"];
+	        this.total = source["total"];
+	        this.durationMs = source["durationMs"];
+	    }
+	}
+	export class MongoQuerySpec {
+	    database: string;
+	    collection: string;
+	    filter: string;
+	    projection: string;
+	    sort: string;
+	    limit: number;
+	    skip: number;
+	    hint: string;
+	    collation: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoQuerySpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.database = source["database"];
+	        this.collection = source["collection"];
+	        this.filter = source["filter"];
+	        this.projection = source["projection"];
+	        this.sort = source["sort"];
+	        this.limit = source["limit"];
+	        this.skip = source["skip"];
+	        this.hint = source["hint"];
+	        this.collation = source["collation"];
+	    }
+	}
+	export class MongoTxOp {
+	    type: string;
+	    database: string;
+	    collection: string;
+	    filter: string;
+	    document: string;
+	    upsert: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoTxOp(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.database = source["database"];
+	        this.collection = source["collection"];
+	        this.filter = source["filter"];
+	        this.document = source["document"];
+	        this.upsert = source["upsert"];
+	    }
+	}
+	export class MongoURIInfo {
+	    scheme: string;
+	    hosts: string[];
+	    username: string;
+	    password: string;
+	    database: string;
+	    authSource: string;
+	    authMech: string;
+	    replicaSet: string;
+	    tls: boolean;
+	    srv: boolean;
+	    options: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoURIInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.scheme = source["scheme"];
+	        this.hosts = source["hosts"];
+	        this.username = source["username"];
+	        this.password = source["password"];
+	        this.database = source["database"];
+	        this.authSource = source["authSource"];
+	        this.authMech = source["authMech"];
+	        this.replicaSet = source["replicaSet"];
+	        this.tls = source["tls"];
+	        this.srv = source["srv"];
+	        this.options = source["options"];
+	    }
+	}
 	export class ServerConfig {
 	    id: string;
 	    name: string;
@@ -210,8 +328,30 @@ export namespace main {
 	    mysqlSSHKeyData?: string;
 	    mysqlSSHPassphrase?: string;
 	    mysqlSSHProxyLocalPort?: number;
+	    mongoUri?: string;
+	    mongoSrv?: boolean;
+	    mongoHosts?: string;
+	    mongoDatabase?: string;
+	    mongoAuthMech?: string;
+	    mongoAuthSource?: string;
+	    mongoReplicaSet?: string;
+	    mongoReadPreference?: string;
+	    mongoTlsEnabled?: boolean;
+	    mongoTlsInsecure?: boolean;
+	    mongoTlsCaCert?: string;
+	    mongoTlsClientCert?: string;
+	    mongoTlsClientKey?: string;
+	    mongoMaxPoolSize?: number;
+	    mongoMinPoolSize?: number;
+	    mongoMaxConnIdleTime?: number;
+	    mongoConnectTimeout?: number;
+	    mongoServerSelectTimeout?: number;
+	    mongoSocketTimeout?: number;
+	    mongoCompressors?: string;
+	    mongoAppName?: string;
 	    clientId?: string;
 	    useTLS?: boolean;
+	    sqlitePath?: string;
 	    mqttProto?: string;
 	    mqttKeepAlive?: number;
 	    mqttConnectTimeout?: number;
@@ -280,8 +420,30 @@ export namespace main {
 	        this.mysqlSSHKeyData = source["mysqlSSHKeyData"];
 	        this.mysqlSSHPassphrase = source["mysqlSSHPassphrase"];
 	        this.mysqlSSHProxyLocalPort = source["mysqlSSHProxyLocalPort"];
+	        this.mongoUri = source["mongoUri"];
+	        this.mongoSrv = source["mongoSrv"];
+	        this.mongoHosts = source["mongoHosts"];
+	        this.mongoDatabase = source["mongoDatabase"];
+	        this.mongoAuthMech = source["mongoAuthMech"];
+	        this.mongoAuthSource = source["mongoAuthSource"];
+	        this.mongoReplicaSet = source["mongoReplicaSet"];
+	        this.mongoReadPreference = source["mongoReadPreference"];
+	        this.mongoTlsEnabled = source["mongoTlsEnabled"];
+	        this.mongoTlsInsecure = source["mongoTlsInsecure"];
+	        this.mongoTlsCaCert = source["mongoTlsCaCert"];
+	        this.mongoTlsClientCert = source["mongoTlsClientCert"];
+	        this.mongoTlsClientKey = source["mongoTlsClientKey"];
+	        this.mongoMaxPoolSize = source["mongoMaxPoolSize"];
+	        this.mongoMinPoolSize = source["mongoMinPoolSize"];
+	        this.mongoMaxConnIdleTime = source["mongoMaxConnIdleTime"];
+	        this.mongoConnectTimeout = source["mongoConnectTimeout"];
+	        this.mongoServerSelectTimeout = source["mongoServerSelectTimeout"];
+	        this.mongoSocketTimeout = source["mongoSocketTimeout"];
+	        this.mongoCompressors = source["mongoCompressors"];
+	        this.mongoAppName = source["mongoAppName"];
 	        this.clientId = source["clientId"];
 	        this.useTLS = source["useTLS"];
+	        this.sqlitePath = source["sqlitePath"];
 	        this.mqttProto = source["mqttProto"];
 	        this.mqttKeepAlive = source["mqttKeepAlive"];
 	        this.mqttConnectTimeout = source["mqttConnectTimeout"];

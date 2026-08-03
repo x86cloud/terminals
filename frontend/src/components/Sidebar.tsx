@@ -2,7 +2,7 @@ import React, {useMemo, useState} from 'react'
 import Icon from './Icon'
 import ClientIcon from './ClientIcon'
 import ContextMenu, {closedMenu, MenuState, MenuItem} from './ContextMenu'
-import {ServerConfig, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, ConnType} from '../types'
+import {ServerConfig, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from '../types'
 import g from '../styles/global.module.less'
 import s from './Sidebar.module.less'
 
@@ -17,6 +17,10 @@ interface Props {
     activeMysqlId: string | null
     mqttSessions: MqttSessionInfo[]
     activeMqttId: string | null
+    mongoSessions: MongoSessionInfo[]
+    activeMongoId: string | null
+    sqliteSessions: SqliteSessionInfo[]
+    activeSqliteId: string | null
     onNew: () => void
     onEdit: (cfg: ServerConfig) => void
     onDelete: (cfg: ServerConfig) => void
@@ -36,6 +40,10 @@ export default function Sidebar({
                                     activeMysqlId,
                                     mqttSessions,
                                     activeMqttId,
+                                    mongoSessions,
+                                    activeMongoId,
+                                    sqliteSessions,
+                                    activeSqliteId,
                                     onNew,
                                     onEdit,
                                     onDelete,
@@ -54,7 +62,9 @@ export default function Sidebar({
                 (s.type ?? 'ssh') === 'ssh' ||
                 s.type === 'redis' ||
                 s.type === 'mysql' ||
-                s.type === 'mqtt'
+                s.type === 'mqtt' ||
+                s.type === 'mongo' ||
+                s.type === 'sqlite'
         )
         const matched = kw
             ? list.filter(
@@ -78,13 +88,19 @@ export default function Sidebar({
             ? 'mysql'
             : s.type === 'mqtt'
             ? 'mqtt'
-            : 'ssh'
+        : s.type === 'mongo'
+        ? 'mongo'
+        : s.type === 'sqlite'
+        ? 'sqlite'
+        : 'ssh'
 
     const sessionsOf = (server: ServerConfig) => {
         const kind = kindOf(server)
         if (kind === 'redis') return redisSessions.filter((s) => s.serverId === server.id)
         if (kind === 'mysql') return mysqlSessions.filter((s) => s.serverId === server.id)
         if (kind === 'mqtt') return mqttSessions.filter((s) => s.serverId === server.id)
+        if (kind === 'mongo') return mongoSessions.filter((s) => s.serverId === server.id)
+        if (kind === 'sqlite') return sqliteSessions.filter((s) => s.serverId === server.id)
         return sessions.filter((s) => s.serverId === server.id)
     }
 
@@ -93,6 +109,8 @@ export default function Sidebar({
         if (kind === 'redis') return activeRedisId
         if (kind === 'mysql') return activeMysqlId
         if (kind === 'mqtt') return activeMqttId
+        if (kind === 'mongo') return activeMongoId
+        if (kind === 'sqlite') return activeSqliteId
         return activeSessionId
     }
 
@@ -166,11 +184,13 @@ export default function Sidebar({
                                 </span>
                                 <span className={s.serverText}>
                                     <span className={s.serverName}>
-                                        {server.name || ((isRedis || isMysql || kind === 'mqtt') ? `${server.host}:${server.port}` : `${server.username}@${server.host}`)}
+                                        {server.name || ((isRedis || isMysql || kind === 'mqtt' || kind === 'mongo' || kind === 'sqlite') ? (kind === 'sqlite' ? (server.sqlitePath || 'SQLite 文件') : `${server.host}:${server.port}`) : `${server.username}@${server.host}`)}
                                     </span>
                                     <span className={s.serverSub}>
-                                        {isRedis || isMysql || kind === 'mqtt'
+                                        {isRedis || isMysql || kind === 'mqtt' || kind === 'mongo'
                                             ? `${server.host}:${server.port}`
+                                            : kind === 'sqlite'
+                                            ? (server.sqlitePath || '')
                                             : `${server.username}@${server.host}:${server.port}`}
                                     </span>
                                 </span>
@@ -199,13 +219,17 @@ export default function Sidebar({
                                     onClick={() => onFocusSession(sess.id, kind)}
                                 >
                                     <span className={`${g.dot}${sess.connected ? ' ' + g.on : ''}`}/>
-                                    {isRedis
-                                        ? `Redis ${server.host}:${server.port}`
-                                        : isMysql
-                                        ? `MySQL ${server.host}:${server.port}`
-                                        : kind === 'mqtt'
-                                        ? `MQTT ${server.host}:${server.port}`
-                                        : `会话 ${sess.id.slice(0, 6)}`}
+                                {isRedis
+                                    ? `Redis ${server.host}:${server.port}`
+                                    : isMysql
+                                    ? `MySQL ${server.host}:${server.port}`
+                                    : kind === 'mqtt'
+                                    ? `MQTT ${server.host}:${server.port}`
+                                    : kind === 'mongo'
+                                    ? `MongoDB ${server.host}:${server.port}`
+                                    : kind === 'sqlite'
+                                    ? `SQLite ${(server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
+                                    : `会话 ${sess.id.slice(0, 6)}`}
                                 </button>
                             ))}
                         </div>

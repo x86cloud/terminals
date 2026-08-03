@@ -5,6 +5,8 @@ import ServerDialog from './components/ServerDialog'
 import RedisClient from './components/RedisClient'
 import MysqlClient from './components/MysqlClient'
 import MqttClient from './components/MqttClient'
+import MongoClient from './components/MongoClient'
+import SqliteClient from './components/SqliteClient'
 import ApiClient from './components/ApiClient'
 import TransferBar from './components/TransferBar'
 import Icon from './components/Icon'
@@ -13,7 +15,7 @@ import {ConfirmModal, ConfirmState} from './components/Modal'
 import SessionTabs from './components/app/SessionTabs'
 import Stage from './components/app/Stage'
 import {API, registerNativeFileDrop, subscribe, unregisterNativeFileDrop} from './api'
-import {ServerConfig, SessionInfo, Transfer, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, ConnType} from './types'
+import {ServerConfig, SessionInfo, Transfer, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from './types'
 import {errorMessage} from './utils'
 import g from './styles/global.module.less'
 import a from './components/App.module.less'
@@ -49,6 +51,14 @@ export default function App() {
     const [activeMysqlId, setActiveMysqlId] = useState<string | null>(null)
     const [mqttSessions, setMqttSessions] = useState<MqttSessionInfo[]>([])
     const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
+
+    // MongoDB 会话
+    const [mongoSessions, setMongoSessions] = useState<MongoSessionInfo[]>([])
+    const [activeMongoId, setActiveMongoId] = useState<string | null>(null)
+
+    // SQLite 会话
+    const [sqliteSessions, setSqliteSessions] = useState<SqliteSessionInfo[]>([])
+    const [activeSqliteId, setActiveSqliteId] = useState<string | null>(null)
 
     // API 调试工具（独立的工具面板，不依赖服务器配置）
     const [apiOpen, setApiOpen] = useState(false)
@@ -176,6 +186,7 @@ export default function App() {
                     setActiveId(null)
                     setActiveMysqlId(null)
                     setActiveMqttId(null)
+                    setActiveSqliteId(null)
                     notify(`已连接 Redis ${info.title}`)
                 } else if (cfg.type === 'mysql') {
                     const ok = await API.mysqlConnectEx(cfg.id)
@@ -197,6 +208,7 @@ export default function App() {
                     setActiveId(null)
                     setActiveRedisId(null)
                     setActiveMqttId(null)
+                    setActiveSqliteId(null)
                     notify(`已连接 MySQL ${info.title}`)
                 } else if (cfg.type === 'mqtt') {
                     const ok = await API.mqttConnect(cfg.id)
@@ -215,7 +227,63 @@ export default function App() {
                     setActiveId(null)
                     setActiveRedisId(null)
                     setActiveMysqlId(null)
+                    setActiveSqliteId(null)
                     notify(`已连接 MQTT ${info.host}:${info.port}`)
+                } else if (cfg.type === 'mongo') {
+                    const ok = await API.mongoConnect(cfg.id)
+                    if (!ok) throw new Error('MongoDB 连接失败')
+                    const db = cfg.mongoDatabase || ''
+                    const info: MongoSessionInfo = {
+                        id: cfg.id,
+                        serverId: cfg.id,
+                        title: cfg.name || `${cfg.host}:${cfg.port || 27017}`,
+                        host: cfg.host,
+                        port: cfg.port || 27017,
+                        connected: true,
+                        database: db,
+                        topology: '',
+                        version: '',
+                    }
+                    setMongoSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
+                    setActiveMongoId(cfg.id)
+                    setActiveId(null)
+                    setActiveRedisId(null)
+                    setActiveMysqlId(null)
+                    setActiveMqttId(null)
+                    setActiveSqliteId(null)
+                    notify(`已连接 MongoDB ${info.title}`)
+                } else if (cfg.type === 'sqlite') {
+                    // SQLite 为本地文件连接：优先使用已保存的文件路径，否则再弹出文件选择器
+                    let path = cfg.sqlitePath || ''
+                    if (!path) {
+                        path = await API.sqliteOpenFile()
+                        if (!path) {
+                            notify('未选择文件', 'info')
+                            return
+                        }
+                    }
+                    const ok = await API.sqliteConnect(cfg.id, path)
+                    if (!ok) throw new Error('无法打开该 SQLite 文件')
+                    const stat = await API.sqliteInfo(cfg.id).catch(() => ({path, size: 0}))
+                    const info: SqliteSessionInfo = {
+                        id: cfg.id,
+                        serverId: cfg.id,
+                        title: cfg.name || (path.split(/[\\/]/).pop() || path),
+                        path: stat?.path || path,
+                        connected: true,
+                        size: Number(stat?.size) || 0,
+                    }
+                    setSqliteSessions((prev) => [
+                        ...prev.filter((s) => s.id !== cfg.id),
+                        info,
+                    ])
+                    setActiveSqliteId(cfg.id)
+                    setActiveId(null)
+                    setActiveRedisId(null)
+                    setActiveMysqlId(null)
+                    setActiveMqttId(null)
+                    setActiveMongoId(null)
+                    notify(`已打开 SQLite 文件：${info.title}`)
                 } else {
                     const info = await API.connect(cfg.id, 120, 32)
                     setSessions((prev) => [...prev, info])
@@ -223,6 +291,7 @@ export default function App() {
                     setActiveRedisId(null)
                     setActiveMysqlId(null)
                     setActiveMqttId(null)
+                    setActiveSqliteId(null)
                     pathsRef.current[info.id] = info.homeDir || '/'
                     notify(`已连接 ${info.title}`)
                 }
@@ -242,14 +311,16 @@ export default function App() {
         setActiveRedisId(target && target.kind === 'redis' ? target.id : null)
         setActiveMysqlId(target && target.kind === 'mysql' ? target.id : null)
         setActiveMqttId(target && target.kind === 'mqtt' ? target.id : null)
+        setActiveMongoId(target && target.kind === 'mongo' ? target.id : null)
+        setActiveSqliteId(target && target.kind === 'sqlite' ? target.id : null)
         setApiActive(false)
     }, [])
 
-    // 关闭激活会话后挑选唯一的回退目标：优先同类型剩余会话，其次按 ssh > redis > mysql > mqtt 顺序
+    // 关闭激活会话后挑选唯一的回退目标：优先同类型剩余会话，其次按 ssh > redis > mysql > mqtt > mongo 顺序
     // lists 中被关闭类型需传入已过滤的 remaining，避免读取到陈旧（未删除）的会话
     const pickFallback = useCallback(
         (kind: ConnType, lists: Record<ConnType, Array<{ id: string }>>): { kind: ConnType; id: string } | null => {
-            const rest = (['ssh', 'redis', 'mysql', 'mqtt'] as ConnType[]).filter((k) => k !== kind)
+            const rest = (['ssh', 'redis', 'mysql', 'mqtt', 'mongo', 'sqlite'] as ConnType[]).filter((k) => k !== kind)
             for (const k of [kind, ...rest]) {
                 const list = lists[k]
                 if (list.length) return { kind: k, id: list[list.length - 1].id }
@@ -270,9 +341,9 @@ export default function App() {
             setSessions(remaining)
             delete pathsRef.current[sessionId]
             if (activeId !== sessionId) return
-            applyActive(pickFallback('ssh', { ssh: remaining, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions }))
+            applyActive(pickFallback('ssh', { ssh: remaining, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
         },
-        [sessions, redisSessions, mysqlSessions, mqttSessions, activeId, applyActive, pickFallback]
+        [sessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeId, applyActive, pickFallback]
     )
 
     const closeRedisSession = useCallback(async (id: string) => {
@@ -284,8 +355,8 @@ export default function App() {
         const remaining = redisSessions.filter((s) => s.id !== id)
         setRedisSessions(remaining)
         if (activeRedisId !== id) return
-        applyActive(pickFallback('redis', { ssh: sessions, redis: remaining, mysql: mysqlSessions, mqtt: mqttSessions }))
-    }, [sessions, redisSessions, mysqlSessions, mqttSessions, activeRedisId, applyActive, pickFallback])
+        applyActive(pickFallback('redis', { ssh: sessions, redis: remaining, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeRedisId, applyActive, pickFallback])
 
     const closeMysqlSession = useCallback(async (id: string) => {
         try {
@@ -296,8 +367,8 @@ export default function App() {
         const remaining = mysqlSessions.filter((s) => s.id !== id)
         setMysqlSessions(remaining)
         if (activeMysqlId !== id) return
-        applyActive(pickFallback('mysql', { ssh: sessions, redis: redisSessions, mysql: remaining, mqtt: mqttSessions }))
-    }, [sessions, redisSessions, mysqlSessions, mqttSessions, activeMysqlId, applyActive, pickFallback])
+        applyActive(pickFallback('mysql', { ssh: sessions, redis: redisSessions, mysql: remaining, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeMysqlId, applyActive, pickFallback])
 
     const closeMqttSession = useCallback(async (id: string) => {
         try {
@@ -308,8 +379,32 @@ export default function App() {
         const remaining = mqttSessions.filter((s) => s.id !== id)
         setMqttSessions(remaining)
         if (activeMqttId !== id) return
-        applyActive(pickFallback('mqtt', { ssh: sessions, redis: redisSessions, mysql: mysqlSessions, mqtt: remaining }))
-    }, [sessions, redisSessions, mysqlSessions, mqttSessions, activeMqttId, applyActive, pickFallback])
+        applyActive(pickFallback('mqtt', { ssh: sessions, redis: redisSessions, mysql: mysqlSessions, mqtt: remaining, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeMqttId, applyActive, pickFallback])
+
+    const closeMongoSession = useCallback(async (id: string) => {
+        try {
+            await API.mongoClose(id)
+        } catch {
+            /* ignore */
+        }
+        const remaining = mongoSessions.filter((s) => s.id !== id)
+        setMongoSessions(remaining)
+        if (activeMongoId !== id) return
+        applyActive(pickFallback('mongo', { ssh: sessions, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: remaining, sqlite: sqliteSessions }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeMongoId, applyActive, pickFallback])
+
+    const closeSqliteSession = useCallback(async (id: string) => {
+        try {
+            await API.sqliteClose(id)
+        } catch {
+            /* ignore */
+        }
+        const remaining = sqliteSessions.filter((s) => s.id !== id)
+        setSqliteSessions(remaining)
+        if (activeSqliteId !== id) return
+        applyActive(pickFallback('sqlite', { ssh: sessions, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: remaining }))
+    }, [sessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeSqliteId, applyActive, pickFallback])
 
     const deleteServer = useCallback(
         (cfg: ServerConfig) => {
@@ -356,6 +451,8 @@ export default function App() {
         setActiveRedisId(kind === 'redis' ? id : null)
         setActiveMysqlId(kind === 'mysql' ? id : null)
         setActiveMqttId(kind === 'mqtt' ? id : null)
+        setActiveMongoId(kind === 'mongo' ? id : null)
+        setActiveSqliteId(kind === 'sqlite' ? id : null)
         setApiActive(false)
     }, [])
 
@@ -372,6 +469,10 @@ export default function App() {
                 activeMysqlId={activeMysqlId}
                 mqttSessions={mqttSessions}
                 activeMqttId={activeMqttId}
+                mongoSessions={mongoSessions}
+                activeMongoId={activeMongoId}
+                sqliteSessions={sqliteSessions}
+                activeSqliteId={activeSqliteId}
                 onNew={addServer}
                 onEdit={editServer}
                 onDelete={deleteServer}
@@ -390,6 +491,10 @@ export default function App() {
                     activeMysqlId={activeMysqlId}
                     mqttSessions={mqttSessions}
                     activeMqttId={activeMqttId}
+                    mongoSessions={mongoSessions}
+                    activeMongoId={activeMongoId}
+                    sqliteSessions={sqliteSessions}
+                    activeSqliteId={activeSqliteId}
                     apiOpen={apiOpen}
                     apiActive={apiActive}
                     onFocusSession={focusSession}
@@ -397,6 +502,8 @@ export default function App() {
                     onCloseRedis={(id) => void closeRedisSession(id)}
                     onCloseMysql={(id) => void closeMysqlSession(id)}
                     onCloseMqtt={(id) => void closeMqttSession(id)}
+                    onCloseMongo={(id) => void closeMongoSession(id)}
+                    onCloseSqlite={(id) => void closeSqliteSession(id)}
                     onActivateApi={openApiTool}
                     onCloseApi={closeApiTool}
                 />
@@ -411,6 +518,10 @@ export default function App() {
                     activeMysqlId={activeMysqlId}
                     mqttSessions={mqttSessions}
                     activeMqttId={activeMqttId}
+                    mongoSessions={mongoSessions}
+                    activeMongoId={activeMongoId}
+                    sqliteSessions={sqliteSessions}
+                    activeSqliteId={activeSqliteId}
                     apiOpen={apiOpen}
                     apiActive={apiActive}
                     onPathChange={handlePathChange}
@@ -424,6 +535,11 @@ export default function App() {
                         setMysqlSessions((prev) => prev.map((x) => (x.id === id ? {...x, database} : x)))
                     }
                     onCloseMqtt={(id) => void closeMqttSession(id)}
+                    onCloseMongo={(id) => void closeMongoSession(id)}
+                    onCloseSqlite={(id) => void closeSqliteSession(id)}
+                    onMongoChange={(id, database) =>
+                        setMongoSessions((prev) => prev.map((x) => (x.id === id ? {...x, database} : x)))
+                    }
                     onCloseApi={closeApiTool}
                     onNewServer={addServer}
                 />

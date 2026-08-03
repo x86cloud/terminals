@@ -36,6 +36,94 @@ export function ListTransfers():Promise<Array<main.Transfer>>;
 
 export function MakeDir(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function MongoAggregate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean,arg6:number):Promise<main.MongoFindResult>;
+
+export function MongoAggregateExplain(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MongoBulkWrite(arg1:string,arg2:string,arg3:string,arg4:Array<main.MongoBulkOp>,arg5:boolean):Promise<Record<string, any>>;
+
+export function MongoClientStats(arg1:string):Promise<Record<string, any>>;
+
+export function MongoClose(arg1:string):Promise<void>;
+
+export function MongoCollectionStats(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
+
+export function MongoCollections(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function MongoConnect(arg1:string):Promise<boolean>;
+
+export function MongoCountDocuments(arg1:string,arg2:string,arg3:string,arg4:string):Promise<number>;
+
+export function MongoCreateCollection(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MongoCreateDatabase(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MongoCreateIndex(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean,arg7:boolean,arg8:number):Promise<string>;
+
+export function MongoCurrentOps(arg1:string):Promise<Array<string>>;
+
+export function MongoDatabases(arg1:string):Promise<Array<Record<string, any>>>;
+
+export function MongoDeleteMany(arg1:string,arg2:string,arg3:string,arg4:string):Promise<number>;
+
+export function MongoDeleteOne(arg1:string,arg2:string,arg3:string,arg4:string):Promise<number>;
+
+export function MongoDistinct(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<Array<string>>;
+
+export function MongoDropCollection(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MongoDropDatabase(arg1:string,arg2:string):Promise<void>;
+
+export function MongoDropIndex(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function MongoExplain(arg1:string,arg2:main.MongoQuerySpec,arg3:string):Promise<string>;
+
+export function MongoFind(arg1:string,arg2:main.MongoQuerySpec):Promise<main.MongoFindResult>;
+
+export function MongoFindOneAndUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<string>;
+
+export function MongoGetValidator(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
+
+export function MongoHealthCheck(arg1:string):Promise<Record<string, any>>;
+
+export function MongoIndexStats(arg1:string,arg2:string,arg3:string):Promise<Array<string>>;
+
+export function MongoIndexes(arg1:string,arg2:string,arg3:string):Promise<Array<Record<string, any>>>;
+
+export function MongoInferSchema(arg1:string,arg2:string,arg3:string,arg4:number):Promise<Array<Record<string, any>>>;
+
+export function MongoInsertMany(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<Record<string, any>>;
+
+export function MongoInsertOne(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MongoParseURI(arg1:string):Promise<main.MongoURIInfo>;
+
+export function MongoRenameCollection(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function MongoReplaceOne(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<Record<string, any>>;
+
+export function MongoRunCommand(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function MongoServerStatus(arg1:string):Promise<Record<string, any>>;
+
+export function MongoSetValidator(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<void>;
+
+export function MongoTestConnection(arg1:main.ServerConfig):Promise<Record<string, any>>;
+
+export function MongoTransaction(arg1:string,arg2:Array<main.MongoTxOp>):Promise<Record<string, any>>;
+
+export function MongoUnwatch(arg1:string,arg2:string):Promise<void>;
+
+export function MongoUpdateMany(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<Record<string, any>>;
+
+export function MongoUpdateOne(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<Record<string, any>>;
+
+export function MongoValidateDocument(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Record<string, any>>;
+
+export function MongoWatch(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<string>;
+
+export function MongoWatchList(arg1:string):Promise<Array<string>>;
+
 export function MqttClose(arg1:string):Promise<void>;
 
 export function MqttConnect(arg1:string):Promise<boolean>;
@@ -215,6 +303,28 @@ export function SaveServer(arg1:main.ServerConfig):Promise<main.ServerConfig>;
 export function SelectPrivateKey():Promise<string>;
 
 export function SendInput(arg1:string,arg2:string):Promise<void>;
+
+export function SqliteClose(arg1:string):Promise<void>;
+
+export function SqliteConnect(arg1:string,arg2:string):Promise<boolean>;
+
+export function SqliteCount(arg1:string,arg2:string):Promise<number>;
+
+export function SqliteDescribe(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function SqliteIndexes(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function SqliteInfo(arg1:string):Promise<Record<string, any>>;
+
+export function SqliteOpenFile():Promise<string>;
+
+export function SqliteRun(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function SqliteSchema(arg1:string):Promise<Record<string, any>>;
+
+export function SqliteSelect(arg1:string,arg2:string,arg3:number,arg4:number):Promise<Record<string, any>>;
+
+export function SqliteTables(arg1:string):Promise<Array<Record<string, any>>>;
 
 export function UploadData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 

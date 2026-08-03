@@ -28,7 +28,7 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
             if (!base.type) base.type = 'ssh'
             if (!base.port)
                 base.port =
-                    base.type === 'redis' ? 6379 : base.type === 'mysql' ? 3306 : base.type === 'mqtt' ? 1883 : 22
+                    base.type === 'redis' ? 6379 : base.type === 'mysql' ? 3306 : base.type === 'mqtt' ? 1883 : base.type === 'sqlite' ? 0 : 22
             if (!base.username && (base.type === 'ssh' || base.type === 'mysql')) base.username = 'root'
             setForm(base)
             setError('')
@@ -39,14 +39,16 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
     const update = (patch: Partial<ServerConfig>) => setForm((prev) => ({...prev, ...patch}))
 
     const switchType = (t: ConnType) => {
-        const defaultPort = t === 'redis' ? 6379 : t === 'mysql' ? 3306 : t === 'mqtt' ? 1883 : 22
+        const defaultPort =
+            t === 'redis' ? 6379 : t === 'mysql' ? 3306 : t === 'mqtt' ? 1883 : t === 'mongo' ? 27017 : 0
         update({
             type: t,
             port:
-                form.port === 22 || form.port === 6379 || form.port === 3306 || form.port === 1883 || !form.port
+                form.port === 22 || form.port === 6379 || form.port === 3306 ||
+                form.port === 1883 || form.port === 27017 || form.port === 27017 || !form.port
                     ? defaultPort
                     : form.port,
-            username: t === 'redis' || t === 'mqtt' ? '' : form.username || 'root',
+            username: t === 'redis' || t === 'mqtt' || t === 'sqlite' ? '' : form.username || 'root',
         })
     }
 
@@ -77,6 +79,8 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
     const isRedis = form.type === 'redis'
     const isMysql = form.type === 'mysql'
     const isMqtt = form.type === 'mqtt'
+    const isMongo = form.type === 'mongo'
+    const isSqlite = form.type === 'sqlite'
 
     return (
         <Modal
@@ -122,6 +126,18 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
                         >
                             <ClientIcon kind="mqtt" size={13}/> MQTT
                         </button>
+                        <button
+                            className={form.type === 'mongo' ? g.active : ''}
+                            onClick={() => switchType('mongo')}
+                        >
+                            <ClientIcon kind="mongo" size={13}/> MongoDB
+                        </button>
+                        <button
+                            className={form.type === 'sqlite' ? g.active : ''}
+                            onClick={() => switchType('sqlite')}
+                        >
+                            <ClientIcon kind="sqlite" size={13}/> SQLite
+                        </button>
                     </div>
                 </div>
 
@@ -134,28 +150,30 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
                     />
                 </label>
 
-                <div className={g.fieldRow}>
-                    <label className={`${g.field} ${g.grow}`}>
-                        <span>主机</span>
-                        <input
-                            value={form.host}
-                            placeholder="192.168.1.10"
-                            onChange={(e) => update({host: e.target.value})}
-                        />
-                    </label>
-                    <label className={`${g.field} ${g.port}`}>
-                        <span>端口</span>
-                        <input
-                            type="number"
-                            value={form.port}
-                            onChange={(e) =>
-                                update({port: Number(e.target.value) || (isRedis ? 6379 : isMysql ? 3306 : isMqtt ? 1883 : 22)})
-                            }
-                        />
-                    </label>
-                </div>
+                {!isSqlite && (
+                    <div className={g.fieldRow}>
+                        <label className={`${g.field} ${g.grow}`}>
+                            <span>主机</span>
+                            <input
+                                value={form.host}
+                                placeholder="192.168.1.10"
+                                onChange={(e) => update({host: e.target.value})}
+                            />
+                        </label>
+                        <label className={`${g.field} ${g.port}`}>
+                            <span>端口</span>
+                            <input
+                                type="number"
+                                value={form.port}
+                                onChange={(e) =>
+                                    update({port: Number(e.target.value) || (isRedis ? 6379 : isMysql ? 3306 : isMqtt ? 1883 : isMongo ? 27017 : 22)})
+                                }
+                            />
+                        </label>
+                    </div>
+                )}
 
-                {!isRedis && (
+                {!isRedis && !isMongo && !isSqlite && (
                     <label className={g.field}>
                         <span>用户名</span>
                         <input value={form.username} onChange={(e) => update({username: e.target.value})}/>
@@ -636,6 +654,261 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
                                 </div>
                             </>
                         )}
+                    </>
+                )}
+
+                {isMongo && (
+                    <>
+                        <label className={g.field}>
+                            <span>连接字符串（可选，mongodb:// 或 mongodb+srv://）</span>
+                            <textarea
+                                className={g.grow}
+                                rows={2}
+                                value={form.mongoUri ?? ''}
+                                placeholder="留空则用下方离散字段拼装；SRV 形式通常需开启 TLS"
+                                onChange={(e) => update({mongoUri: e.target.value, mongoSrv: e.target.value.startsWith('mongodb+srv')})}
+                            />
+                        </label>
+                        <div className={g.fieldRow}>
+                            <label className={`${g.field} ${g.grow}`}>
+                                <span>种子节点（逗号分隔 host:port）</span>
+                                <input
+                                    value={form.mongoHosts ?? ''}
+                                    placeholder="rs0:27017,rs1:27017（副本集/分片）；留空用主机:端口"
+                                    onChange={(e) => update({mongoHosts: e.target.value})}
+                                />
+                            </label>
+                            <label className={`${g.field} ${g.grow}`}>
+                                <span>默认库（可选）</span>
+                                <input
+                                    value={form.mongoDatabase ?? ''}
+                                    placeholder="例如 admin / test"
+                                    onChange={(e) => update({mongoDatabase: e.target.value})}
+                                />
+                            </label>
+                        </div>
+                        <div className={g.fieldRow}>
+                            <label className={`${g.field} ${g.grow}`}>
+                                <span>认证机制</span>
+                                <select
+                                    value={form.mongoAuthMech ?? 'SCRAM-SHA-256'}
+                                    onChange={(e) => update({mongoAuthMech: e.target.value})}
+                                >
+                                    <option value="SCRAM-SHA-256">SCRAM-SHA-256</option>
+                                    <option value="SCRAM-SHA-1">SCRAM-SHA-1</option>
+                                    <option value="MONGODB-X509">MONGODB-X509（客户端证书）</option>
+                                    <option value="none">无认证</option>
+                                </select>
+                            </label>
+                            <label className={`${g.field} ${g.grow}`}>
+                                <span>认证源（authSource）</span>
+                                <input
+                                    value={form.mongoAuthSource ?? ''}
+                                    placeholder="默认 admin"
+                                    onChange={(e) => update({mongoAuthSource: e.target.value})}
+                                />
+                            </label>
+                        </div>
+                        {form.mongoAuthMech !== 'MONGODB-X509' && form.mongoAuthMech !== 'none' && (
+                            <>
+                                <label className={g.field}>
+                                    <span>用户名</span>
+                                    <input value={form.username} onChange={(e) => update({username: e.target.value})}/>
+                                </label>
+                                <label className={g.field}>
+                                    <span>密码（可选）</span>
+                                    <input
+                                        type="password"
+                                        value={form.password}
+                                        autoComplete="new-password"
+                                        placeholder="MongoDB 无密码可留空"
+                                        onChange={(e) => update({password: e.target.value})}
+                                    />
+                                </label>
+                            </>
+                        )}
+                        <div className={g.fieldRow}>
+                            <label className={`${g.field} ${g.grow}`}>
+                                <span>副本集名称（可选）</span>
+                                <input
+                                    value={form.mongoReplicaSet ?? ''}
+                                    placeholder="如 rs0（副本集/分片）"
+                                    onChange={(e) => update({mongoReplicaSet: e.target.value})}
+                                />
+                            </label>
+                            <label className={`${g.field} ${g.grow}`}>
+                                <span>读偏好</span>
+                                <select
+                                    value={form.mongoReadPreference ?? 'primary'}
+                                    onChange={(e) => update({mongoReadPreference: e.target.value})}
+                                >
+                                    <option value="primary">primary</option>
+                                    <option value="primaryPreferred">primaryPreferred</option>
+                                    <option value="secondary">secondary</option>
+                                    <option value="secondaryPreferred">secondaryPreferred</option>
+                                    <option value="nearest">nearest</option>
+                                </select>
+                            </label>
+                        </div>
+
+                        <div className={g.field}>
+                            <button type="button" className={g.advToggle} onClick={() => setShowAdv(v => !v)}>
+                                <Icon name={showAdv ? 'chevron-down' : 'chevron-right'} size={14}/>
+                                高级参数（TLS / 连接池 / 超时 / 压缩）
+                            </button>
+                        </div>
+
+                        {showAdv && (
+                            <>
+                                <label className={g.switchField}>
+                                    <span>启用 TLS/SSL 加密连接</span>
+                                    <span className={g.switch}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!!form.mongoTlsEnabled}
+                                            onChange={(e) => update({mongoTlsEnabled: e.target.checked})}
+                                        />
+                                        <span className={g.slider} />
+                                    </span>
+                                </label>
+                                <label className={g.switchField}>
+                                    <span>跳过 TLS 证书校验（自签证书可用）</span>
+                                    <span className={g.switch}>
+                                        <input
+                                            type="checkbox"
+                                            checked={!!form.mongoTlsInsecure}
+                                            onChange={(e) => update({mongoTlsInsecure: e.target.checked})}
+                                        />
+                                        <span className={g.slider} />
+                                    </span>
+                                </label>
+                                <label className={g.field}>
+                                    <span>CA 证书（可选，PEM 内容或路径）</span>
+                                    <input
+                                        value={form.mongoTlsCaCert ?? ''}
+                                        placeholder="用于校验服务端自签证书；留空则使用系统信任库"
+                                        onChange={(e) => update({mongoTlsCaCert: e.target.value})}
+                                    />
+                                </label>
+                                <label className={g.field}>
+                                    <span>客户端证书（X.509 双向认证，PEM 内容或路径）</span>
+                                    <input
+                                        value={form.mongoTlsClientCert ?? ''}
+                                        placeholder="含证书的 PEM；X.509 认证必填"
+                                        onChange={(e) => update({mongoTlsClientCert: e.target.value})}
+                                    />
+                                </label>
+                                <label className={g.field}>
+                                    <span>客户端私钥（可选，PEM 内容或路径）</span>
+                                    <input
+                                        value={form.mongoTlsClientKey ?? ''}
+                                        placeholder="与客户端证书配套的私钥；可合并到证书文件"
+                                        onChange={(e) => update({mongoTlsClientKey: e.target.value})}
+                                    />
+                                </label>
+                                <div className={g.fieldRow}>
+                                    <label className={`${g.field} ${g.grow}`}>
+                                        <span>最大连接池</span>
+                                        <input
+                                            type="number"
+                                            value={form.mongoMaxPoolSize ?? 100}
+                                            onChange={(e) => update({mongoMaxPoolSize: Number(e.target.value) || 100})}
+                                        />
+                                    </label>
+                                    <label className={g.field}>
+                                        <span>最小连接池</span>
+                                        <input
+                                            type="number"
+                                            value={form.mongoMinPoolSize ?? 0}
+                                            onChange={(e) => update({mongoMinPoolSize: Number(e.target.value) || 0})}
+                                        />
+                                    </label>
+                                </div>
+                                <div className={g.fieldRow}>
+                                    <label className={`${g.field} ${g.grow}`}>
+                                        <span>连接超时(秒)</span>
+                                        <input
+                                            type="number"
+                                            value={form.mongoConnectTimeout ?? 10}
+                                            onChange={(e) => update({mongoConnectTimeout: Number(e.target.value) || 10})}
+                                        />
+                                    </label>
+                                    <label className={g.field}>
+                                        <span>服务端选择超时(秒)</span>
+                                        <input
+                                            type="number"
+                                            value={form.mongoServerSelectTimeout ?? 10}
+                                            onChange={(e) => update({mongoServerSelectTimeout: Number(e.target.value) || 10})}
+                                        />
+                                    </label>
+                                </div>
+                                <div className={g.fieldRow}>
+                                    <label className={`${g.field} ${g.grow}`}>
+                                        <span>Socket 超时(秒，0=默认)</span>
+                                        <input
+                                            type="number"
+                                            value={form.mongoSocketTimeout ?? 30}
+                                            onChange={(e) => update({mongoSocketTimeout: Number(e.target.value) || 30})}
+                                        />
+                                    </label>
+                                    <label className={g.field}>
+                                        <span>连接最大空闲(秒，0=默认)</span>
+                                        <input
+                                            type="number"
+                                            value={form.mongoMaxConnIdleTime ?? 0}
+                                            onChange={(e) => update({mongoMaxConnIdleTime: Number(e.target.value) || 0})}
+                                        />
+                                    </label>
+                                </div>
+                                <div className={g.fieldRow}>
+                                    <label className={`${g.field} ${g.grow}`}>
+                                        <span>压缩器（逗号分隔，可选）</span>
+                                        <input
+                                            value={form.mongoCompressors ?? ''}
+                                            placeholder="如 snappy,zlib,zstd；留空不压缩"
+                                            onChange={(e) => update({mongoCompressors: e.target.value})}
+                                        />
+                                    </label>
+                                    <label className={`${g.field} ${g.grow}`}>
+                                        <span>应用名</span>
+                                        <input
+                                            value={form.mongoAppName ?? 'xClient'}
+                                            onChange={(e) => update({mongoAppName: e.target.value})}
+                                        />
+                                    </label>
+                                </div>
+                            </>
+                        )}
+                    </>
+                )}
+
+                {form.type === 'sqlite' && (
+                    <>
+                        <label className={g.field}>
+                            <span>数据库文件（.db / .sqlite）</span>
+                            <div className={g.fieldRow}>
+                                <input
+                                    className={g.grow}
+                                    value={form.sqlitePath ?? ''}
+                                    placeholder="点击右侧按钮选择本地 SQLite 文件"
+                                    onChange={(e) => update({sqlitePath: e.target.value})}
+                                />
+                                <button
+                                    className={g.btn}
+                                    onClick={async () => {
+                                        try {
+                                            const p = await API.sqliteOpenFile()
+                                            if (p) update({sqlitePath: p})
+                                        } catch (err) {
+                                            setError(errorMessage(err))
+                                        }
+                                    }}
+                                >
+                                    浏览
+                                </button>
+                            </div>
+                        </label>
+                        <p className={g.formHint}>SQLite 为本地文件数据库，连接时可直接选取文件，无需主机地址与端口。</p>
                     </>
                 )}
 

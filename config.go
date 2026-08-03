@@ -36,6 +36,10 @@ const (
 	ConnMysql ConnType = "mysql"
 	// ConnMqtt MQTT 代理，使用内置 MQTT 客户端管理。
 	ConnMqtt ConnType = "mqtt"
+	// ConnMongo MongoDB 实例，使用内置 MongoDB 客户端管理。
+	ConnMongo ConnType = "mongo"
+	// ConnSqlite 本地 SQLite 数据库文件，使用内置 SQLite 客户端管理。
+	ConnSqlite ConnType = "sqlite"
 )
 
 // ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL。
@@ -91,8 +95,34 @@ type ServerConfig struct {
 	MysqlSSHPassphrase     string `json:"mysqlSSHPassphrase,omitempty"`     // 私钥口令
 	MysqlSSHProxyLocalPort int    `json:"mysqlSSHProxyLocalPort,omitempty"` // 本地监听端口（0=自动）
 
+	// MongoDB 高级配置
+	MongoURI                 string `json:"mongoUri,omitempty"`                 // 完整连接串，填写后优先生效
+	MongoSRV                 bool   `json:"mongoSrv,omitempty"`                 // 使用 mongodb+srv:// 方案
+	MongoHosts               string `json:"mongoHosts,omitempty"`               // 多节点种子列表，逗号分隔 host:port
+	MongoDatabase            string `json:"mongoDatabase,omitempty"`            // 默认数据库
+	MongoAuthMech            string `json:"mongoAuthMech,omitempty"`            // none | SCRAM-SHA-1 | SCRAM-SHA-256 | MONGODB-X509
+	MongoAuthSource          string `json:"mongoAuthSource,omitempty"`          // 认证库，默认 admin
+	MongoReplicaSet          string `json:"mongoReplicaSet,omitempty"`          // 副本集名称
+	MongoReadPreference      string `json:"mongoReadPreference,omitempty"`      // primary | secondary | nearest 等
+	MongoTLSEnabled          bool   `json:"mongoTlsEnabled,omitempty"`          // 启用 TLS/SSL
+	MongoTLSInsecure         bool   `json:"mongoTlsInsecure,omitempty"`         // 跳过证书校验
+	MongoTLSCACert           string `json:"mongoTlsCaCert,omitempty"`           // CA 证书（PEM 内容或路径）
+	MongoTLSClientCert       string `json:"mongoTlsClientCert,omitempty"`       // 客户端证书（X.509 认证用）
+	MongoTLSClientKey        string `json:"mongoTlsClientKey,omitempty"`        // 客户端私钥
+	MongoMaxPoolSize         int    `json:"mongoMaxPoolSize,omitempty"`         // 连接池最大连接数
+	MongoMinPoolSize         int    `json:"mongoMinPoolSize,omitempty"`         // 连接池最小连接数
+	MongoMaxConnIdleTime     int    `json:"mongoMaxConnIdleTime,omitempty"`     // 连接最大空闲时间（秒）
+	MongoConnectTimeout      int    `json:"mongoConnectTimeout,omitempty"`      // 连接超时（秒）
+	MongoServerSelectTimeout int    `json:"mongoServerSelectTimeout,omitempty"` // 服务器选择超时（秒）
+	MongoSocketTimeout       int    `json:"mongoSocketTimeout,omitempty"`       // 单次操作超时（秒）
+	MongoCompressors         string `json:"mongoCompressors,omitempty"`         // 压缩算法，逗号分隔 snappy,zlib,zstd
+	MongoAppName             string `json:"mongoAppName,omitempty"`             // 上报给服务端的应用名
+
 	ClientID   string `json:"clientId,omitempty"` // MQTT 客户端 ID（可选）
 	UseTLS     bool   `json:"useTLS,omitempty"`    // MQTT 是否使用 TLS
+
+	// SQLite 本地文件配置
+	SqlitePath string `json:"sqlitePath,omitempty"` // 本地 .db / .sqlite 文件路径
 
 	// MQTT 高级配置
 	MqttProto          string `json:"mqttProto,omitempty"`            // 协议版本："3.1.1" | "3.1"
@@ -121,6 +151,10 @@ func (c ServerConfig) connType() ConnType {
 		return ConnMysql
 	case string(ConnMqtt):
 		return ConnMqtt
+	case string(ConnMongo):
+		return ConnMongo
+	case string(ConnSqlite):
+		return ConnSqlite
 	}
 	return ConnSSH
 }
@@ -130,8 +164,12 @@ func (c ServerConfig) label() string {
 		return c.Name
 	}
 	switch c.connType() {
-	case ConnRedis, ConnMysql, ConnMqtt:
+	case ConnRedis, ConnMysql, ConnMqtt, ConnMongo:
 		return fmt.Sprintf("%s:%d", c.Host, c.displayPort())
+	case ConnSqlite:
+		if name := c.SqlitePath; name != "" {
+			return filepath.Base(name)
+		}
 	}
 	return fmt.Sprintf("%s@%s", c.Username, c.Host)
 }
@@ -147,6 +185,10 @@ func (c ServerConfig) displayPort() int {
 		return 3306
 	case ConnMqtt:
 		return 1883
+	case ConnMongo:
+		return 27017
+	case ConnSqlite:
+		return 0
 	}
 	return 22
 }
@@ -156,6 +198,25 @@ func (c ServerConfig) addr() string {
 }
 
 func (c ServerConfig) validate() error {
+	// MongoDB 允许仅凭连接串或种子节点列表建立连接，此时主机可留空
+	if c.connType() == ConnMongo {
+		if strings.TrimSpace(c.Host) == "" &&
+			strings.TrimSpace(c.MongoURI) == "" &&
+			strings.TrimSpace(c.MongoHosts) == "" {
+			return errors.New("请填写主机地址、种子节点或完整连接字符串")
+		}
+		if c.MongoAuthMech == string(MongoAuthX509) && strings.TrimSpace(c.MongoTLSClientCert) == "" {
+			return errors.New("X.509 认证需要提供客户端证书")
+		}
+		return nil
+	}
+	// SQLite 为本地文件连接，仅需有效的文件路径
+	if c.connType() == ConnSqlite {
+		if strings.TrimSpace(c.SqlitePath) == "" {
+			return errors.New("请选择 SQLite 数据库文件（.db / .sqlite）")
+		}
+		return nil
+	}
 	if strings.TrimSpace(c.Host) == "" {
 		return errors.New("主机地址不能为空")
 	}
@@ -315,6 +376,8 @@ func (s *Store) load() error {
 		list[i].Password = s.box.decrypt(list[i].Password)
 		list[i].Passphrase = s.box.decrypt(list[i].Passphrase)
 		list[i].PrivateKey = s.box.decrypt(list[i].PrivateKey)
+		list[i].MongoURI = s.box.decrypt(list[i].MongoURI)
+		list[i].MongoTLSClientKey = s.box.decrypt(list[i].MongoTLSClientKey)
 	}
 	s.servers = list
 	return nil
@@ -328,6 +391,9 @@ func (s *Store) persist() error {
 		out[i].Password = s.box.encrypt(out[i].Password)
 		out[i].Passphrase = s.box.encrypt(out[i].Passphrase)
 		out[i].PrivateKey = s.box.encrypt(out[i].PrivateKey)
+		// 连接串常内嵌账号密码，与客户端私钥一并加密存储
+		out[i].MongoURI = s.box.encrypt(out[i].MongoURI)
+		out[i].MongoTLSClientKey = s.box.encrypt(out[i].MongoTLSClientKey)
 	}
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
@@ -387,9 +453,30 @@ func (s *Store) Save(cfg ServerConfig) (ServerConfig, error) {
 		if cfg.MqttProto != "3.1" {
 			cfg.MqttProto = "3.1.1"
 		}
+	case ConnMongo:
+		cfg.Port = 27017
+	case ConnSqlite:
+		cfg.Port = 0
 	default:
 		cfg.Port = 22
 	}
+	}
+	if ct == ConnMongo {
+		if strings.TrimSpace(cfg.MongoAuthSource) == "" {
+			cfg.MongoAuthSource = "admin"
+		}
+		if cfg.MongoConnectTimeout <= 0 {
+			cfg.MongoConnectTimeout = 10
+		}
+		if cfg.MongoServerSelectTimeout <= 0 {
+			cfg.MongoServerSelectTimeout = 10
+		}
+		if cfg.MongoSocketTimeout <= 0 {
+			cfg.MongoSocketTimeout = 30
+		}
+		if cfg.MongoMaxPoolSize <= 0 {
+			cfg.MongoMaxPoolSize = 100
+		}
 	}
 	// 非私钥认证统一归为密码认证。
 	if ct == ConnSSH && cfg.AuthType != authTypeKey {

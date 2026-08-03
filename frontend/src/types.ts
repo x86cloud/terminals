@@ -1,5 +1,5 @@
 export type AuthType = 'password' | 'key'
-export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt'
+export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite'
 
 export interface ServerConfig {
     id: string
@@ -67,6 +67,30 @@ export interface ServerConfig {
     mysqlSSHKeyData?: string
     mysqlSSHPassphrase?: string
     mysqlSSHProxyLocalPort?: number
+    // MongoDB 高级配置
+    mongoUri?: string
+    mongoSrv?: boolean
+    mongoHosts?: string
+    mongoDatabase?: string
+    mongoAuthMech?: string
+    mongoAuthSource?: string
+    mongoReplicaSet?: string
+    mongoReadPreference?: string
+    mongoTlsEnabled?: boolean
+    mongoTlsInsecure?: boolean
+    mongoTlsCaCert?: string
+    mongoTlsClientCert?: string
+    mongoTlsClientKey?: string
+    mongoMaxPoolSize?: number
+    mongoMinPoolSize?: number
+    mongoMaxConnIdleTime?: number
+    mongoConnectTimeout?: number
+    mongoServerSelectTimeout?: number
+    mongoSocketTimeout?: number
+    mongoCompressors?: string
+    mongoAppName?: string
+    // SQLite 本地文件配置
+    sqlitePath?: string
     updatedAt: number
 }
 
@@ -157,6 +181,28 @@ export function emptyServer(): ServerConfig {
         mysqlSSHKeyData: '',
         mysqlSSHPassphrase: '',
         mysqlSSHProxyLocalPort: 13306,
+        // MongoDB 高级参数默认值
+        mongoUri: '',
+        mongoSrv: false,
+        mongoHosts: '',
+        mongoDatabase: '',
+        mongoAuthMech: 'SCRAM-SHA-256',
+        mongoAuthSource: 'admin',
+        mongoReplicaSet: '',
+        mongoReadPreference: 'primary',
+        mongoTlsEnabled: false,
+        mongoTlsInsecure: false,
+        mongoTlsCaCert: '',
+        mongoTlsClientCert: '',
+        mongoTlsClientKey: '',
+        mongoMaxPoolSize: 100,
+        mongoMinPoolSize: 0,
+        mongoMaxConnIdleTime: 0,
+        mongoConnectTimeout: 10,
+        mongoServerSelectTimeout: 10,
+        mongoSocketTimeout: 30,
+        mongoCompressors: '',
+        mongoAppName: 'xClient',
         updatedAt: 0,
     }
 }
@@ -445,4 +491,284 @@ export interface MysqlForeignKey {
 export interface MysqlSchema {
     tables: MysqlSchemaTable[]
     foreignKeys: MysqlForeignKey[]
+}
+
+/* ---------------- MongoDB ---------------- */
+
+export interface MongoSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    connected: boolean
+    database: string
+    topology: string
+    version: string
+}
+
+export function emptyMongo(): MongoSessionInfo {
+    return {
+        id: '',
+        serverId: '',
+        title: '',
+        host: '',
+        port: 27017,
+        connected: false,
+        database: '',
+        topology: '',
+        version: '',
+    }
+}
+
+// 连接字符串解析结果
+export interface MongoURIInfo {
+    scheme: string
+    hosts: string[]
+    username: string
+    password: string
+    database: string
+    authSource: string
+    authMech: string
+    replicaSet: string
+    tls: boolean
+    srv: boolean
+    options: Record<string, string>
+}
+
+// 健康检查 / 探活
+export interface MongoHealthInfo {
+    ok: boolean
+    latencyMs: number
+    topology?: string
+    version?: string
+    primary?: boolean
+    setName?: string
+    isWritablePrimary?: boolean
+    hosts?: string[]
+    error?: string
+}
+
+// 数据库 / 集合条目
+export interface MongoDatabaseInfo {
+    name: string
+    sizeOnDisk: number
+    empty: boolean
+}
+
+export interface MongoCollectionInfo {
+    name: string
+    type: string
+    hasValidator?: boolean
+    capped?: boolean
+}
+
+export interface MongoCollectionStats {
+    count: number
+    size: number
+    avgObjSize: number
+    storageSize: number
+    totalIndexSize: number
+    nindexes: number
+}
+
+// 查询构建器
+export interface MongoQuerySpec {
+    database: string
+    collection: string
+    filter: string
+    projection: string
+    sort: string
+    limit: number
+    skip: number
+    hint: string
+    collation: string
+}
+
+export interface MongoFindResult {
+    documents: string[]
+    count: number
+    total: number
+    durationMs: number
+}
+
+// 数据模型映射（Schema 推断）
+export interface MongoFieldInfo {
+    field: string
+    type: string
+    types: string[]
+    count: number
+    presence: number
+    required: boolean
+}
+
+// Schema 验证
+export interface MongoValidatorInfo {
+    validator: string
+    validationLevel: string
+    validationAction: string
+}
+
+export interface MongoValidationResult {
+    valid: boolean
+    error?: string
+}
+
+// 索引
+export interface MongoIndexInfo {
+    name: string
+    key: string
+    unique: boolean
+    sparse: boolean
+    expireAfterSeconds?: number
+    partialFilterExpression?: string
+}
+
+// 聚合 / 命令
+export interface MongoAggregateResult {
+    documents: string[]
+    count: number
+    durationMs: number
+}
+
+// 批量写
+export interface MongoBulkOp {
+    type: 'insert' | 'update' | 'updateMany' | 'replace' | 'delete' | 'deleteMany'
+    filter: string
+    document: string
+    upsert: boolean
+}
+
+export interface MongoBulkResult {
+    requested: number
+    inserted: number
+    matched: number
+    modified: number
+    deleted: number
+    upserted: number
+    error?: string
+}
+
+// 事务
+export interface MongoTxOp {
+    type: 'insert' | 'update' | 'updateMany' | 'replace' | 'delete' | 'deleteMany'
+    database: string
+    collection: string
+    filter: string
+    document: string
+    upsert: boolean
+}
+
+export interface MongoTxResult {
+    results: Array<Record<string, any>>
+    committed: boolean
+    durationMs: number
+    error?: string
+}
+
+// 性能监控
+export interface MongoServerStatus {
+    host: string
+    version: string
+    uptime: number
+    process: string
+    connections?: any
+    network?: any
+    opcounters?: any
+    mem?: any
+    globalLock?: any
+    client: {
+        ops: number
+        failures: number
+        slowOps: number
+        avgMs: number
+        totalMs: number
+    }
+}
+
+// 变更流事件
+export interface MongoChangeEvent {
+    watchKey: string
+    operation: string
+    ns: string
+    document: string
+    ts: number
+    error?: string
+}
+
+/* ---------------- SQLite ---------------- */
+
+export interface SqliteSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    path: string
+    connected: boolean
+    size: number
+}
+
+export function emptySqlite(): SqliteSessionInfo {
+    return {
+        id: '',
+        serverId: '',
+        title: '',
+        path: '',
+        connected: false,
+        size: 0,
+    }
+}
+
+// 表/视图条目
+export interface SqliteTableInfo {
+    name: string
+    type: string // table | view
+}
+
+// 列结构
+export interface SqliteColumnInfo {
+    cid: number
+    name: string
+    type: string
+    notnull: number
+    default: any
+    pk: number
+}
+
+// 索引信息
+export interface SqliteIndexInfo {
+    seq: number
+    name: string
+    unique: number
+    origin: string
+    partial: string
+}
+
+export interface SqliteQueryResult {
+    columns: string[]
+    rows: Record<string, any>[]
+    rowCount: number
+    affected: number
+}
+
+export interface SqliteInfo {
+    path: string
+    size: number
+}
+
+export interface SqliteSchemaTable {
+    name: string
+    columns: { name: string; type: string; key: string }[]
+}
+
+export interface SqliteForeignKey {
+    fromTable: string
+    fromColumn: any
+    toTable: string
+    toColumn: any
+    name: any
+}
+
+export interface SqliteSchema {
+    tables: SqliteSchemaTable[]
+    foreignKeys: SqliteForeignKey[]
 }

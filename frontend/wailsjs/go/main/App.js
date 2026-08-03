@@ -70,6 +70,182 @@ export function MakeDir(arg1, arg2, arg3) {
   return window['go']['main']['App']['MakeDir'](arg1, arg2, arg3);
 }
 
+export function MongoAggregate(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoAggregate'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoAggregateExplain(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoAggregateExplain'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoBulkWrite(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MongoBulkWrite'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MongoClientStats(arg1) {
+  return window['go']['main']['App']['MongoClientStats'](arg1);
+}
+
+export function MongoClose(arg1) {
+  return window['go']['main']['App']['MongoClose'](arg1);
+}
+
+export function MongoCollectionStats(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoCollectionStats'](arg1, arg2, arg3);
+}
+
+export function MongoCollections(arg1, arg2) {
+  return window['go']['main']['App']['MongoCollections'](arg1, arg2);
+}
+
+export function MongoConnect(arg1) {
+  return window['go']['main']['App']['MongoConnect'](arg1);
+}
+
+export function MongoCountDocuments(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoCountDocuments'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoCreateCollection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoCreateCollection'](arg1, arg2, arg3);
+}
+
+export function MongoCreateDatabase(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoCreateDatabase'](arg1, arg2, arg3);
+}
+
+export function MongoCreateIndex(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['main']['App']['MongoCreateIndex'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+}
+
+export function MongoCurrentOps(arg1) {
+  return window['go']['main']['App']['MongoCurrentOps'](arg1);
+}
+
+export function MongoDatabases(arg1) {
+  return window['go']['main']['App']['MongoDatabases'](arg1);
+}
+
+export function MongoDeleteMany(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDeleteMany'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoDeleteOne(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDeleteOne'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoDistinct(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MongoDistinct'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MongoDropCollection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoDropCollection'](arg1, arg2, arg3);
+}
+
+export function MongoDropDatabase(arg1, arg2) {
+  return window['go']['main']['App']['MongoDropDatabase'](arg1, arg2);
+}
+
+export function MongoDropIndex(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDropIndex'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoExplain(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoExplain'](arg1, arg2, arg3);
+}
+
+export function MongoFind(arg1, arg2) {
+  return window['go']['main']['App']['MongoFind'](arg1, arg2);
+}
+
+export function MongoFindOneAndUpdate(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoFindOneAndUpdate'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoGetValidator(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoGetValidator'](arg1, arg2, arg3);
+}
+
+export function MongoHealthCheck(arg1) {
+  return window['go']['main']['App']['MongoHealthCheck'](arg1);
+}
+
+export function MongoIndexStats(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoIndexStats'](arg1, arg2, arg3);
+}
+
+export function MongoIndexes(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoIndexes'](arg1, arg2, arg3);
+}
+
+export function MongoInferSchema(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoInferSchema'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoInsertMany(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MongoInsertMany'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MongoInsertOne(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoInsertOne'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoParseURI(arg1) {
+  return window['go']['main']['App']['MongoParseURI'](arg1);
+}
+
+export function MongoRenameCollection(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoRenameCollection'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoReplaceOne(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoReplaceOne'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoRunCommand(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoRunCommand'](arg1, arg2, arg3);
+}
+
+export function MongoServerStatus(arg1) {
+  return window['go']['main']['App']['MongoServerStatus'](arg1);
+}
+
+export function MongoSetValidator(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoSetValidator'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoTestConnection(arg1) {
+  return window['go']['main']['App']['MongoTestConnection'](arg1);
+}
+
+export function MongoTransaction(arg1, arg2) {
+  return window['go']['main']['App']['MongoTransaction'](arg1, arg2);
+}
+
+export function MongoUnwatch(arg1, arg2) {
+  return window['go']['main']['App']['MongoUnwatch'](arg1, arg2);
+}
+
+export function MongoUpdateMany(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoUpdateMany'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoUpdateOne(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoUpdateOne'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoValidateDocument(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoValidateDocument'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoWatch(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoWatch'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoWatchList(arg1) {
+  return window['go']['main']['App']['MongoWatchList'](arg1);
+}
+
 export function MqttClose(arg1) {
   return window['go']['main']['App']['MqttClose'](arg1);
 }
@@ -428,6 +604,50 @@ export function SelectPrivateKey() {
 
 export function SendInput(arg1, arg2) {
   return window['go']['main']['App']['SendInput'](arg1, arg2);
+}
+
+export function SqliteClose(arg1) {
+  return window['go']['main']['App']['SqliteClose'](arg1);
+}
+
+export function SqliteConnect(arg1, arg2) {
+  return window['go']['main']['App']['SqliteConnect'](arg1, arg2);
+}
+
+export function SqliteCount(arg1, arg2) {
+  return window['go']['main']['App']['SqliteCount'](arg1, arg2);
+}
+
+export function SqliteDescribe(arg1, arg2) {
+  return window['go']['main']['App']['SqliteDescribe'](arg1, arg2);
+}
+
+export function SqliteIndexes(arg1, arg2) {
+  return window['go']['main']['App']['SqliteIndexes'](arg1, arg2);
+}
+
+export function SqliteInfo(arg1) {
+  return window['go']['main']['App']['SqliteInfo'](arg1);
+}
+
+export function SqliteOpenFile() {
+  return window['go']['main']['App']['SqliteOpenFile']();
+}
+
+export function SqliteRun(arg1, arg2) {
+  return window['go']['main']['App']['SqliteRun'](arg1, arg2);
+}
+
+export function SqliteSchema(arg1) {
+  return window['go']['main']['App']['SqliteSchema'](arg1);
+}
+
+export function SqliteSelect(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SqliteSelect'](arg1, arg2, arg3, arg4);
+}
+
+export function SqliteTables(arg1) {
+  return window['go']['main']['App']['SqliteTables'](arg1);
 }
 
 export function UploadData(arg1, arg2, arg3, arg4) {

@@ -4,10 +4,12 @@ import SessionWorkspace from '../SessionWorkspace'
 import RedisClient from '../RedisClient'
 import MysqlClient from '../MysqlClient'
 import MqttClient from '../MqttClient'
+import MongoClient from '../MongoClient'
+import SqliteClient from '../SqliteClient'
 import ApiClient from '../ApiClient'
 import g from '../../styles/global.module.less'
 import a from './Stage.module.less'
-import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo} from '../../types'
+import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo} from '../../types'
 
 const hiddenPane = {display: 'none' as const}
 const shownPane = {display: 'flex' as const, flex: 1, minHeight: 0, minWidth: 0}
@@ -22,6 +24,10 @@ export interface StageProps {
     activeMysqlId: string | null
     mqttSessions: MqttSessionInfo[]
     activeMqttId: string | null
+    mongoSessions: MongoSessionInfo[]
+    activeMongoId: string | null
+    sqliteSessions: SqliteSessionInfo[]
+    activeSqliteId: string | null
     apiOpen: boolean
     apiActive: boolean
     onPathChange: (sessionId: string, p: string) => void
@@ -31,6 +37,9 @@ export interface StageProps {
     onCloseMysql: (id: string) => void
     onMysqlChange: (id: string, database: string) => void
     onCloseMqtt: (id: string) => void
+    onCloseMongo: (id: string) => void
+    onMongoChange: (id: string, database: string) => void
+    onCloseSqlite: (id: string) => void
     onCloseApi: () => void
     onNewServer: () => void
 }
@@ -38,12 +47,12 @@ export interface StageProps {
 export default function Stage(props: StageProps) {
     const {
         sessions, activeId, nativeDrop, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId, apiOpen, apiActive,
+        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, apiOpen, apiActive,
         onPathChange, onNotify, onCloseRedis, onRedisDbChange, onCloseMysql, onMysqlChange,
-        onCloseMqtt, onCloseApi, onNewServer,
+        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseApi, onNewServer,
     } = props
 
-    const empty = sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && !apiOpen
+    const empty = sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !apiOpen
 
     return (
         <div className={a.stage}>
@@ -87,6 +96,25 @@ export default function Stage(props: StageProps) {
                 </div>
             ))}
 
+            {mongoSessions.map((s) => (
+                <div key={s.id} style={s.id === activeMongoId ? shownPane : hiddenPane}>
+                    <MongoClient
+                        session={s}
+                        onClose={() => onCloseMongo(s.id)}
+                        onChange={(id, database) => onMongoChange(id, database)}
+                    />
+                </div>
+            ))}
+
+            {sqliteSessions.map((s) => (
+                <div key={s.id} style={s.id === activeSqliteId ? shownPane : hiddenPane}>
+                    <SqliteClient
+                        session={s}
+                        onClose={() => onCloseSqlite(s.id)}
+                    />
+                </div>
+            ))}
+
             {apiOpen && (
                 <div style={apiActive ? shownPane : hiddenPane}>
                     <ApiClient onClose={onCloseApi}/>
@@ -97,7 +125,6 @@ export default function Stage(props: StageProps) {
                 <div className={g.emptyStage}>
                     <Icon name="terminal" size={44}/>
                     <h2>多协议开发运维客户端</h2>
-                    <p>在左侧添加服务器（SSH、Redis、MySQL 或 MQTT）后双击即可连接：SSH 提供终端与 SFTP 文件管理，Redis / MySQL 支持键值与数据浏览编辑，MQTT 支持主题订阅、消息发布与实时收发。点击左侧「API 调试」可打开内置的 HTTP 接口调试工具。</p>
                     <div className={g.emptyActions}>
                         <button className={`${g.btn} ${g.primary}`} onClick={() => onNewServer()}>新建服务器</button>
                     </div>

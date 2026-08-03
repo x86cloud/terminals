@@ -22,6 +22,31 @@ import type {
     WsStatus,
     WsConnectResult,
     WsMessage,
+    MongoSessionInfo,
+    MongoURIInfo,
+    MongoHealthInfo,
+    MongoDatabaseInfo,
+    MongoCollectionInfo,
+    MongoCollectionStats,
+    MongoQuerySpec,
+    MongoFindResult,
+    MongoFieldInfo,
+    MongoValidatorInfo,
+    MongoValidationResult,
+    MongoIndexInfo,
+    MongoAggregateResult,
+    MongoBulkOp,
+    MongoBulkResult,
+    MongoTxOp,
+    MongoTxResult,
+    MongoServerStatus,
+    SqliteSessionInfo,
+    SqliteTableInfo,
+    SqliteColumnInfo,
+    SqliteIndexInfo,
+    SqliteQueryResult,
+    SqliteInfo,
+    SqliteSchema,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -282,6 +307,102 @@ export const API = {
     mqttSubscriptions: (id: string): Promise<MqttSubscription[]> =>
         app().MqttSubscriptions(id),
 
+    // MongoDB
+    mongoConnect: (id: string): Promise<boolean> => app().MongoConnect(id),
+    mongoClose: (id: string): Promise<void> => app().MongoClose(id),
+    mongoParseURI: (uri: string): Promise<MongoURIInfo> => app().MongoParseURI(uri),
+    mongoTestConnection: (cfg: ServerConfig): Promise<MongoHealthInfo> => app().MongoTestConnection(cfg),
+    mongoHealthCheck: (id: string): Promise<MongoHealthInfo> => app().MongoHealthCheck(id),
+    mongoServerStatus: (id: string): Promise<MongoServerStatus> => app().MongoServerStatus(id),
+    mongoClientStats: (id: string): Promise<Record<string, any>> => app().MongoClientStats(id),
+    mongoCurrentOps: (id: string): Promise<string[]> => app().MongoCurrentOps(id),
+
+    mongoDatabases: (id: string): Promise<MongoDatabaseInfo[]> => app().MongoDatabases(id),
+    mongoCollections: (id: string, db: string): Promise<MongoCollectionInfo[]> => app().MongoCollections(id, db),
+    mongoCreateDatabase: (id: string, db: string, firstCollection: string): Promise<void> =>
+        app().MongoCreateDatabase(id, db, firstCollection),
+    mongoDropDatabase: (id: string, db: string): Promise<void> => app().MongoDropDatabase(id, db),
+    mongoCreateCollection: (id: string, db: string, coll: string): Promise<void> =>
+        app().MongoCreateCollection(id, db, coll),
+    mongoDropCollection: (id: string, db: string, coll: string): Promise<void> =>
+        app().MongoDropCollection(id, db, coll),
+    mongoRenameCollection: (id: string, db: string, coll: string, newName: string): Promise<void> =>
+        app().MongoRenameCollection(id, db, coll, newName),
+    mongoCollectionStats: (id: string, db: string, coll: string): Promise<MongoCollectionStats> =>
+        app().MongoCollectionStats(id, db, coll),
+
+    mongoInferSchema: (id: string, db: string, coll: string, sampleSize: number): Promise<MongoFieldInfo[]> =>
+        app().MongoInferSchema(id, db, coll, sampleSize),
+    mongoGetValidator: (id: string, db: string, coll: string): Promise<MongoValidatorInfo> =>
+        app().MongoGetValidator(id, db, coll),
+    mongoSetValidator: (
+        id: string, db: string, coll: string, validatorJSON: string, level: string, action: string
+    ): Promise<void> => app().MongoSetValidator(id, db, coll, validatorJSON, level, action),
+    mongoValidateDocument: (
+        id: string, db: string, coll: string, docJSON: string
+    ): Promise<MongoValidationResult> => app().MongoValidateDocument(id, db, coll, docJSON),
+
+    mongoFind: (id: string, spec: MongoQuerySpec): Promise<MongoFindResult> => app().MongoFind(id, spec),
+    mongoCountDocuments: (id: string, db: string, coll: string, filterJSON: string): Promise<number> =>
+        app().MongoCountDocuments(id, db, coll, filterJSON),
+    mongoDistinct: (id: string, db: string, coll: string, field: string, filterJSON: string): Promise<string[]> =>
+        app().MongoDistinct(id, db, coll, field, filterJSON),
+    mongoExplain: (id: string, spec: MongoQuerySpec, verbosity: string): Promise<string> =>
+        app().MongoExplain(id, spec, verbosity),
+
+    mongoInsertOne: (id: string, db: string, coll: string, docJSON: string): Promise<string> =>
+        app().MongoInsertOne(id, db, coll, docJSON),
+    mongoInsertMany: (
+        id: string, db: string, coll: string, docsJSON: string, ordered: boolean
+    ): Promise<Record<string, any>> => app().MongoInsertMany(id, db, coll, docsJSON, ordered),
+    mongoUpdateOne: (
+        id: string, db: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean
+    ): Promise<Record<string, any>> => app().MongoUpdateOne(id, db, coll, filterJSON, updateJSON, upsert),
+    mongoUpdateMany: (
+        id: string, db: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean
+    ): Promise<Record<string, any>> => app().MongoUpdateMany(id, db, coll, filterJSON, updateJSON, upsert),
+    mongoReplaceOne: (
+        id: string, db: string, coll: string, filterJSON: string, docJSON: string, upsert: boolean
+    ): Promise<Record<string, any>> => app().MongoReplaceOne(id, db, coll, filterJSON, docJSON, upsert),
+    mongoDeleteOne: (id: string, db: string, coll: string, filterJSON: string): Promise<number> =>
+        app().MongoDeleteOne(id, db, coll, filterJSON),
+    mongoDeleteMany: (id: string, db: string, coll: string, filterJSON: string): Promise<number> =>
+        app().MongoDeleteMany(id, db, coll, filterJSON),
+    mongoFindOneAndUpdate: (
+        id: string, db: string, coll: string, filterJSON: string, updateJSON: string, returnNew: boolean
+    ): Promise<string> => app().MongoFindOneAndUpdate(id, db, coll, filterJSON, updateJSON, returnNew),
+
+    mongoBulkWrite: (
+        id: string, db: string, coll: string, ops: MongoBulkOp[], ordered: boolean
+    ): Promise<MongoBulkResult> => app().MongoBulkWrite(id, db, coll, ops, ordered),
+
+    mongoAggregate: (
+        id: string, db: string, coll: string, pipelineJSON: string, allowDiskUse: boolean, maxTimeMS: number
+    ): Promise<MongoAggregateResult> => app().MongoAggregate(id, db, coll, pipelineJSON, allowDiskUse, maxTimeMS),
+    mongoAggregateExplain: (id: string, db: string, coll: string, pipelineJSON: string): Promise<string> =>
+        app().MongoAggregateExplain(id, db, coll, pipelineJSON),
+    mongoRunCommand: (id: string, db: string, commandJSON: string): Promise<string> =>
+        app().MongoRunCommand(id, db, commandJSON),
+
+    mongoIndexes: (id: string, db: string, coll: string): Promise<MongoIndexInfo[]> =>
+        app().MongoIndexes(id, db, coll),
+    mongoCreateIndex: (
+        id: string, db: string, coll: string, keysJSON: string, name: string,
+        unique: boolean, sparse: boolean, expireAfterSeconds: number
+    ): Promise<string> => app().MongoCreateIndex(id, db, coll, keysJSON, name, unique, sparse, expireAfterSeconds),
+    mongoDropIndex: (id: string, db: string, coll: string, name: string): Promise<void> =>
+        app().MongoDropIndex(id, db, coll, name),
+    mongoIndexStats: (id: string, db: string, coll: string): Promise<string[]> =>
+        app().MongoIndexStats(id, db, coll),
+
+    mongoTransaction: (id: string, ops: MongoTxOp[]): Promise<MongoTxResult> => app().MongoTransaction(id, ops),
+
+    mongoWatch: (
+        id: string, scope: string, db: string, coll: string, pipelineJSON: string, fullDocument: string
+    ): Promise<string> => app().MongoWatch(id, scope, db, coll, pipelineJSON, fullDocument),
+    mongoUnwatch: (id: string, watchKey: string): Promise<void> => app().MongoUnwatch(id, watchKey),
+    mongoWatchList: (id: string): Promise<string[]> => app().MongoWatchList(id),
+
     // API 调试工具
     apiRequest: (req: ApiRequest): Promise<ApiResponse> => app().ApiRequest(req),
 
@@ -290,6 +411,20 @@ export const API = {
         app().WsConnect({ url, headers, insecureTLS, auth, protocols }),
     wsSend: (id: string, message: string): Promise<void> => app().WsSend(id, message),
     wsClose: (id: string): Promise<void> => app().WsClose(id),
+
+    // SQLite（本地文件）
+    sqliteOpenFile: (): Promise<string> => app().SqliteOpenFile(),
+    sqliteConnect: (id: string, path: string): Promise<boolean> => app().SqliteConnect(id, path),
+    sqliteClose: (id: string): Promise<void> => app().SqliteClose(id),
+    sqliteInfo: (id: string): Promise<SqliteInfo> => app().SqliteInfo(id),
+    sqliteTables: (id: string): Promise<SqliteTableInfo[]> => app().SqliteTables(id),
+    sqliteDescribe: (id: string, table: string): Promise<SqliteColumnInfo[]> => app().SqliteDescribe(id, table),
+    sqliteSelect: (id: string, table: string, limit: number, offset: number): Promise<SqliteQueryResult> =>
+        app().SqliteSelect(id, table, limit, offset),
+    sqliteCount: (id: string, table: string): Promise<number> => app().SqliteCount(id, table),
+    sqliteIndexes: (id: string, table: string): Promise<SqliteIndexInfo[]> => app().SqliteIndexes(id, table),
+    sqliteRun: (id: string, sqlText: string): Promise<SqliteQueryResult> => app().SqliteRun(id, sqlText),
+    sqliteSchema: (id: string): Promise<SqliteSchema> => app().SqliteSchema(id),
 }
 
 /* ------------------------------------------------------------------ */

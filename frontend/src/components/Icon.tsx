@@ -27,6 +27,8 @@ export type IconName =
     | 'chevron-left'
     | 'chevrons-left'
     | 'chevrons-right'
+    | 'play'
+    | 'chart'
 
 const PATHS: Record<IconName, React.ReactNode> = {
     server: (
@@ -137,6 +139,12 @@ const PATHS: Record<IconName, React.ReactNode> = {
     'chevron-left': <path d="M15 6l-6 6 6 6"/>,
     'chevrons-left': <path d="M11 6l-6 6 6 6M18 6l-6 6 6 6"/>,
     'chevrons-right': <path d="M6 6l6 6-6 6M13 6l6 6-6 6"/>,
+    play: <path d="M7 4l13 8-13 8V4z"/>,
+    chart: (
+        <>
+            <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
+        </>
+    ),
 }
 
 interface Props {

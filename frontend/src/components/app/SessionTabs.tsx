@@ -3,7 +3,7 @@ import Icon from '../Icon'
 import ClientIcon from '../ClientIcon'
 import g from '../../styles/global.module.less'
 import a from './SessionTabs.module.less'
-import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo} from '../../types'
+import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo} from '../../types'
 
 export interface SessionTabsProps {
     sessions: SessionInfo[]
@@ -14,13 +14,19 @@ export interface SessionTabsProps {
     activeMysqlId: string | null
     mqttSessions: MqttSessionInfo[]
     activeMqttId: string | null
+    mongoSessions: MongoSessionInfo[]
+    activeMongoId: string | null
+    sqliteSessions: SqliteSessionInfo[]
+    activeSqliteId: string | null
     apiOpen: boolean
     apiActive: boolean
-    onFocusSession: (id: string, kind: 'ssh' | 'redis' | 'mysql' | 'mqtt') => void
+    onFocusSession: (id: string, kind: 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite') => void
     onCloseSession: (id: string) => void
     onCloseRedis: (id: string) => void
     onCloseMysql: (id: string) => void
     onCloseMqtt: (id: string) => void
+    onCloseMongo: (id: string) => void
+    onCloseSqlite: (id: string) => void
     onActivateApi: () => void
     onCloseApi: () => void
 }
@@ -55,8 +61,8 @@ function Tab({
 export default function SessionTabs(props: SessionTabsProps) {
     const {
         sessions, activeId, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId, apiOpen, apiActive,
-        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onCloseMqtt, onActivateApi, onCloseApi,
+        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, apiOpen, apiActive,
+        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onCloseMqtt, onCloseMongo, onCloseSqlite, onActivateApi, onCloseApi,
     } = props
 
     return (
@@ -103,6 +109,28 @@ export default function SessionTabs(props: SessionTabsProps) {
                     icon={<ClientIcon kind="mqtt" size={12}/>}
                     dotOn={true}
                     title={`${s.host}:${s.port}`}
+                />
+            ))}
+            {mongoSessions.map((s) => (
+                <Tab
+                    key={s.id}
+                    active={s.id === activeMongoId}
+                    onClick={() => onFocusSession(s.id, 'mongo')}
+                    onClose={() => onCloseMongo(s.id)}
+                    icon={<ClientIcon kind="mongo" size={12}/>}
+                    dotOn={true}
+                    title={s.database ? `${s.title} · ${s.database}` : s.title}
+                />
+            ))}
+            {sqliteSessions.map((s) => (
+                <Tab
+                    key={s.id}
+                    active={s.id === activeSqliteId}
+                    onClick={() => onFocusSession(s.id, 'sqlite')}
+                    onClose={() => onCloseSqlite(s.id)}
+                    icon={<ClientIcon kind="sqlite" size={12}/>}
+                    dotOn={true}
+                    title={s.title}
                 />
             ))}
 
