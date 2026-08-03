@@ -135,6 +135,13 @@ export default function Stage(props: StageProps) {
                 <div className={g.emptyStage}>
                     <Icon name="terminal" size={44}/>
                     <h2>多协议开发运维客户端</h2>
+                    <p>
+                        xClient 是一款跨平台桌面客户端，集成了 SSH 终端、SFTP、Redis、MySQL、SQLite、
+                        MQTT 与 HTTP 接口调试等常用运维工具，所有连接在同一窗口内统一管理。
+                    </p>
+                    <a className={g.emptyLink} href="https://github.com/x86cloud/terminals" target="_blank" rel="noreferrer">
+                        GitHub: https://github.com/x86cloud/terminals
+                    </a>
                     <div className={g.emptyActions}>
                         <button className={`${g.btn} ${g.primary}`} onClick={() => onNewServer()}>新建服务器</button>
                     </div>

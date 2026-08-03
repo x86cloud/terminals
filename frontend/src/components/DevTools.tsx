@@ -1,15 +1,17 @@
 import React, {useEffect, useMemo, useState} from 'react'
 import Icon from './Icon'
 import {md5} from '../utils/md5'
+import CodeEditor from './CodeEditor'
 import g from '../styles/global.module.less'
 import dt from './DevTools.module.less'
 
-type ToolKey = 'md5' | 'timestamp' | 'base64'
+type ToolKey = 'md5' | 'timestamp' | 'base64' | 'json'
 
 const TOOLS: {key: ToolKey; label: string}[] = [
     {key: 'md5', label: 'MD5 哈希'},
     {key: 'timestamp', label: '时间戳'},
     {key: 'base64', label: 'Base64 编解码'},
+    {key: 'json', label: 'JSON 格式化'},
 ]
 
 function CopyButton({value}: {value: string}) {
@@ -248,6 +250,116 @@ function Base64Tool() {
     )
 }
 
+/* ---------------- JSON 格式化 ---------------- */
+function downloadText(filename: string, text: string) {
+    const blob = new Blob([text], {type: 'application/json'})
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+// 从 JSON.parse 错误信息中提取出错字符偏移量
+function findPos(msg: string): number | null {
+    const m = /position (\d+)/.exec(msg)
+    return m ? Number(m[1]) : null
+}
+
+// 将偏移量换算为「第 line 行第 col 列」
+function locate(str: string, pos: number) {
+    let line = 1
+    let col = 1
+    const max = Math.min(pos, str.length)
+    for (let i = 0; i < max; i++) {
+        if (str.charCodeAt(i) === 10) {
+            line++
+            col = 1
+        } else {
+            col++
+        }
+    }
+    return {line, col}
+}
+
+function JsonTool() {
+    const [input, setInput] = useState('')
+    const [error, setError] = useState('')
+    const [busy, setBusy] = useState(false)
+
+    const run = async (mode: 'format' | 'minify') => {
+        if (!input.trim()) {
+            setError('')
+            return
+        }
+        setBusy(true)
+        // 让出主线程一帧，避免大文件解析时页面卡顿
+        await new Promise((r) => setTimeout(r, 0))
+        try {
+            const parsed = JSON.parse(input)
+            const text =
+                mode === 'format'
+                    ? JSON.stringify(parsed, null, 2)
+                    : JSON.stringify(parsed)
+            setInput(text) // 直接更新原文件内容
+            setError('')
+        } catch (e: any) {
+            const msg = e?.message || String(e)
+            const pos = findPos(msg)
+            let detail = msg
+            if (pos != null) {
+                const {line, col} = locate(input, pos)
+                detail = `${msg}（出错位置 ${pos}，第 ${line} 行第 ${col} 列）`
+            }
+            setError(detail)
+        } finally {
+            setBusy(false)
+        }
+    }
+
+    return (
+        <div className={dt.tool}>
+            <h3 className={dt.toolTitle}>JSON 格式化</h3>
+            <p className={dt.desc}>
+                在原文件上就地格式化或压缩，操作完成后直接更新内容；自动校验语法并定位错误行列，支持大文件。
+            </p>
+
+            <div className={dt.editorWrap}>
+                <CodeEditor
+                    value={input}
+                    onChange={(v) => {
+                        setInput(v)
+                        if (error) setError('')
+                    }}
+                    lang="json"
+                    minHeight="320px"
+                    height="520px"
+                    placeholder="在此粘贴 / 编辑 JSON 字符串…"
+                />
+            </div>
+
+            <div className={dt.jsonActions}>
+                <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || !input.trim()} onClick={() => run('format')}>
+                    格式化
+                </button>
+                <button className={`${g.btn} ${g.sm}`} disabled={busy || !input.trim()} onClick={() => run('minify')}>
+                    压缩
+                </button>
+                <span className={g.spacer}/>
+                <CopyButton value={input}/>
+                <button className={`${g.btn} ${g.sm}`} disabled={!input.trim()} onClick={() => downloadText('formatted.json', input)} title="下载结果">
+                    下载
+                </button>
+            </div>
+
+            {error && <div className={dt.jsonError}>{error}</div>}
+        </div>
+    )
+}
+
 /* ---------------- 主组件 ---------------- */
 export default function DevTools({onClose}: {onClose: () => void}) {
     const [active, setActive] = useState<ToolKey>('md5')
@@ -277,6 +389,7 @@ export default function DevTools({onClose}: {onClose: () => void}) {
                     {active === 'md5' && <Md5Tool/>}
                     {active === 'timestamp' && <TimestampTool/>}
                     {active === 'base64' && <Base64Tool/>}
+                    {active === 'json' && <JsonTool/>}
                 </div>
             </div>
         </div>

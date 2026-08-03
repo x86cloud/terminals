@@ -200,6 +200,35 @@
     gap: 8px;
 }
 
+/* JSON 工具 */
+.editorWrap {
+    margin-top: 8px;
+    border: 1px solid @border;
+    border-radius: @radius;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.jsonActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.jsonError {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid @danger;
+    background: @danger-bg;
+    color: @danger;
+    border-radius: @radius;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 /* 响应式：窄屏改为上下布局 */
 @media (max-width: 640px) {
     .devPane {
