@@ -47,6 +47,7 @@ import type {
     SqliteQueryResult,
     SqliteInfo,
     SqliteSchema,
+    ServerGroup,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -72,6 +73,13 @@ export const API = {
     saveServer: (cfg: ServerConfig): Promise<ServerConfig> => app().SaveServer(cfg),
     deleteServer: (id: string): Promise<void> => app().DeleteServer(id),
     selectPrivateKey: (): Promise<string> => app().SelectPrivateKey(),
+
+    // 分组管理
+    listGroups: (): Promise<ServerGroup[]> => app().ListGroups(),
+    saveGroup: (g: ServerGroup): Promise<ServerGroup> => app().SaveGroup(g),
+    deleteGroup: (id: string): Promise<void> => app().DeleteGroup(id),
+    moveServerToGroup: (serverId: string, groupId: string): Promise<void> =>
+        app().MoveServerToGroup(serverId, groupId),
 
     // 会话
     listSessions: (): Promise<SessionInfo[]> => app().ListSessions(),

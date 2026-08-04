@@ -42,10 +42,17 @@ const (
 	ConnSqlite ConnType = "sqlite"
 )
 
+// ServerGroup 描述服务器分组。
+type ServerGroup struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
 // ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL。
 type ServerConfig struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
+	GroupID    string `json:"groupId,omitempty"` // 所属分组 ID，空表示未分组
 	Host       string `json:"host"`
 	Port       int    `json:"port"`
 	Username   string `json:"username"`
@@ -290,13 +297,14 @@ func (s *secretBox) decrypt(value string) string {
 	return string(plain)
 }
 
-// Store 负责服务器列表的持久化。
+// Store 负责服务器列表与分组的持久化。
 type Store struct {
 	mu      sync.RWMutex
 	dir     string
 	file    string
 	box     *secretBox
 	servers []ServerConfig
+	groups  []ServerGroup
 }
 
 func appConfigDir() (string, error) {
@@ -362,15 +370,29 @@ func (s *Store) load() error {
 	if err != nil {
 		if os.IsNotExist(err) {
 			s.servers = []ServerConfig{}
+			s.groups = []ServerGroup{}
 			return nil
 		}
 		return err
 	}
-	var list []ServerConfig
-	if err := json.Unmarshal(data, &list); err != nil {
+	// 兼容旧版纯数组格式：尝试按包装结构解析，失败则回退为服务器数组。
+	var wrapper struct {
+		Servers []ServerConfig `json:"servers"`
+		Groups  []ServerGroup  `json:"groups"`
+	}
+	if err := json.Unmarshal(data, &wrapper); err != nil {
 		// 配置损坏时不阻塞启动
 		s.servers = []ServerConfig{}
+		s.groups = []ServerGroup{}
 		return nil
+	}
+	list := wrapper.Servers
+	if list == nil {
+		// 旧格式：整个文件是 ServerConfig 数组
+		var legacy []ServerConfig
+		if err2 := json.Unmarshal(data, &legacy); err2 == nil {
+			list = legacy
+		}
 	}
 	for i := range list {
 		list[i].Password = s.box.decrypt(list[i].Password)
@@ -380,6 +402,10 @@ func (s *Store) load() error {
 		list[i].MongoTLSClientKey = s.box.decrypt(list[i].MongoTLSClientKey)
 	}
 	s.servers = list
+	if wrapper.Groups == nil {
+		wrapper.Groups = []ServerGroup{}
+	}
+	s.groups = wrapper.Groups
 	return nil
 }
 
@@ -395,7 +421,14 @@ func (s *Store) persist() error {
 		out[i].MongoURI = s.box.encrypt(out[i].MongoURI)
 		out[i].MongoTLSClientKey = s.box.encrypt(out[i].MongoTLSClientKey)
 	}
-	data, err := json.MarshalIndent(out, "", "  ")
+	wrapper := struct {
+		Servers []ServerConfig `json:"servers"`
+		Groups  []ServerGroup  `json:"groups"`
+	}{
+		Servers: out,
+		Groups:  s.groups,
+	}
+	data, err := json.MarshalIndent(wrapper, "", "  ")
 	if err != nil {
 		return err
 	}
@@ -520,5 +553,95 @@ func (s *Store) Delete(id string) error {
 		}
 	}
 	s.servers = next
+	return s.persist()
+}
+
+// ---------- 分组管理 ----------
+
+func (s *Store) ListGroups() []ServerGroup {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]ServerGroup, len(s.groups))
+	copy(out, s.groups)
+	return out
+}
+
+func (s *Store) SaveGroup(g ServerGroup) (ServerGroup, error) {
+	name := strings.TrimSpace(g.Name)
+	if name == "" {
+		return ServerGroup{}, errors.New("分组名称不能为空")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if g.ID == "" {
+		g.ID = uuid.NewString()
+		s.groups = append(s.groups, g)
+	} else {
+		found := false
+		for i := range s.groups {
+			if s.groups[i].ID == g.ID {
+				s.groups[i].Name = name
+				found = true
+				break
+			}
+		}
+		if !found {
+			s.groups = append(s.groups, g)
+		}
+	}
+	if err := s.persist(); err != nil {
+		return ServerGroup{}, err
+	}
+	return g, nil
+}
+
+func (s *Store) DeleteGroup(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	next := s.groups[:0]
+	for _, item := range s.groups {
+		if item.ID != id {
+			next = append(next, item)
+		}
+	}
+	s.groups = next
+	// 解除该分组下服务器的归属
+	for i := range s.servers {
+		if s.servers[i].GroupID == id {
+			s.servers[i].GroupID = ""
+			s.servers[i].UpdatedAt = time.Now().Unix()
+		}
+	}
+	return s.persist()
+}
+
+// MoveServerToGroup 将服务器移入指定分组；groupId 为空表示移出分组。
+func (s *Store) MoveServerToGroup(serverID, groupID string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if groupID != "" {
+		exists := false
+		for _, g := range s.groups {
+			if g.ID == groupID {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			return errors.New("目标分组不存在")
+		}
+	}
+	found := false
+	for i := range s.servers {
+		if s.servers[i].ID == serverID {
+			s.servers[i].GroupID = groupID
+			s.servers[i].UpdatedAt = time.Now().Unix()
+			found = true
+			break
+		}
+	}
+	if !found {
+		return errors.New("服务器不存在")
+	}
 	return s.persist()
 }

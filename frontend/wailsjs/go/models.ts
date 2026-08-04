@@ -284,6 +284,7 @@ export namespace main {
 	export class ServerConfig {
 	    id: string;
 	    name: string;
+	    groupId?: string;
 	    host: string;
 	    port: number;
 	    username: string;
@@ -376,6 +377,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.name = source["name"];
+	        this.groupId = source["groupId"];
 	        this.host = source["host"];
 	        this.port = source["port"];
 	        this.username = source["username"];
@@ -459,6 +461,20 @@ export namespace main {
 	        this.mqttWillQos = source["mqttWillQos"];
 	        this.mqttWillRetained = source["mqttWillRetained"];
 	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+	export class ServerGroup {
+	    id: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
 	    }
 	}
 	export class SessionInfo {

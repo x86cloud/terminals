@@ -30,6 +30,10 @@ export function ConnectWithConfig(arg1, arg2, arg3) {
   return window['go']['main']['App']['ConnectWithConfig'](arg1, arg2, arg3);
 }
 
+export function DeleteGroup(arg1) {
+  return window['go']['main']['App']['DeleteGroup'](arg1);
+}
+
 export function DeleteServer(arg1) {
   return window['go']['main']['App']['DeleteServer'](arg1);
 }
@@ -52,6 +56,10 @@ export function HomeDir(arg1) {
 
 export function ListDir(arg1, arg2) {
   return window['go']['main']['App']['ListDir'](arg1, arg2);
+}
+
+export function ListGroups() {
+  return window['go']['main']['App']['ListGroups']();
 }
 
 export function ListServers() {
@@ -244,6 +252,10 @@ export function MongoWatch(arg1, arg2, arg3, arg4, arg5, arg6) {
 
 export function MongoWatchList(arg1) {
   return window['go']['main']['App']['MongoWatchList'](arg1);
+}
+
+export function MoveServerToGroup(arg1, arg2) {
+  return window['go']['main']['App']['MoveServerToGroup'](arg1, arg2);
 }
 
 export function MqttClose(arg1) {
@@ -588,6 +600,10 @@ export function RenamePath(arg1, arg2, arg3) {
 
 export function ResizeTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
+}
+
+export function SaveGroup(arg1) {
+  return window['go']['main']['App']['SaveGroup'](arg1);
 }
 
 export function SaveMysqlFile(arg1) {

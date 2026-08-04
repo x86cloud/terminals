@@ -1,9 +1,15 @@
 export type AuthType = 'password' | 'key'
 export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite'
 
+export interface ServerGroup {
+    id: string
+    name: string
+}
+
 export interface ServerConfig {
     id: string
     name: string
+    groupId?: string
     host: string
     port: number
     username: string

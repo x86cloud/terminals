@@ -16,7 +16,7 @@ import {ConfirmModal, ConfirmState} from './components/Modal'
 import SessionTabs from './components/app/SessionTabs'
 import Stage from './components/app/Stage'
 import {API, registerNativeFileDrop, subscribe, unregisterNativeFileDrop} from './api'
-import {ServerConfig, SessionInfo, Transfer, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from './types'
+import {ServerConfig, ServerGroup, SessionInfo, Transfer, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from './types'
 import {errorMessage} from './utils'
 import g from './styles/global.module.less'
 import a from './components/App.module.less'
@@ -31,6 +31,7 @@ const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
 
 export default function App() {
     const [servers, setServers] = useState<ServerConfig[]>([])
+    const [groups, setGroups] = useState<ServerGroup[]>([])
     const [sessions, setSessions] = useState<SessionInfo[]>([])
     const [activeId, setActiveId] = useState<string | null>(null)
     const [transfers, setTransfers] = useState<Transfer[]>([])
@@ -103,12 +104,55 @@ export default function App() {
         }
     }, [notify])
 
+    const reloadGroups = useCallback(async () => {
+        try {
+            setGroups((await API.listGroups()) || [])
+        } catch (err) {
+            notify(errorMessage(err), 'error')
+        }
+    }, [notify])
+
+    // 新建分组：先落库再刷新本地；返回新建的分组供侧边栏继续内联重命名
+    const createGroup = useCallback(async (): Promise<ServerGroup> => {
+        const g = await API.saveGroup({id: '', name: '新分组'})
+        await reloadGroups()
+        return g
+    }, [reloadGroups])
+
+    const renameGroup = useCallback(async (g: ServerGroup) => {
+        try {
+            await API.saveGroup(g)
+            await reloadGroups()
+        } catch (err) {
+            notify(errorMessage(err), 'error')
+        }
+    }, [reloadGroups, notify])
+
+    const deleteGroup = useCallback(async (id: string) => {
+        try {
+            await API.deleteGroup(id)
+            await reloadGroups()
+        } catch (err) {
+            notify(errorMessage(err), 'error')
+        }
+    }, [reloadGroups, notify])
+
+    const moveServer = useCallback(async (serverId: string, groupId: string) => {
+        try {
+            await API.moveServerToGroup(serverId, groupId)
+            await reloadServers()
+        } catch (err) {
+            notify(errorMessage(err), 'error')
+        }
+    }, [reloadServers, notify])
+
     useEffect(() => {
         void reloadServers()
+        void reloadGroups()
         API.listTransfers()
             .then((list) => setTransfers(list || []))
             .catch(() => undefined)
-    }, [reloadServers])
+    }, [reloadServers, reloadGroups])
 
     useEffect(() => {
         const offTransfer = subscribe('transfer:update', (t: Transfer) => {
@@ -454,6 +498,7 @@ export default function App() {
         <div className={a.app}>
             <Sidebar
                 servers={servers}
+                groups={groups}
                 sessions={sessions}
                 activeSessionId={activeId}
                 connectingId={connectingId}
@@ -471,6 +516,10 @@ export default function App() {
                 onEdit={editServer}
                 onDelete={deleteServer}
                 onConnect={connect}
+                onCreateGroup={createGroup}
+                onRenameGroup={renameGroup}
+                onDeleteGroup={deleteGroup}
+                onMoveServer={moveServer}
                 onOpenApi={openApiTool}
                 onOpenDevTools={openDevTools}
                 onFocusSession={(id, kind) => focusSession(id, kind)}
@@ -560,6 +609,7 @@ export default function App() {
             <ServerDialog
                 open={dialog.open}
                 initial={dialog.initial}
+                groups={groups}
                 onClose={() => setDialog({open: false, initial: null})}
                 onSaved={() => void reloadServers()}
                 onSaveAndConnect={async (cfg: ServerConfig) => {

@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react'
 import {Modal} from './Modal'
 import {API} from '../api'
-import {emptyServer, ServerConfig, ConnType} from '../types'
+import {emptyServer, ServerConfig, ServerGroup, ConnType} from '../types'
 import {errorMessage} from '../utils'
 import Icon from './Icon'
 import ClientIcon from './ClientIcon'
@@ -11,12 +11,13 @@ import sd from './ServerDialog.module.less'
 interface Props {
     open: boolean
     initial: ServerConfig | null
+    groups: ServerGroup[]
     onClose: () => void
     onSaved: (cfg: ServerConfig) => void
     onSaveAndConnect: (cfg: ServerConfig) => void
 }
 
-export default function ServerDialog({open, initial, onClose, onSaved, onSaveAndConnect}: Props) {
+export default function ServerDialog({open, initial, groups, onClose, onSaved, onSaveAndConnect}: Props) {
     const [form, setForm] = useState<ServerConfig>(emptyServer())
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
@@ -148,6 +149,19 @@ export default function ServerDialog({open, initial, onClose, onSaved, onSaveAnd
                         placeholder={isRedis ? '可选，例如 缓存-redis01' : '可选，例如 生产环境-web01'}
                         onChange={(e) => update({name: e.target.value})}
                     />
+                </label>
+
+                <label className={g.field}>
+                    <span>所属分组（可选）</span>
+                    <select
+                        value={form.groupId ?? ''}
+                        onChange={(e) => update({groupId: e.target.value || undefined})}
+                    >
+                        <option value="">未分组</option>
+                        {groups.map((grp) => (
+                            <option key={grp.id} value={grp.id}>{grp.name}</option>
+                        ))}
+                    </select>
                 </label>
 
                 {!isSqlite && (

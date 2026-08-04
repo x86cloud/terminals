@@ -84,6 +84,133 @@
     color: @text-dim;
 }
 
+/* ---------------- 分组 ---------------- */
+
+.groupBlock {
+    margin-bottom: 2px;
+    border-radius: @radius-md;
+
+    &.dropActive {
+        outline: 1px dashed @accent;
+        outline-offset: -1px;
+        background: @accent-soft;
+    }
+}
+
+.groupHeader {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding: 3px 4px;
+    border-radius: @radius-md;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    .iconBtn {
+        flex: none;
+    }
+}
+
+.groupTitleBtn {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    min-width: 0;
+    gap: 6px;
+    padding: 4px 4px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.groupName {
+    .ellipsis();
+    min-width: 0;
+}
+
+.groupCount {
+    flex: none;
+    font-size: 11px;
+    color: @text-dim;
+    background: @bg-3;
+    border-radius: 999px;
+    padding: 1px 7px;
+    font-weight: 400;
+}
+
+.groupActions {
+    display: flex;
+    gap: 1px;
+    opacity: 0;
+    flex: none;
+}
+
+.groupHeader:hover .groupActions {
+    opacity: 1;
+}
+
+.groupInput {
+    flex: 1;
+    min-width: 0;
+    padding: 3px 6px;
+    border: 1px solid @accent;
+    border-radius: @radius-sm;
+    background: @bg-1;
+    color: @text;
+    font-size: 13px;
+    font-weight: 600;
+    outline: none;
+}
+
+/* 移动到分组浮层 */
+.movePopover {
+    position: fixed;
+    z-index: 300;
+    min-width: 160px;
+    padding: 4px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    box-shadow: @shadow-pop;
+}
+
+.movePopTitle {
+    padding: 4px 8px;
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.moveItem {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 6px 8px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-sm;
+    color: @text;
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+        background: @accent-soft;
+        color: @accent;
+    }
+}
+
+.moveEmpty {
+    padding: 6px 8px;
+    font-size: 12px;
+    color: @text-dim;
+}
+
 .serverGroup {
     margin-bottom: 2px;
 }

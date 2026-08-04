@@ -81,6 +81,36 @@ func (a *App) DeleteServer(id string) error {
 	return a.store.Delete(id)
 }
 
+// ---------- 分组管理 ----------
+
+func (a *App) ListGroups() []ServerGroup {
+	if a.store == nil {
+		return []ServerGroup{}
+	}
+	return a.store.ListGroups()
+}
+
+func (a *App) SaveGroup(g ServerGroup) (ServerGroup, error) {
+	if a.store == nil {
+		return ServerGroup{}, errors.New("配置存储不可用")
+	}
+	return a.store.SaveGroup(g)
+}
+
+func (a *App) DeleteGroup(id string) error {
+	if a.store == nil {
+		return errors.New("配置存储不可用")
+	}
+	return a.store.DeleteGroup(id)
+}
+
+func (a *App) MoveServerToGroup(serverID, groupID string) error {
+	if a.store == nil {
+		return errors.New("配置存储不可用")
+	}
+	return a.store.MoveServerToGroup(serverID, groupID)
+}
+
 // SelectPrivateKey 打开文件选择框以挑选私钥文件。
 func (a *App) SelectPrivateKey() (string, error) {
 	return wruntime.OpenFileDialog(a.ctx, wruntime.OpenDialogOptions{

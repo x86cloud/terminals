@@ -16,6 +16,8 @@ export function Connect(arg1:string,arg2:number,arg3:number):Promise<main.Sessio
 
 export function ConnectWithConfig(arg1:main.ServerConfig,arg2:number,arg3:number):Promise<main.SessionInfo>;
 
+export function DeleteGroup(arg1:string):Promise<void>;
+
 export function DeleteServer(arg1:string):Promise<void>;
 
 export function Disconnect(arg1:string):Promise<void>;
@@ -27,6 +29,8 @@ export function DownloadTo(arg1:string,arg2:Array<string>,arg3:string):Promise<v
 export function HomeDir(arg1:string):Promise<string>;
 
 export function ListDir(arg1:string,arg2:string):Promise<main.DirListing>;
+
+export function ListGroups():Promise<Array<main.ServerGroup>>;
 
 export function ListServers():Promise<Array<main.ServerConfig>>;
 
@@ -123,6 +127,8 @@ export function MongoValidateDocument(arg1:string,arg2:string,arg3:string,arg4:s
 export function MongoWatch(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<string>;
 
 export function MongoWatchList(arg1:string):Promise<Array<string>>;
+
+export function MoveServerToGroup(arg1:string,arg2:string):Promise<void>;
 
 export function MqttClose(arg1:string):Promise<void>;
 
@@ -295,6 +301,8 @@ export function RemovePaths(arg1:string,arg2:Array<string>):Promise<void>;
 export function RenamePath(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
+
+export function SaveGroup(arg1:main.ServerGroup):Promise<main.ServerGroup>;
 
 export function SaveMysqlFile(arg1:string):Promise<string>;
 
