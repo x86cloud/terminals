@@ -17,6 +17,7 @@ export default function ErDiagram({
     const [pan, setPan] = useState<{x: number; y: number}>({x: 0, y: 0})
     const [isDragging, setIsDragging] = useState(false)
     const [hoveredTable, setHoveredTable] = useState<string | null>(null)
+    const [isFullscreen, setIsFullscreen] = useState(false)
 
     const dragStartRef = useRef<{x: number; y: number}>({x: 0, y: 0})
     const panStartRef = useRef<{x: number; y: number}>({x: 0, y: 0})
@@ -97,6 +98,24 @@ export default function ErDiagram({
         autoFit()
     }, [autoFit])
 
+    // 切换全屏时延迟重新自适应居中
+    useEffect(() => {
+        const timer = setTimeout(() => autoFit(), 50)
+        return () => clearTimeout(timer)
+    }, [isFullscreen, autoFit])
+
+    // 按 Esc 键退出全屏
+    useEffect(() => {
+        if (!isFullscreen) return
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                setIsFullscreen(false)
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [isFullscreen])
+
     // 监听容器 Resize 事件
     useEffect(() => {
         const el = canvasRef.current
@@ -155,7 +174,7 @@ export default function ErDiagram({
     }, [hoveredTable, schema.foreignKeys])
 
     return (
-        <div className={my.erWrap}>
+        <div className={`${my.erWrap} ${isFullscreen ? my.fullscreen : ''}`}>
             <div className={my.erToolBar}>
                 <button
                     className={my.erZoomBtn}
@@ -186,8 +205,19 @@ export default function ErDiagram({
                 >
                     <Icon name="panel" size={12} /> 适应画布
                 </button>
+                <button
+                    className={`${g.btn} ${g.xs} ${isFullscreen ? g.danger : ''}`}
+                    title={isFullscreen ? '退出全屏 (Esc)' : '全屏沉浸展示'}
+                    onClick={() => setIsFullscreen((v) => !v)}
+                >
+                    <Icon name={isFullscreen ? 'close' : 'panel'} size={12} /> {isFullscreen ? '退出全屏' : '全屏'}
+                </button>
                 <span className={g.spacer} />
-                <span className={my.erHint}>提示：按住鼠标左键可拖拽平移，滚轮/按钮控制缩放，悬停数据表高亮关系链</span>
+                <span className={my.erHint}>
+                    {isFullscreen
+                        ? '按 Esc 键或点击按钮退出全屏'
+                        : '提示：按住鼠标左键可拖拽平移，滚轮/按钮控制缩放，悬停数据表高亮关系链'}
+                </span>
             </div>
 
             {schema.tables.length === 0 ? (

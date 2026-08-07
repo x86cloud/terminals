@@ -6,6 +6,15 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+
+    &.fullscreen {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 1000 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: @bg !important;
+    }
 }
 
 .erToolBar {

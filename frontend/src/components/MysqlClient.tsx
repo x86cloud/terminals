@@ -706,7 +706,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     ))}
                 </div>
 
-                <div className={my.mysqlContent}>
+                <div className={`${my.mysqlContent} ${tab === 'er' ? my.mysqlContentEr : ''}`}>
                     {tab === 'data' && (
                         <DataTab
                             busy={busy}
