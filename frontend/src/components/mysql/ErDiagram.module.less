@@ -52,23 +52,44 @@
 .erCanvas {
     flex: 1;
     min-height: 0;
-    overflow: auto;
-    padding: 12px;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+    cursor: grab;
+    user-select: none;
+    background: @bg;
+
+    &.dragging {
+        cursor: grabbing !important;
+    }
 }
 
 .erSvg {
-    background: @bg;
-    border: 1px solid @border;
-    border-radius: @radius-md;
-    width: 100%;
-    height: 100%;
+    background: transparent;
     display: block;
+    will-change: transform;
 }
 
 .erTable {
     fill: @bg-1;
     stroke: @border;
     stroke-width: 1;
+    transition: stroke 0.2s ease, opacity 0.2s ease, filter 0.2s ease;
+}
+
+.erTableGroup {
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+
+    &.dimmed {
+        opacity: 0.25;
+    }
+
+    &.highlighted .erTable {
+        stroke: @accent;
+        stroke-width: 2px;
+        filter: drop-shadow(0 2px 8px rgba(91, 155, 255, 0.4));
+    }
 }
 
 .erTableHead {
@@ -92,4 +113,23 @@
 .erType {
     fill: @text-faint;
     font-size: 11px;
+}
+
+.fkPath {
+    stroke: #5b9bff;
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.65;
+    transition: stroke 0.2s ease, opacity 0.2s ease, stroke-width 0.2s ease;
+
+    &.dimmed {
+        opacity: 0.15;
+    }
+
+    &.highlighted {
+        stroke: #38bdf8 !important;
+        stroke-width: 2.5px !important;
+        opacity: 1 !important;
+        filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.6));
+    }
 }

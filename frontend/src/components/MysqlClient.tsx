@@ -777,7 +777,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     )}
 
                     {tab === 'er' && (
-                        <ErDiagram schema={schema} busy={busy} zoom={erZoom} setZoom={setErZoom}/>
+                        <ErDiagram schema={schema} busy={busy}/>
                     )}
                 </div>
             </div>
