@@ -95,6 +95,8 @@
         border: none;
         color: @text-dim;
         cursor: pointer;
+        white-space: nowrap;
+        flex-shrink: 0;
 
         &.active {
             background: @accent-dim;
@@ -106,6 +108,12 @@
         padding: 4px 10px;
         font-size: 12px;
         gap: 5px;
+    }
+
+    &.xs button {
+        padding: 3px 8px;
+        font-size: 11px;
+        gap: 4px;
     }
 }
 

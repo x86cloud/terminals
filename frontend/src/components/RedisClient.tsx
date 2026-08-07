@@ -704,7 +704,7 @@ function RedisClient({session, onClose, onDbChange}: Props) {
                             </div>
                             <span className={g.spacer}/>
                             {viewMode === 'tree' && (
-                                <span style={{fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 4}}>
+                                <span style={{fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0}}>
                                     分隔符
                                     <input
                                         className={r.delimiterInput}
