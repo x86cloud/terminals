@@ -78,7 +78,7 @@ export default function ContextMenu({state, onClose}: { state: MenuState; onClos
                         }}
                     >
                         <span className={g.menuIcon}>{item.icon && <Icon name={item.icon} size={15}/>}</span>
-                        <span className={g.menuLabel}>{item.label}</span>
+                        {item.label}
                     </button>
                 )
             )}

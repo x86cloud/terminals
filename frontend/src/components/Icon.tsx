@@ -166,7 +166,6 @@ export default function Icon({name, size = 16, className}: Props) {
             strokeLinecap="round"
             strokeLinejoin="round"
             aria-hidden="true"
-            style={{ display: 'block', flex: 'none' }}
         >
             {PATHS[name]}
         </svg>
