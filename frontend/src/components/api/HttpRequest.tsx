@@ -10,7 +10,7 @@ import type {ApiState} from './useApi'
 export default function HttpRequest({state, onClose}: { state: ApiState; onClose: () => void }) {
     const {
         mode, wsStatus, wsConnect, wsDisconnect, wsConnecting, wsSendMsg,
-        method, setMethod, methods, url, setUrl, doSend, sending, showHistory, setShowHistory,
+        method, setMethod, methods, url, setUrl, updateUrl, doSend, sending, showHistory, setShowHistory,
         configTab, setConfigTab, showConfig, setShowConfig,
         response, respTab, setRespTab, prettyBody, respLang, respHeaders, bodyPretty, setBodyPretty, copy,
     } = state
@@ -52,7 +52,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                     placeholder={mode === 'ws' ? 'ws://example.com/ws' : 'https://example.com/api/v1/resource'}
                     value={url}
                     spellCheck={false}
-                    onChange={(e) => setUrl(e.target.value)}
+                    onChange={(e) => updateUrl(e.target.value)}
                     onKeyDown={(e) => {
                         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
                             e.preventDefault()

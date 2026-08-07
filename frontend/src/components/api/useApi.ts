@@ -18,6 +18,8 @@ import {
     buildRequest,
     emptyAuth,
     looksLikeJson,
+    parseUrlParams,
+    buildUrlWithParams,
 } from './apiTypes'
 
 const MAX_HISTORY = 30
@@ -26,6 +28,7 @@ const MAX_WS_MESSAGES = 500
 export function useApi() {
     const [method, setMethod] = useState<ApiMethod>('GET')
     const [url, setUrl] = useState('')
+    const [params, setParams] = useState<ApiHeader[]>([])
     const [headers, setHeaders] = useState<ApiHeader[]>([])
     const [bodyType, setBodyType] = useState('none')
     const [body, setBody] = useState('')
@@ -34,7 +37,7 @@ export function useApi() {
     const [insecureTLS, setInsecureTLS] = useState(false)
     const [followRedirects, setFollowRedirects] = useState(true)
 
-    const [configTab, setConfigTab] = useState<ConfigTab>('headers')
+    const [configTab, setConfigTab] = useState<ConfigTab>('params')
     const [showConfig, setShowConfig] = useState(true)
 
     const [sending, setSending] = useState(false)
@@ -59,6 +62,15 @@ export function useApi() {
     const [wsInput, setWsInput] = useState('')
     const [wsProtocols, setWsProtocols] = useState('')
     const [wsConnecting, setWsConnecting] = useState(false)
+
+    // 手动输入 URL 时同步解析 query 参数至 params 表格
+    const updateUrl = useCallback((newUrl: string) => {
+        setUrl(newUrl)
+        const {params: parsed} = parseUrlParams(newUrl)
+        if (parsed.length > 0) {
+            setParams(parsed)
+        }
+    }, [])
 
     useEffect(() => {
         try {
@@ -171,10 +183,20 @@ export function useApi() {
 
     const wsClear = useCallback(() => setWsMessages([]), [])
 
+    // 销毁组件时释放 WebSocket 连接，防内存/资源泄漏
+    useEffect(() => {
+        return () => {
+            if (wsConnId) {
+                API.wsClose(wsConnId)
+            }
+        }
+    }, [wsConnId])
+
     const formatJsonBody = useCallback(() => {
         if (bodyType !== 'json') return
         try {
             setBody(JSON.stringify(JSON.parse(body), null, 2))
+            setError('')
         } catch {
             setError('请求体不是合法的 JSON')
         }
@@ -195,6 +217,24 @@ export function useApi() {
         return response.body
     }, [response, bodyPretty])
 
+    const addParam = useCallback(() => setParams((p) => [...p, {name: '', value: '', enabled: true}]), [])
+    const updateParam = useCallback((i: number, patch: Partial<ApiHeader>) => {
+        setParams((list) => {
+            const next = list.map((x, idx) => (idx === i ? {...x, ...patch} : x))
+            const {baseUrl} = parseUrlParams(url)
+            setUrl(buildUrlWithParams(baseUrl, next))
+            return next
+        })
+    }, [url])
+    const removeParam = useCallback((i: number) => {
+        setParams((list) => {
+            const next = list.filter((_, idx) => idx !== i)
+            const {baseUrl} = parseUrlParams(url)
+            setUrl(buildUrlWithParams(baseUrl, next))
+            return next
+        })
+    }, [url])
+
     const addHeader = useCallback(() => setHeaders((h) => [...h, {name: '', value: '', enabled: true}]), [])
     const updateHeader = useCallback((i: number, patch: Partial<ApiHeader>) =>
         setHeaders((h) => h.map((x, idx) => (idx === i ? {...x, ...patch} : x))), [])
@@ -205,14 +245,11 @@ export function useApi() {
 
     const loadHistory = useCallback((item: ApiHistoryItem) => {
         setMethod(item.method)
-        setUrl(item.url)
+        updateUrl(item.url)
         setShowConfig(true)
-    }, [])
+    }, [updateUrl])
     const deleteHistory = useCallback((idx: number) => setHistory((h) => h.filter((_, i) => i !== idx)), [])
-    const clearHistory = useCallback(() => {
-        if (history.length === 0) return
-        if (window.confirm('确定清空全部请求历史？')) setHistory([])
-    }, [history])
+    const clearHistory = useCallback(() => setHistory([]), [])
 
     const respHeaders = response ? Object.entries(response.headers) : []
     const respLang: 'json' | 'plain' = useMemo(() => {
@@ -223,7 +260,8 @@ export function useApi() {
 
     return {
         // HTTP 状态
-        method, setMethod, url, setUrl, headers, setHeaders, bodyType, setBodyType, body, setBody,
+        method, setMethod, url, setUrl, updateUrl, params, setParams, addParam, updateParam, removeParam,
+        headers, setHeaders, bodyType, setBodyType, body, setBody,
         auth, setAuth, timeoutMs, setTimeoutMs, insecureTLS, setInsecureTLS, followRedirects, setFollowRedirects,
         configTab, setConfigTab, showConfig, setShowConfig, sending, error, setError, response, respTab, setRespTab,
         bodyPretty, setBodyPretty, history, showHistory, setShowHistory, allowBody, doSend, prettyBody,

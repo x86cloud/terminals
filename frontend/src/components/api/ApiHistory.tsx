@@ -1,5 +1,6 @@
-import React from 'react'
+import React, {useState} from 'react'
 import Icon from '../Icon'
+import {ConfirmModal, ConfirmState} from '../Modal'
 import g from '../../styles/global.module.less'
 import a from './ApiHistory.module.less'
 import sh from './apiShared.module.less'
@@ -7,6 +8,7 @@ import type {ApiState} from './useApi'
 
 export default function ApiHistory({state}: { state: ApiState }) {
     const {history, showHistory, setShowHistory, clearHistory, loadHistory, deleteHistory} = state
+    const [confirm, setConfirm] = useState<ConfirmState>({open: false, title: '', message: ''})
     if (!showHistory) return null
     return (
         <aside className={a.historyPanel}>
@@ -14,7 +16,23 @@ export default function ApiHistory({state}: { state: ApiState }) {
                 <span className={a.historyTitle}>请求历史</span>
                 <span className={a.historyCount}>{history.length}</span>
                 <span className={g.spacer}/>
-                <button className={g.iconBtn} title="清空历史" onClick={clearHistory}>
+                <button
+                    className={g.iconBtn}
+                    title="清空历史"
+                    disabled={history.length === 0}
+                    onClick={() => {
+                        setConfirm({
+                            open: true,
+                            title: '清空请求历史',
+                            danger: true,
+                            message: '确定要清空所有 API 请求历史记录吗？',
+                            onConfirm: () => {
+                                setConfirm({open: false, title: '', message: ''})
+                                clearHistory()
+                            },
+                        })
+                    }}
+                >
                     <Icon name="trash" size={14}/>
                 </button>
                 <button className={g.iconBtn} title="关闭历史" onClick={() => setShowHistory(false)}>
@@ -47,6 +65,7 @@ export default function ApiHistory({state}: { state: ApiState }) {
                     </div>
                 ))}
             </div>
+            <ConfirmModal state={confirm} onCancel={() => setConfirm({open: false, title: '', message: ''})}/>
         </aside>
     )
 }

@@ -8,6 +8,7 @@ import type {ApiState} from './useApi'
 export default function ApiConfigTabs({state}: { state: ApiState }) {
     const {
         mode, configTab, setConfigTab, showConfig, setShowConfig,
+        params, addParam, updateParam, removeParam,
         headers, addHeader, updateHeader, removeHeader,
         bodyType, setBodyType, body, setBody, allowBody, formatJsonBody, doSend,
         auth, setAuth,
@@ -15,15 +16,17 @@ export default function ApiConfigTabs({state}: { state: ApiState }) {
         wsProtocols, setWsProtocols,
     } = state
 
-    const tabs: Array<{key: 'headers' | 'body' | 'auth' | 'options' | 'messages'; label: string}> =
+    const tabs: Array<{key: 'params' | 'headers' | 'body' | 'auth' | 'options' | 'messages'; label: string}> =
         mode === 'ws'
             ? [
                 {key: 'messages', label: '消息'},
+                {key: 'params', label: 'Params'},
                 {key: 'headers', label: '请求头'},
                 {key: 'auth', label: '鉴权'},
                 {key: 'options', label: '选项'},
             ]
             : [
+                {key: 'params', label: 'Params'},
                 {key: 'headers', label: '请求头'},
                 {key: 'body', label: '请求体'},
                 {key: 'auth', label: '鉴权'},
@@ -60,6 +63,7 @@ export default function ApiConfigTabs({state}: { state: ApiState }) {
 export function ConfigBody({state}: { state: ApiState }) {
     const {
         mode, configTab, showConfig,
+        params, addParam, updateParam, removeParam,
         headers, addHeader, updateHeader, removeHeader,
         bodyType, setBodyType, body, setBody, allowBody, formatJsonBody, doSend,
         auth, setAuth,
@@ -71,6 +75,48 @@ export function ConfigBody({state}: { state: ApiState }) {
 
     return (
         <div className={`${a.configBody} ${mode === 'ws' && configTab === 'messages' ? a.configBodyWs : ''}`}>
+            {configTab === 'params' && (
+                <div className={a.headersEditor}>
+                    {params.length === 0 && (
+                        <div className={`${a.emptyHint} ${a.small}`}>暂无 Query 参数，点击「添加」新增</div>
+                    )}
+                    {params.map((p, i) => (
+                        <div key={i} className={a.headerRow}>
+                            <input
+                                type="checkbox"
+                                checked={p.enabled}
+                                title="启用"
+                                onChange={(e) => updateParam(i, {enabled: e.target.checked})}
+                            />
+                            <input
+                                className={a.headerName}
+                                placeholder="Parameter Key"
+                                value={p.name}
+                                spellCheck={false}
+                                onChange={(e) => updateParam(i, {name: e.target.value})}
+                            />
+                            <input
+                                className={a.headerValue}
+                                placeholder="Value"
+                                value={p.value}
+                                spellCheck={false}
+                                onChange={(e) => updateParam(i, {value: e.target.value})}
+                            />
+                            <button
+                                className={`${g.iconBtn} ${g.danger}`}
+                                title="删除"
+                                onClick={() => removeParam(i)}
+                            >
+                                <Icon name="trash" size={13}/>
+                            </button>
+                        </div>
+                    ))}
+                    <button className={`${g.btn} ${g.sm}`} onClick={addParam}>
+                        <Icon name="plus" size={13}/> 添加 Query 参数
+                    </button>
+                </div>
+            )}
+
             {configTab === 'headers' && (
                 <div className={a.headersEditor}>
                     {headers.length === 0 && (

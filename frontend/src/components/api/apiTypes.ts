@@ -23,7 +23,7 @@ export const BODY_TYPES: Array<{ value: string; label: string; ct: string }> = [
 
 export const HISTORY_KEY = 'api_client_history'
 
-export type ConfigTab = 'headers' | 'body' | 'auth' | 'options' | 'messages'
+export type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'options' | 'messages'
 
 export function emptyAuth(): ApiAuth {
     return {type: 'none', username: '', password: '', token: ''}
@@ -32,6 +32,28 @@ export function emptyAuth(): ApiAuth {
 export function looksLikeJson(s: string): boolean {
     const t = s.trim()
     return (t.startsWith('{') && t.endsWith('}')) || (t.startsWith('[') && t.endsWith(']'))
+}
+
+export function parseUrlParams(urlStr: string): { baseUrl: string; params: ApiHeader[] } {
+    if (!urlStr.includes('?')) {
+        return {baseUrl: urlStr, params: []}
+    }
+    const [baseUrl, queryStr] = urlStr.split('?', 2)
+    const searchParams = new URLSearchParams(queryStr)
+    const params: ApiHeader[] = []
+    searchParams.forEach((value, name) => {
+        params.push({name, value, enabled: true})
+    })
+    return {baseUrl, params}
+}
+
+export function buildUrlWithParams(baseUrl: string, params: ApiHeader[]): string {
+    const activeParams = params.filter((p) => p.enabled && p.name.trim())
+    if (activeParams.length === 0) return baseUrl
+    const searchParams = new URLSearchParams()
+    activeParams.forEach((p) => searchParams.append(p.name.trim(), p.value))
+    const queryStr = searchParams.toString()
+    return queryStr ? `${baseUrl}?${queryStr}` : baseUrl
 }
 
 export function statusClass(code: number, hasError: boolean): string {
