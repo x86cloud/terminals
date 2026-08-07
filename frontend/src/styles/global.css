@@ -47,6 +47,15 @@ button {
     font-size: inherit;
     color: inherit;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    vertical-align: middle;
+}
+
+button > svg {
+    flex-shrink: 0;
 }
 
 input {
