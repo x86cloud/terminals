@@ -88,7 +88,7 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
             open={open}
             title={initial?.id ? '编辑服务器' : '新建服务器'}
             onClose={onClose}
-            width={520}
+            width={640}
             footer={
                 <>
                     {error && <span className={g.formError}>{error}</span>}
