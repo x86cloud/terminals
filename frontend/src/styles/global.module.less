@@ -8,11 +8,22 @@
  * ============================================================ */
 
 .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
     padding: 5px 12px;
     background: @bg-3;
     border: 1px solid @border;
     border-radius: @radius;
     color: @text;
+    line-height: 1.2;
+    vertical-align: middle;
+
+    svg {
+        display: block;
+        flex: none;
+    }
 
     &:hover {
         border-color: #c2ccd8;
@@ -40,9 +51,10 @@
         }
     }
 
-    &.small, &.sm {
+    &.small, &.sm, &.xs {
         padding: 4px 10px;
         font-size: 12px;
+        gap: 4px;
     }
 
     &:disabled {
@@ -391,15 +403,21 @@
 .menuItem {
     display: flex;
     align-items: center;
-    gap: @space-md;
+    gap: 8px;
     width: 100%;
-    padding: 6px 9px;
+    padding: 6px 10px;
     background: transparent;
     border: none;
     border-radius: @radius;
     text-align: left;
     color: @text;
     cursor: pointer;
+    line-height: 1.2;
+
+    svg {
+        display: block;
+        flex: none;
+    }
 
     &:hover:not(:disabled) {
         background: @accent-dim;
@@ -422,9 +440,24 @@
 }
 
 .menuIcon {
-    display: flex;
-    width: 15px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex: none;
     color: inherit;
+
+    svg {
+        display: block;
+        flex: none;
+    }
+}
+
+.menuLabel {
+    flex: 1;
+    min-width: 0;
+    line-height: 1.2;
 }
 
 .menuDivider {

@@ -64,15 +64,22 @@
 
 // 文本按钮（icon-btn 风格）
 .icon-btn-base() {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
     padding: @space-xs;
     background: transparent;
     border: none;
     border-radius: @radius;
     color: @text-dim;
     cursor: pointer;
+    vertical-align: middle;
+
+    svg {
+        display: block;
+        flex: none;
+    }
 
     &:hover {
         background: @bg-3;
