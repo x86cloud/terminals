@@ -58,6 +58,13 @@
     border: 1px solid @border;
     border-radius: @radius-md;
     color: @text-dim;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+
+    &:focus-within {
+        border-color: @accent;
+        box-shadow: 0 0 0 2px rgba(91, 155, 255, 0.2);
+        background: @bg-1;
+    }
 
     input {
         flex: 1;
@@ -66,6 +73,26 @@
         outline: none;
         color: @text;
         padding: 6px 0;
+    }
+}
+
+.clearBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: @text-dim;
+    cursor: pointer;
+    border-radius: 50%;
+    transition: color 0.15s ease, background 0.15s ease;
+
+    &:hover {
+        color: @text;
+        background: @bg-3;
     }
 }
 
@@ -112,6 +139,34 @@
     .iconBtn {
         flex: none;
     }
+}
+
+.groupChevron {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.open {
+        transform: rotate(90deg);
+    }
+}
+
+.groupBody {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+
+    &.open {
+        grid-template-rows: 1fr;
+        opacity: 1;
+    }
+}
+
+.groupInner {
+    min-height: 0;
+    overflow: hidden;
 }
 
 .groupTitleBtn {
@@ -215,6 +270,18 @@
 
 .serverGroup {
     margin-bottom: 2px;
+    animation: fadeInSlide 0.2s ease-out forwards;
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .serverItem {

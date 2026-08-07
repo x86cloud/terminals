@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react'
+import React, {useEffect, useMemo, useState} from 'react'
 import Icon from './Icon'
 import ClientIcon from './ClientIcon'
 import ContextMenu, {closedMenu, MenuState, MenuItem} from './ContextMenu'
@@ -102,6 +102,26 @@ export default function Sidebar({
             return na < nb ? -1 : na > nb ? 1 : 0
         })
     }, [servers, keyword])
+
+    // 搜索时自动展开所有包含匹配项的分组
+    useEffect(() => {
+        if (!keyword.trim()) return
+        const kw = keyword.trim().toLowerCase()
+        const autoExpanded: Record<string, boolean> = {}
+        groups.forEach((g) => {
+            const members = servers.filter(
+                (s) =>
+                    (s.groupId || '') === g.id &&
+                    (s.name.toLowerCase().includes(kw) ||
+                        s.host.toLowerCase().includes(kw) ||
+                        s.username.toLowerCase().includes(kw))
+            )
+            if (members.length > 0) {
+                autoExpanded[g.id] = true
+            }
+        })
+        setExpanded((prev) => ({...prev, ...autoExpanded}))
+    }, [keyword, groups, servers])
 
     const kindOf = (s: ServerConfig): ConnType =>
         s.type === 'redis'
@@ -291,6 +311,11 @@ export default function Sidebar({
                         placeholder="搜索服务器 / Redis / MQTT"
                         onChange={(e) => setKeyword(e.target.value)}
                     />
+                    {keyword && (
+                        <button className={s.clearBtn} title="清空搜索" onClick={() => setKeyword('')}>
+                            <Icon name="close" size={12}/>
+                        </button>
+                    )}
                 </div>
                 <button
                     className={g.iconBtn}
@@ -344,7 +369,9 @@ export default function Sidebar({
                                     title={isOpen ? '折叠' : '展开'}
                                     onClick={() => toggleGroup(grp.id)}
                                 >
-                                    <Icon name={isOpen ? 'chevron-down' : 'chevron-right'} size={14}/>
+                                    <span className={`${s.groupChevron}${isOpen ? ' ' + s.open : ''}`}>
+                                        <Icon name="chevron-right" size={14}/>
+                                    </span>
                                 </button>
                                 {isEditing ? (
                                     <input
@@ -393,7 +420,11 @@ export default function Sidebar({
                                 </span>
                             </div>
 
-                            {isOpen && members.map((server) => renderServer(server))}
+                            <div className={`${s.groupBody}${isOpen ? ' ' + s.open : ''}`}>
+                                <div className={s.groupInner}>
+                                    {members.map((server) => renderServer(server))}
+                                </div>
+                            </div>
                         </div>
                     )
                 })}
