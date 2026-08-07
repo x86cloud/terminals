@@ -40,20 +40,57 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
     const update = (patch: Partial<ServerConfig>) => setForm((prev) => ({...prev, ...patch}))
 
     const switchType = (t: ConnType) => {
-        const defaultPort =
-            t === 'redis' ? 6379 : t === 'mysql' ? 3306 : t === 'mqtt' ? 1883 : t === 'mongo' ? 27017 : 0
+        const defaultPortMap: Record<ConnType, number> = {
+            ssh: 22,
+            redis: 6379,
+            mysql: 3306,
+            mqtt: 1883,
+            mongo: 27017,
+            sqlite: 0,
+        }
+        const defaultPort = defaultPortMap[t] || 0
+        const isCurrentDefault = !form.port || Object.values(defaultPortMap).includes(form.port)
+
         update({
             type: t,
-            port:
-                form.port === 22 || form.port === 6379 || form.port === 3306 ||
-                form.port === 1883 || form.port === 27017 || form.port === 27017 || !form.port
-                    ? defaultPort
-                    : form.port,
+            port: isCurrentDefault ? defaultPort : form.port,
             username: t === 'redis' || t === 'mqtt' || t === 'sqlite' ? '' : form.username || 'root',
         })
     }
 
+    const validateForm = (cfg: ServerConfig): string | null => {
+        if (cfg.type === 'sqlite') {
+            if (!cfg.sqlitePath?.trim()) {
+                return '请选取或输入 SQLite 数据库文件路径'
+            }
+            return null
+        }
+
+        if (!cfg.host?.trim()) {
+            return '请输入服务器主机地址（Host）'
+        }
+
+        const port = Number(cfg.port)
+        if (!port || isNaN(port) || port < 1 || port > 65535) {
+            return '请输入有效的端口号（1 - 65535）'
+        }
+
+        if (cfg.type === 'ssh' && cfg.authType === 'key') {
+            if (!cfg.privateKey?.trim()) {
+                return '请选择或输入 SSH 私钥文件路径或 PEM 内容'
+            }
+        }
+
+        return null
+    }
+
     const save = async (connect: boolean) => {
+        const valErr = validateForm(form)
+        if (valErr) {
+            setError(valErr)
+            return
+        }
+
         setBusy(true)
         setError('')
         try {
@@ -235,7 +272,7 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
                                             placeholder="私钥文件路径或直接粘贴 PEM 内容"
                                             onChange={(e) => update({privateKey: e.target.value})}
                                         />
-                                        <button className={g.btn} onClick={pickKey}>浏览</button>
+                                        <button type="button" className={g.btn} onClick={pickKey}>浏览</button>
                                     </div>
                                 </label>
                                 <label className={g.field}>
@@ -908,6 +945,7 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
                                     onChange={(e) => update({sqlitePath: e.target.value})}
                                 />
                                 <button
+                                    type="button"
                                     className={g.btn}
                                     onClick={async () => {
                                         try {
