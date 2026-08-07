@@ -12,6 +12,7 @@ import SqlEditor from './mysql/SqlEditor'
 import UsersPanel from './mysql/UsersPanel'
 import StatusPanel from './mysql/StatusPanel'
 import ErDiagram from './mysql/ErDiagram'
+import {ConfirmModal, ConfirmState, PromptModal, PromptState} from './Modal'
 import ObjModal, {ObjModalKind} from './mysql/ObjModal'
 import IoModal from './mysql/IoModal'
 
@@ -49,6 +50,8 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const [saving, setSaving] = useState(false)
+    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
 
     // 数据库对象管理弹窗
     const [objModal, setObjModal] = useState<ObjModalKind | null>(null)
@@ -298,19 +301,26 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
         const wCols = pkCols.length ? pkCols : columns
         const wVals = wCols.map((c: string) => rows[row]?.[c] ?? null)
         const hint = pkCols.length ? '' : '（该表无主键，将按整行匹配，请谨慎操作）'
-        if (!window.confirm(`确认删除该行？${hint}`)) return
-        setBusy(true)
-        setError('')
-        try {
-            const aff = await API.mysqlDelete(session.id, db, selected, wCols, wVals)
-            setError('')
-            await openTable(selected, page)
-            void aff
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
+        setConfirm({
+            open: true,
+            title: '删除行数据',
+            danger: true,
+            message: `确认删除该行？${hint}`,
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                setBusy(true)
+                setError('')
+                try {
+                    await API.mysqlDelete(session.id, db, selected, wCols, wVals)
+                    setError('')
+                    await openTable(selected, page)
+                } catch (e) {
+                    setError(errorMessage(e))
+                } finally {
+                    setBusy(false)
+                }
+            },
+        })
     }
 
     const saveAll = async () => {
@@ -383,29 +393,80 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     await loadDatabases()
                     break
                 case 'dropdb':
-                    if (!window.confirm(`确认删除数据库 ${objName}？该操作不可恢复！`)) return
-                    await API.mysqlDropDatabase(session.id, objName)
-                    setObjMsg(`已删除数据库 ${objName}`)
-                    await loadDatabases()
-                    break
+                    setObjBusy(false)
+                    setConfirm({
+                        open: true,
+                        title: '删除数据库',
+                        danger: true,
+                        message: `确认删除数据库 ${objName}？该操作不可恢复！`,
+                        onConfirm: async () => {
+                            setConfirm(emptyConfirm)
+                            setObjBusy(true)
+                            try {
+                                await API.mysqlDropDatabase(session.id, objName)
+                                setObjMsg(`已删除数据库 ${objName}`)
+                                await loadDatabases()
+                                setTimeout(() => setObjModal(null), 700)
+                            } catch (e) {
+                                setObjMsg(errorMessage(e))
+                            } finally {
+                                setObjBusy(false)
+                            }
+                        },
+                    })
+                    return
                 case 'createtable':
                     await API.mysqlCreateTable(session.id, db, objName, objExtra)
                     setObjMsg(`已创建表 ${objName}`)
                     await loadTables(db)
                     break
                 case 'droptable':
-                    if (!window.confirm(`确认删除表 ${objName}？`)) return
-                    await API.mysqlDropTable(session.id, db, objName)
-                    setObjMsg(`已删除表 ${objName}`)
-                    await loadTables(db)
-                    if (selected === objName) setSelected(null)
-                    break
+                    setObjBusy(false)
+                    setConfirm({
+                        open: true,
+                        title: '删除表',
+                        danger: true,
+                        message: `确认删除表 ${objName}？`,
+                        onConfirm: async () => {
+                            setConfirm(emptyConfirm)
+                            setObjBusy(true)
+                            try {
+                                await API.mysqlDropTable(session.id, db, objName)
+                                setObjMsg(`已删除表 ${objName}`)
+                                await loadTables(db)
+                                if (selected === objName) setSelected(null)
+                                setTimeout(() => setObjModal(null), 700)
+                            } catch (e) {
+                                setObjMsg(errorMessage(e))
+                            } finally {
+                                setObjBusy(false)
+                            }
+                        },
+                    })
+                    return
                 case 'truncate':
-                    if (!window.confirm(`确认清空表 ${objName} 的所有数据？`)) return
-                    await API.mysqlTruncateTable(session.id, db, objName)
-                    setObjMsg(`已清空表 ${objName}`)
-                    if (selected === objName) await openTable(objName, 1)
-                    break
+                    setObjBusy(false)
+                    setConfirm({
+                        open: true,
+                        title: '清空表数据',
+                        danger: true,
+                        message: `确认清空表 ${objName} 的所有数据？`,
+                        onConfirm: async () => {
+                            setConfirm(emptyConfirm)
+                            setObjBusy(true)
+                            try {
+                                await API.mysqlTruncateTable(session.id, db, objName)
+                                setObjMsg(`已清空表 ${objName}`)
+                                if (selected === objName) await openTable(objName, 1)
+                                setTimeout(() => setObjModal(null), 700)
+                            } catch (e) {
+                                setObjMsg(errorMessage(e))
+                            } finally {
+                                setObjBusy(false)
+                            }
+                        },
+                    })
+                    return
                 case 'createindex':
                     await API.mysqlCreateIndex(session.id, db, selected || objName, objName, objExtra, objUnique)
                     setObjMsg(`已创建索引 ${objName}`)
@@ -750,6 +811,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     onImport={doImport}
                 />
             )}
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
         </div>
     )
 }

@@ -99,6 +99,11 @@ export default function SqliteClient({session, onClose}: Props) {
                 API.sqliteSelect(id, table, PAGE_SIZE, (toPage - 1) * PAGE_SIZE),
                 API.sqliteCount(id, table),
             ])
+            if (data.rows.length === 0 && toPage > 1) {
+                setBusy(false)
+                await openTable(table, 1)
+                return
+            }
             setRows(data.rows)
             setColumns(data.columns)
             setTotalRows(cnt)

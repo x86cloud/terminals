@@ -17,6 +17,7 @@ import type {
 } from '../types'
 import Icon from './Icon'
 import CodeEditor from './CodeEditor'
+import {ConfirmModal, ConfirmState} from './Modal'
 import g from '../styles/global.module.less'
 import r from './RedisClient.module.less'
 
@@ -123,6 +124,9 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
 
     // ---- 慢日志 ----
     const [slowLogs, setSlowLogs] = useState<RedisSlowLogEntry[]>([])
+
+    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
 
     const msgTimerRef = useRef<number | null>(null)
     const flash = useCallback((m: string) => {
@@ -238,17 +242,28 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
         }
     }
 
-    const delKey = async () => {
-        if (!selected) return
-        if (!confirm(`确认删除键 ${selected} ?`)) return
-        try {
-            await API.redisDelete(session.id, selected)
-            setSelected('')
-            setValue(null)
-            loadKeys(true)
-        } catch (e: any) {
-            flash('删除失败: ' + (e?.message || e))
-        }
+    const delKey = (keyName?: string) => {
+        const k = keyName || selected
+        if (!k) return
+        setConfirmState({
+            open: true,
+            title: '删除键',
+            danger: true,
+            message: `确认删除键 ${k} ？该操作不可撤销。`,
+            onConfirm: async () => {
+                setConfirmState(emptyConfirm)
+                try {
+                    await API.redisDelete(session.id, k)
+                    if (selected === k) {
+                        setSelected('')
+                        setValue(null)
+                    }
+                    loadKeys(true)
+                } catch (e: any) {
+                    flash('删除失败: ' + (e?.message || e))
+                }
+            },
+        })
     }
 
     const runRaw = async (cmd: string) => {
@@ -488,7 +503,7 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
                                         />
                                     </label>
                                     <button className={`${g.btn} ${g.primary} ${g.sm}`} onClick={saveValue}>保存</button>
-                                    <button className={`${g.btn} ${g.danger} ${g.sm}`} onClick={delKey}>删除</button>
+                                    <button className={`${g.btn} ${g.danger} ${g.sm}`} onClick={() => delKey()}>删除</button>
                                 </div>
                                 <ValueEditor session={session} value={value} selected={selected} flash={flash}/>
                             </>
@@ -652,6 +667,7 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
                     )}
                 </div>
             )}
+            <ConfirmModal state={confirmState} onCancel={() => setConfirmState(emptyConfirm)}/>
         </div>
     )
 }

@@ -7,6 +7,7 @@ import g from '../styles/global.module.less'
 import m from './MongoClient.module.less'
 import sh from './mongo/mongoShared.module.less'
 import {MongoTabKey} from './mongo/mongoTypes'
+import {ConfirmModal, ConfirmState, PromptModal, PromptState} from './Modal'
 import DocumentsTab from './mongo/DocumentsTab'
 import AggregateTab from './mongo/AggregateTab'
 import IndexesTab from './mongo/IndexesTab'
@@ -28,6 +29,11 @@ export default function MongoClient({session, onClose, onChange}: Props) {
     const [tab, setTab] = useState<MongoTabKey>('documents')
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
+
+    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const emptyPrompt: PromptState = {open: false, title: '', value: ''}
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
+    const [prompt, setPrompt] = useState<PromptState>(emptyPrompt)
 
     // 集合统计弹窗
     const [stats, setStats] = useState<MongoCollectionStats | null>(null)
@@ -88,58 +94,96 @@ export default function MongoClient({session, onClose, onChange}: Props) {
         onChange(id, value)
     }
 
-    const createDb = async () => {
-        const name = window.prompt('新数据库名称（将自动创建默认集合）：')
-        if (!name) return
-        try {
-            await API.mongoCreateDatabase(id, name, 'default')
-            await loadDatabases()
-        } catch (e) {
-            setError(errorMessage(e))
-        }
+    const createDb = () => {
+        setPrompt({
+            open: true,
+            title: '新建数据库',
+            label: '新数据库名称（将自动创建默认集合）',
+            value: '',
+            onConfirm: async (name) => {
+                setPrompt(emptyPrompt)
+                try {
+                    await API.mongoCreateDatabase(id, name, 'default')
+                    await loadDatabases()
+                } catch (e) {
+                    setError(errorMessage(e))
+                }
+            },
+        })
     }
 
-    const dropDb = async (name: string) => {
-        if (!window.confirm(`确认删除数据库 ${name}？该操作不可恢复！`)) return
-        try {
-            await API.mongoDropDatabase(id, name)
-            await loadDatabases()
-        } catch (e) {
-            setError(errorMessage(e))
-        }
+    const dropDb = (name: string) => {
+        setConfirm({
+            open: true,
+            title: '删除数据库',
+            danger: true,
+            message: `确认删除数据库 ${name}？该操作不可恢复！`,
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    await API.mongoDropDatabase(id, name)
+                    await loadDatabases()
+                } catch (e) {
+                    setError(errorMessage(e))
+                }
+            },
+        })
     }
 
-    const createColl = async () => {
-        const name = window.prompt('新集合名称：')
-        if (!name) return
-        try {
-            await API.mongoCreateCollection(id, db, name)
-            await loadCollections(db)
-        } catch (e) {
-            setError(errorMessage(e))
-        }
+    const createColl = () => {
+        setPrompt({
+            open: true,
+            title: '新建集合',
+            label: '新集合名称',
+            value: '',
+            onConfirm: async (name) => {
+                setPrompt(emptyPrompt)
+                try {
+                    await API.mongoCreateCollection(id, db, name)
+                    await loadCollections(db)
+                } catch (e) {
+                    setError(errorMessage(e))
+                }
+            },
+        })
     }
 
-    const dropColl = async (name: string) => {
-        if (!window.confirm(`确认删除集合 ${name}？`)) return
-        try {
-            await API.mongoDropCollection(id, db, name)
-            await loadCollections(db)
-            if (selected === name) setSelected(null)
-        } catch (e) {
-            setError(errorMessage(e))
-        }
+    const dropColl = (name: string) => {
+        setConfirm({
+            open: true,
+            title: '删除集合',
+            danger: true,
+            message: `确认删除集合 ${name}？`,
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    await API.mongoDropCollection(id, db, name)
+                    await loadCollections(db)
+                    if (selected === name) setSelected(null)
+                } catch (e) {
+                    setError(errorMessage(e))
+                }
+            },
+        })
     }
 
-    const renameColl = async (name: string) => {
-        const nn = window.prompt('新集合名称：', name)
-        if (!nn || nn === name) return
-        try {
-            await API.mongoRenameCollection(id, db, name, nn)
-            await loadCollections(db)
-        } catch (e) {
-            setError(errorMessage(e))
-        }
+    const renameColl = (name: string) => {
+        setPrompt({
+            open: true,
+            title: '重命名集合',
+            label: '新集合名称',
+            value: name,
+            onConfirm: async (nn) => {
+                setPrompt(emptyPrompt)
+                if (nn === name) return
+                try {
+                    await API.mongoRenameCollection(id, db, name, nn)
+                    await loadCollections(db)
+                } catch (e) {
+                    setError(errorMessage(e))
+                }
+            },
+        })
     }
 
     const viewStats = async (name: string) => {
@@ -290,6 +334,8 @@ export default function MongoClient({session, onClose, onChange}: Props) {
                     )}
                 </div>
             )}
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
+            <PromptModal state={prompt} onCancel={() => setPrompt(emptyPrompt)}/>
         </div>
     )
 }

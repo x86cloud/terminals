@@ -4,6 +4,7 @@ import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoIndexInfo} from '../../types'
 import CodeEditor from '../CodeEditor'
+import {ConfirmModal, ConfirmState} from '../Modal'
 import sh from './mongoShared.module.less'
 import g from '../../styles/global.module.less'
 
@@ -24,6 +25,8 @@ function formatJSON(text: string): string {
 }
 
 export default function IndexesTab({session, db, collection, onNotify}: Props) {
+    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [indexes, setIndexes] = useState<MongoIndexInfo[]>([])
     const [stats, setStats] = useState<string[]>([])
     const [busy, setBusy] = useState(false)
@@ -66,19 +69,27 @@ export default function IndexesTab({session, db, collection, onNotify}: Props) {
         void load()
     }, [load])
 
-    const drop = async (idxName: string) => {
+    const drop = (idxName: string) => {
         if (idxName === '_id_') {
             onNotify('默认 _id 索引不可删除', 'error')
             return
         }
-        if (!window.confirm(`确认删除索引 ${idxName}？`)) return
-        try {
-            await API.mongoDropIndex(id, db, collection!, idxName)
-            onNotify(`已删除索引 ${idxName}`)
-            await load()
-        } catch (e) {
-            onNotify(errorMessage(e), 'error')
-        }
+        setConfirm({
+            open: true,
+            title: '删除索引',
+            danger: true,
+            message: `确认删除索引 ${idxName}？`,
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    await API.mongoDropIndex(id, db, collection!, idxName)
+                    onNotify(`已删除索引 ${idxName}`)
+                    await load()
+                } catch (e) {
+                    onNotify(errorMessage(e), 'error')
+                }
+            },
+        })
     }
 
     const create = async () => {
@@ -190,6 +201,7 @@ export default function IndexesTab({session, db, collection, onNotify}: Props) {
                     </div>
                 </>
             )}
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
         </div>
     )
 }

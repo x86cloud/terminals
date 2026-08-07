@@ -4,6 +4,7 @@ import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoQuerySpec, MongoFindResult} from '../../types'
 import CodeEditor from '../CodeEditor'
+import {ConfirmModal, ConfirmState} from '../Modal'
 import sh from './mongoShared.module.less'
 import g from '../../styles/global.module.less'
 
@@ -17,6 +18,8 @@ interface Props {
 const DEFAULT_LIMIT = 50
 
 export default function DocumentsTab({session, db, collection, onNotify}: Props) {
+    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [docs, setDocs] = useState<string[]>([])
     const [total, setTotal] = useState(0)
     const [count, setCount] = useState(0)
@@ -138,18 +141,26 @@ export default function DocumentsTab({session, db, collection, onNotify}: Props)
         }
     }
 
-    const deleteDoc = async (raw: string) => {
-        if (!window.confirm('确认删除该文档？')) return
-        setBusy(true)
-        try {
-            const n = await API.mongoDeleteOne(id, db, collection!, raw)
-            onNotify(`已删除 ${n} 个文档`)
-            await runQuery(page)
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
+    const deleteDoc = (raw: string) => {
+        setConfirm({
+            open: true,
+            title: '删除文档',
+            danger: true,
+            message: '确认删除该文档？操作不可撤销。',
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                setBusy(true)
+                try {
+                    const n = await API.mongoDeleteOne(id, db, collection!, raw)
+                    onNotify(`已删除 ${n} 个文档`)
+                    await runQuery(page)
+                } catch (e) {
+                    setError(errorMessage(e))
+                } finally {
+                    setBusy(false)
+                }
+            },
+        })
     }
 
     const openInsert = () => {
@@ -304,6 +315,7 @@ export default function DocumentsTab({session, db, collection, onNotify}: Props)
                     </div>
                 </div>
             )}
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
         </div>
     )
 }
