@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
-import {API} from '../api'
+import {API, subscribe} from '../api'
 import type {
     RedisKeysResult,
     RedisSessionInfo,
@@ -124,9 +124,17 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
     // ---- 慢日志 ----
     const [slowLogs, setSlowLogs] = useState<RedisSlowLogEntry[]>([])
 
+    const msgTimerRef = useRef<number | null>(null)
     const flash = useCallback((m: string) => {
         setMsg(m)
-        setTimeout(() => setMsg(''), 3000)
+        if (msgTimerRef.current) window.clearTimeout(msgTimerRef.current)
+        msgTimerRef.current = window.setTimeout(() => setMsg(''), 3000)
+    }, [])
+
+    useEffect(() => {
+        return () => {
+            if (msgTimerRef.current) window.clearTimeout(msgTimerRef.current)
+        }
     }, [])
 
     // 订阅后端事件
@@ -145,17 +153,12 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
             } catch {
             }
         }
-        // @ts-ignore - 运行时由 wails 注入
-        const rt = (window as any).runtime
-        if (rt?.EventsOn) {
-            rt.EventsOn('redis:pubsub:' + session.id, onPs)
-            rt.EventsOn('redis:keyspace:' + session.id, onKs)
-            return () => {
-                rt.EventsOff('redis:pubsub:' + session.id)
-                rt.EventsOff('redis:keyspace:' + session.id)
-            }
+        const offPs = subscribe('redis:pubsub:' + session.id, onPs)
+        const offKs = subscribe('redis:keyspace:' + session.id, onKs)
+        return () => {
+            offPs()
+            offKs()
         }
-        return undefined
     }, [session.id])
 
     const loadKeys = useCallback(
