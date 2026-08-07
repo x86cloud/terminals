@@ -165,6 +165,111 @@
     font-size: 13px;
 }
 
+.viewModeBar {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+}
+
+.delimiterInput {
+    width: 28px;
+    text-align: center;
+    padding: 2px 4px;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    background: @bg;
+    color: @text;
+    font-size: 11px;
+    outline: none;
+}
+
+.treeRow {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 6px;
+    font-size: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    color: @text;
+    user-select: none;
+
+    &:hover {
+        background: @bg;
+
+        .treeDelBtn {
+            opacity: 1;
+        }
+    }
+
+    &.active {
+        background: @accent-dim;
+        color: #fff;
+
+        .treeCount {
+            color: rgba(255, 255, 255, 0.7);
+        }
+    }
+}
+
+.treeArrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    font-size: 10px;
+    color: @text-dim;
+    transition: transform 0.15s ease;
+
+    &.open {
+        transform: rotate(90deg);
+    }
+}
+
+.treeIcon {
+    display: inline-flex;
+    align-items: center;
+    color: @text-dim;
+    flex-shrink: 0;
+}
+
+.treeLabel {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.treeCount {
+    font-size: 11px;
+    color: @text-dim;
+    margin-left: 4px;
+}
+
+.treeDelBtn {
+    opacity: 0;
+    padding: 2px;
+    border-radius: 3px;
+    color: @danger;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.15s ease;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.15);
+    }
+}
+
 .redisMain {
     flex: 1;
     display: flex;

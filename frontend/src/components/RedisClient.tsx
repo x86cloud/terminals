@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react'
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {API, subscribe} from '../api'
 import type {
     RedisKeysResult,
@@ -20,6 +20,68 @@ import CodeEditor from './CodeEditor'
 import {ConfirmModal, ConfirmState} from './Modal'
 import g from '../styles/global.module.less'
 import r from './RedisClient.module.less'
+
+interface KeyTreeNode {
+    key: string
+    name: string
+    fullKey?: string
+    isLeaf: boolean
+    count: number
+    children: KeyTreeNode[]
+}
+
+function buildKeyTree(keys: string[], delimiter = ':'): KeyTreeNode[] {
+    if (!delimiter) {
+        return keys.map((k) => ({
+            key: k,
+            name: k,
+            fullKey: k,
+            isLeaf: true,
+            count: 1,
+            children: [],
+        }))
+    }
+
+    const rootNodes: KeyTreeNode[] = []
+
+    for (const fullKey of keys) {
+        const parts = fullKey.split(delimiter)
+        let currentLevel = rootNodes
+        let path = ''
+
+        for (let i = 0; i < parts.length; i++) {
+            const part = parts[i]
+            path = path ? `${path}${delimiter}${part}` : part
+            const isLast = i === parts.length - 1
+
+            let node = currentLevel.find((n) => n.name === part)
+            if (!node) {
+                node = {
+                    key: path,
+                    name: part,
+                    fullKey: isLast ? fullKey : undefined,
+                    isLeaf: isLast,
+                    count: 0,
+                    children: [],
+                }
+                currentLevel.push(node)
+            }
+            node.count++
+            currentLevel = node.children
+        }
+    }
+
+    return rootNodes
+}
+
+function collectLeafKeys(node: KeyTreeNode): string[] {
+    if (node.isLeaf && node.fullKey) return [node.fullKey]
+    const result: string[] = []
+    for (const child of node.children) {
+        result.push(...collectLeafKeys(child))
+    }
+    return result
+}
 
 interface Props {
     session: RedisSessionInfo
@@ -78,7 +140,107 @@ const TAB_LABEL: Record<Tab, string> = {
     monitor: '监控',
 }
 
-export function RedisClient({session, onClose, onDbChange}: Props) {
+function KeyItemTree({
+    nodes,
+    level = 0,
+    selected,
+    expandedKeys,
+    onToggleExpand,
+    onSelectKey,
+    onDeleteFolder,
+    onDeleteKey,
+}: {
+    nodes: KeyTreeNode[]
+    level?: number
+    selected: string | null
+    expandedKeys: Set<string>
+    onToggleExpand: (key: string) => void
+    onSelectKey: (fullKey: string) => void
+    onDeleteFolder: (node: KeyTreeNode) => void
+    onDeleteKey: (fullKey: string) => void
+}) {
+    return (
+        <>
+            {nodes.map((node) => {
+                const isExpanded = expandedKeys.has(node.key)
+                const isSelected = node.isLeaf && node.fullKey === selected
+                return (
+                    <React.Fragment key={node.key}>
+                        <div
+                            className={`${r.treeRow} ${isSelected ? r.active : ''}`}
+                            style={{paddingLeft: `${level * 14 + 6}px`}}
+                            onClick={() => {
+                                if (node.isLeaf && node.fullKey) {
+                                    onSelectKey(node.fullKey)
+                                } else {
+                                    onToggleExpand(node.key)
+                                }
+                            }}
+                        >
+                            {!node.isLeaf ? (
+                                <span
+                                    className={`${r.treeArrow} ${isExpanded ? r.open : ''}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        onToggleExpand(node.key)
+                                    }}
+                                >
+                                    ▶
+                                </span>
+                            ) : (
+                                <span style={{width: 14}} />
+                            )}
+                            <span className={r.treeIcon}>
+                                <Icon name={node.isLeaf ? 'file' : isExpanded ? 'folder' : 'folder'} size={13} />
+                            </span>
+                            <span className={r.treeLabel} title={node.fullKey || node.name}>
+                                {node.name}
+                            </span>
+                            {!node.isLeaf && <span className={r.treeCount}>({node.count})</span>}
+                            {!node.isLeaf ? (
+                                <button
+                                    className={r.treeDelBtn}
+                                    title={`批量删除 ${node.name} 下的 ${node.count} 个 Key`}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        onDeleteFolder(node)
+                                    }}
+                                >
+                                    <Icon name="trash" size={12} />
+                                </button>
+                            ) : (
+                                <button
+                                    className={r.treeDelBtn}
+                                    title={`删除 ${node.fullKey}`}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (node.fullKey) onDeleteKey(node.fullKey)
+                                    }}
+                                >
+                                    <Icon name="trash" size={12} />
+                                </button>
+                            )}
+                        </div>
+                        {!node.isLeaf && isExpanded && node.children.length > 0 && (
+                            <KeyItemTree
+                                nodes={node.children}
+                                level={level + 1}
+                                selected={selected}
+                                expandedKeys={expandedKeys}
+                                onToggleExpand={onToggleExpand}
+                                onSelectKey={onSelectKey}
+                                onDeleteFolder={onDeleteFolder}
+                                onDeleteKey={onDeleteKey}
+                            />
+                        )}
+                    </React.Fragment>
+                )
+            })}
+        </>
+    )
+}
+
+function RedisClient({session, onClose, onDbChange}: Props) {
     const [tab, setTab] = useState<Tab>('keys')
     const [msg, setMsg] = useState('')
 
@@ -94,6 +256,48 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
     const [db, setDb] = useState(session.db)
     const [dbInput, setDbInput] = useState(String(session.db))
     const cursorRef = useRef('0')
+
+    // ---- 树状分层视图 ----
+    const [viewMode, setViewMode] = useState<'tree' | 'flat'>('tree')
+    const [delimiter, setDelimiter] = useState(':')
+    const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
+
+    const toggleExpand = useCallback((nodeKey: string) => {
+        setExpandedKeys((prev) => {
+            const next = new Set(prev)
+            if (next.has(nodeKey)) next.delete(nodeKey)
+            else next.add(nodeKey)
+            return next
+        })
+    }, [])
+
+    const keyTree = useMemo(() => buildKeyTree(data.keys, delimiter), [data.keys, delimiter])
+
+    useEffect(() => {
+        if (!pattern.trim() || pattern === '*') return
+        const searchLower = pattern.toLowerCase().trim().replace(/\*/g, '')
+        if (!searchLower) return
+        const expanded = new Set<string>()
+
+        function traverse(node: KeyTreeNode): boolean {
+            if (node.isLeaf) {
+                return (node.fullKey || node.name).toLowerCase().includes(searchLower)
+            }
+            let hasMatch = false
+            for (const child of node.children) {
+                if (traverse(child)) hasMatch = true
+            }
+            if (hasMatch) expanded.add(node.key)
+            return hasMatch
+        }
+
+        for (const rootNode of keyTree) {
+            traverse(rootNode)
+        }
+        if (expanded.size > 0) {
+            setExpandedKeys((prev) => new Set([...prev, ...expanded]))
+        }
+    }, [pattern, keyTree])
 
     // ---- 监控 ----
     const [monitor, setMonitor] = useState<RedisMonitorInfo | null>(null)
@@ -265,6 +469,34 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
             },
         })
     }
+    const delFolder = useCallback((node: KeyTreeNode) => {
+        const leafKeys = collectLeafKeys(node)
+        if (leafKeys.length === 0) return
+        setConfirmState({
+            open: true,
+            title: '批量删除文件夹',
+            danger: true,
+            message: `确认删除文件夹“${node.name}”下的所有 ${leafKeys.length} 个 Key？该操作不可撤销！`,
+            onConfirm: async () => {
+                setConfirmState(emptyConfirm)
+                try {
+                    let deletedCount = 0
+                    for (const k of leafKeys) {
+                        await API.redisDelete(session.id, k)
+                        deletedCount++
+                    }
+                    if (selected && leafKeys.includes(selected)) {
+                        setSelected('')
+                        setValue(null)
+                    }
+                    flash(`已成功批量删除 ${deletedCount} 个 Key`)
+                    loadKeys(true)
+                } catch (e: any) {
+                    flash('批量删除失败: ' + (e?.message || e))
+                }
+            },
+        })
+    }, [session.id, selected, flash, loadKeys])
 
     const runRaw = async (cmd: string) => {
         if (!cmd.trim()) return
@@ -452,18 +684,65 @@ export function RedisClient({session, onClose, onDbChange}: Props) {
                             </button>
                             <span className={r.redisDbCount}>{data.keys.length} 键 / 共 {session.dbSize}</span>
                         </div>
+
+                        <div className={r.viewModeBar}>
+                            <div className={`${g.segmented} ${g.xs}`}>
+                                <button
+                                    className={viewMode === 'tree' ? g.active : ''}
+                                    title="树状视图"
+                                    onClick={() => setViewMode('tree')}
+                                >
+                                    <Icon name="folder" size={12}/> 树状
+                                </button>
+                                <button
+                                    className={viewMode === 'flat' ? g.active : ''}
+                                    title="平铺列表"
+                                    onClick={() => setViewMode('flat')}
+                                >
+                                    <Icon name="table" size={12}/> 平铺
+                                </button>
+                            </div>
+                            <span className={g.spacer}/>
+                            {viewMode === 'tree' && (
+                                <span style={{fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 4}}>
+                                    分隔符
+                                    <input
+                                        className={r.delimiterInput}
+                                        value={delimiter}
+                                        maxLength={3}
+                                        onChange={(e) => setDelimiter(e.target.value)}
+                                        title="键名分层分隔符，默认冒号 :"
+                                    />
+                                </span>
+                            )}
+                        </div>
+
                         <div className={r.redisKeys}>
                             {data.keys.length === 0 && <div className={r.redisEmpty}>无键</div>}
-                            {data.keys.map((k) => (
-                                <div
-                                    key={k}
-                                    className={`${r.redisKey} ${k === selected ? ' ' + r.active : ''}`}
-                                    onClick={() => loadValue(k)}
-                                    title={k}
-                                >
-                                    {k}
-                                </div>
-                            ))}
+                            {data.keys.length > 0 && (
+                                viewMode === 'flat' ? (
+                                    data.keys.map((k) => (
+                                        <div
+                                            key={k}
+                                            className={`${r.redisKey} ${k === selected ? ' ' + r.active : ''}`}
+                                            onClick={() => loadValue(k)}
+                                            title={k}
+                                        >
+                                            {k}
+                                        </div>
+                                    ))
+                                ) : (
+                                    <KeyItemTree
+                                        nodes={keyTree}
+                                        selected={selected}
+                                        expandedKeys={expandedKeys}
+                                        onToggleExpand={toggleExpand}
+                                        onSelectKey={loadValue}
+                                        onDeleteFolder={delFolder}
+                                        onDeleteKey={delKey}
+                                    />
+                                )
+                            )}
                         </div>
                     </div>
 
