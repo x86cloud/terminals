@@ -257,17 +257,19 @@ export default function Sidebar({
                         onClick={() => onFocusSession(sess.id, kind)}
                     >
                         <span className={`${g.dot}${sess.connected ? ' ' + g.on : ''}`}/>
-                        {isRedis
-                            ? `Redis ${server.host}:${server.port}`
-                            : isMysql
-                            ? `MySQL ${server.host}:${server.port}`
-                            : kind === 'mqtt'
-                            ? `MQTT ${server.host}:${server.port}`
-                            : kind === 'mongo'
-                            ? `MongoDB ${server.host}:${server.port}`
-                            : kind === 'sqlite'
-                            ? `SQLite ${(server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
-                            : `会话 ${sess.id.slice(0, 6)}`}
+                        <span className={s.sessionTitle}>
+                            {isRedis
+                                ? `Redis ${server.host}:${server.port}`
+                                : isMysql
+                                ? `MySQL ${server.host}:${server.port}`
+                                : kind === 'mqtt'
+                                ? `MQTT ${server.host}:${server.port}`
+                                : kind === 'mongo'
+                                ? `MongoDB ${server.host}:${server.port}`
+                                : kind === 'sqlite'
+                                ? `SQLite ${(server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
+                                : `会话 ${sess.id.slice(0, 6)}`}
+                        </span>
                     </button>
                 ))}
             </div>

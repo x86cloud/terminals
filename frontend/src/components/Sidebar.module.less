@@ -71,7 +71,8 @@
 
 .serverList {
     flex: 1;
-    overflow: auto;
+    overflow-x: hidden;
+    overflow-y: auto;
     padding: 0 8px 12px;
 }
 
@@ -262,7 +263,8 @@
     display: flex;
     align-items: center;
     gap: 7px;
-    width: 100%;
+    width: calc(100% - 22px);
+    box-sizing: border-box;
     margin: 1px 0 1px 22px;
     padding: 4px 8px;
     background: transparent;
@@ -280,6 +282,12 @@
         background: @bg-3;
         color: @text;
     }
+}
+
+.sessionTitle {
+    .ellipsis();
+    flex: 1;
+    min-width: 0;
 }
 
 .spinner {
