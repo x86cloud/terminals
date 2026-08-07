@@ -2,6 +2,7 @@ import React, {useMemo, useState} from 'react'
 import Icon from './Icon'
 import ClientIcon from './ClientIcon'
 import ContextMenu, {closedMenu, MenuState, MenuItem} from './ContextMenu'
+import {ConfirmModal, ConfirmState} from './Modal'
 import {ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from '../types'
 import g from '../styles/global.module.less'
 import s from './Sidebar.module.less'
@@ -70,6 +71,8 @@ export default function Sidebar({
     const [ungroupedOpen, setUngroupedOpen] = useState(true)
     const [dragId, setDragId] = useState<string | null>(null)
     const [dropGroup, setDropGroup] = useState<string | null>(null)
+    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null)
     const [moveMenu, setMoveMenu] = useState<{ serverId: string; x: number; y: number } | null>(null)
 
@@ -373,9 +376,16 @@ export default function Sidebar({
                                         className={`${g.iconBtn} ${g.danger}`}
                                         title="删除分组"
                                         onClick={() => {
-                                            if (window.confirm(`删除分组「${grp.name}」？分组下的服务器不会被删除，仅移出分组。`)) {
-                                                onDeleteGroup(grp.id)
-                                            }
+                                            setConfirm({
+                                                open: true,
+                                                title: '删除分组',
+                                                danger: true,
+                                                message: `删除分组「${grp.name}」？分组下的服务器不会被删除，仅移出分组。`,
+                                                onConfirm: () => {
+                                                    setConfirm(emptyConfirm)
+                                                    onDeleteGroup(grp.id)
+                                                },
+                                            })
                                         }}
                                     >
                                         <Icon name="trash" size={13}/>
@@ -467,6 +477,7 @@ export default function Sidebar({
                     {groups.length === 0 && <div className={s.moveEmpty}>暂无分组</div>}
                 </div>
             )}
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
         </aside>
     )
 }
