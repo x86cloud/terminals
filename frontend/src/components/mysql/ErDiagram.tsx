@@ -78,27 +78,30 @@ export default function ErDiagram({
     const autoFit = useCallback(() => {
         if (!canvasRef.current || ER.svgW === 0 || ER.svgH === 0) return
         const rect = canvasRef.current.getBoundingClientRect()
-        const containerW = rect.width - 40
-        const containerH = rect.height - 40
+        // 预留 60px 边距（四周各 30px），保证表头与所有字段完整在视口内展示
+        const padding = 60
+        const containerW = rect.width - padding
+        const containerH = rect.height - padding
         if (containerW <= 0 || containerH <= 0) return
 
         const scaleX = containerW / ER.svgW
         const scaleY = containerH / ER.svgH
-        const fitScale = Math.min(Math.min(scaleX, scaleY), 1.2)
-        const finalScale = Math.max(0.25, +(fitScale.toFixed(2)))
+        const fitScale = Math.min(scaleX, scaleY)
+        // 缩放范围允许在 0.05 到 1.5 之间自适应，无强行 Clamping 截断
+        const finalScale = Math.max(0.05, Math.min(1.5, fitScale))
 
         const fitX = (rect.width - ER.svgW * finalScale) / 2
         const fitY = (rect.height - ER.svgH * finalScale) / 2
 
         setScale(finalScale)
-        setPan({x: Math.max(10, fitX), y: Math.max(10, fitY)})
+        setPan({x: fitX, y: fitY})
     }, [ER.svgW, ER.svgH])
 
     useEffect(() => {
         autoFit()
     }, [autoFit])
 
-    // 切换全屏时延迟重新自适应居中
+    // 切换全屏或容器 Resizing 时触发重新适应
     useEffect(() => {
         const timer = setTimeout(() => autoFit(), 50)
         return () => clearTimeout(timer)
@@ -149,7 +152,7 @@ export default function ErDiagram({
     const handleWheel = (e: React.WheelEvent) => {
         e.preventDefault()
         const delta = e.deltaY > 0 ? -0.06 : 0.06
-        const nextScale = Math.max(0.2, Math.min(3, +(scale + delta).toFixed(2)))
+        const nextScale = Math.max(0.05, Math.min(3, +(scale + delta).toFixed(2)))
         if (canvasRef.current) {
             const rect = canvasRef.current.getBoundingClientRect()
             const mouseX = e.clientX - rect.left
@@ -177,15 +180,17 @@ export default function ErDiagram({
         <div className={`${my.erWrap} ${isFullscreen ? my.fullscreen : ''}`}>
             <div className={my.erToolBar}>
                 <button
-                    className={my.erZoomBtn}
+                    className={`${g.btn} ${g.xs}`}
+                    style={{width: 24, padding: 0}}
                     title="缩小"
-                    onClick={() => setScale((s) => Math.max(0.2, +(s - 0.1).toFixed(2)))}
+                    onClick={() => setScale((s) => Math.max(0.05, +(s - 0.1).toFixed(2)))}
                 >
                     −
                 </button>
                 <span className={my.erZoomVal}>{Math.round(scale * 100)}%</span>
                 <button
-                    className={my.erZoomBtn}
+                    className={`${g.btn} ${g.xs}`}
+                    style={{width: 24, padding: 0}}
                     title="放大"
                     onClick={() => setScale((s) => Math.min(3, +(s + 0.1).toFixed(2)))}
                 >
