@@ -458,7 +458,21 @@ export function subscribe(event: string, handler: AnyFn): () => void {
     }
 
     return () => {
-        subscribers.get(event)?.delete(handler)
+        const s = subscribers.get(event)
+        if (s) {
+            s.delete(handler)
+            if (s.size === 0) {
+                subscribers.delete(event)
+                boundEvents.delete(event)
+                if (w.runtime?.EventsOff) {
+                    try {
+                        w.runtime.EventsOff(event)
+                    } catch {
+                        /* ignore */
+                    }
+                }
+            }
+        }
     }
 }
 

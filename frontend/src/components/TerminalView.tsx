@@ -1,11 +1,13 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {Terminal} from 'xterm'
 import {FitAddon} from 'xterm-addon-fit'
 import {WebLinksAddon} from 'xterm-addon-web-links'
+import {SearchAddon} from 'xterm-addon-search'
 import 'xterm/css/xterm.css'
 import {API, subscribe} from '../api'
 import {base64ToBytes} from '../utils'
 import ContextMenu, {closedMenu, MenuState} from './ContextMenu'
+import Icon from './Icon'
 import t from './Terminal.module.less'
 
 interface Props {
@@ -40,7 +42,47 @@ export default function TerminalView({sessionId, active}: Props) {
     const hostRef = useRef<HTMLDivElement>(null)
     const termRef = useRef<Terminal | null>(null)
     const fitRef = useRef<FitAddon | null>(null)
+    const searchRef = useRef<SearchAddon | null>(null)
+    const searchInputRef = useRef<HTMLInputElement>(null)
+
     const [menu, setMenu] = useState<MenuState>(closedMenu)
+    const [searchOpen, setSearchOpen] = useState(false)
+    const [searchQuery, setSearchQuery] = useState('')
+    const [caseSensitive, setCaseSensitive] = useState(false)
+
+    // 防抖 resize
+    const resizeTimerRef = useRef<number | null>(null)
+    const debouncedResize = useCallback((cols: number, rows: number) => {
+        if (resizeTimerRef.current) {
+            window.clearTimeout(resizeTimerRef.current)
+        }
+        resizeTimerRef.current = window.setTimeout(() => {
+            API.resize(sessionId, cols, rows).catch(() => undefined)
+        }, 100)
+    }, [sessionId])
+
+    const copySelection = useCallback(async () => {
+        const text = termRef.current?.getSelection()
+        if (text) {
+            try {
+                await navigator.clipboard.writeText(text)
+            } catch {
+                /* ignore */
+            }
+        }
+    }, [])
+
+    const paste = useCallback(async () => {
+        try {
+            const text = await navigator.clipboard.readText()
+            if (text && termRef.current) {
+                // 使用 xterm 的 paste() 以便支持 Bracketed Paste 机制
+                termRef.current.paste(text)
+            }
+        } catch {
+            /* ignore */
+        }
+    }, [])
 
     useEffect(() => {
         const host = hostRef.current
@@ -56,11 +98,16 @@ export default function TerminalView({sessionId, active}: Props) {
             theme: THEME,
         })
         const fit = new FitAddon()
+        const search = new SearchAddon()
+
         term.loadAddon(fit)
         term.loadAddon(new WebLinksAddon())
+        term.loadAddon(search)
         term.open(host)
+
         termRef.current = term
         fitRef.current = fit
+        searchRef.current = search
 
         try {
             fit.fit()
@@ -71,8 +118,40 @@ export default function TerminalView({sessionId, active}: Props) {
         term.onData((data) => {
             API.sendInput(sessionId, data).catch(() => undefined)
         })
+
         term.onResize(({cols, rows}) => {
-            API.resize(sessionId, cols, rows).catch(() => undefined)
+            debouncedResize(cols, rows)
+        })
+
+        // 自定义快捷键处理
+        term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
+            if (e.type !== 'keydown') return true
+            const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+            const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey
+
+            // Ctrl+Shift+C / Cmd+C (存在选中文本时复制)
+            if (ctrlOrCmd && (e.shiftKey || isMac) && (e.key === 'c' || e.key === 'C')) {
+                if (term.hasSelection()) {
+                    void copySelection()
+                    return false
+                }
+            }
+            // Ctrl+Shift+V / Cmd+V 粘贴
+            if (ctrlOrCmd && (e.shiftKey || isMac) && (e.key === 'v' || e.key === 'V')) {
+                void paste()
+                return false
+            }
+            // Ctrl+F / Cmd+F 打开搜索
+            if (ctrlOrCmd && (e.key === 'f' || e.key === 'F')) {
+                setSearchOpen((prev) => !prev)
+                return false
+            }
+            // Ctrl+L 清屏
+            if (ctrlOrCmd && !e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+                term.clear()
+                return false
+            }
+            return true
         })
 
         const offData = subscribe(`terminal:data:${sessionId}`, (payload: string) => {
@@ -96,11 +175,15 @@ export default function TerminalView({sessionId, active}: Props) {
             offData()
             offClosed()
             observer.disconnect()
+            if (resizeTimerRef.current) {
+                window.clearTimeout(resizeTimerRef.current)
+            }
             term.dispose()
             termRef.current = null
             fitRef.current = null
+            searchRef.current = null
         }
-    }, [sessionId])
+    }, [sessionId, debouncedResize, copySelection, paste])
 
     useEffect(() => {
         if (!active) return
@@ -115,40 +198,107 @@ export default function TerminalView({sessionId, active}: Props) {
         return () => window.clearTimeout(timer)
     }, [active])
 
-    const copySelection = async () => {
-        const text = termRef.current?.getSelection()
-        if (text) {
-            try {
-                await navigator.clipboard.writeText(text)
-            } catch {
-                /* ignore */
+    useEffect(() => {
+        if (searchOpen) {
+            searchInputRef.current?.focus()
+            searchInputRef.current?.select()
+        } else {
+            termRef.current?.focus()
+        }
+    }, [searchOpen])
+
+    const handleSearchNext = () => {
+        if (!searchQuery || !searchRef.current) return
+        searchRef.current.findNext(searchQuery, {caseSensitive, incremental: true})
+    }
+
+    const handleSearchPrev = () => {
+        if (!searchQuery || !searchRef.current) return
+        searchRef.current.findPrevious(searchQuery, {caseSensitive})
+    }
+
+    const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            if (e.shiftKey) {
+                handleSearchPrev()
+            } else {
+                handleSearchNext()
             }
+        } else if (e.key === 'Escape') {
+            setSearchOpen(false)
         }
     }
 
-    const paste = async () => {
-        try {
-            const text = await navigator.clipboard.readText()
-            if (text) await API.sendInput(sessionId, text)
-        } catch {
-            /* ignore */
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const q = e.target.value
+        setSearchQuery(q)
+        if (q && searchRef.current) {
+            searchRef.current.findNext(q, {caseSensitive, incremental: true})
         }
     }
 
     return (
         <div className={t.terminalWrap}>
+            {searchOpen && (
+                <div className={t.searchBar}>
+                    <input
+                        ref={searchInputRef}
+                        type="text"
+                        placeholder="查找终端内容..."
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                        onKeyDown={handleSearchKeyDown}
+                    />
+                    <button
+                        title="区分大小写"
+                        className={caseSensitive ? t.active : ''}
+                        onClick={() => {
+                            const next = !caseSensitive
+                            setCaseSensitive(next)
+                            if (searchQuery && searchRef.current) {
+                                searchRef.current.findNext(searchQuery, {caseSensitive: next, incremental: true})
+                            }
+                        }}
+                    >
+                        Aa
+                    </button>
+                    <button title="查找上一个 (Shift+Enter)" onClick={handleSearchPrev}>
+                        ↑
+                    </button>
+                    <button title="查找下一个 (Enter)" onClick={handleSearchNext}>
+                        ↓
+                    </button>
+                    <button title="关闭 (Esc)" onClick={() => setSearchOpen(false)}>
+                        ✕
+                    </button>
+                </div>
+            )}
+
             <div
                 ref={hostRef}
                 className={t.terminalHost}
                 onContextMenu={(e) => {
                     e.preventDefault()
+                    const hasSelection = termRef.current?.hasSelection() ?? false
                     setMenu({
                         open: true,
                         x: e.clientX,
                         y: e.clientY,
                         items: [
-                            {key: 'copy', label: '复制', icon: 'copy', onClick: copySelection},
+                            {
+                                key: 'copy',
+                                label: '复制',
+                                icon: 'copy',
+                                disabled: !hasSelection,
+                                onClick: copySelection,
+                            },
                             {key: 'paste', label: '粘贴', icon: 'file', onClick: paste},
+                            {
+                                key: 'search',
+                                label: '查找 (Ctrl+F)',
+                                icon: 'search',
+                                onClick: () => setSearchOpen(true),
+                            },
                             {key: 'd', label: '', divider: true},
                             {
                                 key: 'clear',
