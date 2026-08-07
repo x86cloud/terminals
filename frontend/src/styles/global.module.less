@@ -86,7 +86,11 @@
     width: fit-content;
 
     button {
-        padding: 6px 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 6px 16px;
         background: transparent;
         border: none;
         color: @text-dim;
@@ -99,8 +103,9 @@
     }
 
     &.sm button {
-        padding: 4px 12px;
+        padding: 4px 10px;
         font-size: 12px;
+        gap: 5px;
     }
 }
 
@@ -501,7 +506,8 @@
 
 /* ---------------- 客户端类型图标 ---------------- */
 .clientIcon {
-    display: block;
+    display: inline-block;
+    vertical-align: middle;
     flex: 0 0 auto;
 }
 
