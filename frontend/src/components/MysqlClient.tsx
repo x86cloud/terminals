@@ -29,7 +29,6 @@ const newTab = (): SqlTab => ({
     content: '',
     result: null,
     error: '',
-    history: [],
 })
 
 function notify(msg: string) {
@@ -230,8 +229,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
         setError('')
         try {
             const res = await API.mysqlRun(session.id, db, stmt)
-            const history = [{sql: stmt, at: Date.now()}, ...activeTabObj.history].slice(0, 50)
-            updateActiveTab({result: res, error: '', history})
+            updateActiveTab({result: res, error: ''})
             // 若切换了数据库（USE xxx）则刷新左侧列表
             if (/^\s*use\s+/i.test(stmt)) {
                 await loadDatabases()
@@ -256,10 +254,6 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
             if (id === activeSqlTab && next.length) setActiveSqlTab(next[next.length - 1].id)
             return next.length ? next : [newTab()]
         })
-    }
-
-    const loadHistoryIntoTab = (hsql: string) => {
-        updateActiveTab({content: hsql})
     }
 
     /* ----------------- 改 / 增 / 删 ----------------- */
@@ -757,7 +751,6 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             onCloseTab={closeSqlTab}
                             onContentChange={(val) => updateActiveTab({content: val})}
                             onRun={runSqlTab}
-                            onLoadHistory={loadHistoryIntoTab}
                         />
                     )}
 

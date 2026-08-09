@@ -19,7 +19,6 @@ export default function SqlEditor({
     onCloseTab,
     onContentChange,
     onRun,
-    onLoadHistory,
 }: {
     sqlTabs: SqlTab[]
     activeSqlTab: string
@@ -31,7 +30,6 @@ export default function SqlEditor({
     onCloseTab: (id: string) => void
     onContentChange: (val: string) => void
     onRun: () => void
-    onLoadHistory: (sql: string) => void
 }) {
     return (
         <div className={my.sqlWrap}>
@@ -86,19 +84,6 @@ export default function SqlEditor({
                     <div className={`${sh.mysqlEmpty} ${my.small}`}>{activeTabObj.error}</div>
                 ) : (
                     <div className={`${sh.mysqlEmpty} ${my.small}`}>执行结果将在此显示</div>
-                )}
-            </div>
-            <div className={my.sqlHistory}>
-                <div className={my.sqlHistoryHead}>查询历史（{activeTabObj.history.length}）</div>
-                {activeTabObj.history.length === 0 ? (
-                    <div className={`${sh.mysqlEmpty} ${my.small}`}>暂无历史</div>
-                ) : (
-                    activeTabObj.history.map((h, i) => (
-                        <button key={i} className={my.sqlHistoryItem} title="点击载入到编辑器" onClick={() => onLoadHistory(h.sql)}>
-                            <span className={my.sqlHistoryTime}>{new Date(h.at).toLocaleTimeString()}</span>
-                            <code>{h.sql.slice(0, 80)}</code>
-                        </button>
-                    ))
                 )}
             </div>
         </div>

@@ -13,7 +13,6 @@ export interface SqlTab {
     content: string
     result: MysqlQueryResult | null
     error: string
-    history: { sql: string; at: number }[]
 }
 
 export interface CellEdit {
