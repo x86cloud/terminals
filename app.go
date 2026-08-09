@@ -180,6 +180,18 @@ func (a *App) SSHServiceLogs(sessionID string, serviceName string) (string, erro
 	return a.sessions.GetServiceLogs(sessionID, serviceName)
 }
 
+func (a *App) SSHCronList(sessionID string) ([]SSHCronItem, error) {
+	return a.sessions.GetCronList(sessionID)
+}
+
+func (a *App) SSHSaveCronList(sessionID string, items []SSHCronItem) error {
+	return a.sessions.SaveCronList(sessionID, items)
+}
+
+func (a *App) SSHRunCronCommand(sessionID string, command string) (string, error) {
+	return a.sessions.RunCronCommand(sessionID, command)
+}
+
 // ---------- SFTP ----------
 
 func (a *App) ListDir(sessionID string, dir string) (DirListing, error) {

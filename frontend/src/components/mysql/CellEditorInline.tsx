@@ -14,17 +14,25 @@ export default function CellEditorInline({
     onCancel: () => void
 }) {
     const [txt, setTxt] = useState(isNull ? '' : value)
-    const [nulled, setNulled] = useState(isNull)
+
     return (
         <span className={my.mysqlCellEdit}>
-            <input autoFocus className={`${sh.mysqlCellInput}${nulled ? ' ' + sh.isNull : ''}`} value={nulled ? '' : txt} disabled={nulled}
-                   onChange={(e) => setTxt(e.target.value)}
-                   onKeyDown={(e) => {
-                       if (e.key === 'Enter') { e.preventDefault(); onCommit(txt, nulled) }
-                       else if (e.key === 'Escape') { e.preventDefault(); onCancel() }
-                   }}
-                   onBlur={() => onCommit(txt, nulled)}/>
-            <button type="button" className={`${sh.nullToggle}${nulled ? ' ' + sh.on : ''}`} title="切换为 NULL" onClick={() => setNulled((n) => !n)}>NULL</button>
+            <input
+                autoFocus
+                className={sh.mysqlCellInput}
+                value={txt}
+                onChange={(e) => setTxt(e.target.value)}
+                onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault()
+                        onCommit(txt, false)
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault()
+                        onCancel()
+                    }
+                }}
+                onBlur={() => onCommit(txt, false)}
+            />
         </span>
     )
 }

@@ -30,8 +30,15 @@ export type IconName =
     | 'play'
     | 'chart'
     | 'power'
+    | 'clock'
 
 const PATHS: Record<IconName, React.ReactNode> = {
+    clock: (
+        <>
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+        </>
+    ),
     power: (
         <>
             <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>

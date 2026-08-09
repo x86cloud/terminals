@@ -306,11 +306,17 @@ export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void
 
 export function SSHControlService(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function SSHCronList(arg1:string):Promise<Array<main.SSHCronItem>>;
+
 export function SSHDashboardStats(arg1:string):Promise<main.SSHDashboardInfo>;
 
 export function SSHKillProcess(arg1:string,arg2:number):Promise<void>;
 
 export function SSHProcessList(arg1:string):Promise<Array<main.SSHProcessInfo>>;
+
+export function SSHRunCronCommand(arg1:string,arg2:string):Promise<string>;
+
+export function SSHSaveCronList(arg1:string,arg2:Array<main.SSHCronItem>):Promise<void>;
 
 export function SSHServiceList(arg1:string):Promise<Array<main.SSHServiceInfo>>;
 

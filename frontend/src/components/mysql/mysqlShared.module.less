@@ -61,13 +61,14 @@
 .mysqlCellInput {
     width: 100%;
     min-width: 60px;
-    border: 1px solid @accent;
-    background: @bg;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
     color: @text;
-    border-radius: 3px;
-    padding: 2px 4px;
+    padding: 0 !important;
+    margin: 0 !important;
     font: inherit;
-    outline: none;
 
     &.isNull {
         color: @text-faint;

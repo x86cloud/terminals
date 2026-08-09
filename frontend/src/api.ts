@@ -51,6 +51,7 @@ import type {
     SSHDashboardInfo,
     SSHProcessInfo,
     SSHServiceInfo,
+    SSHCronItem,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -106,6 +107,12 @@ export const API = {
         app().SSHControlService(sessionId, serviceName, action),
     sshServiceLogs: (sessionId: string, serviceName: string): Promise<string> =>
         app().SSHServiceLogs(sessionId, serviceName),
+    sshCronList: (sessionId: string): Promise<SSHCronItem[]> =>
+        app().SSHCronList(sessionId),
+    sshSaveCronList: (sessionId: string, items: SSHCronItem[]): Promise<void> =>
+        app().SSHSaveCronList(sessionId, items),
+    sshRunCronCommand: (sessionId: string, command: string): Promise<string> =>
+        app().SSHRunCronCommand(sessionId, command),
 
     // SFTP
     listDir: (sessionId: string, dir: string): Promise<DirListing> => app().ListDir(sessionId, dir),

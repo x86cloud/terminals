@@ -841,3 +841,11 @@ export interface SSHServiceInfo {
     sub: string
     description: string
 }
+
+export interface SSHCronItem {
+    id: string
+    expression: string
+    command: string
+    enabled: boolean
+    comment: string
+}

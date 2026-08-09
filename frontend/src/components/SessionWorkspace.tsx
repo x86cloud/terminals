@@ -4,6 +4,7 @@ import FilePanel from './FilePanel'
 import DashboardPanel from './DashboardPanel'
 import ProcessPanel from './ProcessPanel'
 import ServicePanel from './ServicePanel'
+import CronPanel from './CronPanel'
 import Icon from './Icon'
 import { SessionInfo } from '../types'
 import w from './SessionWorkspace.module.less'
@@ -17,7 +18,7 @@ interface Props {
 }
 
 const MIN_PANEL = 320
-type PanelTab = 'files' | 'dashboard' | 'process' | 'service'
+type PanelTab = 'files' | 'dashboard' | 'process' | 'service' | 'cron'
 
 export default function SessionWorkspace({ session, active, nativeDrop, onPathChange, onNotify }: Props) {
     const [panelWidth, setPanelWidth] = useState(440)
@@ -98,6 +99,12 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
                             >
                                 <Icon name="plug" size={13} /> 服务
                             </button>
+                            <button
+                                className={`${w.panelTab}${activeTab === 'cron' ? ' ' + w.active : ''}`}
+                                onClick={() => setActiveTab('cron')}
+                            >
+                                <Icon name="clock" size={13} /> 定时任务
+                            </button>
                         </div>
 
                         <div className={w.panelContent}>
@@ -123,6 +130,11 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
                             <ServicePanel
                                 sessionId={session.id}
                                 active={activeTab === 'service'}
+                                onNotify={onNotify}
+                            />
+                            <CronPanel
+                                sessionId={session.id}
+                                active={activeTab === 'cron'}
                                 onNotify={onNotify}
                             />
                         </div>

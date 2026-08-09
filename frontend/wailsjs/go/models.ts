@@ -297,6 +297,26 @@ export namespace main {
 	        this.loadAvg = source["loadAvg"];
 	    }
 	}
+	export class SSHCronItem {
+	    id: string;
+	    expression: string;
+	    command: string;
+	    enabled: boolean;
+	    comment: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHCronItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.expression = source["expression"];
+	        this.command = source["command"];
+	        this.enabled = source["enabled"];
+	        this.comment = source["comment"];
+	    }
+	}
 	export class SSHNetInfo {
 	    name: string;
 	    ip: string;

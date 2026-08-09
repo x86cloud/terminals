@@ -140,8 +140,8 @@ export default function DataTab(props: {
                                         return (
                                             <td key={c}
                                                 className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + db.dbNullCell : ''}`}
-                                                onDoubleClick={() => !isEditing && onSetEditing({row: i, col: c})}
-                                                title="双击编辑">
+                                                onClick={() => !isEditing && onSetEditing({row: i, col: c})}
+                                                title="点击编辑">
                                                 {isEditing ? (
                                                     <CellEditorInline value={disp.text === 'NULL' ? '' : disp.text} isNull={disp.isNull}
                                                                        onCommit={(v, n) => onCommitEdit(i, c, v, n)} onCancel={() => onSetEditing(null)}/>
@@ -166,12 +166,10 @@ export default function DataTab(props: {
                                     {columns.map((c) => {
                                         const cell = nr[c] || {value: '', isNull: false}
                                         return (
-                                            <td key={c} className={cell.isNull ? db.dbNullCell : ''}>
-                                                <input className={sh.mysqlCellInput} value={cell.isNull ? '' : cell.value} disabled={cell.isNull}
+                                            <td key={c}>
+                                                <input className={sh.mysqlCellInput} value={cell.value}
                                                        onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
                                                        onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
-                                                <button type="button" className={`${sh.nullToggle}${cell.isNull ? ' ' + sh.on : ''}`} title="切换为 NULL"
-                                                        onClick={() => onUpdateNewCell(idx, c, cell.value, !cell.isNull)}>NULL</button>
                                             </td>
                                         )
                                     })}
