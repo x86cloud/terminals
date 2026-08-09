@@ -15,7 +15,7 @@ interface Props {
     active: boolean
 }
 
-const THEME = {
+const LIGHT_TERM_THEME = {
     background: '#ffffff',
     foreground: '#1f2733',
     cursor: '#1577a6',
@@ -36,6 +36,29 @@ const THEME = {
     brightMagenta: '#a371f7',
     brightCyan: '#39c5de',
     brightWhite: '#1f2733',
+}
+
+const DARK_TERM_THEME = {
+    background: '#141619',
+    foreground: '#e1e4ea',
+    cursor: '#29b6f6',
+    selectionBackground: '#304d6d',
+    black: '#141619',
+    red: '#ef5350',
+    green: '#66bb6a',
+    yellow: '#ffa726',
+    blue: '#42a5f5',
+    magenta: '#ab47bc',
+    cyan: '#26c6da',
+    white: '#e1e4ea',
+    brightBlack: '#606673',
+    brightRed: '#ff7371',
+    brightGreen: '#81c784',
+    brightYellow: '#ffb74d',
+    brightBlue: '#64b5f6',
+    brightMagenta: '#ba68c8',
+    brightCyan: '#4dd0e1',
+    brightWhite: '#ffffff',
 }
 
 export default function TerminalView({sessionId, active}: Props) {
@@ -84,10 +107,34 @@ export default function TerminalView({sessionId, active}: Props) {
         }
     }, [])
 
+    // 动态跟从主题模式变动设置 xterm 主题
+    useEffect(() => {
+        const applyTermTheme = () => {
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
+            if (termRef.current) {
+                termRef.current.options.theme = isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME
+            }
+        }
+
+        applyTermTheme()
+
+        const observer = new MutationObserver((mutations) => {
+            for (const m of mutations) {
+                if (m.attributeName === 'data-theme') {
+                    applyTermTheme()
+                }
+            }
+        })
+
+        observer.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']})
+        return () => observer.disconnect()
+    }, [])
+
     useEffect(() => {
         const host = hostRef.current
         if (!host) return
 
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
         const term = new Terminal({
             fontFamily: '"Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace',
             fontSize: 13.5,
@@ -95,7 +142,7 @@ export default function TerminalView({sessionId, active}: Props) {
             cursorBlink: true,
             scrollback: 20000,
             allowProposedApi: true,
-            theme: THEME,
+            theme: isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME,
         })
         const fit = new FitAddon()
         const search = new SearchAddon()
