@@ -130,6 +130,26 @@ export default function DataTab(props: {
                             </tr>
                             </thead>
                             <tbody>
+                            {newRows.map((nr, idx) => (
+                                <tr key={`new-${idx}`} className={my.rowNew}>
+                                    <td className={my.mysqlRownum}>+</td>
+                                    {columns.map((c) => {
+                                        const cell = nr[c] || {value: '', isNull: false}
+                                        return (
+                                            <td key={c}>
+                                                <input className={sh.mysqlCellInput} value={cell.value}
+                                                       onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
+                                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
+                                            </td>
+                                        )
+                                    })}
+                                    <td className={my.mysqlRowact}>
+                                        <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
+                                            <Icon name="trash" size={13}/>
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                             {rows.map((_, i) => (
                                 <tr key={i}>
                                     <td className={my.mysqlRownum}>{(page - 1) * pageSize + i + 1}</td>
@@ -155,26 +175,6 @@ export default function DataTab(props: {
                                     })}
                                     <td className={my.mysqlRowact}>
                                         <button className={`${g.iconBtn} ${g.danger}`} title="删除该行" disabled={busy || saving} onClick={() => onDeleteRow(i)}>
-                                            <Icon name="trash" size={13}/>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {newRows.map((nr, idx) => (
-                                <tr key={`new-${idx}`} className={my.rowNew}>
-                                    <td className={my.mysqlRownum}>+</td>
-                                    {columns.map((c) => {
-                                        const cell = nr[c] || {value: '', isNull: false}
-                                        return (
-                                            <td key={c}>
-                                                <input className={sh.mysqlCellInput} value={cell.value}
-                                                       onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
-                                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
-                                            </td>
-                                        )
-                                    })}
-                                    <td className={my.mysqlRowact}>
-                                        <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
                                             <Icon name="trash" size={13}/>
                                         </button>
                                     </td>
