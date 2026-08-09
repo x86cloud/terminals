@@ -99,6 +99,7 @@ export default function CodeEditor({
             value={value}
             height={height}
             minHeight={minHeight}
+            style={{height: height || '100%', minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1}}
             theme={lightEditorTheme}
             basicSetup={basicSetup}
             extensions={extensions}

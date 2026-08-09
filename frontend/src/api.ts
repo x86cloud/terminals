@@ -49,6 +49,7 @@ import type {
     SqliteSchema,
     ServerGroup,
     SSHDashboardInfo,
+    SSHProcessInfo,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -94,6 +95,10 @@ export const API = {
         app().ResizeTerminal(sessionId, cols, rows),
     sshDashboardStats: (sessionId: string): Promise<SSHDashboardInfo> =>
         app().SSHDashboardStats(sessionId),
+    sshProcessList: (sessionId: string): Promise<SSHProcessInfo[]> =>
+        app().SSHProcessList(sessionId),
+    sshKillProcess: (sessionId: string, pid: number): Promise<void> =>
+        app().SSHKillProcess(sessionId, pid),
 
     // SFTP
     listDir: (sessionId: string, dir: string): Promise<DirListing> => app().ListDir(sessionId, dir),
@@ -103,6 +108,10 @@ export const API = {
     removePaths: (sessionId: string, paths: string[]): Promise<void> => app().RemovePaths(sessionId, paths),
     rename: (sessionId: string, target: string, newName: string): Promise<void> =>
         app().RenamePath(sessionId, target, newName),
+    readRemoteFile: (sessionId: string, path: string): Promise<string> =>
+        app().ReadRemoteFile(sessionId, path),
+    writeRemoteFile: (sessionId: string, path: string, content: string): Promise<void> =>
+        app().WriteRemoteFile(sessionId, path, content),
 
     // 传输
     chooseLocalFiles: (): Promise<string[]> => app().ChooseLocalFiles(),

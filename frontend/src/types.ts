@@ -824,3 +824,12 @@ export interface SSHDashboardInfo {
     disks: SSHDiskInfo[]
     nets: SSHNetInfo[]
 }
+
+export interface SSHProcessInfo {
+    pid: number
+    user: string
+    cpu: number
+    mem: number
+    rss: number
+    command: string
+}

@@ -224,6 +224,8 @@ export function ReadLocalFile(arg1:string):Promise<string>;
 
 export function ReadLocalFileBase64(arg1:string):Promise<string>;
 
+export function ReadRemoteFile(arg1:string,arg2:string):Promise<string>;
+
 export function RedisClose(arg1:string):Promise<void>;
 
 export function RedisConnect(arg1:string):Promise<boolean>;
@@ -304,6 +306,10 @@ export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void
 
 export function SSHDashboardStats(arg1:string):Promise<main.SSHDashboardInfo>;
 
+export function SSHKillProcess(arg1:string,arg2:number):Promise<void>;
+
+export function SSHProcessList(arg1:string):Promise<Array<main.SSHProcessInfo>>;
+
 export function SaveGroup(arg1:main.ServerGroup):Promise<main.ServerGroup>;
 
 export function SaveMysqlFile(arg1:string):Promise<string>;
@@ -341,6 +347,8 @@ export function UploadData(arg1:string,arg2:string,arg3:string,arg4:string):Prom
 export function UploadPaths(arg1:string,arg2:string,arg3:Array<string>):Promise<void>;
 
 export function WriteLocalFile(arg1:string,arg2:string):Promise<void>;
+
+export function WriteRemoteFile(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function WsClose(arg1:string):Promise<void>;
 

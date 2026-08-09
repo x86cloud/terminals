@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
@@ -158,6 +160,14 @@ func (a *App) SSHDashboardStats(sessionID string) (*SSHDashboardInfo, error) {
 	return a.sessions.GetDashboardStats(sessionID)
 }
 
+func (a *App) SSHProcessList(sessionID string) ([]SSHProcessInfo, error) {
+	return a.sessions.GetProcessList(sessionID)
+}
+
+func (a *App) SSHKillProcess(sessionID string, pid int) error {
+	return a.sessions.KillProcess(sessionID, pid)
+}
+
 // ---------- SFTP ----------
 
 func (a *App) ListDir(sessionID string, dir string) (DirListing, error) {
@@ -242,6 +252,70 @@ func (a *App) RenamePath(sessionID string, target string, newName string) error 
 		return err
 	}
 	a.notifyDirChanged(sessionID, path.Dir(target))
+	return nil
+}
+
+// ReadRemoteFile 读取远程文件内容（限制最大 5MB 文本）
+func (a *App) ReadRemoteFile(sessionID string, remotePath string) (string, error) {
+	session, err := a.sessions.get(sessionID)
+	if err != nil {
+		return "", err
+	}
+	client, err := session.sftpConn()
+	if err != nil {
+		return "", err
+	}
+	remotePath = normalizeRemote(remotePath)
+
+	st, err := client.Stat(remotePath)
+	if err != nil {
+		return "", fmt.Errorf("无法获取文件状态: %w", err)
+	}
+	if st.IsDir() {
+		return "", errors.New("无法打开目录进行编辑")
+	}
+	if st.Size() > 5*1024*1024 {
+		return "", errors.New("文件过大 (>5MB)，暂不支持直接在线编辑")
+	}
+
+	f, err := client.Open(remotePath)
+	if err != nil {
+		return "", fmt.Errorf("无法打开远程文件: %w", err)
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(f)
+	if err != nil {
+		return "", fmt.Errorf("读取远程文件失败: %w", err)
+	}
+
+	return string(data), nil
+}
+
+// WriteRemoteFile 将内容保存写入远程文件
+func (a *App) WriteRemoteFile(sessionID string, remotePath string, content string) error {
+	session, err := a.sessions.get(sessionID)
+	if err != nil {
+		return err
+	}
+	client, err := session.sftpConn()
+	if err != nil {
+		return err
+	}
+	remotePath = normalizeRemote(remotePath)
+
+	f, err := client.OpenFile(remotePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
+	if err != nil {
+		return fmt.Errorf("无法打开远程文件进行写入: %w", err)
+	}
+	defer f.Close()
+
+	_, err = f.Write([]byte(content))
+	if err != nil {
+		return fmt.Errorf("保存远程文件失败: %w", err)
+	}
+
+	a.notifyDirChanged(sessionID, path.Dir(remotePath))
 	return nil
 }
 

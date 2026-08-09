@@ -87,10 +87,7 @@ export default function DashboardPanel({sessionId, active, onNotify}: Props) {
     return (
         <div className={d.dashboard}>
             <div className={d.toolbar}>
-                <div className={d.toolbarTitle}>
-                    <Icon name="chart" size={14}/>
-                    <span>系统仪表盘</span>
-                </div>
+                <span className={g.spacer}/>
                 <div className={d.toolbarActions}>
                     {lastUpdate && <span className={d.lastUpdate}>更新于 {lastUpdate}</span>}
                     <button

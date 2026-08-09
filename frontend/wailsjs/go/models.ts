@@ -414,6 +414,28 @@ export namespace main {
 	
 	
 	
+	export class SSHProcessInfo {
+	    pid: number;
+	    user: string;
+	    cpu: number;
+	    mem: number;
+	    rss: number;
+	    command: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHProcessInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.pid = source["pid"];
+	        this.user = source["user"];
+	        this.cpu = source["cpu"];
+	        this.mem = source["mem"];
+	        this.rss = source["rss"];
+	        this.command = source["command"];
+	    }
+	}
 	export class ServerConfig {
 	    id: string;
 	    name: string;

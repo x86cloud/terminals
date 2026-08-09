@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useRef, useState} from 'react'
 import TerminalView from './TerminalView'
 import FilePanel from './FilePanel'
 import DashboardPanel from './DashboardPanel'
+import ProcessPanel from './ProcessPanel'
 import Icon from './Icon'
 import {SessionInfo} from '../types'
 import w from './SessionWorkspace.module.less'
@@ -15,7 +16,7 @@ interface Props {
 }
 
 const MIN_PANEL = 320
-type PanelTab = 'files' | 'dashboard'
+type PanelTab = 'files' | 'dashboard' | 'process'
 
 export default function SessionWorkspace({session, active, nativeDrop, onPathChange, onNotify}: Props) {
     const [panelWidth, setPanelWidth] = useState(440)
@@ -84,6 +85,12 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
                             >
                                 <Icon name="chart" size={13}/> 系统仪表盘
                             </button>
+                            <button
+                                className={`${w.panelTab}${activeTab === 'process' ? ' ' + w.active : ''}`}
+                                onClick={() => setActiveTab('process')}
+                            >
+                                <Icon name="play" size={13}/> 进程管理
+                            </button>
                         </div>
 
                         <div className={w.panelContent}>
@@ -99,6 +106,11 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
                             <DashboardPanel
                                 sessionId={session.id}
                                 active={activeTab === 'dashboard'}
+                                onNotify={onNotify}
+                            />
+                            <ProcessPanel
+                                sessionId={session.id}
+                                active={activeTab === 'process'}
                                 onNotify={onNotify}
                             />
                         </div>

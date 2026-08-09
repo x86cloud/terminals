@@ -15,6 +15,10 @@ const baseTheme = EditorView.theme(
             color: '#1f2733',
             backgroundColor: '#ffffff',
             fontSize: '13px',
+            border: 'none',
+        },
+        '&.cm-focused': {
+            outline: 'none',
         },
         '.cm-content': {
             fontFamily:
@@ -32,6 +36,7 @@ const baseTheme = EditorView.theme(
             backgroundColor: '#ffffff',
             color: '#aab3c0',
             border: 'none',
+            borderRight: 'none',
         },
         '.cm-activeLine': {
             backgroundColor: 'rgba(28, 143, 196, 0.06)',

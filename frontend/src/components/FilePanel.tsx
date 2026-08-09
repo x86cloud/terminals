@@ -2,6 +2,7 @@ import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import Icon from './Icon'
 import ContextMenu, {closedMenu, MenuItem, MenuState} from './ContextMenu'
 import {ConfirmModal, ConfirmState, PromptModal, PromptState} from './Modal'
+import FileEditorModal from './FileEditorModal'
 import {API, subscribe} from '../api'
 import {FileItem} from '../types'
 import {bytesToBase64, errorMessage, formatSize, formatTime, parentRemote} from '../utils'
@@ -30,6 +31,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     const [prompt, setPrompt] = useState<PromptState>(emptyPrompt)
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
+    const [editFilePath, setEditFilePath] = useState('')
     const [dragOver, setDragOver] = useState(false)
     const lastIndexRef = useRef<number>(-1)
 
@@ -98,9 +100,14 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
         lastIndexRef.current = index
     }
 
+    const askEdit = (item: FileItem) => {
+        if (item.isDir) return
+        setEditFilePath(item.path)
+    }
+
     const open = (item: FileItem) => {
         if (item.isDir) void load(item.path)
-        else void download([item.path])
+        else askEdit(item)
     }
 
     const download = async (paths: string[]) => {
@@ -201,7 +208,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
     const itemMenu = (item: FileItem, targets: string[]): MenuItem[] => [
         ...(item.isDir
             ? [{key: 'open', label: '打开', icon: 'folder' as const, onClick: () => load(item.path)}]
-            : []),
+            : [{key: 'edit', label: '编辑文件', icon: 'edit' as const, disabled: targets.length > 1, onClick: () => askEdit(item)}]),
         {key: 'download', label: `下载${targets.length > 1 ? ` (${targets.length})` : ''}`, icon: 'download', onClick: () => download(targets)},
         {key: 'rename', label: '重命名', icon: 'edit', disabled: targets.length > 1, onClick: () => askRename(item)},
         {key: 'copy', label: '复制路径', icon: 'copy', onClick: () => copyText(targets.join('\n'))},
@@ -368,7 +375,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                 <span>{visible.length} 项</span>
                 {selectedItems.length > 0 && <span>已选 {selectedItems.length}</span>}
                 <span className={g.spacer}/>
-                <span className={fp.hint}>拖拽文件到此处上传 · 右键管理</span>
+                <span className={fp.hint}>双击/右键编辑文件 · 拖拽上传</span>
             </div>
 
             <div className={fp.dropHint}>
@@ -379,6 +386,13 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
             <ContextMenu state={menu} onClose={() => setMenu(closedMenu)}/>
             <PromptModal state={prompt} onCancel={() => setPrompt(emptyPrompt)}/>
             <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
+            <FileEditorModal
+                open={!!editFilePath}
+                sessionId={sessionId}
+                filePath={editFilePath}
+                onClose={() => setEditFilePath('')}
+                onNotify={onNotify}
+            />
         </section>
     )
 }

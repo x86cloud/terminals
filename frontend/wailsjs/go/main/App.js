@@ -446,6 +446,10 @@ export function ReadLocalFileBase64(arg1) {
   return window['go']['main']['App']['ReadLocalFileBase64'](arg1);
 }
 
+export function ReadRemoteFile(arg1, arg2) {
+  return window['go']['main']['App']['ReadRemoteFile'](arg1, arg2);
+}
+
 export function RedisClose(arg1) {
   return window['go']['main']['App']['RedisClose'](arg1);
 }
@@ -606,6 +610,14 @@ export function SSHDashboardStats(arg1) {
   return window['go']['main']['App']['SSHDashboardStats'](arg1);
 }
 
+export function SSHKillProcess(arg1, arg2) {
+  return window['go']['main']['App']['SSHKillProcess'](arg1, arg2);
+}
+
+export function SSHProcessList(arg1) {
+  return window['go']['main']['App']['SSHProcessList'](arg1);
+}
+
 export function SaveGroup(arg1) {
   return window['go']['main']['App']['SaveGroup'](arg1);
 }
@@ -680,6 +692,10 @@ export function UploadPaths(arg1, arg2, arg3) {
 
 export function WriteLocalFile(arg1, arg2) {
   return window['go']['main']['App']['WriteLocalFile'](arg1, arg2);
+}
+
+export function WriteRemoteFile(arg1, arg2, arg3) {
+  return window['go']['main']['App']['WriteRemoteFile'](arg1, arg2, arg3);
 }
 
 export function WsClose(arg1) {
