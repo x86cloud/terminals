@@ -28,19 +28,36 @@
 .panelHeader {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     background: @bg-2;
     border-bottom: 1px solid @border;
-    padding: 0 4px;
+    padding: 0;
     height: 36px;
     flex: none;
+}
+
+.panelTabsScroll {
+    display: flex;
+    align-items: center;
+    flex: 1;
     overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
     scrollbar-width: none;
+    padding: 0 4px;
 
     &::-webkit-scrollbar {
         display: none;
     }
+}
+
+.panelHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 6px;
+    padding-left: 6px;
+    flex-shrink: 0;
 }
 
 .panelTab {
@@ -92,21 +109,35 @@
     }
 }
 
-.panelToggle {
+.panelControls {
     position: absolute;
     right: @space-md;
     top: @space-md;
     display: flex;
-    padding: 5px;
-    background: rgba(255, 255, 255, .9);
+    align-items: center;
+    gap: 2px;
+    padding: 3px;
+    background: @bg-elev;
     border: 1px solid @border;
     border-radius: @radius-md;
-    color: @text-dim;
-    opacity: .5;
-    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    z-index: 20;
 
-    &:hover {
-        opacity: 1;
-        color: @text;
+    button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 5px;
+        background: transparent;
+        border: none;
+        border-radius: @radius-sm;
+        color: @text-dim;
+        cursor: pointer;
+        transition: all 0.15s;
+
+        &:hover {
+            background: @bg-2;
+            color: @text;
+        }
     }
 }
