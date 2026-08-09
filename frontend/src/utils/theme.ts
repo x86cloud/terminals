@@ -11,6 +11,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 const GLOBAL_FONT_MAP: Record<string, string> = {
     system: '"Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif',
+    nunito: '"Nunito", "Microsoft YaHei UI", sans-serif',
     msyh: '"Microsoft YaHei UI", sans-serif',
     segoe: '"Segoe UI", "Microsoft YaHei UI", sans-serif',
     inter: '"Inter", system-ui, -apple-system, sans-serif',
@@ -54,13 +55,4 @@ export function setCachedSettings(settings: AppSettings) {
     } catch {
         // ignore
     }
-}
-
-// 初始化加载时立刻应用本地缓存字体与主题，防止界面闪烁
-try {
-    const cached = getCachedSettings()
-    applyThemeMode(cached.themeMode)
-    applyGlobalFont(cached.globalFontFamily)
-} catch {
-    // ignore
 }

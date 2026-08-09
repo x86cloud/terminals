@@ -4,6 +4,14 @@
  * 组件样式已全部迁移到各自的 .module.less（CSS Modules）
  * ============================================================ */
 
+@font-face {
+    font-family: 'Nunito';
+    src: url('../assets/fonts/nunito-v16-latin-regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
 :root, [data-theme='light'] {
     --bg: #eef1f6;
     --bg-1: #ffffff;
