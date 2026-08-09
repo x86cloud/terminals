@@ -490,6 +490,9 @@ func (s *Store) SaveSettings(settings AppSettings) (AppSettings, error) {
 	if settings.DbDefaultLimit == "" {
 		settings.DbDefaultLimit = "50"
 	}
+	if settings.GlobalFontFamily == "" {
+		settings.GlobalFontFamily = "system"
+	}
 	s.settings = settings
 	if err := s.persist(); err != nil {
 		return settings, err

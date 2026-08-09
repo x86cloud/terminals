@@ -55,3 +55,12 @@ export function setCachedSettings(settings: AppSettings) {
         // ignore
     }
 }
+
+// 初始化加载时立刻应用本地缓存字体与主题，防止界面闪烁
+try {
+    const cached = getCachedSettings()
+    applyThemeMode(cached.themeMode)
+    applyGlobalFont(cached.globalFontFamily)
+} catch {
+    // ignore
+}
