@@ -30,16 +30,24 @@
     align-items: center;
     background: @bg-2;
     border-bottom: 1px solid @border;
-    padding: 0 6px;
+    padding: 0 4px;
     height: 36px;
     flex: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
 }
 
 .panelTab {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 0 12px;
+    gap: 4px;
+    padding: 0 8px;
     height: 36px;
     background: transparent;
     border: none;
@@ -48,6 +56,8 @@
     font-size: 12px;
     font-weight: 500;
     cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
     transition: all 0.2s ease;
 
     &:hover {

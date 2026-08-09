@@ -12,24 +12,16 @@ interface Props {
     onSave: (newSettings: AppSettings) => void
 }
 
-type SettingsTab = 'general' | 'terminal' | 'appearance' | 'about'
+type SettingsTab = 'appearance' | 'about'
 
 export default function SettingsModal({open, settings, onClose, onSave}: Props) {
-    const [activeTab, setActiveTab] = useState<SettingsTab>('general')
-    const [autoConnect, setAutoConnect] = useState(false)
-    const [fontFamily, setFontFamily] = useState('Consolas')
-    const [fontSize, setFontSize] = useState('13')
+    const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
     const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('light')
-    const [dbDefaultLimit, setDbDefaultLimit] = useState('50')
     const [globalFontFamily, setGlobalFontFamily] = useState('system')
 
     useEffect(() => {
         if (open && settings) {
-            setAutoConnect(!!settings.autoConnect)
-            setFontFamily(settings.fontFamily || 'Consolas')
-            setFontSize(settings.fontSize || '13')
             setThemeMode(settings.themeMode || 'light')
-            setDbDefaultLimit(settings.dbDefaultLimit || '50')
             setGlobalFontFamily(settings.globalFontFamily || 'system')
         }
     }, [open, settings])
@@ -54,11 +46,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
 
     const handleSave = () => {
         onSave({
+            ...settings,
             themeMode,
-            fontFamily,
-            fontSize,
-            autoConnect,
-            dbDefaultLimit,
             globalFontFamily,
         })
     }
@@ -80,18 +69,6 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                     {/* 左侧分类导航 */}
                     <div className={s.navSidebar}>
                         <button
-                            className={`${s.navItem}${activeTab === 'general' ? ' ' + s.active : ''}`}
-                            onClick={() => setActiveTab('general')}
-                        >
-                            <Icon name="server" size={14}/> 常规设置
-                        </button>
-                        <button
-                            className={`${s.navItem}${activeTab === 'terminal' ? ' ' + s.active : ''}`}
-                            onClick={() => setActiveTab('terminal')}
-                        >
-                            <Icon name="terminal" size={14}/> 终端配置
-                        </button>
-                        <button
                             className={`${s.navItem}${activeTab === 'appearance' ? ' ' + s.active : ''}`}
                             onClick={() => setActiveTab('appearance')}
                         >
@@ -107,77 +84,6 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
 
                     {/* 右侧配置面板 */}
                     <div className={s.contentPanel}>
-                        {activeTab === 'general' && (
-                            <div>
-                                <div className={s.sectionTitle}>常规设置</div>
-                                <div className={s.sectionDesc}>管理客户端启动、全局会话与基础行数为默认项。</div>
-
-                                <div className={s.card}>
-                                    <div className={s.formRow}>
-                                        <div className={s.labelInfo}>
-                                            <span className={s.rowTitle}>启动时自动恢复会话</span>
-                                            <span className={s.rowSub}>开启后将在应用打开时尝试恢复上一次未关闭的 SSH / 数据库连接</span>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            checked={autoConnect}
-                                            onChange={(e) => setAutoConnect(e.target.checked)}
-                                        />
-                                    </div>
-
-                                    <div className={s.formRow}>
-                                        <div className={s.labelInfo}>
-                                            <span className={s.rowTitle}>默认数据库查询限制</span>
-                                            <span className={s.rowSub}>MySQL / SQLite 单页默认读取行数</span>
-                                        </div>
-                                        <select
-                                            value={dbDefaultLimit}
-                                            onChange={(e) => setDbDefaultLimit(e.target.value)}
-                                        >
-                                            <option value="20">20 行/页</option>
-                                            <option value="50">50 行/页</option>
-                                            <option value="100">100 行/页</option>
-                                            <option value="200">200 行/页</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {activeTab === 'terminal' && (
-                            <div>
-                                <div className={s.sectionTitle}>终端配置</div>
-                                <div className={s.sectionDesc}>自定义 SSH 终端字体、字号与光标渲染逻辑。</div>
-
-                                <div className={s.card}>
-                                    <div className={s.formRow}>
-                                        <div className={s.labelInfo}>
-                                            <span className={s.rowTitle}>终端字体 (Font Family)</span>
-                                            <span className={s.rowSub}>用于 SSH / Shell 命令行界面的等宽字体</span>
-                                        </div>
-                                        <select value={fontFamily} onChange={(e) => setFontFamily(e.target.value)}>
-                                            <option value="Consolas">Consolas</option>
-                                            <option value="JetBrains Mono">JetBrains Mono</option>
-                                            <option value="Fira Code">Fira Code</option>
-                                            <option value="Courier New">Courier New</option>
-                                        </select>
-                                    </div>
-
-                                    <div className={s.formRow}>
-                                        <div className={s.labelInfo}>
-                                            <span className={s.rowTitle}>终端字号 (Font Size)</span>
-                                            <span className={s.rowSub}>命令行文字大小（px）</span>
-                                        </div>
-                                        <select value={fontSize} onChange={(e) => setFontSize(e.target.value)}>
-                                            <option value="12">12 px</option>
-                                            <option value="13">13 px (默认)</option>
-                                            <option value="14">14 px</option>
-                                            <option value="16">16 px</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
 
                         {activeTab === 'appearance' && (
                             <div>
