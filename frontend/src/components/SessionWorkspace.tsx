@@ -70,22 +70,13 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
         <div ref={rootRef} className={w.workspace} style={{ display: active ? 'flex' : 'none' }}>
             <div className={w.terminalPane} style={{ display: showPanel && isMaximized ? 'none' : 'block' }}>
                 <TerminalView sessionId={session.id} active={active} />
-                <div className={w.panelControls}>
-                    <button
-                        title={showPanel ? '隐藏侧栏面板' : '显示侧栏面板'}
-                        onClick={toggleShowPanel}
-                    >
-                        <Icon name="panel" size={14} />
-                    </button>
-                    {showPanel && (
-                        <button
-                            title={isMaximized ? '还原侧栏面板' : '侧栏面板占满'}
-                            onClick={toggleMaximized}
-                        >
-                            <Icon name={isMaximized ? 'minimize' : 'maximize'} size={14} />
-                        </button>
-                    )}
-                </div>
+                <button
+                    className={w.panelToggle}
+                    title={showPanel ? '隐藏侧栏面板' : '显示侧栏面板'}
+                    onClick={toggleShowPanel}
+                >
+                    <Icon name="panel" size={15} />
+                </button>
             </div>
 
             {showPanel && (
