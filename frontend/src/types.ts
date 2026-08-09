@@ -778,3 +778,49 @@ export interface SqliteSchema {
     tables: SqliteSchemaTable[]
     foreignKeys: SqliteForeignKey[]
 }
+
+export interface SSHDiskInfo {
+    mount: string
+    filesystem: string
+    fsType: string
+    total: number
+    used: number
+    available: number
+    usagePercent: number
+    isVirtual: boolean
+}
+
+export interface SSHCPUInfo {
+    usagePercent: number
+    cores: number
+    loadAvg: number[]
+}
+
+export interface SSHMemInfo {
+    total: number
+    used: number
+    free: number
+    available: number
+    usagePercent: number
+    swapTotal: number
+    swapUsed: number
+}
+
+export interface SSHNetInfo {
+    name: string
+    ip: string
+    rxBytes: number
+    txBytes: number
+    isLoopback: boolean
+    isVirtual: boolean
+}
+
+export interface SSHDashboardInfo {
+    hostname: string
+    os: string
+    uptime: string
+    cpu: SSHCPUInfo
+    mem: SSHMemInfo
+    disks: SSHDiskInfo[]
+    nets: SSHNetInfo[]
+}

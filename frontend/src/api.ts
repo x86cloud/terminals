@@ -48,6 +48,7 @@ import type {
     SqliteInfo,
     SqliteSchema,
     ServerGroup,
+    SSHDashboardInfo,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -91,6 +92,8 @@ export const API = {
     sendInput: (sessionId: string, data: string): Promise<void> => app().SendInput(sessionId, data),
     resize: (sessionId: string, cols: number, rows: number): Promise<void> =>
         app().ResizeTerminal(sessionId, cols, rows),
+    sshDashboardStats: (sessionId: string): Promise<SSHDashboardInfo> =>
+        app().SSHDashboardStats(sessionId),
 
     // SFTP
     listDir: (sessionId: string, dir: string): Promise<DirListing> => app().ListDir(sessionId, dir),

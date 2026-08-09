@@ -602,6 +602,10 @@ export function ResizeTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
 }
 
+export function SSHDashboardStats(arg1) {
+  return window['go']['main']['App']['SSHDashboardStats'](arg1);
+}
+
 export function SaveGroup(arg1) {
   return window['go']['main']['App']['SaveGroup'](arg1);
 }

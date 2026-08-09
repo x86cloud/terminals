@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import TerminalView from './TerminalView'
 import FilePanel from './FilePanel'
+import DashboardPanel from './DashboardPanel'
 import Icon from './Icon'
 import {SessionInfo} from '../types'
 import w from './SessionWorkspace.module.less'
@@ -14,10 +15,12 @@ interface Props {
 }
 
 const MIN_PANEL = 320
+type PanelTab = 'files' | 'dashboard'
 
 export default function SessionWorkspace({session, active, nativeDrop, onPathChange, onNotify}: Props) {
     const [panelWidth, setPanelWidth] = useState(440)
     const [showPanel, setShowPanel] = useState(true)
+    const [activeTab, setActiveTab] = useState<PanelTab>('files')
     const rootRef = useRef<HTMLDivElement>(null)
     const draggingRef = useRef(false)
 
@@ -51,7 +54,7 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
                 <TerminalView sessionId={session.id} active={active}/>
                 <button
                     className={w.panelToggle}
-                    title={showPanel ? '隐藏文件管理器' : '显示文件管理器'}
+                    title={showPanel ? '隐藏侧栏面板' : '显示侧栏面板'}
                     onClick={() => setShowPanel((v) => !v)}
                 >
                     <Icon name="panel" size={15}/>
@@ -68,13 +71,37 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
                         }}
                     />
                     <div className={w.filePane} style={{width: panelWidth}}>
-                        <FilePanel
-                            sessionId={session.id}
-                            homeDir={session.homeDir}
-                            nativeDrop={nativeDrop}
-                            onPathChange={handlePath}
-                            onNotify={onNotify}
-                        />
+                        <div className={w.panelHeader}>
+                            <button
+                                className={`${w.panelTab}${activeTab === 'files' ? ' ' + w.active : ''}`}
+                                onClick={() => setActiveTab('files')}
+                            >
+                                <Icon name="folder" size={13}/> 文件管理
+                            </button>
+                            <button
+                                className={`${w.panelTab}${activeTab === 'dashboard' ? ' ' + w.active : ''}`}
+                                onClick={() => setActiveTab('dashboard')}
+                            >
+                                <Icon name="chart" size={13}/> 系统仪表盘
+                            </button>
+                        </div>
+
+                        <div className={w.panelContent}>
+                            <div style={{display: activeTab === 'files' ? 'flex' : 'none', flexDirection: 'column', flex: 1, height: '100%', width: '100%', minHeight: 0}}>
+                                <FilePanel
+                                    sessionId={session.id}
+                                    homeDir={session.homeDir}
+                                    nativeDrop={nativeDrop}
+                                    onPathChange={handlePath}
+                                    onNotify={onNotify}
+                                />
+                            </div>
+                            <DashboardPanel
+                                sessionId={session.id}
+                                active={activeTab === 'dashboard'}
+                                onNotify={onNotify}
+                            />
+                        </div>
                     </div>
                 </>
             )}

@@ -154,6 +154,10 @@ func (a *App) ResizeTerminal(sessionID string, cols int, rows int) error {
 	return a.sessions.Resize(sessionID, cols, rows)
 }
 
+func (a *App) SSHDashboardStats(sessionID string) (*SSHDashboardInfo, error) {
+	return a.sessions.GetDashboardStats(sessionID)
+}
+
 // ---------- SFTP ----------
 
 func (a *App) ListDir(sessionID string, dir string) (DirListing, error) {

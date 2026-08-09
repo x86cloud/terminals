@@ -8,7 +8,9 @@
     display: flex;
     flex-direction: column;
     width: 100%;
-    .fill();
+    height: 100%;
+    flex: 1;
+    min-height: 0;
 }
 
 .fileToolbar,
@@ -81,6 +83,7 @@
 
 .fileList {
     flex: 1;
+    min-height: 0;
     overflow: auto;
     .fill();
 }
@@ -161,8 +164,10 @@
     gap: 12px;
     padding: 5px 10px;
     border-top: 1px solid @border;
+    background: @bg-1;
     color: @text-dim;
     font-size: 11.5px;
+    flex: none;
 
     .hint {
         opacity: .8;

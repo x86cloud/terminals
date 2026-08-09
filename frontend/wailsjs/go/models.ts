@@ -281,6 +281,139 @@ export namespace main {
 	        this.options = source["options"];
 	    }
 	}
+	export class SSHCPUInfo {
+	    usagePercent: number;
+	    cores: number;
+	    loadAvg: number[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHCPUInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.usagePercent = source["usagePercent"];
+	        this.cores = source["cores"];
+	        this.loadAvg = source["loadAvg"];
+	    }
+	}
+	export class SSHNetInfo {
+	    name: string;
+	    ip: string;
+	    rxBytes: number;
+	    txBytes: number;
+	    isLoopback: boolean;
+	    isVirtual: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHNetInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.ip = source["ip"];
+	        this.rxBytes = source["rxBytes"];
+	        this.txBytes = source["txBytes"];
+	        this.isLoopback = source["isLoopback"];
+	        this.isVirtual = source["isVirtual"];
+	    }
+	}
+	export class SSHDiskInfo {
+	    mount: string;
+	    filesystem: string;
+	    fsType: string;
+	    total: number;
+	    used: number;
+	    available: number;
+	    usagePercent: number;
+	    isVirtual: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHDiskInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.mount = source["mount"];
+	        this.filesystem = source["filesystem"];
+	        this.fsType = source["fsType"];
+	        this.total = source["total"];
+	        this.used = source["used"];
+	        this.available = source["available"];
+	        this.usagePercent = source["usagePercent"];
+	        this.isVirtual = source["isVirtual"];
+	    }
+	}
+	export class SSHMemInfo {
+	    total: number;
+	    used: number;
+	    free: number;
+	    available: number;
+	    usagePercent: number;
+	    swapTotal: number;
+	    swapUsed: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHMemInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.total = source["total"];
+	        this.used = source["used"];
+	        this.free = source["free"];
+	        this.available = source["available"];
+	        this.usagePercent = source["usagePercent"];
+	        this.swapTotal = source["swapTotal"];
+	        this.swapUsed = source["swapUsed"];
+	    }
+	}
+	export class SSHDashboardInfo {
+	    hostname: string;
+	    os: string;
+	    uptime: string;
+	    cpu: SSHCPUInfo;
+	    mem: SSHMemInfo;
+	    disks: SSHDiskInfo[];
+	    nets: SSHNetInfo[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHDashboardInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hostname = source["hostname"];
+	        this.os = source["os"];
+	        this.uptime = source["uptime"];
+	        this.cpu = this.convertValues(source["cpu"], SSHCPUInfo);
+	        this.mem = this.convertValues(source["mem"], SSHMemInfo);
+	        this.disks = this.convertValues(source["disks"], SSHDiskInfo);
+	        this.nets = this.convertValues(source["nets"], SSHNetInfo);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
+	
 	export class ServerConfig {
 	    id: string;
 	    name: string;

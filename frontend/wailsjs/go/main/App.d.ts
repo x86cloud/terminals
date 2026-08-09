@@ -302,6 +302,8 @@ export function RenamePath(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function SSHDashboardStats(arg1:string):Promise<main.SSHDashboardInfo>;
+
 export function SaveGroup(arg1:main.ServerGroup):Promise<main.ServerGroup>;
 
 export function SaveMysqlFile(arg1:string):Promise<string>;
