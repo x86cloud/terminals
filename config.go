@@ -299,20 +299,22 @@ func (s *secretBox) decrypt(value string) string {
 
 // Store 负责服务器列表与分组的持久化。
 type AppSettings struct {
-	ThemeMode      string `json:"themeMode"`
-	FontFamily     string `json:"fontFamily"`
-	FontSize       string `json:"fontSize"`
-	AutoConnect    bool   `json:"autoConnect"`
-	DbDefaultLimit string `json:"dbDefaultLimit"`
+	ThemeMode        string `json:"themeMode"`
+	FontFamily       string `json:"fontFamily"`
+	FontSize         string `json:"fontSize"`
+	AutoConnect      bool   `json:"autoConnect"`
+	DbDefaultLimit   string `json:"dbDefaultLimit"`
+	GlobalFontFamily string `json:"globalFontFamily"`
 }
 
 func defaultAppSettings() AppSettings {
 	return AppSettings{
-		ThemeMode:      "light",
-		FontFamily:     "Consolas",
-		FontSize:       "13",
-		AutoConnect:    false,
-		DbDefaultLimit: "50",
+		ThemeMode:        "light",
+		FontFamily:       "Consolas",
+		FontSize:         "13",
+		AutoConnect:      false,
+		DbDefaultLimit:   "50",
+		GlobalFontFamily: "system",
 	}
 }
 

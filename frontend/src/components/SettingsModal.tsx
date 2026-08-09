@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react'
 import Icon from './Icon'
 import {AppSettings} from '../types'
-import {applyThemeMode} from '../utils/theme'
+import {applyThemeMode, applyGlobalFont} from '../utils/theme'
 import g from '../styles/global.module.less'
 import s from './SettingsModal.module.less'
 
@@ -21,6 +21,7 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
     const [fontSize, setFontSize] = useState('13')
     const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('light')
     const [dbDefaultLimit, setDbDefaultLimit] = useState('50')
+    const [globalFontFamily, setGlobalFontFamily] = useState('system')
 
     useEffect(() => {
         if (open && settings) {
@@ -29,6 +30,7 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             setFontSize(settings.fontSize || '13')
             setThemeMode(settings.themeMode || 'light')
             setDbDefaultLimit(settings.dbDefaultLimit || '50')
+            setGlobalFontFamily(settings.globalFontFamily || 'system')
         }
     }, [open, settings])
 
@@ -39,8 +41,14 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
         applyThemeMode(mode)
     }
 
+    const handleGlobalFontChange = (fontKey: string) => {
+        setGlobalFontFamily(fontKey)
+        applyGlobalFont(fontKey)
+    }
+
     const handleCancel = () => {
         applyThemeMode(settings.themeMode || 'light')
+        applyGlobalFont(settings.globalFontFamily || 'system')
         onClose()
     }
 
@@ -51,6 +59,7 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             fontSize,
             autoConnect,
             dbDefaultLimit,
+            globalFontFamily,
         })
     }
 
@@ -188,6 +197,24 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                                             <option value="light">浅色模式 (Light Default)</option>
                                             <option value="dark">暗色模式 (Dark)</option>
                                             <option value="system">跟随系统 (System)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className={s.formRow}>
+                                        <div className={s.labelInfo}>
+                                            <span className={s.rowTitle}>全局界面字体 (Global Font)</span>
+                                            <span className={s.rowSub}>应用整个界面（侧栏、表格、对话框）全局字体风格</span>
+                                        </div>
+                                        <select
+                                            value={globalFontFamily}
+                                            onChange={(e) => handleGlobalFontChange(e.target.value)}
+                                        >
+                                            <option value="system">系统默认 (System Default)</option>
+                                            <option value="msyh">微软雅黑 (Microsoft YaHei)</option>
+                                            <option value="segoe">Segoe UI (Windows)</option>
+                                            <option value="inter">Inter / San Francisco</option>
+                                            <option value="harmony">HarmonyOS Sans (鸿蒙)</option>
+                                            <option value="mono">程序员极简风格 (Monospace)</option>
                                         </select>
                                     </div>
                                 </div>

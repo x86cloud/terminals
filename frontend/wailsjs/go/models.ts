@@ -110,6 +110,7 @@ export namespace main {
 	    fontSize: string;
 	    autoConnect: boolean;
 	    dbDefaultLimit: string;
+	    globalFontFamily: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -122,6 +123,7 @@ export namespace main {
 	        this.fontSize = source["fontSize"];
 	        this.autoConnect = source["autoConnect"];
 	        this.dbDefaultLimit = source["dbDefaultLimit"];
+	        this.globalFontFamily = source["globalFontFamily"];
 	    }
 	}
 	export class FileItem {

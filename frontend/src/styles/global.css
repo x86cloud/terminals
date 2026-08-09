@@ -22,9 +22,13 @@
     --warn: #c97a1a;
     --bg-elev: #f5f7fa;
 
-    font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-family: var(--font-family, "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif);
     font-size: 13px;
     color: var(--text);
+}
+
+body {
+    font-family: var(--font-family, "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif);
 }
 
 [data-theme='dark'] {

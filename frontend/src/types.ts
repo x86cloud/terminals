@@ -856,4 +856,5 @@ export interface AppSettings {
     fontSize: string
     autoConnect: boolean
     dbDefaultLimit: string
+    globalFontFamily?: string
 }

@@ -21,7 +21,7 @@ import {
     AppSettings,
 } from './types'
 import {errorMessage} from './utils'
-import {applyThemeMode, getCachedSettings, setCachedSettings} from './utils/theme'
+import {applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings} from './utils/theme'
 import g from './styles/global.module.less'
 import a from './components/App.module.less'
 
@@ -254,6 +254,7 @@ export default function App() {
                 setSettings(s)
                 setCachedSettings(s)
                 applyThemeMode(s.themeMode)
+                applyGlobalFont(s.globalFontFamily)
             }
         } catch {
             // fallback
@@ -266,6 +267,7 @@ export default function App() {
             setSettings(saved)
             setCachedSettings(saved)
             applyThemeMode(saved.themeMode)
+            applyGlobalFont(saved.globalFontFamily)
             notify('设置已保存并全域应用', 'info')
         } catch (err) {
             notify(errorMessage(err), 'error')
@@ -283,6 +285,7 @@ export default function App() {
 
     useEffect(() => {
         applyThemeMode(settings.themeMode)
+        applyGlobalFont(settings.globalFontFamily)
         const media = window.matchMedia('(prefers-color-scheme: dark)')
         const listener = () => {
             if (settings.themeMode === 'system') {
@@ -297,7 +300,7 @@ export default function App() {
                 media.removeEventListener('change', listener)
             }
         }
-    }, [settings.themeMode])
+    }, [settings.themeMode, settings.globalFontFamily])
 
     useEffect(() => {
         const offTransfer = subscribe('transfer:update', (t: Transfer) => {
