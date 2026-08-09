@@ -4,7 +4,7 @@
  * 组件样式已全部迁移到各自的 .module.less（CSS Modules）
  * ============================================================ */
 
-:root {
+:root, [data-theme='light'] {
     --bg: #eef1f6;
     --bg-1: #ffffff;
     --bg-2: #f3f6fa;
@@ -16,12 +16,35 @@
     --accent: #1c8fc4;
     --accent-dim: #1577a6;
     --accent-dim-2: rgba(28, 143, 196, 0.12);
+    --accent-soft: rgba(28, 143, 196, 0.10);
     --danger: #d6453f;
     --ok: #2f9e44;
+    --warn: #c97a1a;
     --bg-elev: #f5f7fa;
 
     font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif;
     font-size: 13px;
+    color: var(--text);
+}
+
+[data-theme='dark'] {
+    --bg: #141619;
+    --bg-1: #1e2025;
+    --bg-2: #262930;
+    --bg-3: #30343d;
+    --border: #383c47;
+    --text: #e1e4ea;
+    --text-dim: #9299a6;
+    --text-faint: #606673;
+    --accent: #29b6f6;
+    --accent-dim: #0288d1;
+    --accent-dim-2: rgba(41, 182, 246, 0.15);
+    --accent-soft: rgba(41, 182, 246, 0.15);
+    --danger: #ef5350;
+    --ok: #66bb6a;
+    --warn: #ffa726;
+    --bg-elev: #21242b;
+
     color: var(--text);
 }
 

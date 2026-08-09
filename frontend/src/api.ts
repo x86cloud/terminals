@@ -52,6 +52,7 @@ import type {
     SSHProcessInfo,
     SSHServiceInfo,
     SSHCronItem,
+    AppSettings,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -72,6 +73,10 @@ function app(): any {
 }
 
 export const API = {
+    // 设置持久化
+    getAppSettings: (): Promise<AppSettings> => app().GetAppSettings(),
+    saveAppSettings: (settings: AppSettings): Promise<AppSettings> => app().SaveAppSettings(settings),
+
     // 服务器配置
     listServers: (): Promise<ServerConfig[]> => app().ListServers(),
     saveServer: (cfg: ServerConfig): Promise<ServerConfig> => app().SaveServer(cfg),

@@ -33,6 +33,7 @@ interface Props {
     onMoveServer: (serverId: string, groupId: string) => void
     onOpenApi: () => void
     onOpenDevTools: () => void
+    onOpenSettings: () => void
     onFocusSession: (id: string, kind: ConnType) => void
 }
 
@@ -62,6 +63,7 @@ export default function Sidebar({
                                     onMoveServer,
                                     onOpenApi,
                                     onOpenDevTools,
+                                    onOpenSettings,
                                     onFocusSession,
                                 }: Props) {
     const [keyword, setKeyword] = useState('')
@@ -474,6 +476,10 @@ export default function Sidebar({
                 <button className={s.toolItem} onClick={onOpenApi}>
                     <Icon name="link" size={15}/>
                     <span>API 调试</span>
+                </button>
+                <button className={s.toolItem} onClick={onOpenSettings}>
+                    <Icon name="settings" size={15}/>
+                    <span>设置</span>
                 </button>
             </div>
 

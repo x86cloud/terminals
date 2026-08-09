@@ -849,3 +849,11 @@ export interface SSHCronItem {
     enabled: boolean
     comment: string
 }
+
+export interface AppSettings {
+    themeMode: 'light' | 'dark' | 'system'
+    fontFamily: string
+    fontSize: string
+    autoConnect: boolean
+    dbDefaultLimit: string
+}

@@ -50,6 +50,10 @@ export function DownloadTo(arg1, arg2, arg3) {
   return window['go']['main']['App']['DownloadTo'](arg1, arg2, arg3);
 }
 
+export function GetAppSettings() {
+  return window['go']['main']['App']['GetAppSettings']();
+}
+
 export function HomeDir(arg1) {
   return window['go']['main']['App']['HomeDir'](arg1);
 }
@@ -640,6 +644,10 @@ export function SSHServiceList(arg1) {
 
 export function SSHServiceLogs(arg1, arg2) {
   return window['go']['main']['App']['SSHServiceLogs'](arg1, arg2);
+}
+
+export function SaveAppSettings(arg1) {
+  return window['go']['main']['App']['SaveAppSettings'](arg1);
 }
 
 export function SaveGroup(arg1) {

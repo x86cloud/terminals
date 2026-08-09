@@ -26,6 +26,8 @@ export function DownloadPaths(arg1:string,arg2:Array<string>):Promise<void>;
 
 export function DownloadTo(arg1:string,arg2:Array<string>,arg3:string):Promise<void>;
 
+export function GetAppSettings():Promise<main.AppSettings>;
+
 export function HomeDir(arg1:string):Promise<string>;
 
 export function ListDir(arg1:string,arg2:string):Promise<main.DirListing>;
@@ -321,6 +323,8 @@ export function SSHSaveCronList(arg1:string,arg2:Array<main.SSHCronItem>):Promis
 export function SSHServiceList(arg1:string):Promise<Array<main.SSHServiceInfo>>;
 
 export function SSHServiceLogs(arg1:string,arg2:string):Promise<string>;
+
+export function SaveAppSettings(arg1:main.AppSettings):Promise<main.AppSettings>;
 
 export function SaveGroup(arg1:main.ServerGroup):Promise<main.ServerGroup>;
 

@@ -1,0 +1,222 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.modal {
+    width: 780px;
+    height: 540px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: @text;
+    user-select: none;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    flex: none;
+    font-weight: 600;
+    font-size: 14px;
+
+    .title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: @text;
+    }
+}
+
+.body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.navSidebar {
+    width: 180px;
+    background: @bg-2;
+    border-right: 1px solid @border;
+    padding: 12px 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: none;
+
+    .navItem {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-radius: @radius-md;
+        border: none;
+        background: transparent;
+        color: @text-dim;
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: left;
+        width: 100%;
+
+        &:hover {
+            background: @bg-3;
+            color: @text;
+        }
+
+        &.active {
+            background: @bg-1;
+            color: @accent;
+            font-weight: 600;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+        }
+    }
+}
+
+.contentPanel {
+    flex: 1;
+    min-width: 0;
+    padding: 20px 24px;
+    overflow-y: auto;
+    background: @bg-1;
+}
+
+.sectionTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: @text;
+    margin-bottom: 6px;
+}
+
+.sectionDesc {
+    font-size: 12px;
+    color: @text-dim;
+    margin-bottom: 16px;
+}
+
+.card {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.formRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .labelInfo {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        .rowTitle {
+            font-size: 13px;
+            font-weight: 500;
+            color: @text;
+        }
+
+        .rowSub {
+            font-size: 11.5px;
+            color: @text-dim;
+        }
+    }
+
+    input[type='text'], select {
+        width: 200px;
+        background: @bg-1;
+        border: 1px solid @border;
+        border-radius: 4px;
+        padding: 5px 8px;
+        color: @text;
+        font-size: 12.5px;
+        outline: none;
+
+        &:focus {
+            border-color: @accent;
+        }
+    }
+}
+
+.aboutBox {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px 20px;
+    text-align: center;
+    gap: 10px;
+
+    .appName {
+        font-size: 18px;
+        font-weight: 700;
+        color: @text;
+    }
+
+    .appVer {
+        font-size: 12px;
+        padding: 2px 8px;
+        background: @accent-soft;
+        color: @accent;
+        border-radius: 10px;
+        font-weight: 600;
+    }
+
+    .appDesc {
+        font-size: 12.5px;
+        color: @text-dim;
+        max-width: 360px;
+        line-height: 1.5;
+        margin-top: 6px;
+    }
+}
+
+.footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 12px 18px;
+    background: @bg-2;
+    border-top: 1px solid @border;
+    flex: none;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

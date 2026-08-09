@@ -83,6 +83,22 @@ func (a *App) DeleteServer(id string) error {
 	return a.store.Delete(id)
 }
 
+// ---------- 设置持久化 ----------
+
+func (a *App) GetAppSettings() AppSettings {
+	if a.store == nil {
+		return defaultAppSettings()
+	}
+	return a.store.GetSettings()
+}
+
+func (a *App) SaveAppSettings(settings AppSettings) (AppSettings, error) {
+	if a.store == nil {
+		return settings, errors.New("配置存储不可用")
+	}
+	return a.store.SaveSettings(settings)
+}
+
 // ---------- 分组管理 ----------
 
 func (a *App) ListGroups() []ServerGroup {

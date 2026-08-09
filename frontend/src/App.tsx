@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import Sidebar from './components/Sidebar'
 import ServerDialog from './components/ServerDialog'
+import SettingsModal from './components/SettingsModal'
 import {ConfirmModal, ConfirmState} from './components/Modal'
 import SessionTabs from './components/app/SessionTabs'
 import Stage from './components/app/Stage'
@@ -17,8 +18,10 @@ import {
     MongoSessionInfo,
     SqliteSessionInfo,
     ConnType,
+    AppSettings,
 } from './types'
 import {errorMessage} from './utils'
+import {applyThemeMode, getCachedSettings, setCachedSettings} from './utils/theme'
 import g from './styles/global.module.less'
 import a from './components/App.module.less'
 
@@ -152,11 +155,13 @@ export default function App() {
     const [sqliteSessions, setSqliteSessions] = useState<SqliteSessionInfo[]>([])
     const [activeSqliteId, setActiveSqliteId] = useState<string | null>(null)
 
-    // ---- 工具面板 (API 调试 / 开发工具集) ----
+    // ---- 工具面板 (API 调试 / 开发工具集 / 设置) ----
     const [apiOpen, setApiOpen] = useState(false)
     const [apiActive, setApiActive] = useState(false)
     const [devToolsOpen, setDevToolsOpen] = useState(false)
     const [devToolsActive, setDevToolsActive] = useState(false)
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [settings, setSettings] = useState<AppSettings>(getCachedSettings())
 
     // ---- 全局 UI 状态 ----
     const [transfers, setTransfers] = useState<Transfer[]>([])
@@ -242,13 +247,57 @@ export default function App() {
         }
     }, [reloadServers, notify])
 
+    const reloadSettings = useCallback(async () => {
+        try {
+            const s = await API.getAppSettings()
+            if (s) {
+                setSettings(s)
+                setCachedSettings(s)
+                applyThemeMode(s.themeMode)
+            }
+        } catch {
+            // fallback
+        }
+    }, [])
+
+    const handleSaveSettings = useCallback(async (newSettings: AppSettings) => {
+        try {
+            const saved = await API.saveAppSettings(newSettings)
+            setSettings(saved)
+            setCachedSettings(saved)
+            applyThemeMode(saved.themeMode)
+            notify('设置已保存并全域应用', 'info')
+        } catch (err) {
+            notify(errorMessage(err), 'error')
+        }
+    }, [notify])
+
     useEffect(() => {
         void reloadServers()
         void reloadGroups()
+        void reloadSettings()
         API.listTransfers()
             .then((list) => setTransfers(list || []))
             .catch(() => undefined)
-    }, [reloadServers, reloadGroups])
+    }, [reloadServers, reloadGroups, reloadSettings])
+
+    useEffect(() => {
+        applyThemeMode(settings.themeMode)
+        const media = window.matchMedia('(prefers-color-scheme: dark)')
+        const listener = () => {
+            if (settings.themeMode === 'system') {
+                applyThemeMode('system')
+            }
+        }
+        if (media.addEventListener) {
+            media.addEventListener('change', listener)
+        }
+        return () => {
+            if (media.removeEventListener) {
+                media.removeEventListener('change', listener)
+            }
+        }
+    }, [settings.themeMode])
 
     useEffect(() => {
         const offTransfer = subscribe('transfer:update', (t: Transfer) => {
@@ -550,6 +599,7 @@ export default function App() {
                 onMoveServer={moveServer}
                 onOpenApi={openApiTool}
                 onOpenDevTools={openDevTools}
+                onOpenSettings={() => setSettingsOpen(true)}
                 onFocusSession={(id, kind) => focusSession(id, kind)}
             />
 
@@ -643,6 +693,16 @@ export default function App() {
                 onSaveAndConnect={async (cfg: ServerConfig) => {
                     await reloadServers()
                     void connect(cfg)
+                }}
+            />
+
+            <SettingsModal
+                open={settingsOpen}
+                settings={settings}
+                onClose={() => setSettingsOpen(false)}
+                onSave={(newSettings) => {
+                    void handleSaveSettings(newSettings)
+                    setSettingsOpen(false)
                 }}
             />
 

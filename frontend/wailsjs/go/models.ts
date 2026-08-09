@@ -104,6 +104,26 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class AppSettings {
+	    themeMode: string;
+	    fontFamily: string;
+	    fontSize: string;
+	    autoConnect: boolean;
+	    dbDefaultLimit: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppSettings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.themeMode = source["themeMode"];
+	        this.fontFamily = source["fontFamily"];
+	        this.fontSize = source["fontSize"];
+	        this.autoConnect = source["autoConnect"];
+	        this.dbDefaultLimit = source["dbDefaultLimit"];
+	    }
+	}
 	export class FileItem {
 	    name: string;
 	    path: string;

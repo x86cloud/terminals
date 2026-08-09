@@ -298,13 +298,32 @@ func (s *secretBox) decrypt(value string) string {
 }
 
 // Store 负责服务器列表与分组的持久化。
+type AppSettings struct {
+	ThemeMode      string `json:"themeMode"`
+	FontFamily     string `json:"fontFamily"`
+	FontSize       string `json:"fontSize"`
+	AutoConnect    bool   `json:"autoConnect"`
+	DbDefaultLimit string `json:"dbDefaultLimit"`
+}
+
+func defaultAppSettings() AppSettings {
+	return AppSettings{
+		ThemeMode:      "light",
+		FontFamily:     "Consolas",
+		FontSize:       "13",
+		AutoConnect:    false,
+		DbDefaultLimit: "50",
+	}
+}
+
 type Store struct {
-	mu      sync.RWMutex
-	dir     string
-	file    string
-	box     *secretBox
-	servers []ServerConfig
-	groups  []ServerGroup
+	mu       sync.RWMutex
+	dir      string
+	file     string
+	box      *secretBox
+	servers  []ServerConfig
+	groups   []ServerGroup
+	settings AppSettings
 }
 
 func appConfigDir() (string, error) {
@@ -352,9 +371,10 @@ func NewStore() (*Store, error) {
 		return nil, err
 	}
 	s := &Store{
-		dir:  dir,
-		file: filepath.Join(dir, "servers.json"),
-		box:  box,
+		dir:      dir,
+		file:     filepath.Join(dir, "servers.json"),
+		box:      box,
+		settings: defaultAppSettings(),
 	}
 	if err := s.load(); err != nil {
 		return nil, err
@@ -371,24 +391,24 @@ func (s *Store) load() error {
 		if os.IsNotExist(err) {
 			s.servers = []ServerConfig{}
 			s.groups = []ServerGroup{}
+			s.settings = defaultAppSettings()
 			return nil
 		}
 		return err
 	}
-	// 兼容旧版纯数组格式：尝试按包装结构解析，失败则回退为服务器数组。
 	var wrapper struct {
-		Servers []ServerConfig `json:"servers"`
-		Groups  []ServerGroup  `json:"groups"`
+		Servers  []ServerConfig `json:"servers"`
+		Groups   []ServerGroup  `json:"groups"`
+		Settings AppSettings    `json:"settings"`
 	}
 	if err := json.Unmarshal(data, &wrapper); err != nil {
-		// 配置损坏时不阻塞启动
 		s.servers = []ServerConfig{}
 		s.groups = []ServerGroup{}
+		s.settings = defaultAppSettings()
 		return nil
 	}
 	list := wrapper.Servers
 	if list == nil {
-		// 旧格式：整个文件是 ServerConfig 数组
 		var legacy []ServerConfig
 		if err2 := json.Unmarshal(data, &legacy); err2 == nil {
 			list = legacy
@@ -406,10 +426,14 @@ func (s *Store) load() error {
 		wrapper.Groups = []ServerGroup{}
 	}
 	s.groups = wrapper.Groups
+
+	if wrapper.Settings.ThemeMode == "" {
+		wrapper.Settings = defaultAppSettings()
+	}
+	s.settings = wrapper.Settings
 	return nil
 }
 
-// persist 需在持有写锁的情况下调用。
 func (s *Store) persist() error {
 	out := make([]ServerConfig, len(s.servers))
 	copy(out, s.servers)
@@ -417,16 +441,17 @@ func (s *Store) persist() error {
 		out[i].Password = s.box.encrypt(out[i].Password)
 		out[i].Passphrase = s.box.encrypt(out[i].Passphrase)
 		out[i].PrivateKey = s.box.encrypt(out[i].PrivateKey)
-		// 连接串常内嵌账号密码，与客户端私钥一并加密存储
 		out[i].MongoURI = s.box.encrypt(out[i].MongoURI)
 		out[i].MongoTLSClientKey = s.box.encrypt(out[i].MongoTLSClientKey)
 	}
 	wrapper := struct {
-		Servers []ServerConfig `json:"servers"`
-		Groups  []ServerGroup  `json:"groups"`
+		Servers  []ServerConfig `json:"servers"`
+		Groups   []ServerGroup  `json:"groups"`
+		Settings AppSettings    `json:"settings"`
 	}{
-		Servers: out,
-		Groups:  s.groups,
+		Servers:  out,
+		Groups:   s.groups,
+		Settings: s.settings,
 	}
 	data, err := json.MarshalIndent(wrapper, "", "  ")
 	if err != nil {
@@ -437,6 +462,37 @@ func (s *Store) persist() error {
 		return err
 	}
 	return os.Rename(tmp, s.file)
+}
+
+func (s *Store) GetSettings() AppSettings {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if s.settings.ThemeMode == "" {
+		return defaultAppSettings()
+	}
+	return s.settings
+}
+
+func (s *Store) SaveSettings(settings AppSettings) (AppSettings, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if settings.ThemeMode == "" {
+		settings.ThemeMode = "light"
+	}
+	if settings.FontFamily == "" {
+		settings.FontFamily = "Consolas"
+	}
+	if settings.FontSize == "" {
+		settings.FontSize = "13"
+	}
+	if settings.DbDefaultLimit == "" {
+		settings.DbDefaultLimit = "50"
+	}
+	s.settings = settings
+	if err := s.persist(); err != nil {
+		return settings, err
+	}
+	return s.settings, nil
 }
 
 func (s *Store) List() []ServerConfig {
