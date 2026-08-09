@@ -27,6 +27,8 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
     const [selected, setSelected] = useState<string[]>([])
     const [loading, setLoading] = useState(false)
     const [showHidden, setShowHidden] = useState(false)
+    const [showTime, setShowTime] = useState(false)
+    const [showMode, setShowMode] = useState(false)
     const [filter, setFilter] = useState('')
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     const [prompt, setPrompt] = useState<PromptState>(emptyPrompt)
@@ -34,6 +36,13 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
     const [editFilePath, setEditFilePath] = useState('')
     const [dragOver, setDragOver] = useState(false)
     const lastIndexRef = useRef<number>(-1)
+
+    const gridCols = useMemo(() => {
+        let cols = 'minmax(0, 1fr) 78px'
+        if (showTime) cols += ' 116px'
+        if (showMode) cols += ' 96px'
+        return cols
+    }, [showTime, showMode])
 
     const load = useCallback(
         async (target: string, quiet = false) => {
@@ -320,6 +329,22 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     />
                     隐藏文件
                 </label>
+                <label className={fp.checkbox}>
+                    <input
+                        type="checkbox"
+                        checked={showTime}
+                        onChange={(e) => setShowTime(e.target.checked)}
+                    />
+                    修改时间
+                </label>
+                <label className={fp.checkbox}>
+                    <input
+                        type="checkbox"
+                        checked={showMode}
+                        onChange={(e) => setShowMode(e.target.checked)}
+                    />
+                    权限
+                </label>
             </div>
 
             <div
@@ -333,11 +358,11 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     if (e.target === e.currentTarget) setSelected([])
                 }}
             >
-                <div className={`${fp.fileRow} ${fp.head}`}>
+                <div className={`${fp.fileRow} ${fp.head}`} style={{ gridTemplateColumns: gridCols }}>
                     <span className={fp.colName}>名称</span>
                     <span className={fp.colSize}>大小</span>
-                    <span className={fp.colTime}>修改时间</span>
-                    <span className={fp.colMode}>权限</span>
+                    {showTime && <span className={fp.colTime}>修改时间</span>}
+                    {showMode && <span className={fp.colMode}>权限</span>}
                 </div>
 
                 {loading && <div className={fp.fileEmpty}>加载中…</div>}
@@ -348,6 +373,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                         <div
                             key={item.path}
                             className={`${fp.fileRow}${selected.includes(item.path) ? ' ' + fp.selected : ''}`}
+                            style={{ gridTemplateColumns: gridCols }}
                             onClick={(e) => onRowClick(e, item, index)}
                             onDoubleClick={() => open(item)}
                             onContextMenu={(e) => {
@@ -365,8 +391,8 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                                 <span className={fp.fileName} title={item.path}>{item.name}</span>
                             </span>
                             <span className={fp.colSize}>{item.isDir ? '-' : formatSize(item.size)}</span>
-                            <span className={fp.colTime}>{formatTime(item.modTime)}</span>
-                            <span className={fp.colMode}>{item.mode}</span>
+                            {showTime && <span className={fp.colTime}>{formatTime(item.modTime)}</span>}
+                            {showMode && <span className={fp.colMode}>{item.mode}</span>}
                         </div>
                     ))}
             </div>
