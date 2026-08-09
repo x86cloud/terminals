@@ -50,6 +50,7 @@ import type {
     ServerGroup,
     SSHDashboardInfo,
     SSHProcessInfo,
+    SSHServiceInfo,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -99,6 +100,12 @@ export const API = {
         app().SSHProcessList(sessionId),
     sshKillProcess: (sessionId: string, pid: number): Promise<void> =>
         app().SSHKillProcess(sessionId, pid),
+    sshServiceList: (sessionId: string): Promise<SSHServiceInfo[]> =>
+        app().SSHServiceList(sessionId),
+    sshControlService: (sessionId: string, serviceName: string, action: string): Promise<void> =>
+        app().SSHControlService(sessionId, serviceName, action),
+    sshServiceLogs: (sessionId: string, serviceName: string): Promise<string> =>
+        app().SSHServiceLogs(sessionId, serviceName),
 
     // SFTP
     listDir: (sessionId: string, dir: string): Promise<DirListing> => app().ListDir(sessionId, dir),

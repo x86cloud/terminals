@@ -436,6 +436,26 @@ export namespace main {
 	        this.command = source["command"];
 	    }
 	}
+	export class SSHServiceInfo {
+	    name: string;
+	    load: string;
+	    active: string;
+	    sub: string;
+	    description: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHServiceInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.load = source["load"];
+	        this.active = source["active"];
+	        this.sub = source["sub"];
+	        this.description = source["description"];
+	    }
+	}
 	export class ServerConfig {
 	    id: string;
 	    name: string;

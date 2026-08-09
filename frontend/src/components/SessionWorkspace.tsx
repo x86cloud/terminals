@@ -1,10 +1,11 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import TerminalView from './TerminalView'
 import FilePanel from './FilePanel'
 import DashboardPanel from './DashboardPanel'
 import ProcessPanel from './ProcessPanel'
+import ServicePanel from './ServicePanel'
 import Icon from './Icon'
-import {SessionInfo} from '../types'
+import { SessionInfo } from '../types'
 import w from './SessionWorkspace.module.less'
 
 interface Props {
@@ -16,9 +17,9 @@ interface Props {
 }
 
 const MIN_PANEL = 320
-type PanelTab = 'files' | 'dashboard' | 'process'
+type PanelTab = 'files' | 'dashboard' | 'process' | 'service'
 
-export default function SessionWorkspace({session, active, nativeDrop, onPathChange, onNotify}: Props) {
+export default function SessionWorkspace({ session, active, nativeDrop, onPathChange, onNotify }: Props) {
     const [panelWidth, setPanelWidth] = useState(440)
     const [showPanel, setShowPanel] = useState(true)
     const [activeTab, setActiveTab] = useState<PanelTab>('files')
@@ -50,15 +51,15 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
     }, [])
 
     return (
-        <div ref={rootRef} className={w.workspace} style={{display: active ? 'flex' : 'none'}}>
+        <div ref={rootRef} className={w.workspace} style={{ display: active ? 'flex' : 'none' }}>
             <div className={w.terminalPane}>
-                <TerminalView sessionId={session.id} active={active}/>
+                <TerminalView sessionId={session.id} active={active} />
                 <button
                     className={w.panelToggle}
                     title={showPanel ? '隐藏侧栏面板' : '显示侧栏面板'}
                     onClick={() => setShowPanel((v) => !v)}
                 >
-                    <Icon name="panel" size={15}/>
+                    <Icon name="panel" size={15} />
                 </button>
             </div>
 
@@ -71,30 +72,36 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
                             document.body.classList.add('resizing')
                         }}
                     />
-                    <div className={w.filePane} style={{width: panelWidth}}>
+                    <div className={w.filePane} style={{ width: panelWidth }}>
                         <div className={w.panelHeader}>
                             <button
                                 className={`${w.panelTab}${activeTab === 'files' ? ' ' + w.active : ''}`}
                                 onClick={() => setActiveTab('files')}
                             >
-                                <Icon name="folder" size={13}/> 文件管理
+                                <Icon name="folder" size={13} /> 文件
                             </button>
                             <button
                                 className={`${w.panelTab}${activeTab === 'dashboard' ? ' ' + w.active : ''}`}
                                 onClick={() => setActiveTab('dashboard')}
                             >
-                                <Icon name="chart" size={13}/> 系统仪表盘
+                                <Icon name="chart" size={13} /> 仪表盘
                             </button>
                             <button
                                 className={`${w.panelTab}${activeTab === 'process' ? ' ' + w.active : ''}`}
                                 onClick={() => setActiveTab('process')}
                             >
-                                <Icon name="play" size={13}/> 进程管理
+                                <Icon name="play" size={13} /> 进程
+                            </button>
+                            <button
+                                className={`${w.panelTab}${activeTab === 'service' ? ' ' + w.active : ''}`}
+                                onClick={() => setActiveTab('service')}
+                            >
+                                <Icon name="plug" size={13} /> 服务
                             </button>
                         </div>
 
                         <div className={w.panelContent}>
-                            <div style={{display: activeTab === 'files' ? 'flex' : 'none', flexDirection: 'column', flex: 1, height: '100%', width: '100%', minHeight: 0}}>
+                            <div style={{ display: activeTab === 'files' ? 'flex' : 'none', flexDirection: 'column', flex: 1, height: '100%', width: '100%', minHeight: 0 }}>
                                 <FilePanel
                                     sessionId={session.id}
                                     homeDir={session.homeDir}
@@ -111,6 +118,11 @@ export default function SessionWorkspace({session, active, nativeDrop, onPathCha
                             <ProcessPanel
                                 sessionId={session.id}
                                 active={activeTab === 'process'}
+                                onNotify={onNotify}
+                            />
+                            <ServicePanel
+                                sessionId={session.id}
+                                active={activeTab === 'service'}
                                 onNotify={onNotify}
                             />
                         </div>

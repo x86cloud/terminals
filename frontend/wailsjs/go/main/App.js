@@ -606,6 +606,10 @@ export function ResizeTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
 }
 
+export function SSHControlService(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SSHControlService'](arg1, arg2, arg3);
+}
+
 export function SSHDashboardStats(arg1) {
   return window['go']['main']['App']['SSHDashboardStats'](arg1);
 }
@@ -616,6 +620,14 @@ export function SSHKillProcess(arg1, arg2) {
 
 export function SSHProcessList(arg1) {
   return window['go']['main']['App']['SSHProcessList'](arg1);
+}
+
+export function SSHServiceList(arg1) {
+  return window['go']['main']['App']['SSHServiceList'](arg1);
+}
+
+export function SSHServiceLogs(arg1, arg2) {
+  return window['go']['main']['App']['SSHServiceLogs'](arg1, arg2);
 }
 
 export function SaveGroup(arg1) {

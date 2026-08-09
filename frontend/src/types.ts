@@ -833,3 +833,11 @@ export interface SSHProcessInfo {
     rss: number
     command: string
 }
+
+export interface SSHServiceInfo {
+    name: string
+    load: string
+    active: string
+    sub: string
+    description: string
+}

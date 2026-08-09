@@ -168,6 +168,18 @@ func (a *App) SSHKillProcess(sessionID string, pid int) error {
 	return a.sessions.KillProcess(sessionID, pid)
 }
 
+func (a *App) SSHServiceList(sessionID string) ([]SSHServiceInfo, error) {
+	return a.sessions.GetServiceList(sessionID)
+}
+
+func (a *App) SSHControlService(sessionID string, serviceName string, action string) error {
+	return a.sessions.ControlService(sessionID, serviceName, action)
+}
+
+func (a *App) SSHServiceLogs(sessionID string, serviceName string) (string, error) {
+	return a.sessions.GetServiceLogs(sessionID, serviceName)
+}
+
 // ---------- SFTP ----------
 
 func (a *App) ListDir(sessionID string, dir string) (DirListing, error) {

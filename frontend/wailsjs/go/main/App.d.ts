@@ -304,11 +304,17 @@ export function RenamePath(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
 
+export function SSHControlService(arg1:string,arg2:string,arg3:string):Promise<void>;
+
 export function SSHDashboardStats(arg1:string):Promise<main.SSHDashboardInfo>;
 
 export function SSHKillProcess(arg1:string,arg2:number):Promise<void>;
 
 export function SSHProcessList(arg1:string):Promise<Array<main.SSHProcessInfo>>;
+
+export function SSHServiceList(arg1:string):Promise<Array<main.SSHServiceInfo>>;
+
+export function SSHServiceLogs(arg1:string,arg2:string):Promise<string>;
 
 export function SaveGroup(arg1:main.ServerGroup):Promise<main.ServerGroup>;
 
