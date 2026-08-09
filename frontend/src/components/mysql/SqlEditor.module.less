@@ -78,9 +78,20 @@
 .sqlResultArea {
     flex: 1;
     .fill();
-    overflow: auto;
-    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
     min-height: 0;
+}
+
+.sqlResultMeta {
+    padding: 5px 12px;
+    font-size: 12px;
+    color: @text-dim;
+    background: @bg-elev;
+    border-bottom: 1px solid @border;
+    flex-shrink: 0;
 }
 
 .sqlHistory {

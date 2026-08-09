@@ -51,7 +51,8 @@
         top: 0;
         z-index: 10;
         color: @text-dim;
-        box-shadow: inset 0 -1px 0 @border;
+        border-top: 1px solid @border;
+        .sticky-divider();
     }
 
     tbody tr:nth-child(even) {

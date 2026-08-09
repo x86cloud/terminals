@@ -5,6 +5,7 @@ import {lightEditorTheme} from '../editorTheme'
 import g from '../../styles/global.module.less'
 import my from './SqlEditor.module.less'
 import sh from './mysqlShared.module.less'
+import dbStyle from '../dbTable.module.less'
 import {SqlTab, sqlExtension} from './mysqlTypes'
 
 export default function SqlEditor({
@@ -76,7 +77,7 @@ export default function SqlEditor({
             <div className={my.sqlResultArea}>
                 {activeTabObj.result && activeTabObj.result.columns.length > 0 ? (
                     <>
-                        <div className={sh.mysqlCount}>{activeTabObj.result.rowCount} 行</div>
+                        <div className={my.sqlResultMeta}>共 {activeTabObj.result.rowCount} 行</div>
                         <GridInline columns={activeTabObj.result.columns} rows={activeTabObj.result.rows}/>
                     </>
                 ) : activeTabObj.result ? (
@@ -107,8 +108,8 @@ export default function SqlEditor({
 function GridInline({columns, rows}: { columns: string[]; rows: Record<string, any>[] }) {
     if (!columns.length) return <div className={sh.mysqlEmpty}>无结果</div>
     return (
-        <div className={sh.mysqlGridWrap}>
-            <table className={sh.mysqlTable}>
+        <div className={dbStyle.dbTableScroll} style={{border: 'none', borderRadius: 0}}>
+            <table className={dbStyle.dbTable}>
                 <thead><tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
                 <tbody>
                 {rows.map((r, i) => (
