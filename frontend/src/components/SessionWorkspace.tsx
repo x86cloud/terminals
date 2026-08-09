@@ -5,6 +5,7 @@ import DashboardPanel from './DashboardPanel'
 import ProcessPanel from './ProcessPanel'
 import ServicePanel from './ServicePanel'
 import CronPanel from './CronPanel'
+import DockerPanel from './DockerPanel'
 import Icon from './Icon'
 import { SessionInfo } from '../types'
 import w from './SessionWorkspace.module.less'
@@ -18,7 +19,7 @@ interface Props {
 }
 
 const MIN_PANEL = 320
-type PanelTab = 'files' | 'dashboard' | 'process' | 'service' | 'cron'
+type PanelTab = 'files' | 'dashboard' | 'process' | 'service' | 'cron' | 'docker'
 
 export default function SessionWorkspace({ session, active, nativeDrop, onPathChange, onNotify }: Props) {
     const [panelWidth, setPanelWidth] = useState(440)
@@ -105,6 +106,12 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
                             >
                                 <Icon name="clock" size={13} /> 定时任务
                             </button>
+                            <button
+                                className={`${w.panelTab}${activeTab === 'docker' ? ' ' + w.active : ''}`}
+                                onClick={() => setActiveTab('docker')}
+                            >
+                                <Icon name="box" size={13} /> Docker
+                            </button>
                         </div>
 
                         <div className={w.panelContent}>
@@ -135,6 +142,11 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
                             <CronPanel
                                 sessionId={session.id}
                                 active={activeTab === 'cron'}
+                                onNotify={onNotify}
+                            />
+                            <DockerPanel
+                                sessionId={session.id}
+                                active={activeTab === 'docker'}
                                 onNotify={onNotify}
                             />
                         </div>

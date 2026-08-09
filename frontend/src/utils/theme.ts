@@ -11,7 +11,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
 
 const GLOBAL_FONT_MAP: Record<string, string> = {
     system: '"Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif',
-    nunito: '"Nunito", "Microsoft YaHei UI", sans-serif',
     msyh: '"Microsoft YaHei UI", sans-serif',
     segoe: '"Segoe UI", "Microsoft YaHei UI", sans-serif',
     inter: '"Inter", system-ui, -apple-system, sans-serif',

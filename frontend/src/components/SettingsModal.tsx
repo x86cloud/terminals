@@ -210,7 +210,6 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                                             onChange={(e) => handleGlobalFontChange(e.target.value)}
                                         >
                                             <option value="system">系统默认 (System Default)</option>
-                                            <option value="nunito">Nunito (本地内置静态字体)</option>
                                             <option value="msyh">微软雅黑 (Microsoft YaHei)</option>
                                             <option value="segoe">Segoe UI (Windows)</option>
                                             <option value="inter">Inter / San Francisco</option>

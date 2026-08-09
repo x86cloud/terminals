@@ -454,6 +454,50 @@ export namespace main {
 		}
 	}
 	
+	export class SSHDockerContainer {
+	    id: string;
+	    name: string;
+	    image: string;
+	    status: string;
+	    ports: string;
+	    createdAt: string;
+	    running: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHDockerContainer(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.image = source["image"];
+	        this.status = source["status"];
+	        this.ports = source["ports"];
+	        this.createdAt = source["createdAt"];
+	        this.running = source["running"];
+	    }
+	}
+	export class SSHDockerImage {
+	    id: string;
+	    repo: string;
+	    tag: string;
+	    size: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHDockerImage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.repo = source["repo"];
+	        this.tag = source["tag"];
+	        this.size = source["size"];
+	        this.createdAt = source["createdAt"];
+	    }
+	}
 	
 	
 	export class SSHProcessInfo {

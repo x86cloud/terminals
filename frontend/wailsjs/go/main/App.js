@@ -622,6 +622,30 @@ export function SSHDashboardStats(arg1) {
   return window['go']['main']['App']['SSHDashboardStats'](arg1);
 }
 
+export function SSHDockerContainerList(arg1) {
+  return window['go']['main']['App']['SSHDockerContainerList'](arg1);
+}
+
+export function SSHDockerContainerLogs(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SSHDockerContainerLogs'](arg1, arg2, arg3);
+}
+
+export function SSHDockerControlContainer(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SSHDockerControlContainer'](arg1, arg2, arg3);
+}
+
+export function SSHDockerImageList(arg1) {
+  return window['go']['main']['App']['SSHDockerImageList'](arg1);
+}
+
+export function SSHDockerPullImage(arg1, arg2) {
+  return window['go']['main']['App']['SSHDockerPullImage'](arg1, arg2);
+}
+
+export function SSHDockerRemoveImage(arg1, arg2) {
+  return window['go']['main']['App']['SSHDockerRemoveImage'](arg1, arg2);
+}
+
 export function SSHKillProcess(arg1, arg2) {
   return window['go']['main']['App']['SSHKillProcess'](arg1, arg2);
 }

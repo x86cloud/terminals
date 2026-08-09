@@ -208,6 +208,32 @@ func (a *App) SSHRunCronCommand(sessionID string, command string) (string, error
 	return a.sessions.RunCronCommand(sessionID, command)
 }
 
+// ---------- Docker 运维 ----------
+
+func (a *App) SSHDockerContainerList(sessionID string) ([]SSHDockerContainer, error) {
+	return a.sessions.GetDockerContainerList(sessionID)
+}
+
+func (a *App) SSHDockerControlContainer(sessionID string, containerID string, action string) error {
+	return a.sessions.ControlDockerContainer(sessionID, containerID, action)
+}
+
+func (a *App) SSHDockerContainerLogs(sessionID string, containerID string, tail int) (string, error) {
+	return a.sessions.GetDockerContainerLogs(sessionID, containerID, tail)
+}
+
+func (a *App) SSHDockerImageList(sessionID string) ([]SSHDockerImage, error) {
+	return a.sessions.GetDockerImageList(sessionID)
+}
+
+func (a *App) SSHDockerRemoveImage(sessionID string, imageID string) error {
+	return a.sessions.RemoveDockerImage(sessionID, imageID)
+}
+
+func (a *App) SSHDockerPullImage(sessionID string, imageName string) (string, error) {
+	return a.sessions.PullDockerImage(sessionID, imageName)
+}
+
 // ---------- SFTP ----------
 
 func (a *App) ListDir(sessionID string, dir string) (DirListing, error) {

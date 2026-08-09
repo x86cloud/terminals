@@ -312,6 +312,18 @@ export function SSHCronList(arg1:string):Promise<Array<main.SSHCronItem>>;
 
 export function SSHDashboardStats(arg1:string):Promise<main.SSHDashboardInfo>;
 
+export function SSHDockerContainerList(arg1:string):Promise<Array<main.SSHDockerContainer>>;
+
+export function SSHDockerContainerLogs(arg1:string,arg2:string,arg3:number):Promise<string>;
+
+export function SSHDockerControlContainer(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function SSHDockerImageList(arg1:string):Promise<Array<main.SSHDockerImage>>;
+
+export function SSHDockerPullImage(arg1:string,arg2:string):Promise<string>;
+
+export function SSHDockerRemoveImage(arg1:string,arg2:string):Promise<void>;
+
 export function SSHKillProcess(arg1:string,arg2:number):Promise<void>;
 
 export function SSHProcessList(arg1:string):Promise<Array<main.SSHProcessInfo>>;

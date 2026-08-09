@@ -858,3 +858,21 @@ export interface AppSettings {
     dbDefaultLimit: string
     globalFontFamily?: string
 }
+
+export interface SSHDockerContainer {
+    id: string
+    name: string
+    image: string
+    status: string
+    ports: string
+    createdAt: string
+    running: boolean
+}
+
+export interface SSHDockerImage {
+    id: string
+    repo: string
+    tag: string
+    size: string
+    createdAt: string
+}

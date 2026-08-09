@@ -52,6 +52,8 @@ import type {
     SSHProcessInfo,
     SSHServiceInfo,
     SSHCronItem,
+    SSHDockerContainer,
+    SSHDockerImage,
     AppSettings,
 } from './types'
 
@@ -118,6 +120,18 @@ export const API = {
         app().SSHSaveCronList(sessionId, items),
     sshRunCronCommand: (sessionId: string, command: string): Promise<string> =>
         app().SSHRunCronCommand(sessionId, command),
+    sshDockerContainerList: (sessionId: string): Promise<SSHDockerContainer[]> =>
+        app().SSHDockerContainerList(sessionId),
+    sshDockerControlContainer: (sessionId: string, containerId: string, action: string): Promise<void> =>
+        app().SSHDockerControlContainer(sessionId, containerId, action),
+    sshDockerContainerLogs: (sessionId: string, containerId: string, tail: number): Promise<string> =>
+        app().SSHDockerContainerLogs(sessionId, containerId, tail),
+    sshDockerImageList: (sessionId: string): Promise<SSHDockerImage[]> =>
+        app().SSHDockerImageList(sessionId),
+    sshDockerRemoveImage: (sessionId: string, imageId: string): Promise<void> =>
+        app().SSHDockerRemoveImage(sessionId, imageId),
+    sshDockerPullImage: (sessionId: string, imageName: string): Promise<string> =>
+        app().SSHDockerPullImage(sessionId, imageName),
 
     // SFTP
     listDir: (sessionId: string, dir: string): Promise<DirListing> => app().ListDir(sessionId, dir),
