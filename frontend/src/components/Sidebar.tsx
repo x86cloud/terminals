@@ -245,9 +245,11 @@ export default function Sidebar({
                     </span>
                     <span className={s.serverText}>
                         <span className={s.serverName}>
-                            {server.name || ((isRedis || isMysql || kind === 'mqtt' || kind === 'mongo' || kind === 'sqlite') ? (kind === 'sqlite' ? (server.sqlitePath || 'SQLite 文件') : `${server.host}:${server.port}`) : `${server.username}@${server.host}`)}
+                            {kind === 'sqlite'
+                                ? ((server.name || server.sqlitePath || '').split(/[\\/]/).pop() || 'SQLite 文件')
+                                : server.name || ((isRedis || isMysql || kind === 'mqtt' || kind === 'mongo') ? `${server.host}:${server.port}` : `${server.username}@${server.host}`)}
                         </span>
-                        <span className={s.serverSub}>
+                        <span className={s.serverSub} title={server.sqlitePath}>
                             {isRedis || isMysql || kind === 'mqtt' || kind === 'mongo'
                                 ? `${server.host}:${server.port}`
                                 : kind === 'sqlite'
@@ -290,7 +292,7 @@ export default function Sidebar({
                                 : kind === 'mongo'
                                 ? `MongoDB ${server.host}:${server.port}`
                                 : kind === 'sqlite'
-                                ? `SQLite ${(server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
+                                ? `SQLite ${((sess as any).title || server.name || server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
                                 : `会话 ${sess.id.slice(0, 6)}`}
                         </span>
                     </button>

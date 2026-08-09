@@ -950,7 +950,14 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
                                     onClick={async () => {
                                         try {
                                             const p = await API.sqliteOpenFile()
-                                            if (p) update({sqlitePath: p})
+                                            if (p) {
+                                                const dbName = p.split(/[\\/]/).pop() || ''
+                                                const hasCustomName = form.name && !form.name.includes('/') && !form.name.includes('\\')
+                                                update({
+                                                    sqlitePath: p,
+                                                    name: hasCustomName ? form.name : dbName,
+                                                })
+                                            }
                                         } catch (err) {
                                             setError(errorMessage(err))
                                         }

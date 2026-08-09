@@ -108,11 +108,16 @@ async function connectSqliteHelper(cfg: ServerConfig): Promise<SqliteSessionInfo
     const ok = await API.sqliteConnect(cfg.id, path)
     if (!ok) throw new Error('无法打开该 SQLite 文件')
     const stat = await API.sqliteInfo(cfg.id).catch(() => ({path, size: 0}))
+    const finalPath = stat?.path || path
+    const dbName = finalPath.split(/[\\/]/).pop() || finalPath
+    const displayTitle = (cfg.name && !cfg.name.includes('/') && !cfg.name.includes('\\'))
+        ? cfg.name
+        : (cfg.name ? cfg.name.split(/[\\/]/).pop() : dbName)
     return {
         id: cfg.id,
         serverId: cfg.id,
-        title: cfg.name || (path.split(/[\\/]/).pop() || path),
-        path: stat?.path || path,
+        title: displayTitle || dbName,
+        path: finalPath,
         connected: true,
         size: Number(stat?.size) || 0,
     }

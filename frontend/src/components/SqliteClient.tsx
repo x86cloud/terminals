@@ -212,7 +212,7 @@ export default function SqliteClient({session, onClose}: Props) {
             <div className={sq.sqliteMain}>
                 <div className={sq.sqliteToolbar}>
                     <span className={sq.sqliteConnTitle}>
-                        {selected ? `${selected} · ${totalRows} 行` : 'SQLite 浏览器'}
+                        {selected ? `${selected} · ${totalRows} 行` : `${session.title || (info.path ? info.path.split(/[\\/]/).pop() : 'SQLite')} 浏览器`}
                     </span>
                     <span className={g.spacer}/>
                     {error && <span className={sq.sqliteError}>{error}</span>}
