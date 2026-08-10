@@ -175,7 +175,10 @@
 .sqliteContent {
     flex: 1;
     .fill();
-    overflow: auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     padding: 12px;
 }
 
@@ -184,7 +187,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
     overflow: hidden;
 }
 
@@ -193,6 +196,8 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+    padding-top: 8px;
+    border-top: 1px solid @border;
 }
 
 .pageInfo {
