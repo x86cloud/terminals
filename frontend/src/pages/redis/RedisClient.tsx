@@ -171,11 +171,19 @@ export default function RedisClient({session, onClose, onDbChange}: Props) {
             const cur = reset ? '0' : cursorRef.current
             try {
                 const res = await API.redisKeys(session.id, pattern, cur)
-                const keys = Array.isArray(res.keys) ? res.keys : []
-                cursorRef.current = res.cursor
+                const rawKeys = Array.isArray(res?.keys) ? res.keys : []
+                const keys: string[] = rawKeys
+                    .map((item: any) => {
+                        if (typeof item === 'string') return item
+                        if (item && typeof item === 'object' && item.key) return String(item.key)
+                        return String(item ?? '')
+                    })
+                    .filter(Boolean)
+                const nextCursor = String(res?.cursor ?? '0')
+                cursorRef.current = nextCursor
                 setData((d) => ({
-                    cursor: res.cursor,
-                    keys: reset ? keys : [...d.keys, ...keys],
+                    cursor: nextCursor,
+                    keys: reset ? keys : [...(Array.isArray(d?.keys) ? d.keys : []), ...keys],
                 }))
             } catch (e: any) {
                 flash('加载键失败: ' + (e?.message || e))

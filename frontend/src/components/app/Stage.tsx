@@ -1,5 +1,6 @@
 import React from 'react'
 import Icon from '../Icon'
+import ErrorBoundary from '../ErrorBoundary'
 import SessionWorkspace from '../../pages/ssh/SessionWorkspace'
 import RedisClient from '../../pages/redis/RedisClient'
 import MysqlClient from '../../pages/mysql/MysqlClient'
@@ -73,61 +74,75 @@ export default function Stage(props: StageProps) {
 
             {redisSessions.map((s) => (
                 <div key={s.id} style={s.id === activeRedisId ? shownPane : hiddenPane}>
-                    <RedisClient
-                        session={s}
-                        onClose={() => onCloseRedis(s.id)}
-                        onDbChange={(id, db, dbSize) => onRedisDbChange(id, db, dbSize)}
-                    />
+                    <ErrorBoundary title="Redis 页面渲染异常" onClose={() => onCloseRedis(s.id)}>
+                        <RedisClient
+                            session={s}
+                            onClose={() => onCloseRedis(s.id)}
+                            onDbChange={(id, db, dbSize) => onRedisDbChange(id, db, dbSize)}
+                        />
+                    </ErrorBoundary>
                 </div>
             ))}
 
             {mysqlSessions.map((s) => (
                 <div key={s.id} style={s.id === activeMysqlId ? shownPane : hiddenPane}>
-                    <MysqlClient
-                        session={s}
-                        onClose={() => onCloseMysql(s.id)}
-                        onChange={(id, database) => onMysqlChange(id, database)}
-                    />
+                    <ErrorBoundary title="MySQL 页面渲染异常" onClose={() => onCloseMysql(s.id)}>
+                        <MysqlClient
+                            session={s}
+                            onClose={() => onCloseMysql(s.id)}
+                            onChange={(id, database) => onMysqlChange(id, database)}
+                        />
+                    </ErrorBoundary>
                 </div>
             ))}
 
             {mqttSessions.map((s) => (
                 <div key={s.id} style={s.id === activeMqttId ? shownPane : hiddenPane}>
-                    <MqttClient
-                        session={s}
-                        onClose={() => onCloseMqtt(s.id)}
-                    />
+                    <ErrorBoundary title="MQTT 页面渲染异常" onClose={() => onCloseMqtt(s.id)}>
+                        <MqttClient
+                            session={s}
+                            onClose={() => onCloseMqtt(s.id)}
+                        />
+                    </ErrorBoundary>
                 </div>
             ))}
 
             {mongoSessions.map((s) => (
                 <div key={s.id} style={s.id === activeMongoId ? shownPane : hiddenPane}>
-                    <MongoClient
-                        session={s}
-                        onClose={() => onCloseMongo(s.id)}
-                        onChange={(id, database) => onMongoChange(id, database)}
-                    />
+                    <ErrorBoundary title="MongoDB 页面渲染异常" onClose={() => onCloseMongo(s.id)}>
+                        <MongoClient
+                            session={s}
+                            onClose={() => onCloseMongo(s.id)}
+                            onChange={(id, database) => onMongoChange(id, database)}
+                        />
+                    </ErrorBoundary>
                 </div>
             ))}
 
             {sqliteSessions.map((s) => (
                 <div key={s.id} style={s.id === activeSqliteId ? shownPane : hiddenPane}>
-                    <SqliteClient
-                        session={s}
-                        onClose={() => onCloseSqlite(s.id)}
-                    />
+                    <ErrorBoundary title="SQLite 页面渲染异常" onClose={() => onCloseSqlite(s.id)}>
+                        <SqliteClient
+                            session={s}
+                            onClose={() => onCloseSqlite(s.id)}
+                        />
+                    </ErrorBoundary>
                 </div>
             ))}
 
             {devToolsOpen && (
                 <div style={devToolsActive ? shownPane : hiddenPane}>
-                    <DevTools onClose={() => onCloseDevTools()}/>
+                    <ErrorBoundary title="DevTools 页面渲染异常" onClose={onCloseDevTools}>
+                        <DevTools onClose={() => onCloseDevTools()}/>
+                    </ErrorBoundary>
                 </div>
             )}
 
             {apiOpen && (
                 <div style={apiActive ? shownPane : hiddenPane}>
-                    <ApiClient onClose={onCloseApi}/>
+                    <ErrorBoundary title="API 页面渲染异常" onClose={onCloseApi}>
+                        <ApiClient onClose={onCloseApi}/>
+                    </ErrorBoundary>
                 </div>
             )}
 

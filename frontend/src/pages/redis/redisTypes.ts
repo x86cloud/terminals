@@ -9,9 +9,14 @@ export interface KeyTreeNode {
     children: KeyTreeNode[]
 }
 
-export function buildKeyTree(keys: string[], delimiter = ':'): KeyTreeNode[] {
+export function buildKeyTree(keys: (string | { key?: string })[], delimiter = ':'): KeyTreeNode[] {
+    if (!Array.isArray(keys)) return []
+    const stringKeys: string[] = keys
+        .map((k) => (typeof k === 'string' ? k : (k && typeof k === 'object' && k.key ? String(k.key) : String(k || ''))))
+        .filter(Boolean)
+
     if (!delimiter) {
-        return keys.map((k) => ({
+        return stringKeys.map((k) => ({
             key: k,
             name: k,
             fullKey: k,
@@ -23,7 +28,7 @@ export function buildKeyTree(keys: string[], delimiter = ':'): KeyTreeNode[] {
 
     const rootNodes: KeyTreeNode[] = []
 
-    for (const fullKey of keys) {
+    for (const fullKey of stringKeys) {
         const parts = fullKey.split(delimiter)
         let currentLevel = rootNodes
         let path = ''
