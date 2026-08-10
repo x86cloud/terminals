@@ -148,6 +148,25 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
         }
     }
 
+    const askNewFile = () => {
+        setPrompt({
+            open: true,
+            title: '新建文件',
+            label: '文件名称',
+            value: 'new-file.txt',
+            onConfirm: async (value) => {
+                setPrompt(emptyPrompt)
+                try {
+                    const fullPath = path.endsWith('/') ? `${path}${value}` : `${path}/${value}`
+                    await API.writeRemoteFile(sessionId, fullPath, '')
+                    await load(path, true)
+                } catch (err) {
+                    onNotify(errorMessage(err), 'error')
+                }
+            },
+        })
+    }
+
     const askNewFolder = () => {
         setPrompt({
             open: true,
@@ -223,6 +242,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
         {key: 'copy', label: '复制路径', icon: 'copy', onClick: () => copyText(targets.join('\n'))},
         {key: 'd1', label: '', divider: true},
         {key: 'upload', label: '上传到当前目录', icon: 'upload', onClick: uploadViaDialog},
+        {key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile},
         {key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder},
         {key: 'd2', label: '', divider: true},
         {key: 'delete', label: '删除', icon: 'trash', danger: true, onClick: () => askDelete(targets)},
@@ -231,6 +251,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
     const blankMenu = (): MenuItem[] => [
         {key: 'upload', label: '上传文件', icon: 'upload', onClick: uploadViaDialog},
         {key: 'uploadDir', label: '上传文件夹', icon: 'folder', onClick: uploadFolderViaDialog},
+        {key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile},
         {key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder},
         {key: 'd1', label: '', divider: true},
         {key: 'copy', label: '复制当前路径', icon: 'copy', onClick: () => copyText(path)},
@@ -285,12 +306,6 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     }}
                     spellCheck={false}
                 />
-                <button className={g.iconBtn} title="上传文件" onClick={uploadViaDialog}>
-                    <Icon name="upload"/>
-                </button>
-                <button className={g.iconBtn} title="新建文件夹" onClick={askNewFolder}>
-                    <Icon name="newFolder"/>
-                </button>
             </div>
 
             <div className={fp.fileSubbar}>
@@ -300,30 +315,32 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     placeholder="过滤"
                     onChange={(e) => setFilter(e.target.value)}
                 />
-                <label className={fp.checkbox}>
-                    <input
-                        type="checkbox"
-                        checked={showHidden}
-                        onChange={(e) => setShowHidden(e.target.checked)}
-                    />
-                    隐藏文件
-                </label>
-                <label className={fp.checkbox}>
-                    <input
-                        type="checkbox"
-                        checked={showTime}
-                        onChange={(e) => setShowTime(e.target.checked)}
-                    />
-                    修改时间
-                </label>
-                <label className={fp.checkbox}>
-                    <input
-                        type="checkbox"
-                        checked={showMode}
-                        onChange={(e) => setShowMode(e.target.checked)}
-                    />
-                    权限
-                </label>
+                <div className={fp.rightOptions}>
+                    <label className={fp.checkbox}>
+                        <input
+                            type="checkbox"
+                            checked={showHidden}
+                            onChange={(e) => setShowHidden(e.target.checked)}
+                        />
+                        隐藏文件
+                    </label>
+                    <label className={fp.checkbox}>
+                        <input
+                            type="checkbox"
+                            checked={showTime}
+                            onChange={(e) => setShowTime(e.target.checked)}
+                        />
+                        修改时间
+                    </label>
+                    <label className={fp.checkbox}>
+                        <input
+                            type="checkbox"
+                            checked={showMode}
+                            onChange={(e) => setShowMode(e.target.checked)}
+                        />
+                        权限
+                    </label>
+                </div>
             </div>
 
             <div
