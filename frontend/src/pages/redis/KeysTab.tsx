@@ -215,19 +215,14 @@ export default function KeysTab({
                 )}
 
                 <div className={k.redisCli}>
-                    <div className={k.redisCliHead}>
-                        <Icon name="terminal" size={13} />
-                        <span>命令行 (CLI)</span>
-                        <span className={k.cliHint}>按 Enter 键或点击右侧按钮执行</span>
-                    </div>
-                    <div className={k.redisCliBar}>
-                        <div className={k.cliInputWrap}>
+                    <div className={k.redisCliHead}>命令行 (CLI)</div>
+                    <div className={k.redisCliRow}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                             <CodeEditor
                                 value={cliInput}
                                 onChange={setCliInput}
                                 lang="plain"
-                                height="32px"
-                                lineNumbers={false}
+                                height="56px"
                                 placeholder="输入 Redis 原生命令（例如：GET foo / HSET myhash field val）"
                                 onEnter={async (v) => {
                                     if (!v.trim()) return
@@ -237,15 +232,15 @@ export default function KeysTab({
                             />
                         </div>
                         <button
-                            className={k.cliRunBtn}
+                            className={`${g.btn} ${g.primary}`}
+                            style={{ height: 56, padding: '0 20px', flexShrink: 0, fontSize: 13, fontWeight: 500 }}
                             onClick={async () => {
                                 if (!cliInput.trim()) return
                                 const res = await runRaw(cliInput)
                                 setCliResult(res || '(空结果)')
                             }}
                         >
-                            <Icon name="play" size={12} />
-                            <span>执行</span>
+                            执行
                         </button>
                     </div>
                     {cliResult && (
