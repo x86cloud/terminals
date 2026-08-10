@@ -270,8 +270,14 @@ export default function SqliteClient({session, onClose}: Props) {
             } else if (kind === 'droptable') {
                 await API.sqliteDropTable(id, name)
                 setObjModal((prev) => ({...prev, open: false}))
-                setSelected(null)
+                if (selected === name) setSelected(null)
                 await loadTables()
+            } else if (kind === 'truncate') {
+                await API.sqliteTruncateTable(id, name)
+                setObjModal((prev) => ({...prev, open: false}))
+                if (selected === name) {
+                    await openTable(name, 1)
+                }
             } else if (kind === 'createindex') {
                 if (!selected) return
                 await API.sqliteCreateIndex(id, selected, name, extra, unique)
@@ -359,11 +365,41 @@ export default function SqliteClient({session, onClose}: Props) {
                                 {t.type === 'view' && <span className={sh.mongoBadge} style={{marginLeft: 4}}>视图</span>}
                             </button>
                             <div className={sq.sqliteTableMenu}>
-                                <button className={g.iconBtn} title="表结构" onClick={() => viewStruct(t.name)}>
-                                    <Icon name="chart" size={12}/>
+                                <button
+                                    className={g.iconBtn}
+                                    title="清空表数据"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setObjModal({
+                                            open: true,
+                                            kind: 'truncate',
+                                            name: t.name,
+                                            extra: '',
+                                            unique: false,
+                                            msg: '',
+                                            busy: false,
+                                        })
+                                    }}
+                                >
+                                    <Icon name="refresh" size={12}/>
                                 </button>
-                                <button className={g.iconBtn} title="索引" onClick={() => viewIndex(t.name)}>
-                                    <Icon name="database" size={12}/>
+                                <button
+                                    className={`${g.iconBtn} ${g.danger}`}
+                                    title="删除表"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        setObjModal({
+                                            open: true,
+                                            kind: 'droptable',
+                                            name: t.name,
+                                            extra: '',
+                                            unique: false,
+                                            msg: '',
+                                            busy: false,
+                                        })
+                                    }}
+                                >
+                                    <Icon name="close" size={12}/>
                                 </button>
                             </div>
                         </div>

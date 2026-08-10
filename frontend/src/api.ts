@@ -493,6 +493,7 @@ export const API = {
     sqliteCreateTable: (id: string, table: string, defs: string): Promise<void> =>
         app().SqliteCreateTable(id, table, defs),
     sqliteDropTable: (id: string, table: string): Promise<void> => app().SqliteDropTable(id, table),
+    sqliteTruncateTable: (id: string, table: string): Promise<void> => app().SqliteTruncateTable(id, table),
     sqliteCreateIndex: (id: string, table: string, name: string, colsCSV: string, unique: boolean): Promise<void> =>
         app().SqliteCreateIndex(id, table, name, colsCSV, unique),
     sqliteDropIndex: (id: string, table: string, name: string): Promise<void> =>

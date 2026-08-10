@@ -3,7 +3,7 @@ import Icon from '../../components/Icon'
 import g from '../../styles/global.module.less'
 import my from '../mysql/ObjModal.module.less'
 
-export type SqliteObjModalKind = 'createtable' | 'droptable' | 'createindex' | 'dropindex'
+export type SqliteObjModalKind = 'createtable' | 'droptable' | 'truncate' | 'createindex' | 'dropindex'
 
 export default function SqliteObjModal(props: {
     kind: SqliteObjModalKind
@@ -22,13 +22,14 @@ export default function SqliteObjModal(props: {
     const titleMap: Record<string, string> = {
         createtable: '新建 SQLite 数据表',
         droptable: `删除表 ${name}`,
+        truncate: `清空表 ${name} 的全部数据`,
         createindex: '新建索引',
         dropindex: `删除索引 ${name}`,
     }
-    const needName = !['dropindex'].includes(kind)
+    const needName = !['dropindex', 'truncate'].includes(kind)
     const needDef = kind === 'createtable'
     const needCols = kind === 'createindex'
-    const needConfirm = ['droptable', 'dropindex'].includes(kind)
+    const needConfirm = ['droptable', 'dropindex', 'truncate'].includes(kind)
 
     return (
         <div className={g.modalMask} onClick={() => !busy && onClose()}>

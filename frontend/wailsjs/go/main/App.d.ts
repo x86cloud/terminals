@@ -387,6 +387,8 @@ export function SqliteSelect(arg1:string,arg2:string,arg3:number,arg4:number):Pr
 
 export function SqliteTables(arg1:string):Promise<Array<Record<string, any>>>;
 
+export function SqliteTruncateTable(arg1:string,arg2:string):Promise<void>;
+
 export function SqliteUpdate(arg1:string,arg2:string,arg3:Array<string>,arg4:Array<any>,arg5:Array<string>,arg6:Array<any>):Promise<number>;
 
 export function UploadData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;

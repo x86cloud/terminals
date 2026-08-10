@@ -550,6 +550,20 @@ func (m *SqliteManager) SqliteDropTable(id, table string) error {
 	return err
 }
 
+// SqliteTruncateTable 清空数据表全部内容
+func (m *SqliteManager) SqliteTruncateTable(id, table string) error {
+	mc, ok := m.Get(id)
+	if !ok {
+		return errors.New("SQLite 连接不存在或已断开")
+	}
+	_, err := mc.db.Exec("DELETE FROM " + quoteSqliteIdent(table))
+	if err != nil {
+		return err
+	}
+	_, _ = mc.db.Exec("DELETE FROM sqlite_sequence WHERE name = ?", table)
+	return nil
+}
+
 // SqliteCreateIndex 新建索引
 func (m *SqliteManager) SqliteCreateIndex(id, table, name, colsCSV string, unique bool) error {
 	mc, ok := m.Get(id)

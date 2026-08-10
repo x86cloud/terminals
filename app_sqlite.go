@@ -75,6 +75,10 @@ func (a *App) SqliteDropTable(id, table string) error {
 	return db.SqliteMgr.SqliteDropTable(id, table)
 }
 
+func (a *App) SqliteTruncateTable(id, table string) error {
+	return db.SqliteMgr.SqliteTruncateTable(id, table)
+}
+
 func (a *App) SqliteCreateIndex(id, table, name, colsCSV string, unique bool) error {
 	return db.SqliteMgr.SqliteCreateIndex(id, table, name, colsCSV, unique)
 }

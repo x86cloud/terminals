@@ -762,6 +762,10 @@ export function SqliteTables(arg1) {
   return window['go']['main']['App']['SqliteTables'](arg1);
 }
 
+export function SqliteTruncateTable(arg1, arg2) {
+  return window['go']['main']['App']['SqliteTruncateTable'](arg1, arg2);
+}
+
 export function SqliteUpdate(arg1, arg2, arg3, arg4, arg5, arg6) {
   return window['go']['main']['App']['SqliteUpdate'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
