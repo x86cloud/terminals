@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"terminal/db"
 )
 
@@ -22,7 +21,7 @@ func (a *App) MysqlClose(serverID string) error {
 }
 
 func (a *App) MysqlDatabases(serverID string) ([]string, error) {
-	return a.mysqlMgr.ListDatabases(serverID)
+	return db.MysqlExMgr.MysqlDatabases(serverID)
 }
 
 func (a *App) MysqlTables(serverID, dbName string) ([]string, error) {
@@ -30,74 +29,31 @@ func (a *App) MysqlTables(serverID, dbName string) ([]string, error) {
 }
 
 func (a *App) MysqlSelect(serverID, dbName, table string, limit, offset int) (db.MysqlQueryResult, error) {
-	if dbName != "" {
-		_ = a.mysqlMgr.UseDatabase(serverID, dbName)
-	}
-	sqlText := fmt.Sprintf("SELECT * FROM `%s` LIMIT %d OFFSET %d", table, limit, offset)
-	return a.mysqlMgr.RunSQL(serverID, sqlText)
+	return db.MysqlExMgr.MysqlSelect(serverID, dbName, table, limit, offset)
 }
 
 func (a *App) MysqlCount(serverID, dbName, table string) (int64, error) {
-	if dbName != "" {
-		_ = a.mysqlMgr.UseDatabase(serverID, dbName)
-	}
-	res, err := a.mysqlMgr.RunSQL(serverID, fmt.Sprintf("SELECT COUNT(*) AS total FROM `%s`", table))
-	if err != nil || len(res.Rows) == 0 {
-		return 0, err
-	}
-	if val, ok := res.Rows[0]["total"].(int64); ok {
-		return val, nil
-	}
-	return 0, nil
+	return db.MysqlExMgr.MysqlCount(serverID, dbName, table)
 }
 
 func (a *App) MysqlDescribe(serverID, dbName, table string) (db.MysqlQueryResult, error) {
-	if dbName != "" {
-		_ = a.mysqlMgr.UseDatabase(serverID, dbName)
-	}
-	return a.mysqlMgr.RunSQL(serverID, fmt.Sprintf("DESCRIBE `%s`", table))
+	return db.MysqlExMgr.MysqlDescribe(serverID, dbName, table)
 }
 
 func (a *App) MysqlRun(serverID, dbName, sqlText string) (db.MysqlQueryResult, error) {
-	if dbName != "" {
-		_ = a.mysqlMgr.UseDatabase(serverID, dbName)
-	}
-	return a.mysqlMgr.RunSQL(serverID, sqlText)
+	return db.MysqlExMgr.MysqlRun(serverID, dbName, sqlText)
 }
 
 func (a *App) MysqlInsert(serverID, dbName, table string, columns []string, values []any) (int64, error) {
-	if dbName != "" {
-		_ = a.mysqlMgr.UseDatabase(serverID, dbName)
-	}
-	if len(columns) == 0 || len(values) == 0 {
-		return 0, errors.New("插入列或值不能为空")
-	}
-	placeholders := ""
-	for i := 0; i < len(columns); i++ {
-		if i > 0 {
-			placeholders += ", "
-		}
-		placeholders += "?"
-	}
-	sqlText := fmt.Sprintf("INSERT INTO `%s` (`%s`) VALUES (%s)", table, columns[0], placeholders)
-	res, err := a.mysqlMgr.RunSQL(serverID, sqlText)
-	return res.Affected, err
+	return db.MysqlExMgr.MysqlInsert(serverID, dbName, table, columns, values)
 }
 
 func (a *App) MysqlUpdate(serverID, dbName, table string, setCols []string, setVals []any, whereCols []string, whereVals []any) (int64, error) {
-	if dbName != "" {
-		_ = a.mysqlMgr.UseDatabase(serverID, dbName)
-	}
-	res, err := a.mysqlMgr.RunSQL(serverID, fmt.Sprintf("UPDATE `%s` SET ...", table))
-	return res.Affected, err
+	return db.MysqlExMgr.MysqlUpdate(serverID, dbName, table, setCols, setVals, whereCols, whereVals)
 }
 
 func (a *App) MysqlDelete(serverID, dbName, table string, whereCols []string, whereVals []any) (int64, error) {
-	if dbName != "" {
-		_ = a.mysqlMgr.UseDatabase(serverID, dbName)
-	}
-	res, err := a.mysqlMgr.RunSQL(serverID, fmt.Sprintf("DELETE FROM `%s`", table))
-	return res.Affected, err
+	return db.MysqlExMgr.MysqlDelete(serverID, dbName, table, whereCols, whereVals)
 }
 
 func (a *App) MysqlExport(serverID, dbName, mode, source, table, sqlText string, limit int) (string, error) {

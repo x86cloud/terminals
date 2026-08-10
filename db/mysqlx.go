@@ -351,7 +351,192 @@ func (m *MysqlManagerEx) MysqlCloseEx(id string) {
 	m.Close(id)
 }
 
-// ===================== 库 / 表管理 =====================
+func (m *MysqlManagerEx) MysqlDatabases(id string) ([]string, error) {
+	_, rows, err := m.queryEx(id, "", "SHOW DATABASES")
+	if err != nil {
+		return nil, err
+	}
+	dbs := make([]string, 0, len(rows))
+	for _, r := range rows {
+		for _, v := range r {
+			if s := asString(v); s != "" {
+				dbs = append(dbs, s)
+				break
+			}
+		}
+	}
+	return dbs, nil
+}
+
+func (m *MysqlManagerEx) MysqlTables(id, dbName string) ([]string, error) {
+	_, rows, err := m.queryEx(id, dbName, "SHOW TABLES")
+	if err != nil {
+		return nil, err
+	}
+	tables := make([]string, 0, len(rows))
+	for _, r := range rows {
+		for _, v := range r {
+			if s := asString(v); s != "" {
+				tables = append(tables, s)
+				break
+			}
+		}
+	}
+	return tables, nil
+}
+
+func (m *MysqlManagerEx) MysqlRun(id, dbName, sqlText string) (MysqlQueryResult, error) {
+	mc, ok := m.Get(id)
+	if !ok {
+		return MysqlQueryResult{}, errors.New("MySQL 连接不存在或已断开，请重新连接")
+	}
+	if strings.TrimSpace(dbName) != "" {
+		if _, e := mc.db.Exec("USE " + quoteIdent(dbName)); e != nil {
+			return MysqlQueryResult{}, fmt.Errorf("切换数据库失败: %w", e)
+		}
+		mc.curDb = dbName
+	}
+	trimmed := strings.TrimSpace(sqlText)
+	if isReadQuery(trimmed) {
+		cols, rows, err := m.queryEx(id, dbName, trimmed)
+		if err != nil {
+			return MysqlQueryResult{}, err
+		}
+		return MysqlQueryResult{Columns: cols, Rows: rows, Affected: 0}, nil
+	}
+	res, err := mc.db.Exec(trimmed)
+	if err != nil {
+		return MysqlQueryResult{}, err
+	}
+	affected, _ := res.RowsAffected()
+	return MysqlQueryResult{Columns: []string{}, Rows: []map[string]any{}, Affected: affected}, nil
+}
+
+func (m *MysqlManagerEx) MysqlSelect(id, dbName, table string, limit, offset int) (MysqlQueryResult, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	sqlText := fmt.Sprintf("SELECT * FROM %s LIMIT %d OFFSET %d", quoteIdent(table), limit, offset)
+	return m.MysqlRun(id, dbName, sqlText)
+}
+
+func (m *MysqlManagerEx) MysqlCount(id, dbName, table string) (int64, error) {
+	sqlText := fmt.Sprintf("SELECT COUNT(*) AS total FROM %s", quoteIdent(table))
+	res, err := m.MysqlRun(id, dbName, sqlText)
+	if err != nil || len(res.Rows) == 0 {
+		return 0, err
+	}
+	row := res.Rows[0]
+	for _, v := range row {
+		switch t := v.(type) {
+		case int64:
+			return t, nil
+		case int:
+			return int64(t), nil
+		case float64:
+			return int64(t), nil
+		case string:
+			var n int64
+			fmt.Sscanf(t, "%d", &n)
+			return n, nil
+		}
+	}
+	return 0, nil
+}
+
+func (m *MysqlManagerEx) MysqlDescribe(id, dbName, table string) (MysqlQueryResult, error) {
+	sqlText := fmt.Sprintf("DESCRIBE %s", quoteIdent(table))
+	return m.MysqlRun(id, dbName, sqlText)
+}
+
+func (m *MysqlManagerEx) MysqlInsert(id, dbName, table string, columns []string, values []any) (int64, error) {
+	mc, ok := m.Get(id)
+	if !ok {
+		return 0, errors.New("MySQL 连接不存在或已断开，请重新连接")
+	}
+	if strings.TrimSpace(dbName) != "" {
+		if _, e := mc.db.Exec("USE " + quoteIdent(dbName)); e != nil {
+			return 0, fmt.Errorf("切换数据库失败: %w", e)
+		}
+	}
+	if len(columns) == 0 || len(values) == 0 {
+		return 0, errors.New("插入列和值不能为空")
+	}
+	quotedCols := make([]string, len(columns))
+	placeholders := make([]string, len(columns))
+	for i, col := range columns {
+		quotedCols[i] = quoteIdent(col)
+		placeholders[i] = "?"
+	}
+	sqlText := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+		quoteIdent(table), strings.Join(quotedCols, ","), strings.Join(placeholders, ","))
+	res, err := mc.db.Exec(sqlText, values...)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func (m *MysqlManagerEx) MysqlUpdate(id, dbName, table string, setCols []string, setVals []any, whereCols []string, whereVals []any) (int64, error) {
+	mc, ok := m.Get(id)
+	if !ok {
+		return 0, errors.New("MySQL 连接不存在或已断开，请重新连接")
+	}
+	if strings.TrimSpace(dbName) != "" {
+		if _, e := mc.db.Exec("USE " + quoteIdent(dbName)); e != nil {
+			return 0, fmt.Errorf("切换数据库失败: %w", e)
+		}
+	}
+	if len(setCols) == 0 {
+		return 0, errors.New("更新列不能为空")
+	}
+	setParts := make([]string, len(setCols))
+	for i, col := range setCols {
+		setParts[i] = quoteIdent(col) + " = ?"
+	}
+	args := append([]any{}, setVals...)
+	whereParts := make([]string, len(whereCols))
+	for i, col := range whereCols {
+		whereParts[i] = quoteIdent(col) + " = ?"
+		args = append(args, whereVals[i])
+	}
+	sqlText := fmt.Sprintf("UPDATE %s SET %s", quoteIdent(table), strings.Join(setParts, ", "))
+	if len(whereParts) > 0 {
+		sqlText += " WHERE " + strings.Join(whereParts, " AND ")
+	}
+	res, err := mc.db.Exec(sqlText, args...)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+func (m *MysqlManagerEx) MysqlDelete(id, dbName, table string, whereCols []string, whereVals []any) (int64, error) {
+	mc, ok := m.Get(id)
+	if !ok {
+		return 0, errors.New("MySQL 连接不存在或已断开，请重新连接")
+	}
+	if strings.TrimSpace(dbName) != "" {
+		if _, e := mc.db.Exec("USE " + quoteIdent(dbName)); e != nil {
+			return 0, fmt.Errorf("切换数据库失败: %w", e)
+		}
+	}
+	if len(whereCols) == 0 {
+		return 0, errors.New("无法确定删除条件（缺少主键列）")
+	}
+	whereParts := make([]string, len(whereCols))
+	for i, col := range whereCols {
+		whereParts[i] = quoteIdent(col) + " = ?"
+	}
+	sqlText := fmt.Sprintf("DELETE FROM %s WHERE %s", quoteIdent(table), strings.Join(whereParts, " AND "))
+	res, err := mc.db.Exec(sqlText, whereVals...)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+
 
 func (m *MysqlManagerEx) MysqlCreateDatabase(id, name, charset string) error {
 	mc, ok := m.Get(id)
@@ -587,22 +772,7 @@ func (m *MysqlManagerEx) MysqlSlowLog(id string, limit int) ([]map[string]any, e
 	return rows, nil
 }
 
-func (m *MysqlManagerEx) MysqlTables(id, db string) ([]string, error) {
-	_, rows, err := m.queryEx(id, db, "SHOW TABLES")
-	if err != nil {
-		return nil, err
-	}
-	out := make([]string, 0, len(rows))
-	for _, r := range rows {
-		for _, v := range r {
-			if s := asString(v); s != "" {
-				out = append(out, s)
-				break
-			}
-		}
-	}
-	return out, nil
-}
+
 
 func (m *MysqlManagerEx) MysqlExport(id, db, mode, source, table, sqlText string, limit int) (string, error) {
 	if mode == "json" {
