@@ -48,7 +48,7 @@
 ```
 terminal/
 ├── main.go               // Wails 应用主入口，初始化窗口参数与系统级文件拖放
-├── app.go                // App 核心生命周期、服务器/分组/设置配置管理与 HTTP/WS 调试
+├── app.go                // App 核心生命周期、服务器/分组/设置配置管理
 ├── app_ssh.go            // 暴露给前端的 SSH 终端会话、系统运维 (Dashboard/进程/服务/Cron) 与 Docker 接口
 ├── app_sftp.go           // 暴露给前端的 SFTP 文件管理、传输队列控制与本地文件对话框
 ├── app_mysql.go          // 暴露给前端的 MySQL 核心及扩展管理接口
@@ -56,6 +56,7 @@ terminal/
 ├── app_mongo.go          // 暴露给前端的 MongoDB 集合、文档、聚合与 ChangeStream 接口
 ├── app_sqlite.go         // 暴露给前端的 SQLite 本地文件数据库操作接口
 ├── app_mqtt.go           // 暴露给前端的 MQTT Broker 发布订阅与会话控制接口
+├── app_api.go            // 暴露给前端的 HTTP API 调试发包与 WebSocket 双向推流接口
 ├── core/                 // 核心基础设施与通用配置
 │   ├── config.go         // 服务器连接配置管理、读写与敏感字段 AES-GCM 加密存储
 │   └── sftp.go           // SFTP 目录/文件读写、上传下载任务队列与传输进度广播
