@@ -478,26 +478,6 @@ export const API = {
     sqliteIndexes: (id: string, table: string): Promise<SqliteIndexInfo[]> => app().SqliteIndexes(id, table),
     sqliteRun: (id: string, sqlText: string): Promise<SqliteQueryResult> => app().SqliteRun(id, sqlText),
     sqliteSchema: (id: string): Promise<SqliteSchema> => app().SqliteSchema(id),
-    sqliteInsert: (id: string, table: string, columns: string[], values: any[]): Promise<number> =>
-        app().SqliteInsert(id, table, columns, values),
-    sqliteUpdate: (
-        id: string,
-        table: string,
-        setCols: string[],
-        setVals: any[],
-        whereCols: string[],
-        whereVals: any[]
-    ): Promise<number> => app().SqliteUpdate(id, table, setCols, setVals, whereCols, whereVals),
-    sqliteDelete: (id: string, table: string, whereCols: string[], whereVals: any[]): Promise<number> =>
-        app().SqliteDelete(id, table, whereCols, whereVals),
-    sqliteCreateTable: (id: string, table: string, defs: string): Promise<void> =>
-        app().SqliteCreateTable(id, table, defs),
-    sqliteDropTable: (id: string, table: string): Promise<void> => app().SqliteDropTable(id, table),
-    sqliteTruncateTable: (id: string, table: string): Promise<void> => app().SqliteTruncateTable(id, table),
-    sqliteCreateIndex: (id: string, table: string, name: string, colsCSV: string, unique: boolean): Promise<void> =>
-        app().SqliteCreateIndex(id, table, name, colsCSV, unique),
-    sqliteDropIndex: (id: string, table: string, name: string): Promise<void> =>
-        app().SqliteDropIndex(id, table, name),
 }
 
 /* ------------------------------------------------------------------ */

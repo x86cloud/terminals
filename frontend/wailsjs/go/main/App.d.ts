@@ -359,23 +359,11 @@ export function SqliteConnect(arg1:string,arg2:string):Promise<boolean>;
 
 export function SqliteCount(arg1:string,arg2:string):Promise<number>;
 
-export function SqliteCreateIndex(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<void>;
-
-export function SqliteCreateTable(arg1:string,arg2:string,arg3:string):Promise<void>;
-
-export function SqliteDelete(arg1:string,arg2:string,arg3:Array<string>,arg4:Array<any>):Promise<number>;
-
 export function SqliteDescribe(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
-
-export function SqliteDropIndex(arg1:string,arg2:string,arg3:string):Promise<void>;
-
-export function SqliteDropTable(arg1:string,arg2:string):Promise<void>;
 
 export function SqliteIndexes(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
 
 export function SqliteInfo(arg1:string):Promise<Record<string, any>>;
-
-export function SqliteInsert(arg1:string,arg2:string,arg3:Array<string>,arg4:Array<any>):Promise<number>;
 
 export function SqliteOpenFile():Promise<string>;
 
@@ -386,10 +374,6 @@ export function SqliteSchema(arg1:string):Promise<Record<string, any>>;
 export function SqliteSelect(arg1:string,arg2:string,arg3:number,arg4:number):Promise<Record<string, any>>;
 
 export function SqliteTables(arg1:string):Promise<Array<Record<string, any>>>;
-
-export function SqliteTruncateTable(arg1:string,arg2:string):Promise<void>;
-
-export function SqliteUpdate(arg1:string,arg2:string,arg3:Array<string>,arg4:Array<any>,arg5:Array<string>,arg6:Array<any>):Promise<number>;
 
 export function UploadData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 

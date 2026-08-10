@@ -1,26 +1,33 @@
-import React, {useCallback, useEffect, useState} from 'react'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import Icon from '../../components/Icon'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteQueryResult, SqliteIndexInfo} from '../../types'
+import {ConfirmModal, ConfirmState} from '../../components/Modal'
 import g from '../../styles/global.module.less'
 import sq from './SqliteClient.module.less'
 import db from '../mysql/dbTable.module.less'
 import sh from '../mysql/mysqlShared.module.less'
-import CellEditorInline from '../mysql/CellEditorInline'
-import SqliteObjModal, {SqliteObjModalKind} from './SqliteObjModal'
 
 interface Props {
     session: SqliteSessionInfo
     onClose: () => void
 }
 
-interface NewRowDraft {
-    _id: string
-    data: Record<string, string>
+const PAGE_SIZE = 100
+const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+
+function quoteIdent(s: string): string {
+    return `"${s.replace(/"/g, '""')}"`
 }
 
-const PAGE_SIZE = 100
+function sqlVal(v: any): string {
+    if (v === null || v === undefined) return 'NULL'
+    if (typeof v === 'number') return String(v)
+    if (typeof v === 'boolean') return v ? '1' : '0'
+    const str = String(v)
+    return `'${str.replace(/'/g, "''")}'`
+}
 
 export default function SqliteClient({session, onClose}: Props) {
     const [tables, setTables] = useState<SqliteTableInfo[]>([])
@@ -31,42 +38,22 @@ export default function SqliteClient({session, onClose}: Props) {
     const [error, setError] = useState('')
     const [info, setInfo] = useState<{ path: string; size: number }>({path: session.path, size: session.size})
     const [pathError, setPathError] = useState('')
+    const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
 
     // 数据态
     const [rows, setRows] = useState<Record<string, any>[]>([])
     const [columns, setColumns] = useState<string[]>([])
     const [page, setPage] = useState(1)
     const [totalRows, setTotalRows] = useState(0)
-    const [selectedRowIdx, setSelectedRowIdx] = useState<number | null>(null)
 
-    // 数据顶部草稿新增行 (像 MySQL 一样)
-    const [newRows, setNewRows] = useState<NewRowDraft[]>([])
-
-    // 单元格在线编辑
-    const [editingCell, setEditingCell] = useState<{ rowIdx: number; col: string } | null>(null)
+    // 草稿修改态 (行行内编辑 & 新建行)
+    const [newRows, setNewRows] = useState<Record<string, any>[]>([])
+    const [drafts, setDrafts] = useState<Record<number, Record<string, any>>>({})
+    const [editing, setEditing] = useState<{ row: number; col: string } | null>(null)
 
     // 结构态与索引态
     const [structData, setStructData] = useState<SqliteColumnInfo[]>([])
     const [indexData, setIndexData] = useState<SqliteIndexInfo[]>([])
-
-    // 对象弹窗态 (新建表/删表/清空表/新建索引/删索引)
-    const [objModal, setObjModal] = useState<{
-        open: boolean
-        kind: SqliteObjModalKind
-        name: string
-        extra: string
-        unique: boolean
-        msg: string
-        busy: boolean
-    }>({
-        open: false,
-        kind: 'createtable',
-        name: '',
-        extra: '',
-        unique: false,
-        msg: '',
-        busy: false,
-    })
 
     const id = session.id
 
@@ -108,10 +95,12 @@ export default function SqliteClient({session, onClose}: Props) {
             if (!ok) throw new Error('无法打开该 SQLite 文件')
             setSelected(null)
             setRows([])
-            setNewRows([])
             setColumns([])
             setStructData([])
             setIndexData([])
+            setNewRows([])
+            setDrafts({})
+            setEditing(null)
             setTotalRows(0)
             setPage(1)
             await Promise.all([loadTables(), loadInfo()])
@@ -123,36 +112,38 @@ export default function SqliteClient({session, onClose}: Props) {
         }
     }
 
-    const openTable = useCallback(async (table: string, toPage = 1) => {
+    const loadTableData = async (table: string, toPage = 1) => {
         setSelected(table)
         setDataView('data')
         setBusy(true)
         setError('')
-        setSelectedRowIdx(null)
-        setEditingCell(null)
         setNewRows([])
+        setDrafts({})
+        setEditing(null)
         try {
             const [data, cnt, struct] = await Promise.all([
                 API.sqliteSelect(id, table, PAGE_SIZE, (toPage - 1) * PAGE_SIZE),
                 API.sqliteCount(id, table),
-                API.sqliteDescribe(id, table),
+                API.sqliteDescribe(id, table).catch(() => []),
             ])
             if (data.rows.length === 0 && toPage > 1) {
                 setBusy(false)
-                await openTable(table, 1)
+                await loadTableData(table, 1)
                 return
             }
             setRows(data.rows)
             setColumns(data.columns)
-            setTotalRows(cnt)
             setStructData(struct)
+            setTotalRows(cnt)
             setPage(toPage)
         } catch (e) {
             setError(errorMessage(e))
         } finally {
             setBusy(false)
         }
-    }, [id])
+    }
+
+    const openTable = useCallback((table: string, toPage = 1) => loadTableData(table, toPage), [id])
 
     const viewStruct = useCallback(async (table: string) => {
         setSelected(table)
@@ -182,129 +173,227 @@ export default function SqliteClient({session, onClose}: Props) {
         }
     }, [id])
 
-    const getPkWhere = (row: Record<string, any>) => {
-        const pkCols = structData.filter((c) => c.pk > 0).map((c) => c.name)
-        const whereCols: string[] = []
-        const whereVals: any[] = []
-
-        if (pkCols.length > 0) {
-            for (const col of pkCols) {
-                whereCols.push(col)
-                whereVals.push(row[col])
-            }
-        } else {
-            for (const col of columns) {
-                if (row[col] !== undefined && row[col] !== null) {
-                    whereCols.push(col)
-                    whereVals.push(row[col])
-                }
-            }
+    // ---- 草稿变动计算 ----
+    const dirtyCount = useMemo(() => {
+        let count = newRows.length
+        for (const rowIdx in drafts) {
+            count += Object.keys(drafts[rowIdx]).length
         }
-        return {whereCols, whereVals}
+        return count
+    }, [newRows, drafts])
+
+    // ---- 单元格编辑辅助 ----
+    const getEditValue = (rowIdx: number, col: string): string => {
+        if (drafts[rowIdx] && drafts[rowIdx][col] !== undefined) {
+            const v = drafts[rowIdx][col]
+            return v === null || v === undefined ? '' : String(v)
+        }
+        const orig = rows[rowIdx]?.[col]
+        return orig === null || orig === undefined ? '' : String(orig)
     }
 
-    const saveCellEdit = async (rowIdx: number, col: string, rawVal: string, isNull: boolean) => {
+    const getDisplayValue = (rowIdx: number, col: string): string => {
+        if (drafts[rowIdx] && drafts[rowIdx][col] !== undefined) {
+            const v = drafts[rowIdx][col]
+            return v === null || v === undefined ? '' : String(v)
+        }
+        const orig = rows[rowIdx]?.[col]
+        return orig === null || orig === undefined ? '' : String(orig)
+    }
+
+    const isNull = (rowIdx: number, col: string): boolean => {
+        if (drafts[rowIdx] && drafts[rowIdx][col] !== undefined) {
+            return drafts[rowIdx][col] === null || drafts[rowIdx][col] === undefined
+        }
+        const orig = rows[rowIdx]?.[col]
+        return orig === null || orig === undefined
+    }
+
+    const isDirty = (rowIdx: number, col: string): boolean => {
+        if (!drafts[rowIdx]) return false
+        return drafts[rowIdx][col] !== undefined
+    }
+
+    const updateDraft = (rowIdx: number, col: string, rawVal: string) => {
+        const orig = rows[rowIdx]?.[col]
+        const origStr = orig === null || orig === undefined ? '' : String(orig)
+        setDrafts((prev) => {
+            const rowDraft = { ...(prev[rowIdx] || {}) }
+            if (rawVal === origStr) {
+                delete rowDraft[col]
+            } else {
+                rowDraft[col] = rawVal
+            }
+            const next = { ...prev }
+            if (Object.keys(rowDraft).length === 0) {
+                delete next[rowIdx]
+            } else {
+                next[rowIdx] = rowDraft
+            }
+            return next
+        })
+    }
+
+    // ---- 新建行操作 ----
+    const handleAddRow = () => {
+        const emptyRow: Record<string, any> = {}
+        for (const c of columns) {
+            emptyRow[c] = ''
+        }
+        setNewRows((prev) => [...prev, emptyRow])
+    }
+
+    const updateNewCell = (idx: number, col: string, val: string) => {
+        setNewRows((prev) => {
+            const next = [...prev]
+            next[idx] = { ...next[idx], [col]: val }
+            return next
+        })
+    }
+
+    const removeNewRow = (idx: number) => {
+        setNewRows((prev) => prev.filter((_, i) => i !== idx))
+    }
+
+    // ---- 生成安全的 SQLite WHERE 条件 ----
+    const buildWhereClause = (row: Record<string, any>): string => {
+        const pkNames = structData.filter((c) => c.pk > 0).map((c) => c.name)
+        const targetCols = pkNames.length > 0 ? pkNames : columns
+        const parts: string[] = []
+        for (const c of targetCols) {
+            const v = row[c]
+            if (v === null || v === undefined) {
+                parts.push(`${quoteIdent(c)} IS NULL`)
+            } else {
+                parts.push(`${quoteIdent(c)} = ${sqlVal(v)}`)
+            }
+        }
+        return parts.join(' AND ')
+    }
+
+    // ---- 删除整行数据 ----
+    const confirmDeleteRow = (rowIdx: number) => {
         if (!selected) return
-        const oldRow = rows[rowIdx]
-        if (!oldRow) return
-        const {whereCols, whereVals} = getPkWhere(oldRow)
-        const newVal = isNull ? null : rawVal
-
-        try {
-            await API.sqliteUpdate(id, selected, [col], [newVal], whereCols, whereVals)
-            setRows((prev) => {
-                const next = [...prev]
-                next[rowIdx] = {...next[rowIdx], [col]: newVal}
-                return next
-            })
-            setEditingCell(null)
-        } catch (e) {
-            setError('编辑失败: ' + errorMessage(e))
-        }
+        const targetRow = rows[rowIdx]
+        setConfirmState({
+            open: true,
+            title: '删除整行数据',
+            danger: true,
+            message: `确认删除当前选中的第 ${rowIdx + 1} 行数据吗？该操作不可撤销。`,
+            onConfirm: async () => {
+                setConfirmState(emptyConfirm)
+                setSaving(true)
+                try {
+                    const whereSql = buildWhereClause(targetRow)
+                    const sql = `DELETE FROM ${quoteIdent(selected)} WHERE ${whereSql}`
+                    await API.sqliteRun(id, sql)
+                    await openTable(selected, page)
+                } catch (e) {
+                    setError(errorMessage(e))
+                } finally {
+                    setSaving(false)
+                }
+            },
+        })
     }
 
-    const handleDeleteRow = async () => {
-        if (!selected || selectedRowIdx === null) return
-        const row = rows[selectedRowIdx]
-        if (!row) return
-        if (!window.confirm('确定要删除选中的记录吗？')) return
-
-        const {whereCols, whereVals} = getPkWhere(row)
-        try {
-            await API.sqliteDelete(id, selected, whereCols, whereVals)
-            setRows((prev) => prev.filter((_, idx) => idx !== selectedRowIdx))
-            setSelectedRowIdx(null)
-            setTotalRows((prev) => Math.max(0, prev - 1))
-        } catch (e) {
-            setError('删除记录失败: ' + errorMessage(e))
-        }
+    // ---- 清空表数据 (DELETE FROM table) ----
+    const confirmTruncateTable = (tableName: string) => {
+        setConfirmState({
+            open: true,
+            title: '清空表数据',
+            danger: true,
+            message: `确认清空表 "${tableName}" 吗？表中所有数据将被清空且不可恢复！`,
+            onConfirm: async () => {
+                setConfirmState(emptyConfirm)
+                setBusy(true)
+                try {
+                    await API.sqliteRun(id, `DELETE FROM ${quoteIdent(tableName)}`)
+                    if (selected === tableName) {
+                        await openTable(tableName, 1)
+                    }
+                } catch (e) {
+                    setError(errorMessage(e))
+                } finally {
+                    setBusy(false)
+                }
+            },
+        })
     }
 
-    const handleAddRowDraft = () => {
-        setNewRows((prev) => [{_id: String(Date.now() + Math.random()), data: {}}, ...prev])
+    // ---- 删除表 (DROP TABLE table) ----
+    const confirmDropTable = (tableName: string) => {
+        setConfirmState({
+            open: true,
+            title: '删除表 (Drop Table)',
+            danger: true,
+            message: `确认删除表 "${tableName}" 吗？该表及其结构将被永久删除且不可恢复！`,
+            onConfirm: async () => {
+                setConfirmState(emptyConfirm)
+                setBusy(true)
+                try {
+                    await API.sqliteRun(id, `DROP TABLE ${quoteIdent(tableName)}`)
+                    if (selected === tableName) {
+                        setSelected(null)
+                        setRows([])
+                        setColumns([])
+                    }
+                    await loadTables()
+                } catch (e) {
+                    setError(errorMessage(e))
+                } finally {
+                    setBusy(false)
+                }
+            },
+        })
     }
 
-    const handleSaveNewRows = async () => {
-        if (!selected || newRows.length === 0) return
+    // ---- 批量保存更改 ----
+    const handleSaveAll = async () => {
+        if (!selected || dirtyCount === 0) return
         setSaving(true)
         setError('')
         try {
+            // 1. 提交草稿新增行 (INSERT)
             for (const nr of newRows) {
-                const cols: string[] = []
-                const vals: any[] = []
-                for (const col of columns) {
-                    const v = nr.data[col]
-                    if (v !== undefined && v !== '') {
-                        cols.push(col)
-                        vals.push(v)
+                const validCols: string[] = []
+                const validVals: string[] = []
+                for (const c of columns) {
+                    if (nr[c] !== undefined && nr[c] !== '') {
+                        validCols.push(quoteIdent(c))
+                        validVals.push(sqlVal(nr[c]))
                     }
                 }
-                if (cols.length > 0) {
-                    await API.sqliteInsert(id, selected, cols, vals)
+                if (validCols.length > 0) {
+                    const sql = `INSERT INTO ${quoteIdent(selected)} (${validCols.join(', ')}) VALUES (${validVals.join(', ')})`
+                    await API.sqliteRun(id, sql)
                 }
             }
-            setNewRows([])
+
+            // 2. 提交单元格修改 (UPDATE)
+            for (const rowIdxStr in drafts) {
+                const rowIdx = Number(rowIdxStr)
+                const origRow = rows[rowIdx]
+                const rowDraft = drafts[rowIdx]
+                if (!origRow || !rowDraft) continue
+
+                const setParts: string[] = []
+                for (const col in rowDraft) {
+                    setParts.push(`${quoteIdent(col)} = ${sqlVal(rowDraft[col])}`)
+                }
+                if (setParts.length > 0) {
+                    const whereSql = buildWhereClause(origRow)
+                    const sql = `UPDATE ${quoteIdent(selected)} SET ${setParts.join(', ')} WHERE ${whereSql}`
+                    await API.sqliteRun(id, sql)
+                }
+            }
+
+            // 重新刷新
             await openTable(selected, page)
         } catch (e) {
-            setError('保存新增行失败: ' + errorMessage(e))
+            setError(errorMessage(e))
         } finally {
             setSaving(false)
-        }
-    }
-
-    const handleObjConfirm = async () => {
-        const {kind, name, extra, unique} = objModal
-        setObjModal((prev) => ({...prev, busy: true, msg: ''}))
-        try {
-            if (kind === 'createtable') {
-                await API.sqliteCreateTable(id, name, extra)
-                setObjModal((prev) => ({...prev, open: false}))
-                await loadTables()
-                await openTable(name, 1)
-            } else if (kind === 'droptable') {
-                await API.sqliteDropTable(id, name)
-                setObjModal((prev) => ({...prev, open: false}))
-                if (selected === name) setSelected(null)
-                await loadTables()
-            } else if (kind === 'truncate') {
-                await API.sqliteTruncateTable(id, name)
-                setObjModal((prev) => ({...prev, open: false}))
-                if (selected === name) {
-                    await openTable(name, 1)
-                }
-            } else if (kind === 'createindex') {
-                if (!selected) return
-                await API.sqliteCreateIndex(id, selected, name, extra, unique)
-                setObjModal((prev) => ({...prev, open: false}))
-                await viewIndex(selected)
-            } else if (kind === 'dropindex') {
-                if (!selected) return
-                await API.sqliteDropIndex(id, selected, name)
-                setObjModal((prev) => ({...prev, open: false}))
-                await viewIndex(selected)
-            }
-        } catch (e) {
-            setObjModal((prev) => ({...prev, busy: false, msg: '失败: ' + errorMessage(e)}))
         }
     }
 
@@ -330,29 +419,14 @@ export default function SqliteClient({session, onClose}: Props) {
 
     return (
         <div className={sq.sqlitePane}>
+            <ConfirmModal state={confirmState} onCancel={() => setConfirmState(emptyConfirm)} />
+
             <div className={sq.sqliteSide}>
                 <div className={sq.sqliteHead}>
                     <Icon name="database" size={13}/>
                     <span className={sq.sqliteTitle}>SQLite</span>
-                    <button
-                        className={`${g.btn} ${g.xs}`}
-                        onClick={() =>
-                            setObjModal({
-                                open: true,
-                                kind: 'createtable',
-                                name: '',
-                                extra: 'id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT',
-                                unique: false,
-                                msg: '',
-                                busy: false,
-                            })
-                        }
-                        title="新建表"
-                    >
-                        <Icon name="plus" size={12}/> 建表
-                    </button>
                     <button className={`${g.btn} ${g.xs}`} onClick={switchFile} disabled={busy} title="选择其他数据库文件">
-                        <Icon name="folder" size={12}/> 切换
+                        <Icon name="folder" size={12}/> 切换文件
                     </button>
                 </div>
                 <div className={sq.sqlitePath} title={info.path}>
@@ -379,41 +453,11 @@ export default function SqliteClient({session, onClose}: Props) {
                                 {t.type === 'view' && <span className={sh.mongoBadge} style={{marginLeft: 4}}>视图</span>}
                             </button>
                             <div className={sq.sqliteTableMenu}>
-                                <button
-                                    className={g.iconBtn}
-                                    title="清空表数据"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        setObjModal({
-                                            open: true,
-                                            kind: 'truncate',
-                                            name: t.name,
-                                            extra: '',
-                                            unique: false,
-                                            msg: '',
-                                            busy: false,
-                                        })
-                                    }}
-                                >
+                                <button className={g.iconBtn} title="清空表数据" onClick={(e) => { e.stopPropagation(); confirmTruncateTable(t.name); }}>
                                     <Icon name="refresh" size={12}/>
                                 </button>
-                                <button
-                                    className={`${g.iconBtn} ${g.danger}`}
-                                    title="删除表"
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        setObjModal({
-                                            open: true,
-                                            kind: 'droptable',
-                                            name: t.name,
-                                            extra: '',
-                                            unique: false,
-                                            msg: '',
-                                            busy: false,
-                                        })
-                                    }}
-                                >
-                                    <Icon name="close" size={12}/>
+                                <button className={g.iconBtn} title="删除表 (Drop)" onClick={(e) => { e.stopPropagation(); confirmDropTable(t.name); }}>
+                                    <Icon name="trash" size={12}/>
                                 </button>
                             </div>
                         </div>
@@ -449,69 +493,18 @@ export default function SqliteClient({session, onClose}: Props) {
                             {v === 'data' ? '数据预览' : v === 'struct' ? '表结构' : '索引'}
                         </button>
                     ))}
-                    {selected && (
-                        <div style={{marginLeft: 'auto', display: 'flex', gap: 6, paddingRight: 8}}>
-                            {dataView === 'data' && (
-                                <>
-                                    <button className={`${g.btn} ${g.xs}`} onClick={handleAddRowDraft} title="在表格顶部新增一行草稿">
-                                        <Icon name="plus" size={12}/> 新建行
-                                    </button>
-                                    <button
-                                        className={`${g.btn} ${g.xs} ${g.primary}`}
-                                        disabled={newRows.length === 0 || saving}
-                                        onClick={handleSaveNewRows}
-                                        title="保存顶部新增行"
-                                    >
-                                        {saving ? '保存中…' : `保存${newRows.length ? ` (${newRows.length})` : ''}`}
-                                    </button>
-                                    <button className={`${g.btn} ${g.xs}`} onClick={() => openTable(selected, page)} title="刷新数据">
-                                        <Icon name="refresh" size={12}/> 刷新
-                                    </button>
-                                    <button
-                                        className={`${g.btn} ${g.xs} ${g.danger}`}
-                                        disabled={selectedRowIdx === null}
-                                        onClick={handleDeleteRow}
-                                        title="删除选中行"
-                                    >
-                                        <Icon name="close" size={12}/> 删除选中行
-                                    </button>
-                                </>
-                            )}
-                            {dataView === 'index' && (
-                                <button
-                                    className={`${g.btn} ${g.xs} ${g.primary}`}
-                                    onClick={() =>
-                                        setObjModal({
-                                            open: true,
-                                            kind: 'createindex',
-                                            name: '',
-                                            extra: '',
-                                            unique: false,
-                                            msg: '',
-                                            busy: false,
-                                        })
-                                    }
-                                >
-                                    <Icon name="plus" size={12}/> 新建索引
-                                </button>
-                            )}
-                            <button
-                                className={`${g.btn} ${g.xs} ${g.danger}`}
-                                onClick={() =>
-                                    setObjModal({
-                                        open: true,
-                                        kind: 'droptable',
-                                        name: selected,
-                                        extra: '',
-                                        unique: false,
-                                        msg: '',
-                                        busy: false,
-                                    })
-                                }
-                            >
-                                删表
+                    {selected && dataView === 'data' && (
+                        <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', paddingBottom: 4 }}>
+                            <button className={`${g.btn} ${g.sm}`} disabled={busy || saving} onClick={handleAddRow} title="新建一行草稿数据">
+                                <Icon name="plus" size={12}/> 新建行
                             </button>
-                        </div>
+                            <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || saving || dirtyCount === 0} onClick={handleSaveAll} title="保存当前表所有修改">
+                                {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
+                            </button>
+                            <button className={g.iconBtn} title="刷新表格数据" disabled={busy || saving} onClick={() => openTable(selected, page)}>
+                                <Icon name="refresh" size={12}/>
+                            </button>
+                        </span>
                     )}
                 </div>
 
@@ -527,84 +520,72 @@ export default function SqliteClient({session, onClose}: Props) {
                                     <table className={db.dbTable}>
                                         <thead>
                                         <tr>
-                                            <th style={{width: 36, textAlign: 'center'}}>#</th>
+                                            <th style={{ width: 50, textAlign: 'center' }}>操作</th>
                                             {columns.map((c) => (
                                                 <th key={c}>{c}</th>
                                             ))}
                                         </tr>
                                         </thead>
                                         <tbody>
-                                        {/* 顶部渲染新增草稿行 (与 MySQL 保持一致) */}
-                                        {newRows.map((nr, nrIdx) => (
-                                            <tr key={nr._id} style={{background: 'rgba(0, 122, 255, 0.08)'}}>
-                                                <td style={{width: 36, textAlign: 'center'}}>
-                                                    <button
-                                                        className={g.iconBtn}
-                                                        title="移除该草稿行"
-                                                        onClick={() =>
-                                                            setNewRows((prev) => prev.filter((_, i) => i !== nrIdx))
-                                                        }
-                                                    >
-                                                        <Icon name="close" size={12}/>
+                                        {/* 拟提交的草稿新增行 */}
+                                        {newRows.map((nr, idx) => (
+                                            <tr key={`new_${idx}`} style={{ backgroundColor: 'rgba(24, 144, 255, 0.08)' }}>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <button className={g.iconBtn} title="移除此新增行" onClick={() => removeNewRow(idx)}>
+                                                        <Icon name="trash" size={12}/>
                                                     </button>
                                                 </td>
                                                 {columns.map((c) => (
-                                                    <td key={c} style={{padding: '2px 6px'}}>
+                                                    <td key={c} style={{ padding: '2px 4px' }}>
                                                         <input
-                                                            className={sh.mysqlCellInput}
-                                                            value={nr.data[c] ?? ''}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value
-                                                                setNewRows((prev) => {
-                                                                    const next = [...prev]
-                                                                    next[nrIdx] = {
-                                                                        ...next[nrIdx],
-                                                                        data: {...next[nrIdx].data, [c]: val},
-                                                                    }
-                                                                    return next
-                                                                })
-                                                            }}
-                                                            placeholder="输入新值"
+                                                            className={db.dbCellInput}
+                                                            value={nr[c] ?? ''}
+                                                            onChange={(e) => updateNewCell(idx, c, e.target.value)}
+                                                            placeholder="NULL"
                                                         />
                                                     </td>
                                                 ))}
                                             </tr>
                                         ))}
 
+                                        {/* 现存数据行 */}
                                         {rows.map((r, i) => (
-                                            <tr
-                                                key={i}
-                                                className={selectedRowIdx === i ? db.selectedTr : ''}
-                                                onClick={() => setSelectedRowIdx(i)}
-                                            >
-                                                <td style={{width: 36, textAlign: 'center', color: '#888', fontSize: 11}}>
-                                                    {(page - 1) * PAGE_SIZE + i + 1}
+                                            <tr key={i}>
+                                                <td style={{ textAlign: 'center' }}>
+                                                    <button className={g.iconBtn} title="删除整行数据" onClick={() => confirmDeleteRow(i)}>
+                                                        <Icon name="trash" size={12}/>
+                                                    </button>
                                                 </td>
                                                 {columns.map((c) => {
-                                                    const isEditing = editingCell?.rowIdx === i && editingCell?.col === c
-                                                    const v = r[c]
-                                                    const isn = v === null || v === undefined
+                                                    const isEd = editing?.row === i && editing?.col === c
+                                                    const dirty = isDirty(i, c)
+                                                    const isn = isNull(i, c)
+                                                    const disp = getDisplayValue(i, c)
+
+                                                    if (isEd) {
+                                                        return (
+                                                            <td key={c} style={{ padding: '2px 4px' }}>
+                                                                <input
+                                                                    className={db.dbCellInput}
+                                                                    autoFocus
+                                                                    value={getEditValue(i, c)}
+                                                                    onChange={(e) => updateDraft(i, c, e.target.value)}
+                                                                    onBlur={() => setEditing(null)}
+                                                                    onKeyDown={(e) => e.key === 'Enter' && setEditing(null)}
+                                                                />
+                                                            </td>
+                                                        )
+                                                    }
+
                                                     return (
                                                         <td
                                                             key={c}
-                                                            className={isn ? db.dbNullCell : ''}
-                                                            onDoubleClick={(e) => {
-                                                                e.stopPropagation()
-                                                                setEditingCell({rowIdx: i, col: c})
-                                                            }}
+                                                            className={`${dirty ? db.dbDirtyCell : ''} ${isn ? db.dbNullCell : ''}`}
+                                                            onClick={() => setEditing({ row: i, col: c })}
+                                                            style={{ cursor: 'pointer' }}
+                                                            title="点击可编辑"
                                                         >
-                                                            {isEditing ? (
-                                                                <CellEditorInline
-                                                                    value={v === null || v === undefined ? '' : String(v)}
-                                                                    isNull={isn}
-                                                                    onCommit={(raw: string, isN: boolean) => saveCellEdit(i, c, raw, isN)}
-                                                                    onCancel={() => setEditingCell(null)}
-                                                                />
-                                                            ) : isn ? (
-                                                                'NULL'
-                                                            ) : (
-                                                                String(v)
-                                                            )}
+                                                            {isn ? 'NULL' : disp}
                                                         </td>
                                                     )
                                                 })}
@@ -669,7 +650,6 @@ export default function SqliteClient({session, onClose}: Props) {
                                             <th>唯一</th>
                                             <th>来源</th>
                                             <th>部分索引</th>
-                                            <th>操作</th>
                                         </tr>
                                         </thead>
                                         <tbody>
@@ -679,24 +659,6 @@ export default function SqliteClient({session, onClose}: Props) {
                                                 <td>{ix.unique ? '是' : ''}</td>
                                                 <td>{ix.origin || ''}</td>
                                                 <td>{ix.partial ? '是' : ''}</td>
-                                                <td>
-                                                    <button
-                                                        className={`${g.btn} ${g.xs} ${g.danger}`}
-                                                        onClick={() =>
-                                                            setObjModal({
-                                                                open: true,
-                                                                kind: 'dropindex',
-                                                                name: ix.name,
-                                                                extra: '',
-                                                                unique: false,
-                                                                msg: '',
-                                                                busy: false,
-                                                            })
-                                                        }
-                                                    >
-                                                        删除
-                                                    </button>
-                                                </td>
                                             </tr>
                                         ))}
                                         </tbody>
@@ -709,22 +671,6 @@ export default function SqliteClient({session, onClose}: Props) {
                     )}
                 </div>
             </div>
-
-            {objModal.open && (
-                <SqliteObjModal
-                    kind={objModal.kind}
-                    busy={objModal.busy}
-                    msg={objModal.msg}
-                    name={objModal.name}
-                    extra={objModal.extra}
-                    unique={objModal.unique}
-                    onName={(v) => setObjModal((prev) => ({...prev, name: v}))}
-                    onExtra={(v) => setObjModal((prev) => ({...prev, extra: v}))}
-                    onUnique={(v) => setObjModal((prev) => ({...prev, unique: v}))}
-                    onClose={() => setObjModal((prev) => ({...prev, open: false}))}
-                    onConfirm={handleObjConfirm}
-                />
-            )}
         </div>
     )
 }

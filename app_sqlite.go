@@ -54,35 +54,3 @@ func (a *App) SqliteRun(id string, sqlText string) (map[string]any, error) {
 func (a *App) SqliteSchema(id string) (map[string]any, error) {
 	return db.SqliteMgr.SqliteSchema(id)
 }
-
-func (a *App) SqliteInsert(id, table string, columns []string, values []any) (int64, error) {
-	return db.SqliteMgr.SqliteInsert(id, table, columns, values)
-}
-
-func (a *App) SqliteUpdate(id, table string, setCols []string, setVals []any, whereCols []string, whereVals []any) (int64, error) {
-	return db.SqliteMgr.SqliteUpdate(id, table, setCols, setVals, whereCols, whereVals)
-}
-
-func (a *App) SqliteDelete(id, table string, whereCols []string, whereVals []any) (int64, error) {
-	return db.SqliteMgr.SqliteDelete(id, table, whereCols, whereVals)
-}
-
-func (a *App) SqliteCreateTable(id, table, defs string) error {
-	return db.SqliteMgr.SqliteCreateTable(id, table, defs)
-}
-
-func (a *App) SqliteDropTable(id, table string) error {
-	return db.SqliteMgr.SqliteDropTable(id, table)
-}
-
-func (a *App) SqliteTruncateTable(id, table string) error {
-	return db.SqliteMgr.SqliteTruncateTable(id, table)
-}
-
-func (a *App) SqliteCreateIndex(id, table, name, colsCSV string, unique bool) error {
-	return db.SqliteMgr.SqliteCreateIndex(id, table, name, colsCSV, unique)
-}
-
-func (a *App) SqliteDropIndex(id, table, name string) error {
-	return db.SqliteMgr.SqliteDropIndex(id, table, name)
-}
