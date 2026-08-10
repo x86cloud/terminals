@@ -501,8 +501,27 @@ func (m *RedisManager) GetKey(id, key string) (RedisValue, error) {
 			}
 			val.Value = strings.Join(lines, "\n")
 			val.Size = int64(len(zs))
+		case "stream":
+			msgs, e := rc.client.XRevRangeN(c, key, "+", "-", 100).Result()
+			if e != nil {
+				return e
+			}
+			lines := make([]string, 0, len(msgs))
+			for _, msg := range msgs {
+				fieldParts := make([]string, 0, len(msg.Values))
+				for fk, fv := range msg.Values {
+					fieldParts = append(fieldParts, fmt.Sprintf("%s=%v", fk, fv))
+				}
+				lines = append(lines, fmt.Sprintf("%s\n%s", msg.ID, strings.Join(fieldParts, " ")))
+			}
+			val.Value = strings.Join(lines, "\n---\n")
+			val.Size = int64(len(msgs))
+		case "none":
+			val.Value = ""
+			val.Size = 0
 		default:
-			return fmt.Errorf("暂不支持的数据类型: %s", kt)
+			val.Value = fmt.Sprintf("(暂不支持该数据类型的可视化编辑: %s)", kt)
+			val.Size = 0
 		}
 		return nil
 	})
@@ -569,6 +588,27 @@ func (m *RedisManager) SetKey(id, key, keyType, value string, ttlSec int64) erro
 				}
 				if err := rc.client.ZAdd(c, key, zs...).Err(); err != nil {
 					return err
+				}
+			}
+		case "stream":
+			lines := splitLines(value)
+			for _, line := range lines {
+				line = strings.TrimSpace(line)
+				if line == "" || line == "---" {
+					continue
+				}
+				fields := make(map[string]any)
+				parts := strings.Fields(line)
+				for _, p := range parts {
+					if kv := strings.SplitN(p, "=", 2); len(kv) == 2 {
+						fields[kv[0]] = kv[1]
+					}
+				}
+				if len(fields) > 0 {
+					_ = rc.client.XAdd(c, &goredis.XAddArgs{
+						Stream: key,
+						Values: fields,
+					}).Err()
 				}
 			}
 		default:
