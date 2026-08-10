@@ -706,8 +706,28 @@ export function SqliteCount(arg1, arg2) {
   return window['go']['main']['App']['SqliteCount'](arg1, arg2);
 }
 
+export function SqliteCreateIndex(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SqliteCreateIndex'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function SqliteCreateTable(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SqliteCreateTable'](arg1, arg2, arg3);
+}
+
+export function SqliteDelete(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SqliteDelete'](arg1, arg2, arg3, arg4);
+}
+
 export function SqliteDescribe(arg1, arg2) {
   return window['go']['main']['App']['SqliteDescribe'](arg1, arg2);
+}
+
+export function SqliteDropIndex(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SqliteDropIndex'](arg1, arg2, arg3);
+}
+
+export function SqliteDropTable(arg1, arg2) {
+  return window['go']['main']['App']['SqliteDropTable'](arg1, arg2);
 }
 
 export function SqliteIndexes(arg1, arg2) {
@@ -716,6 +736,10 @@ export function SqliteIndexes(arg1, arg2) {
 
 export function SqliteInfo(arg1) {
   return window['go']['main']['App']['SqliteInfo'](arg1);
+}
+
+export function SqliteInsert(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SqliteInsert'](arg1, arg2, arg3, arg4);
 }
 
 export function SqliteOpenFile() {
@@ -736,6 +760,10 @@ export function SqliteSelect(arg1, arg2, arg3, arg4) {
 
 export function SqliteTables(arg1) {
   return window['go']['main']['App']['SqliteTables'](arg1);
+}
+
+export function SqliteUpdate(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['SqliteUpdate'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 export function UploadData(arg1, arg2, arg3, arg4) {
