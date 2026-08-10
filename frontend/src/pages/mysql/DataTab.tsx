@@ -1,5 +1,6 @@
-import React from 'react'
+import React, {useState, useEffect} from 'react'
 import Icon from '../../components/Icon'
+import ResizableTable, {ColDef} from '../../components/ResizableTable'
 import g from '../../styles/global.module.less'
 import my from './DataTab.module.less'
 import sh from './mysqlShared.module.less'
@@ -8,6 +9,10 @@ import {MysqlQueryResult} from '../../types'
 import {Grid} from './mysqlTypes'
 import {RowDrafts, NewRow} from './mysqlTypes'
 import CellEditorInline from './CellEditorInline'
+
+const ROW_NUM_W = 40
+const ROW_ACT_W = 50
+const DEFAULT_COL_W = 120
 
 export default function DataTab(props: {
     busy: boolean
@@ -50,6 +55,36 @@ export default function DataTab(props: {
         onAddRow, onDeleteRow, onSaveAll, onCommitEdit, onUpdateNewCell, onDeleteNewRow, onCellDisplay,
         onSetEditing, saving, dirtyCount, onGoPage, onChangePageSize, onAddIndex, onDropIndex,
     } = props
+
+    // Column widths state — reset when table or columns change
+    const [colWidths, setColWidths] = useState<Record<string, number>>({})
+
+    useEffect(() => {
+        setColWidths({})
+    }, [selected, columns.join(',')])
+
+    const getColW = (key: string) => colWidths[key] ?? DEFAULT_COL_W
+
+    const handleColResize = (key: string, newWidth: number) => {
+        setColWidths((prev) => ({...prev, [key]: newWidth}))
+    }
+
+    // Build ColDef array for ResizableTable
+    const dataCols: ColDef[] = [
+        {key: '__rownum__', label: '#', width: ROW_NUM_W, minWidth: 32},
+        ...columns.map((c) => ({
+            key: c,
+            label: (
+                <>
+                    {c}
+                    {pkCols.includes(c) && <span className={my.pkBadge}>PK</span>}
+                </>
+            ),
+            width: getColW(c),
+            minWidth: 50,
+        })),
+        {key: '__rowact__', label: '操作', width: ROW_ACT_W, minWidth: 38},
+    ]
 
     if (!selected) {
         return <div className={sh.mysqlEmpty}>从左侧选择一个表查看数据 / 结构，或在「SQL 编辑器」中执行任意 SQL</div>
@@ -115,77 +150,70 @@ export default function DataTab(props: {
                             <option value={500}>500 行/页</option>
                         </select>
                     </div>
-                    <div className={db.dbTableScroll}>
-                        {pkCols.length === 0 && (
-                            <div className={my.mysqlWarn}>该表无主键，删除/更新将按整行匹配，请谨慎操作。</div>
-                        )}
-                        <table className={`${db.dbTable} ${my.mysqlEditTable}`}>
-                            <thead>
-                            <tr>
-                                <th className={my.mysqlRownum}>#</th>
-                                {columns.map((c) => (
-                                    <th key={c}>{c}{pkCols.includes(c) && <span className={my.pkBadge}>PK</span>}</th>
-                                ))}
-                                <th className={my.mysqlRowact}>操作</th>
+                    {pkCols.length === 0 && (
+                        <div className={my.mysqlWarn}>该表无主键，删除/更新将按整行匹配，请谨慎操作。</div>
+                    )}
+                    <ResizableTable
+                        cols={dataCols}
+                        onColResize={handleColResize}
+                        className={my.mysqlEditTable}
+                    >
+                        <tbody>
+                        {newRows.map((nr, idx) => (
+                            <tr key={`new-${idx}`} className={my.rowNew}>
+                                <td className={my.mysqlRownum}>+</td>
+                                {columns.map((c) => {
+                                    const cell = nr[c] || {value: '', isNull: false}
+                                    return (
+                                        <td key={c}>
+                                            <input className={sh.mysqlCellInput} value={cell.value}
+                                                   onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
+                                                   onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
+                                        </td>
+                                    )
+                                })}
+                                <td className={my.mysqlRowact}>
+                                    <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
+                                        <Icon name="trash" size={13}/>
+                                    </button>
+                                </td>
                             </tr>
-                            </thead>
-                            <tbody>
-                            {newRows.map((nr, idx) => (
-                                <tr key={`new-${idx}`} className={my.rowNew}>
-                                    <td className={my.mysqlRownum}>+</td>
-                                    {columns.map((c) => {
-                                        const cell = nr[c] || {value: '', isNull: false}
-                                        return (
-                                            <td key={c}>
-                                                <input className={sh.mysqlCellInput} value={cell.value}
-                                                       onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
-                                                       onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
-                                            </td>
-                                        )
-                                    })}
-                                    <td className={my.mysqlRowact}>
-                                        <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
-                                            <Icon name="trash" size={13}/>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {rows.map((_, i) => (
-                                <tr key={i}>
-                                    <td className={my.mysqlRownum}>{(page - 1) * pageSize + i + 1}</td>
-                                    {columns.map((c) => {
-                                        const disp = onCellDisplay(i, c)
-                                        const isEditing = editing?.row === i && editing?.col === c
-                                        const dirty = !!drafts[i]?.[c]
-                                        return (
-                                            <td key={c}
-                                                className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + db.dbNullCell : ''}`}
-                                                onClick={() => !isEditing && onSetEditing({row: i, col: c})}
-                                                title="点击编辑">
-                                                {isEditing ? (
-                                                    <CellEditorInline value={disp.text === 'NULL' ? '' : disp.text} isNull={disp.isNull}
-                                                                       onCommit={(v, n) => onCommitEdit(i, c, v, n)} onCancel={() => onSetEditing(null)}/>
-                                                ) : disp.isNull ? (
-                                                    <span className={sh.mysqlNull}>NULL</span>
-                                                ) : (
-                                                    String(disp.text)
-                                                )}
-                                            </td>
-                                        )
-                                    })}
-                                    <td className={my.mysqlRowact}>
-                                        <button className={`${g.iconBtn} ${g.danger}`} title="删除该行" disabled={busy || saving} onClick={() => onDeleteRow(i)}>
-                                            <Icon name="trash" size={13}/>
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                            {!rows.length && !newRows.length && (
-                                <tr><td colSpan={columns.length + 2} className={db.dbEmpty}>无数据，可点击「新建行」插入</td></tr>
-                            )}
-                            </tbody>
-                        </table>
-                    </div>
+                        ))}
+                        {rows.map((_, i) => (
+                            <tr key={i}>
+                                <td className={my.mysqlRownum}>{(page - 1) * pageSize + i + 1}</td>
+                                {columns.map((c) => {
+                                    const disp = onCellDisplay(i, c)
+                                    const isEditing = editing?.row === i && editing?.col === c
+                                    const dirty = !!drafts[i]?.[c]
+                                    return (
+                                        <td key={c}
+                                            className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + db.dbNullCell : ''}`}
+                                            onClick={() => !isEditing && onSetEditing({row: i, col: c})}
+                                            title="点击编辑">
+                                            {isEditing ? (
+                                                <CellEditorInline value={disp.text === 'NULL' ? '' : disp.text} isNull={disp.isNull}
+                                                                   onCommit={(v, n) => onCommitEdit(i, c, v, n)} onCancel={() => onSetEditing(null)}/>
+                                            ) : disp.isNull ? (
+                                                <span className={sh.mysqlNull}>NULL</span>
+                                            ) : (
+                                                String(disp.text)
+                                            )}
+                                        </td>
+                                    )
+                                })}
+                                <td className={my.mysqlRowact}>
+                                    <button className={`${g.iconBtn} ${g.danger}`} title="删除该行" disabled={busy || saving} onClick={() => onDeleteRow(i)}>
+                                        <Icon name="trash" size={13}/>
+                                    </button>
+                                </td>
+                            </tr>
+                        ))}
+                        {!rows.length && !newRows.length && (
+                            <tr><td colSpan={columns.length + 2} className={db.dbEmpty}>无数据，可点击「新建行」插入</td></tr>
+                        )}
+                        </tbody>
+                    </ResizableTable>
                 </>
             )}
 

@@ -1,0 +1,92 @@
+/* ResizableTable 可拖宽列表格组件样式 */
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+.tableWrapper {
+    flex: 1;
+    .fill();
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    background: @bg-1;
+}
+
+.table {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+    /* width driven by colgroup, not 100% */
+    min-width: 100%;
+
+    th, td {
+        border-right: 1px solid @border;
+        border-bottom: 1px solid @border;
+        padding: 6px 10px;
+        text-align: left;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        box-sizing: border-box;
+        /* width is controlled by colgroup col */
+    }
+
+    th {
+        background: @bg-1;
+        color: @text-dim;
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        /* needed for resize handle positioning */
+        overflow: visible;
+    }
+
+    th:first-child,
+    td:first-child {
+        border-left: 1px solid @border;
+    }
+
+    tbody tr:nth-child(even) {
+        background: @bg-1;
+    }
+
+    tbody tr:hover {
+        background: @bg-2;
+    }
+}
+
+.thInner {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    gap: 4px;
+}
+
+.resizeHandle {
+    position: absolute;
+    right: -3px;
+    top: 0;
+    width: 6px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 10;
+    user-select: none;
+
+    &::after {
+        content: '';
+        display: block;
+        width: 2px;
+        height: 100%;
+        margin: 0 auto;
+        background: transparent;
+        transition: background 0.15s;
+    }
+
+    &:hover::after,
+    &.dragging::after {
+        background: @accent;
+    }
+}

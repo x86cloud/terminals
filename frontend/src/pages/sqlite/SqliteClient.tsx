@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import Icon from '../../components/Icon'
+import ResizableTable, {ColDef} from '../../components/ResizableTable'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteQueryResult, SqliteIndexInfo} from '../../types'
@@ -8,6 +9,9 @@ import g from '../../styles/global.module.less'
 import sq from './SqliteClient.module.less'
 import db from '../mysql/dbTable.module.less'
 import sh from '../mysql/mysqlShared.module.less'
+
+const DEFAULT_COL_W = 120
+const ROW_ACT_W = 50
 
 interface Props {
     session: SqliteSessionInfo
@@ -54,6 +58,9 @@ export default function SqliteClient({session, onClose}: Props) {
     // 结构态与索引态
     const [structData, setStructData] = useState<SqliteColumnInfo[]>([])
     const [indexData, setIndexData] = useState<SqliteIndexInfo[]>([])
+
+    // 列宽状态 — 切换表时重置
+    const [colWidths, setColWidths] = useState<Record<string, number>>({})
 
     const id = session.id
 
@@ -120,6 +127,7 @@ export default function SqliteClient({session, onClose}: Props) {
         setNewRows([])
         setDrafts({})
         setEditing(null)
+        setColWidths({})  // reset column widths on table switch
         try {
             const [data, cnt, struct] = await Promise.all([
                 API.sqliteSelect(id, table, PAGE_SIZE, (toPage - 1) * PAGE_SIZE),
@@ -515,28 +523,29 @@ export default function SqliteClient({session, onClose}: Props) {
 
                     {selected && dataView === 'data' && (
                         <div className={sq.sqliteDataWrap}>
-                            {columns.length > 0 ? (
-                                <div className={db.dbTableScroll}>
-                                    <table className={db.dbTable}>
-                                        <thead>
-                                        <tr>
-                                            <th style={{ width: 50, textAlign: 'center' }}>操作</th>
-                                            {columns.map((c) => (
-                                                <th key={c}>{c}</th>
-                                            ))}
-                                        </tr>
-                                        </thead>
+                            {(() => {
+                                const getColW = (key: string) => colWidths[key] ?? DEFAULT_COL_W
+                                const handleColResize = (key: string, w: number) =>
+                                    setColWidths((prev) => ({...prev, [key]: w}))
+
+                                const sqCols: ColDef[] = [
+                                    {key: '__act__', label: '操作', width: ROW_ACT_W, minWidth: 38},
+                                    ...columns.map((c) => ({key: c, label: c, width: getColW(c), minWidth: 50})),
+                                ]
+
+                                return columns.length > 0 ? (
+                                    <ResizableTable cols={sqCols} onColResize={handleColResize}>
                                         <tbody>
-                                        {/* 拟提交的草稿新增行 */}
+                                        {/* 草稿新增行 */}
                                         {newRows.map((nr, idx) => (
-                                            <tr key={`new_${idx}`} style={{ backgroundColor: 'rgba(24, 144, 255, 0.08)' }}>
-                                                <td style={{ textAlign: 'center' }}>
+                                            <tr key={`new_${idx}`} className={sq.rowNew}>
+                                                <td style={{textAlign: 'center'}}>
                                                     <button className={g.iconBtn} title="移除此新增行" onClick={() => removeNewRow(idx)}>
                                                         <Icon name="trash" size={12}/>
                                                     </button>
                                                 </td>
                                                 {columns.map((c) => (
-                                                    <td key={c} style={{ padding: '2px 4px' }}>
+                                                    <td key={c}>
                                                         <input
                                                             className={db.dbCellInput}
                                                             value={nr[c] ?? ''}
@@ -547,11 +556,10 @@ export default function SqliteClient({session, onClose}: Props) {
                                                 ))}
                                             </tr>
                                         ))}
-
                                         {/* 现存数据行 */}
                                         {rows.map((r, i) => (
                                             <tr key={i}>
-                                                <td style={{ textAlign: 'center' }}>
+                                                <td style={{textAlign: 'center'}}>
                                                     <button className={g.iconBtn} title="删除整行数据" onClick={() => confirmDeleteRow(i)}>
                                                         <Icon name="trash" size={12}/>
                                                     </button>
@@ -561,10 +569,15 @@ export default function SqliteClient({session, onClose}: Props) {
                                                     const dirty = isDirty(i, c)
                                                     const isn = isNull(i, c)
                                                     const disp = getDisplayValue(i, c)
-
-                                                    if (isEd) {
-                                                        return (
-                                                            <td key={c} style={{ padding: '2px 4px' }}>
+                                                    return (
+                                                        <td
+                                                            key={c}
+                                                            className={`${dirty ? db.dbDirtyCell : ''} ${isn && !isEd ? db.dbNullCell : ''}`}
+                                                            onClick={() => !isEd && setEditing({row: i, col: c})}
+                                                            style={{cursor: 'pointer'}}
+                                                            title="点击可编辑"
+                                                        >
+                                                            {isEd ? (
                                                                 <input
                                                                     className={db.dbCellInput}
                                                                     autoFocus
@@ -573,30 +586,21 @@ export default function SqliteClient({session, onClose}: Props) {
                                                                     onBlur={() => setEditing(null)}
                                                                     onKeyDown={(e) => e.key === 'Enter' && setEditing(null)}
                                                                 />
-                                                            </td>
-                                                        )
-                                                    }
-
-                                                    return (
-                                                        <td
-                                                            key={c}
-                                                            className={`${dirty ? db.dbDirtyCell : ''} ${isn ? db.dbNullCell : ''}`}
-                                                            onClick={() => setEditing({ row: i, col: c })}
-                                                            style={{ cursor: 'pointer' }}
-                                                            title="点击可编辑"
-                                                        >
-                                                            {isn ? 'NULL' : disp}
+                                                            ) : isn ? 'NULL' : disp}
                                                         </td>
                                                     )
                                                 })}
                                             </tr>
                                         ))}
+                                        {!rows.length && !newRows.length && (
+                                            <tr><td colSpan={columns.length + 1} className={db.dbEmpty}>该表暂无数据</td></tr>
+                                        )}
                                         </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className={db.dbEmpty}>该表暂无数据</div>
-                            )}
+                                    </ResizableTable>
+                                ) : (
+                                    <div className={db.dbEmpty}>该表暂无数据</div>
+                                )
+                            })()}
                             <div className={sq.pager}>
                                 <button className={g.btn} disabled={page <= 1 || busy} onClick={() => goPage(1)}>首页</button>
                                 <button className={g.btn} disabled={page <= 1 || busy} onClick={() => goPage(page - 1)}>上一页</button>
