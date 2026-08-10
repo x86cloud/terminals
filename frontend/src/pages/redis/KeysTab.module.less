@@ -195,15 +195,75 @@
 }
 
 .redisCliHead {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12px;
     font-weight: 600;
-    color: @text-dim;
+    color: @text;
 }
 
-.redisCliRow {
+.cliHint {
+    font-size: 11px;
+    color: @text-dim;
+    font-weight: normal;
+    margin-left: auto;
+}
+
+.redisCliBar {
     display: flex;
-    align-items: flex-end;
+    align-items: center;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius;
+    padding: 2px 4px 2px 8px;
     gap: 8px;
+
+    &:focus-within {
+        border-color: @accent;
+        box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.15);
+    }
+}
+
+.cliInputWrap {
+    flex: 1;
+    min-width: 0;
+
+    :global(.cm-editor) {
+        background: transparent !important;
+    }
+    :global(.cm-scroller) {
+        font-family: monospace;
+        font-size: 12px;
+    }
+}
+
+.cliRunBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 14px;
+    border-radius: @radius-sm;
+    background: @accent;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+
+    &:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
 }
 
 .cliResultWrapper {
