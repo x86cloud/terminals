@@ -529,8 +529,8 @@ export default function SqliteClient({session, onClose}: Props) {
                                     setColWidths((prev) => ({...prev, [key]: w}))
 
                                 const sqCols: ColDef[] = [
-                                    {key: '__act__', label: '操作', width: ROW_ACT_W, minWidth: 38},
                                     ...columns.map((c) => ({key: c, label: c, width: getColW(c), minWidth: 50})),
+                                    {key: '__act__', label: '操作', width: ROW_ACT_W, minWidth: 38},
                                 ]
 
                                 return columns.length > 0 ? (
@@ -539,11 +539,6 @@ export default function SqliteClient({session, onClose}: Props) {
                                         {/* 草稿新增行 */}
                                         {newRows.map((nr, idx) => (
                                             <tr key={`new_${idx}`} className={sq.rowNew}>
-                                                <td style={{textAlign: 'center'}}>
-                                                    <button className={g.iconBtn} title="移除此新增行" onClick={() => removeNewRow(idx)}>
-                                                        <Icon name="trash" size={12}/>
-                                                    </button>
-                                                </td>
                                                 {columns.map((c) => (
                                                     <td key={c}>
                                                         <input
@@ -554,16 +549,16 @@ export default function SqliteClient({session, onClose}: Props) {
                                                         />
                                                     </td>
                                                 ))}
+                                                <td style={{textAlign: 'center'}}>
+                                                    <button className={g.iconBtn} title="移除此新增行" onClick={() => removeNewRow(idx)}>
+                                                        <Icon name="trash" size={12}/>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                         {/* 现存数据行 */}
                                         {rows.map((r, i) => (
                                             <tr key={i}>
-                                                <td style={{textAlign: 'center'}}>
-                                                    <button className={g.iconBtn} title="删除整行数据" onClick={() => confirmDeleteRow(i)}>
-                                                        <Icon name="trash" size={12}/>
-                                                    </button>
-                                                </td>
                                                 {columns.map((c) => {
                                                     const isEd = editing?.row === i && editing?.col === c
                                                     const dirty = isDirty(i, c)
@@ -590,6 +585,11 @@ export default function SqliteClient({session, onClose}: Props) {
                                                         </td>
                                                     )
                                                 })}
+                                                <td style={{textAlign: 'center'}}>
+                                                    <button className={g.iconBtn} title="删除整行数据" onClick={() => confirmDeleteRow(i)}>
+                                                        <Icon name="trash" size={12}/>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                         {!rows.length && !newRows.length && (
