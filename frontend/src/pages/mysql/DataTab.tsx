@@ -127,29 +127,6 @@ export default function DataTab(props: {
 
             {dataView === 'data' && (
                 <>
-                    <div className={my.mysqlPager}>
-                        <span className={my.mysqlCount}>
-                            共 {totalRows} 行 · 第 {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} 行
-                        </span>
-                        <span className={g.spacer}/>
-                        <button className={g.iconBtn} title="首页" disabled={busy || page <= 1} onClick={() => onGoPage(1)}><Icon name="chevrons-left" size={13}/></button>
-                        <button className={g.iconBtn} title="上一页" disabled={busy || page <= 1} onClick={() => onGoPage(page - 1)}><Icon name="chevron-left" size={13}/></button>
-                        <span className={my.mysqlPageJump}>
-                            <input key={page} type="number" min={1} max={totalPages} defaultValue={page} disabled={busy}
-                                   onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value); if (v) onGoPage(v) } }}
-                                   onBlur={(e) => { const v = Number(e.target.value); if (v && v !== page) onGoPage(v) }}/>
-                            <span className={my.mysqlPageTotal}>/ {totalPages} 页</span>
-                        </span>
-                        <button className={g.iconBtn} title="下一页" disabled={busy || page >= totalPages} onClick={() => onGoPage(page + 1)}><Icon name="chevron-right" size={13}/></button>
-                        <button className={g.iconBtn} title="末页" disabled={busy || page >= totalPages} onClick={() => onGoPage(totalPages)}><Icon name="chevrons-right" size={13}/></button>
-                        <select className={my.mysqlPageSize} value={pageSize} disabled={busy} onChange={(e) => onChangePageSize(Number(e.target.value))}>
-                            <option value={20}>20 行/页</option>
-                            <option value={50}>50 行/页</option>
-                            <option value={100}>100 行/页</option>
-                            <option value={200}>200 行/页</option>
-                            <option value={500}>500 行/页</option>
-                        </select>
-                    </div>
                     {pkCols.length === 0 && (
                         <div className={my.mysqlWarn}>该表无主键，删除/更新将按整行匹配，请谨慎操作。</div>
                     )}
@@ -214,6 +191,29 @@ export default function DataTab(props: {
                         )}
                         </tbody>
                     </ResizableTable>
+                    <div className={my.mysqlPager}>
+                        <span className={my.mysqlCount}>
+                            共 {totalRows} 行 · 第 {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} 行
+                        </span>
+                        <span className={g.spacer}/>
+                        <button className={g.iconBtn} title="首页" disabled={busy || page <= 1} onClick={() => onGoPage(1)}><Icon name="chevrons-left" size={13}/></button>
+                        <button className={g.iconBtn} title="上一页" disabled={busy || page <= 1} onClick={() => onGoPage(page - 1)}><Icon name="chevron-left" size={13}/></button>
+                        <span className={my.mysqlPageJump}>
+                            <input key={page} type="number" min={1} max={totalPages} defaultValue={page} disabled={busy}
+                                   onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value); if (v) onGoPage(v) } }}
+                                   onBlur={(e) => { const v = Number(e.target.value); if (v && v !== page) onGoPage(v) }}/>
+                            <span className={my.mysqlPageTotal}>/ {totalPages} 页</span>
+                        </span>
+                        <button className={g.iconBtn} title="下一页" disabled={busy || page >= totalPages} onClick={() => onGoPage(page + 1)}><Icon name="chevron-right" size={13}/></button>
+                        <button className={g.iconBtn} title="末页" disabled={busy || page >= totalPages} onClick={() => onGoPage(totalPages)}><Icon name="chevrons-right" size={13}/></button>
+                        <select className={my.mysqlPageSize} value={pageSize} disabled={busy} onChange={(e) => onChangePageSize(Number(e.target.value))}>
+                            <option value={20}>20 行/页</option>
+                            <option value={50}>50 行/页</option>
+                            <option value={100}>100 行/页</option>
+                            <option value={200}>200 行/页</option>
+                            <option value={500}>500 行/页</option>
+                        </select>
+                    </div>
                 </>
             )}
 
