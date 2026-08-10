@@ -1,0 +1,215 @@
+@import (reference) '../../../styles/variables.less';
+@import (reference) '../../../styles/mixins.less';
+
+.processPanel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: @bg-2;
+    color: @text;
+    font-size: 13px;
+    user-select: none;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: @bg-1;
+    border-bottom: 1px solid @border;
+    flex: none;
+    gap: 12px;
+
+    .toolbarTitle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        color: @text;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    .searchWrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        max-width: 260px;
+        background: @bg-2;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        padding: 3px 8px;
+        color: @text-dim;
+
+        input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: @text;
+            outline: none;
+            font-size: 12px;
+        }
+    }
+
+    .toolbarActions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .lastUpdate {
+        font-size: 11.5px;
+        color: @text-dim;
+    }
+}
+
+.tableContent {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0;
+}
+
+.tableCard {
+    background: @bg-1;
+    border: none;
+    border-radius: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.procTable {
+    width: 100%;
+    min-width: 580px;
+    border-collapse: collapse;
+    font-size: 12px;
+    table-layout: fixed;
+
+    th {
+        text-align: left;
+        padding: 8px 8px;
+        background: @bg-2;
+        color: @text-dim;
+        font-weight: 600;
+        border-bottom: 1px solid @border;
+        white-space: nowrap;
+        user-select: none;
+
+        &.sortable {
+            cursor: pointer;
+
+            &:hover {
+                color: @text;
+                background: @bg-3;
+            }
+        }
+    }
+
+    td {
+        padding: 7px 8px;
+        border-bottom: 1px solid @border;
+        color: @text;
+        white-space: nowrap;
+    }
+
+    .colPid {
+        width: 76px;
+    }
+
+    .colUser {
+        width: 76px;
+    }
+
+    .colCpu {
+        width: 68px;
+        text-align: right;
+    }
+
+    .colMem {
+        width: 68px;
+        text-align: right;
+    }
+
+    .colRss {
+        width: 86px;
+        text-align: right;
+    }
+
+    .colCmd {
+        width: auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-family: @font-mono;
+        font-size: 11.5px;
+        color: @text;
+    }
+
+    .colAction {
+        width: 56px;
+        text-align: center;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background: @bg-2;
+    }
+}
+
+.pidBadge {
+    font-family: @font-mono;
+    font-weight: 600;
+    color: @accent;
+    background: @accent-soft;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.userBadge {
+    font-size: 11.5px;
+    color: @text-dim;
+}
+
+.killBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    background: transparent;
+    color: @text-dim;
+    font-size: 11.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: @danger-bg;
+        border-color: @danger;
+        color: @danger;
+    }
+}
+
+.emptyState {
+    padding: 40px 20px;
+    text-align: center;
+    color: @text-dim;
+}
+
+.errorState {
+    margin: 12px;
+    padding: 12px 16px;
+    background: @danger-bg;
+    border: 1px solid @danger;
+    color: @danger;
+    border-radius: @radius-md;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+}

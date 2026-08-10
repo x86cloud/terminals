@@ -5,10 +5,16 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"strings"
+
+	"terminal/core"
+	"terminal/db"
+	"terminal/mongo"
+	"terminal/proto"
+	"terminal/redis"
+	"terminal/ssh"
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -16,62 +22,63 @@ import (
 // App 是绑定给前端的应用门面。
 type App struct {
 	ctx       context.Context
-	store     *Store
-	sessions  *SessionManager
-	transfers *transferManager
-	redisMgr  *redisManager
-	mysqlMgr  *mysqlManager
-	mqttMgr   *mqttManager
-	mongoMgr  *mongoManager
-	wsMgr     *wsManager
+	store     *core.Store
+	sessions  *ssh.SessionManager
+	transfers *ssh.TransferManager
+	redisMgr  *redis.RedisManager
+	mysqlMgr  *db.MysqlManager
+	mqttMgr   *proto.MqttManager
+	mongoMgr  *mongo.MongoManager
+	wsMgr     *proto.WsManager
 }
 
 func NewApp() *App {
-	store, err := NewStore()
+	store, err := core.NewStore()
 	if err != nil {
-		// 存储不可用时降级为内存模式，保证应用仍可启动
-		store = &Store{servers: []ServerConfig{}}
+		store = &core.Store{}
 	}
 	return &App{
 		store:     store,
-		sessions:  NewSessionManager(),
-		transfers: newTransferManager(),
-		redisMgr:  newRedisManager(),
-		mysqlMgr:  newMysqlManager(),
-		mqttMgr:   newMqttManager(),
-		mongoMgr:  newMongoManager(),
-		wsMgr:     newWsManager(),
+		sessions:  ssh.NewSessionManager(),
+		transfers: ssh.NewTransferManager(),
+		redisMgr:  redis.NewRedisManager(),
+		mysqlMgr:  db.NewMysqlManager(),
+		mqttMgr:   proto.NewMqttManager(),
+		mongoMgr:  mongo.NewMongoManager(),
+		wsMgr:     proto.NewWsManager(),
 	}
 }
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	a.sessions.setContext(ctx)
-	a.transfers.setContext(ctx)
-	// 系统级文件拖入由前端 runtime.OnFileDrop 监听（需要它注册 DOM 事件才能解析真实路径）
+	a.sessions.SetContext(ctx)
+	a.transfers.SetContext(ctx)
+	a.mqttMgr.SetContext(ctx)
+	a.wsMgr.SetContext(ctx)
 }
 
 func (a *App) shutdown(ctx context.Context) {
-	a.sessions.closeAll()
-	a.redisMgr.closeAll()
-	mysqlExMgr.closeAll()
-	a.mqttMgr.closeAll()
-	a.mongoMgr.closeAll()
-	sqliteMgr.closeAll()
+	a.sessions.CloseAll()
+	a.redisMgr.CloseAll()
+	db.MysqlExMgr.CloseAll()
+	a.mqttMgr.CloseAll()
+	a.mongoMgr.CloseAll()
+	db.SqliteMgr.CloseAll()
+	a.wsMgr.CloseAll()
 }
 
 // ---------- 服务器配置 ----------
 
-func (a *App) ListServers() []ServerConfig {
+func (a *App) ListServers() []core.ServerConfig {
 	if a.store == nil {
-		return []ServerConfig{}
+		return []core.ServerConfig{}
 	}
 	return a.store.List()
 }
 
-func (a *App) SaveServer(cfg ServerConfig) (ServerConfig, error) {
+func (a *App) SaveServer(cfg core.ServerConfig) (core.ServerConfig, error) {
 	if a.store == nil {
-		return ServerConfig{}, errors.New("配置存储不可用")
+		return core.ServerConfig{}, errors.New("配置存储不可用")
 	}
 	return a.store.Save(cfg)
 }
@@ -85,14 +92,14 @@ func (a *App) DeleteServer(id string) error {
 
 // ---------- 设置持久化 ----------
 
-func (a *App) GetAppSettings() AppSettings {
+func (a *App) GetAppSettings() core.AppSettings {
 	if a.store == nil {
-		return defaultAppSettings()
+		return core.DefaultAppSettings()
 	}
 	return a.store.GetSettings()
 }
 
-func (a *App) SaveAppSettings(settings AppSettings) (AppSettings, error) {
+func (a *App) SaveAppSettings(settings core.AppSettings) (core.AppSettings, error) {
 	if a.store == nil {
 		return settings, errors.New("配置存储不可用")
 	}
@@ -101,16 +108,16 @@ func (a *App) SaveAppSettings(settings AppSettings) (AppSettings, error) {
 
 // ---------- 分组管理 ----------
 
-func (a *App) ListGroups() []ServerGroup {
+func (a *App) ListGroups() []core.ServerGroup {
 	if a.store == nil {
-		return []ServerGroup{}
+		return []core.ServerGroup{}
 	}
 	return a.store.ListGroups()
 }
 
-func (a *App) SaveGroup(g ServerGroup) (ServerGroup, error) {
+func (a *App) SaveGroup(g core.ServerGroup) (core.ServerGroup, error) {
 	if a.store == nil {
-		return ServerGroup{}, errors.New("配置存储不可用")
+		return core.ServerGroup{}, errors.New("配置存储不可用")
 	}
 	return a.store.SaveGroup(g)
 }
@@ -138,26 +145,26 @@ func (a *App) SelectPrivateKey() (string, error) {
 
 // ---------- 会话 ----------
 
-func (a *App) ListSessions() []SessionInfo {
-	return a.sessions.list()
+func (a *App) ListSessions() []ssh.SessionInfo {
+	return a.sessions.List()
 }
 
 // Connect 使用已保存的服务器配置建立连接。
-func (a *App) Connect(serverID string, cols int, rows int) (SessionInfo, error) {
+func (a *App) Connect(serverID string, cols int, rows int) (ssh.SessionInfo, error) {
 	cfg, ok := a.store.Get(serverID)
 	if !ok {
-		return SessionInfo{}, errors.New("服务器配置不存在")
+		return ssh.SessionInfo{}, errors.New("服务器配置不存在")
 	}
 	return a.sessions.Connect(cfg, cols, rows)
 }
 
 // ConnectWithConfig 使用临时配置建立连接（不保存）。
-func (a *App) ConnectWithConfig(cfg ServerConfig, cols int, rows int) (SessionInfo, error) {
+func (a *App) ConnectWithConfig(cfg core.ServerConfig, cols int, rows int) (ssh.SessionInfo, error) {
 	return a.sessions.Connect(cfg, cols, rows)
 }
 
 func (a *App) Disconnect(sessionID string) error {
-	a.sessions.remove(sessionID)
+	a.sessions.Remove(sessionID)
 	if a.ctx != nil {
 		wruntime.EventsEmit(a.ctx, "session:closed", sessionID)
 	}
@@ -172,11 +179,11 @@ func (a *App) ResizeTerminal(sessionID string, cols int, rows int) error {
 	return a.sessions.Resize(sessionID, cols, rows)
 }
 
-func (a *App) SSHDashboardStats(sessionID string) (*SSHDashboardInfo, error) {
+func (a *App) SSHDashboardStats(sessionID string) (*ssh.SSHDashboardInfo, error) {
 	return a.sessions.GetDashboardStats(sessionID)
 }
 
-func (a *App) SSHProcessList(sessionID string) ([]SSHProcessInfo, error) {
+func (a *App) SSHProcessList(sessionID string) ([]ssh.SSHProcessInfo, error) {
 	return a.sessions.GetProcessList(sessionID)
 }
 
@@ -184,7 +191,7 @@ func (a *App) SSHKillProcess(sessionID string, pid int) error {
 	return a.sessions.KillProcess(sessionID, pid)
 }
 
-func (a *App) SSHServiceList(sessionID string) ([]SSHServiceInfo, error) {
+func (a *App) SSHServiceList(sessionID string) ([]ssh.SSHServiceInfo, error) {
 	return a.sessions.GetServiceList(sessionID)
 }
 
@@ -196,11 +203,11 @@ func (a *App) SSHServiceLogs(sessionID string, serviceName string) (string, erro
 	return a.sessions.GetServiceLogs(sessionID, serviceName)
 }
 
-func (a *App) SSHCronList(sessionID string) ([]SSHCronItem, error) {
+func (a *App) SSHCronList(sessionID string) ([]ssh.SSHCronItem, error) {
 	return a.sessions.GetCronList(sessionID)
 }
 
-func (a *App) SSHSaveCronList(sessionID string, items []SSHCronItem) error {
+func (a *App) SSHSaveCronList(sessionID string, items []ssh.SSHCronItem) error {
 	return a.sessions.SaveCronList(sessionID, items)
 }
 
@@ -210,7 +217,7 @@ func (a *App) SSHRunCronCommand(sessionID string, command string) (string, error
 
 // ---------- Docker 运维 ----------
 
-func (a *App) SSHDockerContainerList(sessionID string) ([]SSHDockerContainer, error) {
+func (a *App) SSHDockerContainerList(sessionID string) ([]ssh.SSHDockerContainer, error) {
 	return a.sessions.GetDockerContainerList(sessionID)
 }
 
@@ -222,7 +229,7 @@ func (a *App) SSHDockerContainerLogs(sessionID string, containerID string, tail 
 	return a.sessions.GetDockerContainerLogs(sessionID, containerID, tail)
 }
 
-func (a *App) SSHDockerImageList(sessionID string) ([]SSHDockerImage, error) {
+func (a *App) SSHDockerImageList(sessionID string) ([]ssh.SSHDockerImage, error) {
 	return a.sessions.GetDockerImageList(sessionID)
 }
 
@@ -236,19 +243,20 @@ func (a *App) SSHDockerPullImage(sessionID string, imageName string) (string, er
 
 // ---------- SFTP ----------
 
-func (a *App) ListDir(sessionID string, dir string) (DirListing, error) {
-	return a.listDir(sessionID, dir)
+func (a *App) ListDir(sessionID string, dir string) (ssh.DirListing, error) {
+	return a.sessions.ListDir(sessionID, dir)
 }
 
 func (a *App) HomeDir(sessionID string) (string, error) {
-	session, err := a.sessions.get(sessionID)
+	session, err := a.sessions.Get(sessionID)
 	if err != nil {
 		return "", err
 	}
-	if session.homeDir == "" {
+	info := session.Info()
+	if info.HomeDir == "" {
 		return "/", nil
 	}
-	return session.homeDir, nil
+	return info.HomeDir, nil
 }
 
 func (a *App) MakeDir(sessionID string, parent string, name string) error {
@@ -256,35 +264,11 @@ func (a *App) MakeDir(sessionID string, parent string, name string) error {
 	if name == "" {
 		return errors.New("目录名不能为空")
 	}
-	session, err := a.sessions.get(sessionID)
-	if err != nil {
-		return err
-	}
-	client, err := session.sftpConn()
-	if err != nil {
-		return err
-	}
-	return client.Mkdir(path.Join(normalizeRemote(parent), name))
+	return a.sessions.StartUpload(a.transfers, sessionID, parent, name)
 }
 
 func (a *App) RemovePath(sessionID string, target string) error {
-	session, err := a.sessions.get(sessionID)
-	if err != nil {
-		return err
-	}
-	client, err := session.sftpConn()
-	if err != nil {
-		return err
-	}
-	target = normalizeRemote(target)
-	if target == "/" {
-		return errors.New("拒绝删除根目录")
-	}
-	if err := a.removeRemote(client, target); err != nil {
-		return err
-	}
-	a.notifyDirChanged(sessionID, path.Dir(target))
-	return nil
+	return a.sessions.RemoveRemotePath(sessionID, target)
 }
 
 func (a *App) RemovePaths(sessionID string, targets []string) error {
@@ -301,88 +285,44 @@ func (a *App) RenamePath(sessionID string, target string, newName string) error 
 	if newName == "" {
 		return errors.New("新名称不能为空")
 	}
-	session, err := a.sessions.get(sessionID)
-	if err != nil {
-		return err
-	}
-	client, err := session.sftpConn()
-	if err != nil {
-		return err
-	}
-	target = normalizeRemote(target)
 	dest := path.Join(path.Dir(target), newName)
 	if strings.Contains(newName, "/") {
-		dest = normalizeRemote(newName)
+		dest = ssh.NormalizeRemote(newName)
 	}
-	if err := client.Rename(target, dest); err != nil {
+	target = ssh.NormalizeRemote(target)
+	cmd := fmt.Sprintf("mv %s %s", target, dest)
+	session, err := a.sessions.Get(sessionID)
+	if err != nil {
 		return err
 	}
-	a.notifyDirChanged(sessionID, path.Dir(target))
-	return nil
+	_, err = session.ExecCombined(cmd)
+	a.sessions.NotifyDirChanged(sessionID, path.Dir(target))
+	return err
 }
 
 // ReadRemoteFile 读取远程文件内容（限制最大 5MB 文本）
 func (a *App) ReadRemoteFile(sessionID string, remotePath string) (string, error) {
-	session, err := a.sessions.get(sessionID)
+	session, err := a.sessions.Get(sessionID)
 	if err != nil {
 		return "", err
 	}
-	client, err := session.sftpConn()
-	if err != nil {
-		return "", err
-	}
-	remotePath = normalizeRemote(remotePath)
-
-	st, err := client.Stat(remotePath)
-	if err != nil {
-		return "", fmt.Errorf("无法获取文件状态: %w", err)
-	}
-	if st.IsDir() {
-		return "", errors.New("无法打开目录进行编辑")
-	}
-	if st.Size() > 5*1024*1024 {
-		return "", errors.New("文件过大 (>5MB)，暂不支持直接在线编辑")
-	}
-
-	f, err := client.Open(remotePath)
-	if err != nil {
-		return "", fmt.Errorf("无法打开远程文件: %w", err)
-	}
-	defer f.Close()
-
-	data, err := io.ReadAll(f)
-	if err != nil {
-		return "", fmt.Errorf("读取远程文件失败: %w", err)
-	}
-
-	return string(data), nil
+	remotePath = ssh.NormalizeRemote(remotePath)
+	cmd := fmt.Sprintf("cat %s", remotePath)
+	return session.ExecCombined(cmd)
 }
 
 // WriteRemoteFile 将内容保存写入远程文件
 func (a *App) WriteRemoteFile(sessionID string, remotePath string, content string) error {
-	session, err := a.sessions.get(sessionID)
+	session, err := a.sessions.Get(sessionID)
 	if err != nil {
 		return err
 	}
-	client, err := session.sftpConn()
-	if err != nil {
-		return err
-	}
-	remotePath = normalizeRemote(remotePath)
-
-	f, err := client.OpenFile(remotePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC)
-	if err != nil {
-		return fmt.Errorf("无法打开远程文件进行写入: %w", err)
-	}
-	defer f.Close()
-
-	_, err = f.Write([]byte(content))
-	if err != nil {
-		return fmt.Errorf("保存远程文件失败: %w", err)
-	}
-
-	a.notifyDirChanged(sessionID, path.Dir(remotePath))
-	return nil
+	remotePath = ssh.NormalizeRemote(remotePath)
+	encoded := base64.StdEncoding.EncodeToString([]byte(content))
+	cmd := fmt.Sprintf("echo %s | base64 -d > %s", encoded, remotePath)
+	_, err = session.ExecCombined(cmd)
+	a.sessions.NotifyDirChanged(sessionID, path.Dir(remotePath))
+	return err
 }
 
 // ---------- 传输 ----------
@@ -438,7 +378,7 @@ func (a *App) UploadPaths(sessionID string, remoteDir string, localPaths []strin
 		return nil
 	}
 	for _, p := range localPaths {
-		if err := a.startUpload(sessionID, remoteDir, p); err != nil {
+		if err := a.sessions.StartUpload(a.transfers, sessionID, remoteDir, p); err != nil {
 			return err
 		}
 	}
@@ -447,7 +387,7 @@ func (a *App) UploadPaths(sessionID string, remoteDir string, localPaths []strin
 
 // UploadData 用于浏览器内拖拽降级：直接上传 base64 内容。
 func (a *App) UploadData(sessionID string, remoteDir string, name string, base64Data string) error {
-	return a.uploadBase64(sessionID, remoteDir, name, base64Data)
+	return a.sessions.UploadBase64(a.transfers, sessionID, remoteDir, name, base64Data)
 }
 
 // DownloadPaths 询问保存目录后下载远程文件/目录。
@@ -465,7 +405,7 @@ func (a *App) DownloadPaths(sessionID string, remotePaths []string) error {
 		return nil
 	}
 	for _, p := range remotePaths {
-		if err := a.startDownload(sessionID, p, dir); err != nil {
+		if err := a.sessions.StartDownload(a.transfers, sessionID, p, dir); err != nil {
 			return err
 		}
 	}
@@ -475,23 +415,41 @@ func (a *App) DownloadPaths(sessionID string, remotePaths []string) error {
 // DownloadTo 下载到指定本地目录。
 func (a *App) DownloadTo(sessionID string, remotePaths []string, localDir string) error {
 	for _, p := range remotePaths {
-		if err := a.startDownload(sessionID, p, localDir); err != nil {
+		if err := a.sessions.StartDownload(a.transfers, sessionID, p, localDir); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (a *App) ListTransfers() []Transfer {
-	return a.transfers.list()
+func (a *App) ListTransfers() []ssh.Transfer {
+	return a.transfers.List()
 }
 
 func (a *App) CancelTransfer(id string) error {
-	a.transfers.cancel(id)
+	a.transfers.Cancel(id)
 	return nil
 }
 
 func (a *App) ClearFinishedTransfers() error {
-	a.transfers.clearFinished()
+	a.transfers.ClearFinished()
 	return nil
+}
+
+// ---------- HTTP API & WebSocket 调试 ----------
+
+func (a *App) ApiRequest(req proto.ApiRequest) (proto.ApiResponse, error) {
+	return proto.HttpApiRequest(req)
+}
+
+func (a *App) WsConnect(req proto.WsConnectRequest) (proto.WsConnectResult, error) {
+	return a.wsMgr.WsConnect(req)
+}
+
+func (a *App) WsSend(id string, message string) error {
+	return a.wsMgr.WsSend(id, message)
+}
+
+func (a *App) WsClose(id string) {
+	a.wsMgr.WsClose(id)
 }

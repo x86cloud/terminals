@@ -1,0 +1,39 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.monitorGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+}
+
+.metricLabel {
+    font-size: 11px;
+    color: @text-dim;
+}
+
+.metricValue {
+    font-size: 16px;
+    font-weight: 600;
+    color: @text;
+}

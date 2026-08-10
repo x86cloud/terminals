@@ -1,0 +1,157 @@
+@import (reference) '../../../styles/variables.less';
+@import (reference) '../../../styles/mixins.less';
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.modal {
+    width: 86vw;
+    max-width: 900px;
+    height: 80vh;
+    max-height: 700px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: @text;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    flex: none;
+
+    .titleArea {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        color: @text;
+        overflow: hidden;
+
+        .fileName {
+            white-space: nowrap;
+        }
+
+        .filePath {
+            font-weight: 400;
+            font-size: 11.5px;
+            color: @text-dim;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .modifiedBadge {
+            font-size: 11px;
+            padding: 1px 6px;
+            background: @accent-soft;
+            color: @accent;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+    }
+
+    .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: none;
+    }
+}
+
+.body {
+    flex: 1;
+    min-height: 0;
+    height: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    background: @bg-1;
+    overflow: hidden;
+
+    :global(.cm-theme) {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+    }
+
+    :global(.cm-editor) {
+        height: 100% !important;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        border: none !important;
+        outline: none !important;
+
+        &:global(.cm-focused) {
+            outline: none !important;
+            border: none !important;
+        }
+
+        :global(.cm-scroller) {
+            flex: 1;
+            min-height: 0;
+            overflow: auto !important;
+            font-family: @font-mono;
+            font-size: 12.5px;
+            border: none !important;
+            outline: none !important;
+        }
+
+        :global(.cm-content) {
+            padding-bottom: 50px !important;
+            border: none !important;
+            outline: none !important;
+        }
+
+        :global(.cm-gutters) {
+            border: none !important;
+            border-right: none !important;
+            padding-bottom: 50px !important;
+        }
+    }
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: @text-dim;
+    font-size: 13px;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

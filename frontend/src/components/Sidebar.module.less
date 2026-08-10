@@ -292,13 +292,31 @@
     border-radius: @radius-md;
     cursor: default;
     user-select: none;
+    transition: background 0.2s ease, border-left-color 0.2s ease;
+    border-left: 3px solid transparent;
 
     &:hover {
         background: @bg-2;
     }
 
     &.connecting {
-        opacity: .65;
+        background: @accent-soft;
+        border-left-color: @accent;
+        animation: connectingPulse 1.8s ease-in-out infinite;
+
+        .serverActions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    }
+}
+
+@keyframes connectingPulse {
+    0%, 100% {
+        background: @accent-soft;
+    }
+    50% {
+        background: rgba(28, 143, 196, 0.22);
     }
 }
 
@@ -321,6 +339,7 @@
 
 .serverActions {
     opacity: 0;
+    transition: opacity 0.15s ease;
 }
 
 .serverItem:hover .serverActions {
@@ -359,15 +378,17 @@
 }
 
 .spinner {
-    width: 15px;
-    height: 15px;
-    border: 2px solid @border;
+    width: 16px;
+    height: 16px;
+    border: 2px solid @accent-soft;
     border-top-color: @accent;
+    border-right-color: @accent;
     border-radius: 50%;
     animation: spin .7s linear infinite;
     box-sizing: border-box;
     flex: none;
     margin: auto 0;
+    box-shadow: 0 0 6px rgba(28, 143, 196, 0.3);
 }
 
 @keyframes spin {

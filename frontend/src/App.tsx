@@ -1,7 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import Sidebar from './components/Sidebar'
 import ServerDialog from './components/ServerDialog'
-import SettingsModal from './components/SettingsModal'
+import SettingsModal from './pages/setting/SettingsModal'
 import {ConfirmModal, ConfirmState} from './components/Modal'
 import SessionTabs from './components/app/SessionTabs'
 import Stage from './components/app/Stage'

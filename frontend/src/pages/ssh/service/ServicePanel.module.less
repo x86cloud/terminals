@@ -1,0 +1,334 @@
+@import (reference) '../../../styles/variables.less';
+@import (reference) '../../../styles/mixins.less';
+
+.servicePanel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: @bg-2;
+    color: @text;
+    font-size: 13px;
+    user-select: none;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: @bg-1;
+    border-bottom: 1px solid @border;
+    flex: none;
+    gap: 12px;
+
+    .searchWrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        max-width: 240px;
+        background: @bg-2;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        padding: 3px 8px;
+        color: @text-dim;
+
+        input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: @text;
+            outline: none;
+            font-size: 12px;
+        }
+    }
+
+    .filterTabs {
+        display: flex;
+        align-items: center;
+        background: @bg-2;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        padding: 2px;
+        gap: 2px;
+
+        .filterBtn {
+            border: none;
+            background: transparent;
+            color: @text-dim;
+            font-size: 11.5px;
+            padding: 3px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+
+            &:hover {
+                color: @text;
+            }
+
+            &.active {
+                background: @bg-1;
+                color: @accent;
+                font-weight: 600;
+                box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+            }
+        }
+    }
+
+    .toolbarActions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .lastUpdate {
+        font-size: 11.5px;
+        color: @text-dim;
+    }
+}
+
+.tableContent {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0;
+}
+
+.tableCard {
+    background: @bg-1;
+    border: none;
+    border-radius: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.serviceTable {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    font-size: 12px;
+    table-layout: fixed;
+
+    th {
+        text-align: left;
+        padding: 8px 8px;
+        background: @bg-2;
+        color: @text-dim;
+        font-weight: 600;
+        border-bottom: 1px solid @border;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    td {
+        padding: 7px 8px;
+        border-bottom: 1px solid @border;
+        color: @text;
+        white-space: nowrap;
+    }
+
+    .colName {
+        width: 170px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        font-family: @font-mono;
+        font-weight: 600;
+    }
+
+    .colActive {
+        width: 100px;
+    }
+
+    .colSub {
+        width: 80px;
+        color: @text-dim;
+    }
+
+    .colDesc {
+        width: auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: @text-dim;
+        font-size: 11.5px;
+    }
+
+    .colActions {
+        width: 140px;
+        text-align: right;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background: @bg-2;
+    }
+}
+
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+
+    .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+    }
+
+    &.active {
+        background: rgba(16, 185, 129, 0.12);
+        color: #10b981;
+
+        .dot {
+            background: #10b981;
+        }
+    }
+
+    &.inactive {
+        background: rgba(156, 163, 175, 0.15);
+        color: #6b7280;
+
+        .dot {
+            background: #9ca3af;
+        }
+    }
+
+    &.failed {
+        background: rgba(239, 68, 68, 0.12);
+        color: #ef4444;
+
+        .dot {
+            background: #ef4444;
+        }
+    }
+}
+
+.actionBtnGroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.actionBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border: 1px solid @border;
+    border-radius: 4px;
+    background: @bg-1;
+    color: @text;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: @bg-3;
+        color: @accent;
+        border-color: @accent;
+    }
+
+    &.danger:hover {
+        background: @danger-bg;
+        color: @danger;
+        border-color: @danger;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
+.emptyState {
+    padding: 40px 20px;
+    text-align: center;
+    color: @text-dim;
+}
+
+.errorState {
+    margin: 12px;
+    padding: 12px 16px;
+    background: @danger-bg;
+    border: 1px solid @danger;
+    color: @danger;
+    border-radius: @radius-md;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+}
+
+/* 日志 Modal */
+.logOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.logModal {
+    width: 80vw;
+    max-width: 850px;
+    height: 75vh;
+    max-height: 650px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: @text;
+}
+
+.logHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    flex: none;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.logBody {
+    flex: 1;
+    min-height: 0;
+    padding: 14px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

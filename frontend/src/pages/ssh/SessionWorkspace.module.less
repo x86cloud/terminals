@@ -1,0 +1,129 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.workspace {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    .fill();
+}
+
+.terminalPane {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    background: @bg-1;
+}
+
+.filePane {
+    flex: none;
+    min-width: 320px;
+    height: 100%;
+    border-left: 1px solid @border;
+    background: @bg-1;
+    display: flex;
+    flex-direction: column;
+}
+
+.panelHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    padding: 0;
+    height: 36px;
+    flex: none;
+}
+
+.panelTabsScroll {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: none;
+    padding: 0 4px;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.panelHeaderActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding-right: 6px;
+    padding-left: 6px;
+    flex-shrink: 0;
+}
+
+.panelTab {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 8px;
+    height: 36px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: @text-dim;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+
+    &:hover {
+        color: @text;
+        background: @bg-3;
+    }
+
+    &.active {
+        color: @accent;
+        border-bottom-color: @accent;
+        background: @bg-1;
+        font-weight: 600;
+    }
+}
+
+.panelContent {
+    flex: 1;
+    min-height: 0;
+    height: calc(100% - 36px);
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.splitter {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+
+    &:hover {
+        background: @accent-dim;
+    }
+}
+
+.panelToggle {
+    position: absolute;
+    right: @space-md;
+    top: @space-md;
+    display: flex;
+    padding: 5px;
+    background: @bg-elev;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    color: @text-dim;
+    opacity: .6;
+    cursor: pointer;
+
+    &:hover {
+        opacity: 1;
+        color: @text;
+    }
+}

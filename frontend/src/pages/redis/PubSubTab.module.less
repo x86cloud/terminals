@@ -1,0 +1,111 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.input {
+    flex: 1;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    color: @text;
+    font-size: 12px;
+
+    &:focus {
+        border-color: @accent;
+        outline: none;
+    }
+}
+
+.subs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.subChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 6px;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    border: 1px solid @border;
+    color: @text;
+    font-size: 12px;
+}
+
+.subX {
+    border: none;
+    background: transparent;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0;
+    line-height: 1;
+
+    &:hover {
+        color: @danger;
+    }
+}
+
+.msgList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 360px;
+    overflow-y: auto;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 8px;
+}
+
+.msgItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-family: monospace;
+    padding: 4px 6px;
+    border-bottom: 1px dashed @border;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.msgChan {
+    color: @accent;
+    font-weight: 500;
+}
+
+.msgPayload {
+    color: @text;
+    word-break: break-all;
+}
+
+.redisEmpty {
+    color: @text-dim;
+    font-size: 13px;
+    text-align: center;
+    padding: 24px 0;
+}

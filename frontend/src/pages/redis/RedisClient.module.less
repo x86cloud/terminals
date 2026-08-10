@@ -1,0 +1,82 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.redisPane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    .fill();
+    width: 100%;
+    min-height: 0;
+}
+
+.redisTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+}
+
+.tabs {
+    display: flex;
+    gap: 2px;
+}
+
+.tab {
+    padding: 5px 12px;
+    border: 1px solid transparent;
+    border-radius: @radius-md;
+    background: transparent;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 13px;
+
+    &:hover {
+        background: @bg;
+        color: @text;
+    }
+
+    &.active {
+        background: @accent-soft;
+        color: @accent;
+        border-color: @accent-soft;
+        font-weight: 500;
+    }
+}
+
+.modeTag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modeBadge {
+    padding: 2px 8px;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    border: 1px solid @border;
+    color: @text-dim;
+    font-size: 11px;
+
+    &.bk_open {
+        background: rgba(255, 77, 79, 0.15);
+        color: @danger;
+        border-color: rgba(255, 77, 79, 0.3);
+    }
+
+    &.bk_half-open {
+        background: rgba(230, 162, 60, 0.15);
+        color: #e6a23c;
+        border-color: rgba(230, 162, 60, 0.3);
+    }
+}
+
+.redisMsg {
+    background: rgba(230, 162, 60, 0.15);
+    color: #e6a23c;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-bottom: 1px solid @border;
+}

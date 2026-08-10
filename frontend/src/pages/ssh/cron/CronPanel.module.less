@@ -1,0 +1,336 @@
+@import (reference) '../../../styles/variables.less';
+@import (reference) '../../../styles/mixins.less';
+
+.cronPanel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: @bg-2;
+    color: @text;
+    font-size: 13px;
+    user-select: none;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: @bg-1;
+    border-bottom: 1px solid @border;
+    flex: none;
+    gap: 12px;
+
+    .leftActions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+    }
+
+    .searchWrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        max-width: 220px;
+        background: @bg-2;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        padding: 3px 8px;
+        color: @text-dim;
+
+        input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: @text;
+            outline: none;
+            font-size: 12px;
+        }
+    }
+
+    .toolbarActions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .lastUpdate {
+        font-size: 11.5px;
+        color: @text-dim;
+    }
+}
+
+.tableContent {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 0;
+}
+
+.tableCard {
+    background: @bg-1;
+    border: none;
+    border-radius: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+}
+
+.cronTable {
+    width: 100%;
+    min-width: 600px;
+    border-collapse: collapse;
+    font-size: 12px;
+    table-layout: fixed;
+
+    th {
+        text-align: left;
+        padding: 8px 8px;
+        background: @bg-2;
+        color: @text-dim;
+        font-weight: 600;
+        border-bottom: 1px solid @border;
+        white-space: nowrap;
+        user-select: none;
+    }
+
+    td {
+        padding: 8px 8px;
+        border-bottom: 1px solid @border;
+        color: @text;
+        white-space: nowrap;
+    }
+
+    .colStatus {
+        width: 65px;
+        text-align: center;
+    }
+
+    .colExpr {
+        width: 160px;
+
+        .exprCode {
+            font-family: @font-mono;
+            font-weight: 600;
+            color: @accent;
+            display: block;
+        }
+
+        .exprHuman {
+            font-size: 11px;
+            color: @text-dim;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .colCmd {
+        width: auto;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        .cmdText {
+            font-family: @font-mono;
+            font-size: 12px;
+            color: @text;
+        }
+
+        .commentText {
+            font-size: 11px;
+            color: @text-dim;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    }
+
+    .colActions {
+        width: 135px;
+        text-align: right;
+    }
+
+    tr.disabledRow {
+        opacity: 0.55;
+    }
+
+    tr:last-child td {
+        border-bottom: none;
+    }
+
+    tr:hover td {
+        background: @bg-2;
+    }
+}
+
+/* Switch 开关组件 */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 32px;
+    height: 18px;
+    vertical-align: middle;
+
+    input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+
+        &:checked + .slider {
+            background-color: @accent;
+        }
+
+        &:checked + .slider:before {
+            transform: translateX(14px);
+        }
+    }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: @border;
+        transition: 0.2s;
+        border-radius: 18px;
+
+        &:before {
+            position: absolute;
+            content: '';
+            height: 14px;
+            width: 14px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: 0.2s;
+            border-radius: 50%;
+        }
+    }
+}
+
+.actionBtnGroup {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.actionBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border: 1px solid @border;
+    border-radius: 4px;
+    background: @bg-1;
+    color: @text;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+        background: @bg-3;
+        color: @accent;
+        border-color: @accent;
+    }
+
+    &.danger:hover {
+        background: @danger-bg;
+        color: @danger;
+        border-color: @danger;
+    }
+
+    &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+    }
+}
+
+.emptyState {
+    padding: 40px 20px;
+    text-align: center;
+    color: @text-dim;
+}
+
+.errorState {
+    margin: 12px;
+    padding: 12px 16px;
+    background: @danger-bg;
+    border: 1px solid @danger;
+    color: @danger;
+    border-radius: @radius-md;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12.5px;
+}
+
+/* 试运行 Modal */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.modalDialog {
+    width: 80vw;
+    max-width: 750px;
+    height: 70vh;
+    max-height: 550px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    color: @text;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    flex: none;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.modalBody {
+    flex: 1;
+    min-height: 0;
+    padding: 14px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.5;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}

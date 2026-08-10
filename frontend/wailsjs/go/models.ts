@@ -1,4 +1,227 @@
-export namespace main {
+export namespace core {
+	
+	export class AppSettings {
+	    themeMode: string;
+	    fontFamily: string;
+	    fontSize: string;
+	    autoConnect: boolean;
+	    dbDefaultLimit: string;
+	    globalFontFamily: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AppSettings(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.themeMode = source["themeMode"];
+	        this.fontFamily = source["fontFamily"];
+	        this.fontSize = source["fontSize"];
+	        this.autoConnect = source["autoConnect"];
+	        this.dbDefaultLimit = source["dbDefaultLimit"];
+	        this.globalFontFamily = source["globalFontFamily"];
+	    }
+	}
+	export class ServerConfig {
+	    id: string;
+	    name: string;
+	    groupId?: string;
+	    host: string;
+	    port: number;
+	    username: string;
+	    authType: string;
+	    password: string;
+	    privateKey: string;
+	    passphrase: string;
+	    remark: string;
+	    type: string;
+	    db?: number;
+	    redisMode?: string;
+	    redisSentinels?: string;
+	    redisMasterName?: string;
+	    redisClusterNodes?: string;
+	    redisUsername?: string;
+	    redisSerialization?: string;
+	    redisPoolSize?: number;
+	    redisMinIdleConns?: number;
+	    redisMaxIdleConns?: number;
+	    redisPoolTimeout?: number;
+	    redisConnMaxIdleTime?: number;
+	    redisConnMaxLifetime?: number;
+	    redisDialTimeout?: number;
+	    redisReadTimeout?: number;
+	    redisWriteTimeout?: number;
+	    redisMaxRetries?: number;
+	    redisMinRetryBackoff?: number;
+	    redisMaxRetryBackoff?: number;
+	    redisBreakerThreshold?: number;
+	    redisBreakerCooldown?: number;
+	    database?: string;
+	    mysqlMaxOpenConns?: number;
+	    mysqlMaxIdleConns?: number;
+	    mysqlConnMaxLifetime?: number;
+	    mysqlTLS?: string;
+	    mysqlSSLEnabled?: boolean;
+	    mysqlSSHEnabled?: boolean;
+	    mysqlSSHHost?: string;
+	    mysqlSSHHostPort?: number;
+	    mysqlSSHUser?: string;
+	    mysqlSSHKeyPath?: string;
+	    mysqlSSHKeyData?: string;
+	    mysqlSSHPassphrase?: string;
+	    mysqlSSHProxyLocalPort?: number;
+	    mongoUri?: string;
+	    mongoSrv?: boolean;
+	    mongoHosts?: string;
+	    mongoDatabase?: string;
+	    mongoAuthMech?: string;
+	    mongoAuthSource?: string;
+	    mongoReplicaSet?: string;
+	    mongoReadPreference?: string;
+	    mongoTlsEnabled?: boolean;
+	    mongoTlsInsecure?: boolean;
+	    mongoTlsCaCert?: string;
+	    mongoTlsClientCert?: string;
+	    mongoTlsClientKey?: string;
+	    mongoMaxPoolSize?: number;
+	    mongoMinPoolSize?: number;
+	    mongoMaxConnIdleTime?: number;
+	    mongoConnectTimeout?: number;
+	    mongoServerSelectTimeout?: number;
+	    mongoSocketTimeout?: number;
+	    mongoCompressors?: string;
+	    mongoAppName?: string;
+	    clientId?: string;
+	    useTLS?: boolean;
+	    sqlitePath?: string;
+	    mqttProto?: string;
+	    mqttKeepAlive?: number;
+	    mqttConnectTimeout?: number;
+	    mqttCleanSession?: boolean;
+	    mqttAutoReconnect?: boolean;
+	    mqttReconnectIntvl?: number;
+	    mqttInsecure?: boolean;
+	    mqttCaCert?: string;
+	    mqttClientCert?: string;
+	    mqttClientKey?: string;
+	    mqttWillTopic?: string;
+	    mqttWillPayload?: string;
+	    mqttWillQos?: number;
+	    mqttWillRetained?: boolean;
+	    updatedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerConfig(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.groupId = source["groupId"];
+	        this.host = source["host"];
+	        this.port = source["port"];
+	        this.username = source["username"];
+	        this.authType = source["authType"];
+	        this.password = source["password"];
+	        this.privateKey = source["privateKey"];
+	        this.passphrase = source["passphrase"];
+	        this.remark = source["remark"];
+	        this.type = source["type"];
+	        this.db = source["db"];
+	        this.redisMode = source["redisMode"];
+	        this.redisSentinels = source["redisSentinels"];
+	        this.redisMasterName = source["redisMasterName"];
+	        this.redisClusterNodes = source["redisClusterNodes"];
+	        this.redisUsername = source["redisUsername"];
+	        this.redisSerialization = source["redisSerialization"];
+	        this.redisPoolSize = source["redisPoolSize"];
+	        this.redisMinIdleConns = source["redisMinIdleConns"];
+	        this.redisMaxIdleConns = source["redisMaxIdleConns"];
+	        this.redisPoolTimeout = source["redisPoolTimeout"];
+	        this.redisConnMaxIdleTime = source["redisConnMaxIdleTime"];
+	        this.redisConnMaxLifetime = source["redisConnMaxLifetime"];
+	        this.redisDialTimeout = source["redisDialTimeout"];
+	        this.redisReadTimeout = source["redisReadTimeout"];
+	        this.redisWriteTimeout = source["redisWriteTimeout"];
+	        this.redisMaxRetries = source["redisMaxRetries"];
+	        this.redisMinRetryBackoff = source["redisMinRetryBackoff"];
+	        this.redisMaxRetryBackoff = source["redisMaxRetryBackoff"];
+	        this.redisBreakerThreshold = source["redisBreakerThreshold"];
+	        this.redisBreakerCooldown = source["redisBreakerCooldown"];
+	        this.database = source["database"];
+	        this.mysqlMaxOpenConns = source["mysqlMaxOpenConns"];
+	        this.mysqlMaxIdleConns = source["mysqlMaxIdleConns"];
+	        this.mysqlConnMaxLifetime = source["mysqlConnMaxLifetime"];
+	        this.mysqlTLS = source["mysqlTLS"];
+	        this.mysqlSSLEnabled = source["mysqlSSLEnabled"];
+	        this.mysqlSSHEnabled = source["mysqlSSHEnabled"];
+	        this.mysqlSSHHost = source["mysqlSSHHost"];
+	        this.mysqlSSHHostPort = source["mysqlSSHHostPort"];
+	        this.mysqlSSHUser = source["mysqlSSHUser"];
+	        this.mysqlSSHKeyPath = source["mysqlSSHKeyPath"];
+	        this.mysqlSSHKeyData = source["mysqlSSHKeyData"];
+	        this.mysqlSSHPassphrase = source["mysqlSSHPassphrase"];
+	        this.mysqlSSHProxyLocalPort = source["mysqlSSHProxyLocalPort"];
+	        this.mongoUri = source["mongoUri"];
+	        this.mongoSrv = source["mongoSrv"];
+	        this.mongoHosts = source["mongoHosts"];
+	        this.mongoDatabase = source["mongoDatabase"];
+	        this.mongoAuthMech = source["mongoAuthMech"];
+	        this.mongoAuthSource = source["mongoAuthSource"];
+	        this.mongoReplicaSet = source["mongoReplicaSet"];
+	        this.mongoReadPreference = source["mongoReadPreference"];
+	        this.mongoTlsEnabled = source["mongoTlsEnabled"];
+	        this.mongoTlsInsecure = source["mongoTlsInsecure"];
+	        this.mongoTlsCaCert = source["mongoTlsCaCert"];
+	        this.mongoTlsClientCert = source["mongoTlsClientCert"];
+	        this.mongoTlsClientKey = source["mongoTlsClientKey"];
+	        this.mongoMaxPoolSize = source["mongoMaxPoolSize"];
+	        this.mongoMinPoolSize = source["mongoMinPoolSize"];
+	        this.mongoMaxConnIdleTime = source["mongoMaxConnIdleTime"];
+	        this.mongoConnectTimeout = source["mongoConnectTimeout"];
+	        this.mongoServerSelectTimeout = source["mongoServerSelectTimeout"];
+	        this.mongoSocketTimeout = source["mongoSocketTimeout"];
+	        this.mongoCompressors = source["mongoCompressors"];
+	        this.mongoAppName = source["mongoAppName"];
+	        this.clientId = source["clientId"];
+	        this.useTLS = source["useTLS"];
+	        this.sqlitePath = source["sqlitePath"];
+	        this.mqttProto = source["mqttProto"];
+	        this.mqttKeepAlive = source["mqttKeepAlive"];
+	        this.mqttConnectTimeout = source["mqttConnectTimeout"];
+	        this.mqttCleanSession = source["mqttCleanSession"];
+	        this.mqttAutoReconnect = source["mqttAutoReconnect"];
+	        this.mqttReconnectIntvl = source["mqttReconnectIntvl"];
+	        this.mqttInsecure = source["mqttInsecure"];
+	        this.mqttCaCert = source["mqttCaCert"];
+	        this.mqttClientCert = source["mqttClientCert"];
+	        this.mqttClientKey = source["mqttClientKey"];
+	        this.mqttWillTopic = source["mqttWillTopic"];
+	        this.mqttWillPayload = source["mqttWillPayload"];
+	        this.mqttWillQos = source["mqttWillQos"];
+	        this.mqttWillRetained = source["mqttWillRetained"];
+	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+	export class ServerGroup {
+	    id: string;
+	    name: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ServerGroup(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	    }
+	}
+
+}
+
+export namespace proto {
 	
 	export class ApiAuth {
 	    type: string;
@@ -104,28 +327,67 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
-	export class AppSettings {
-	    themeMode: string;
-	    fontFamily: string;
-	    fontSize: string;
-	    autoConnect: boolean;
-	    dbDefaultLimit: string;
-	    globalFontFamily: string;
+	export class WsConnectRequest {
+	    url: string;
+	    headers: ApiHeader[];
+	    insecureTLS: boolean;
+	    auth?: ApiAuth;
+	    protocols: string[];
 	
 	    static createFrom(source: any = {}) {
-	        return new AppSettings(source);
+	        return new WsConnectRequest(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.themeMode = source["themeMode"];
-	        this.fontFamily = source["fontFamily"];
-	        this.fontSize = source["fontSize"];
-	        this.autoConnect = source["autoConnect"];
-	        this.dbDefaultLimit = source["dbDefaultLimit"];
-	        this.globalFontFamily = source["globalFontFamily"];
+	        this.url = source["url"];
+	        this.headers = this.convertValues(source["headers"], ApiHeader);
+	        this.insecureTLS = source["insecureTLS"];
+	        this.auth = this.convertValues(source["auth"], ApiAuth);
+	        this.protocols = source["protocols"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class WsConnectResult {
+	    id: string;
+	    url: string;
+	    status: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new WsConnectResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.url = source["url"];
+	        this.status = source["status"];
+	        this.error = source["error"];
 	    }
 	}
+
+}
+
+export namespace ssh {
+	
 	export class FileItem {
 	    name: string;
 	    path: string;
@@ -185,124 +447,6 @@ export namespace main {
 		}
 	}
 	
-	export class MongoBulkOp {
-	    type: string;
-	    filter: string;
-	    document: string;
-	    upsert: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new MongoBulkOp(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.filter = source["filter"];
-	        this.document = source["document"];
-	        this.upsert = source["upsert"];
-	    }
-	}
-	export class MongoFindResult {
-	    documents: string[];
-	    count: number;
-	    total: number;
-	    durationMs: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new MongoFindResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.documents = source["documents"];
-	        this.count = source["count"];
-	        this.total = source["total"];
-	        this.durationMs = source["durationMs"];
-	    }
-	}
-	export class MongoQuerySpec {
-	    database: string;
-	    collection: string;
-	    filter: string;
-	    projection: string;
-	    sort: string;
-	    limit: number;
-	    skip: number;
-	    hint: string;
-	    collation: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new MongoQuerySpec(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.database = source["database"];
-	        this.collection = source["collection"];
-	        this.filter = source["filter"];
-	        this.projection = source["projection"];
-	        this.sort = source["sort"];
-	        this.limit = source["limit"];
-	        this.skip = source["skip"];
-	        this.hint = source["hint"];
-	        this.collation = source["collation"];
-	    }
-	}
-	export class MongoTxOp {
-	    type: string;
-	    database: string;
-	    collection: string;
-	    filter: string;
-	    document: string;
-	    upsert: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new MongoTxOp(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.type = source["type"];
-	        this.database = source["database"];
-	        this.collection = source["collection"];
-	        this.filter = source["filter"];
-	        this.document = source["document"];
-	        this.upsert = source["upsert"];
-	    }
-	}
-	export class MongoURIInfo {
-	    scheme: string;
-	    hosts: string[];
-	    username: string;
-	    password: string;
-	    database: string;
-	    authSource: string;
-	    authMech: string;
-	    replicaSet: string;
-	    tls: boolean;
-	    srv: boolean;
-	    options: Record<string, string>;
-	
-	    static createFrom(source: any = {}) {
-	        return new MongoURIInfo(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.scheme = source["scheme"];
-	        this.hosts = source["hosts"];
-	        this.username = source["username"];
-	        this.password = source["password"];
-	        this.database = source["database"];
-	        this.authSource = source["authSource"];
-	        this.authMech = source["authMech"];
-	        this.replicaSet = source["replicaSet"];
-	        this.tls = source["tls"];
-	        this.srv = source["srv"];
-	        this.options = source["options"];
-	    }
-	}
 	export class SSHCPUInfo {
 	    usagePercent: number;
 	    cores: number;
@@ -542,202 +686,6 @@ export namespace main {
 	        this.description = source["description"];
 	    }
 	}
-	export class ServerConfig {
-	    id: string;
-	    name: string;
-	    groupId?: string;
-	    host: string;
-	    port: number;
-	    username: string;
-	    authType: string;
-	    password: string;
-	    privateKey: string;
-	    passphrase: string;
-	    remark: string;
-	    type: string;
-	    db?: number;
-	    redisMode?: string;
-	    redisSentinels?: string;
-	    redisMasterName?: string;
-	    redisClusterNodes?: string;
-	    redisUsername?: string;
-	    redisSerialization?: string;
-	    redisPoolSize?: number;
-	    redisMinIdleConns?: number;
-	    redisMaxIdleConns?: number;
-	    redisPoolTimeout?: number;
-	    redisConnMaxIdleTime?: number;
-	    redisConnMaxLifetime?: number;
-	    redisDialTimeout?: number;
-	    redisReadTimeout?: number;
-	    redisWriteTimeout?: number;
-	    redisMaxRetries?: number;
-	    redisMinRetryBackoff?: number;
-	    redisMaxRetryBackoff?: number;
-	    redisBreakerThreshold?: number;
-	    redisBreakerCooldown?: number;
-	    database?: string;
-	    mysqlMaxOpenConns?: number;
-	    mysqlMaxIdleConns?: number;
-	    mysqlConnMaxLifetime?: number;
-	    mysqlTLS?: string;
-	    mysqlSSLEnabled?: boolean;
-	    mysqlSSHEnabled?: boolean;
-	    mysqlSSHHost?: string;
-	    mysqlSSHHostPort?: number;
-	    mysqlSSHUser?: string;
-	    mysqlSSHKeyPath?: string;
-	    mysqlSSHKeyData?: string;
-	    mysqlSSHPassphrase?: string;
-	    mysqlSSHProxyLocalPort?: number;
-	    mongoUri?: string;
-	    mongoSrv?: boolean;
-	    mongoHosts?: string;
-	    mongoDatabase?: string;
-	    mongoAuthMech?: string;
-	    mongoAuthSource?: string;
-	    mongoReplicaSet?: string;
-	    mongoReadPreference?: string;
-	    mongoTlsEnabled?: boolean;
-	    mongoTlsInsecure?: boolean;
-	    mongoTlsCaCert?: string;
-	    mongoTlsClientCert?: string;
-	    mongoTlsClientKey?: string;
-	    mongoMaxPoolSize?: number;
-	    mongoMinPoolSize?: number;
-	    mongoMaxConnIdleTime?: number;
-	    mongoConnectTimeout?: number;
-	    mongoServerSelectTimeout?: number;
-	    mongoSocketTimeout?: number;
-	    mongoCompressors?: string;
-	    mongoAppName?: string;
-	    clientId?: string;
-	    useTLS?: boolean;
-	    sqlitePath?: string;
-	    mqttProto?: string;
-	    mqttKeepAlive?: number;
-	    mqttConnectTimeout?: number;
-	    mqttCleanSession?: boolean;
-	    mqttAutoReconnect?: boolean;
-	    mqttReconnectIntvl?: number;
-	    mqttInsecure?: boolean;
-	    mqttCaCert?: string;
-	    mqttClientCert?: string;
-	    mqttClientKey?: string;
-	    mqttWillTopic?: string;
-	    mqttWillPayload?: string;
-	    mqttWillQos?: number;
-	    mqttWillRetained?: boolean;
-	    updatedAt: number;
-	
-	    static createFrom(source: any = {}) {
-	        return new ServerConfig(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.name = source["name"];
-	        this.groupId = source["groupId"];
-	        this.host = source["host"];
-	        this.port = source["port"];
-	        this.username = source["username"];
-	        this.authType = source["authType"];
-	        this.password = source["password"];
-	        this.privateKey = source["privateKey"];
-	        this.passphrase = source["passphrase"];
-	        this.remark = source["remark"];
-	        this.type = source["type"];
-	        this.db = source["db"];
-	        this.redisMode = source["redisMode"];
-	        this.redisSentinels = source["redisSentinels"];
-	        this.redisMasterName = source["redisMasterName"];
-	        this.redisClusterNodes = source["redisClusterNodes"];
-	        this.redisUsername = source["redisUsername"];
-	        this.redisSerialization = source["redisSerialization"];
-	        this.redisPoolSize = source["redisPoolSize"];
-	        this.redisMinIdleConns = source["redisMinIdleConns"];
-	        this.redisMaxIdleConns = source["redisMaxIdleConns"];
-	        this.redisPoolTimeout = source["redisPoolTimeout"];
-	        this.redisConnMaxIdleTime = source["redisConnMaxIdleTime"];
-	        this.redisConnMaxLifetime = source["redisConnMaxLifetime"];
-	        this.redisDialTimeout = source["redisDialTimeout"];
-	        this.redisReadTimeout = source["redisReadTimeout"];
-	        this.redisWriteTimeout = source["redisWriteTimeout"];
-	        this.redisMaxRetries = source["redisMaxRetries"];
-	        this.redisMinRetryBackoff = source["redisMinRetryBackoff"];
-	        this.redisMaxRetryBackoff = source["redisMaxRetryBackoff"];
-	        this.redisBreakerThreshold = source["redisBreakerThreshold"];
-	        this.redisBreakerCooldown = source["redisBreakerCooldown"];
-	        this.database = source["database"];
-	        this.mysqlMaxOpenConns = source["mysqlMaxOpenConns"];
-	        this.mysqlMaxIdleConns = source["mysqlMaxIdleConns"];
-	        this.mysqlConnMaxLifetime = source["mysqlConnMaxLifetime"];
-	        this.mysqlTLS = source["mysqlTLS"];
-	        this.mysqlSSLEnabled = source["mysqlSSLEnabled"];
-	        this.mysqlSSHEnabled = source["mysqlSSHEnabled"];
-	        this.mysqlSSHHost = source["mysqlSSHHost"];
-	        this.mysqlSSHHostPort = source["mysqlSSHHostPort"];
-	        this.mysqlSSHUser = source["mysqlSSHUser"];
-	        this.mysqlSSHKeyPath = source["mysqlSSHKeyPath"];
-	        this.mysqlSSHKeyData = source["mysqlSSHKeyData"];
-	        this.mysqlSSHPassphrase = source["mysqlSSHPassphrase"];
-	        this.mysqlSSHProxyLocalPort = source["mysqlSSHProxyLocalPort"];
-	        this.mongoUri = source["mongoUri"];
-	        this.mongoSrv = source["mongoSrv"];
-	        this.mongoHosts = source["mongoHosts"];
-	        this.mongoDatabase = source["mongoDatabase"];
-	        this.mongoAuthMech = source["mongoAuthMech"];
-	        this.mongoAuthSource = source["mongoAuthSource"];
-	        this.mongoReplicaSet = source["mongoReplicaSet"];
-	        this.mongoReadPreference = source["mongoReadPreference"];
-	        this.mongoTlsEnabled = source["mongoTlsEnabled"];
-	        this.mongoTlsInsecure = source["mongoTlsInsecure"];
-	        this.mongoTlsCaCert = source["mongoTlsCaCert"];
-	        this.mongoTlsClientCert = source["mongoTlsClientCert"];
-	        this.mongoTlsClientKey = source["mongoTlsClientKey"];
-	        this.mongoMaxPoolSize = source["mongoMaxPoolSize"];
-	        this.mongoMinPoolSize = source["mongoMinPoolSize"];
-	        this.mongoMaxConnIdleTime = source["mongoMaxConnIdleTime"];
-	        this.mongoConnectTimeout = source["mongoConnectTimeout"];
-	        this.mongoServerSelectTimeout = source["mongoServerSelectTimeout"];
-	        this.mongoSocketTimeout = source["mongoSocketTimeout"];
-	        this.mongoCompressors = source["mongoCompressors"];
-	        this.mongoAppName = source["mongoAppName"];
-	        this.clientId = source["clientId"];
-	        this.useTLS = source["useTLS"];
-	        this.sqlitePath = source["sqlitePath"];
-	        this.mqttProto = source["mqttProto"];
-	        this.mqttKeepAlive = source["mqttKeepAlive"];
-	        this.mqttConnectTimeout = source["mqttConnectTimeout"];
-	        this.mqttCleanSession = source["mqttCleanSession"];
-	        this.mqttAutoReconnect = source["mqttAutoReconnect"];
-	        this.mqttReconnectIntvl = source["mqttReconnectIntvl"];
-	        this.mqttInsecure = source["mqttInsecure"];
-	        this.mqttCaCert = source["mqttCaCert"];
-	        this.mqttClientCert = source["mqttClientCert"];
-	        this.mqttClientKey = source["mqttClientKey"];
-	        this.mqttWillTopic = source["mqttWillTopic"];
-	        this.mqttWillPayload = source["mqttWillPayload"];
-	        this.mqttWillQos = source["mqttWillQos"];
-	        this.mqttWillRetained = source["mqttWillRetained"];
-	        this.updatedAt = source["updatedAt"];
-	    }
-	}
-	export class ServerGroup {
-	    id: string;
-	    name: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new ServerGroup(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.name = source["name"];
-	    }
-	}
 	export class SessionInfo {
 	    id: string;
 	    serverId: string;
@@ -796,62 +744,6 @@ export namespace main {
 	        this.error = source["error"];
 	        this.startedAt = source["startedAt"];
 	        this.updatedAt = source["updatedAt"];
-	    }
-	}
-	export class WsConnectRequest {
-	    url: string;
-	    headers: ApiHeader[];
-	    insecureTLS: boolean;
-	    auth?: ApiAuth;
-	    protocols: string[];
-	
-	    static createFrom(source: any = {}) {
-	        return new WsConnectRequest(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.url = source["url"];
-	        this.headers = this.convertValues(source["headers"], ApiHeader);
-	        this.insecureTLS = source["insecureTLS"];
-	        this.auth = this.convertValues(source["auth"], ApiAuth);
-	        this.protocols = source["protocols"];
-	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
-	}
-	export class WsConnectResult {
-	    id: string;
-	    url: string;
-	    status: string;
-	    error: string;
-	
-	    static createFrom(source: any = {}) {
-	        return new WsConnectResult(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.url = source["url"];
-	        this.status = source["status"];
-	        this.error = source["error"];
 	    }
 	}
 
