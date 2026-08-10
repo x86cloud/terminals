@@ -564,7 +564,7 @@ export default function SqliteClient({session, onClose}: Props) {
 
                                                     if (isEd) {
                                                         return (
-                                                            <td key={c} className={dirty ? db.dbDirtyCell : ''}>
+                                                            <td key={c}>
                                                                 <input
                                                                     className={db.dbCellInput}
                                                                     autoFocus
