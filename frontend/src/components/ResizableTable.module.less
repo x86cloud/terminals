@@ -33,14 +33,14 @@
     }
 
     th {
-        background: @bg-elev;
+        background: @bg-1;
         color: @text-dim;
-        position: sticky;
+        position: sticky !important;
         top: 0;
-        z-index: 3;
-        box-shadow: inset 0 -1px 0 @border;
+        z-index: 5;
         /* needed for resize handle positioning */
         overflow: visible;
+        box-shadow: 0 1px 0 @border;
     }
 
     th:first-child,
