@@ -307,6 +307,10 @@ export interface RedisMonitorInfo {
     staleConns: number
     mode: string
     serialization: string
+    version?: string
+    memoryUsed?: string
+    uptimeDays?: string
+    connectedClients?: string
 }
 
 export interface RedisSlowLogEntry {

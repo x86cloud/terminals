@@ -604,6 +604,10 @@ export namespace redis {
 	    staleConns: number;
 	    mode: string;
 	    serialization: string;
+	    version?: string;
+	    memoryUsed?: string;
+	    uptimeDays?: string;
+	    connectedClients?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new RedisMonitorInfo(source);
@@ -620,6 +624,10 @@ export namespace redis {
 	        this.staleConns = source["staleConns"];
 	        this.mode = source["mode"];
 	        this.serialization = source["serialization"];
+	        this.version = source["version"];
+	        this.memoryUsed = source["memoryUsed"];
+	        this.uptimeDays = source["uptimeDays"];
+	        this.connectedClients = source["connectedClients"];
 	    }
 	}
 	export class RedisPipelineResult {

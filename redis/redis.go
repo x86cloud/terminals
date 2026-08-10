@@ -731,13 +731,17 @@ type RedisSlowLogEntry struct {
 }
 
 type RedisMonitorInfo struct {
-	Breaker       string `json:"breaker"`
-	Hits          int64  `json:"hits"`
-	Misses        int64  `json:"misses"`
-	Timeouts      int64  `json:"timeouts"`
-	TotalConns    uint32 `json:"totalConns"`
-	IdleConns     uint32 `json:"idleConns"`
-	StaleConns    uint32 `json:"staleConns"`
-	Mode          string `json:"mode"`
-	Serialization string `json:"serialization"`
+	Breaker          string `json:"breaker"`
+	Hits             int64  `json:"hits"`
+	Misses           int64  `json:"misses"`
+	Timeouts         int64  `json:"timeouts"`
+	TotalConns       uint32 `json:"totalConns"`
+	IdleConns        uint32 `json:"idleConns"`
+	StaleConns       uint32 `json:"staleConns"`
+	Mode             string `json:"mode"`
+	Serialization    string `json:"serialization"`
+	Version          string `json:"version,omitempty"`
+	MemoryUsed       string `json:"memoryUsed,omitempty"`
+	UptimeDays       string `json:"uptimeDays,omitempty"`
+	ConnectedClients string `json:"connectedClients,omitempty"`
 }

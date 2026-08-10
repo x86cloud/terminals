@@ -431,9 +431,43 @@ func (m *RedisManager) Monitor(id string) (*RedisMonitorInfo, error) {
 	if !ok {
 		return nil, errors.New("Redis 连接不存在或已断开")
 	}
-	return &RedisMonitorInfo{
+	info := &RedisMonitorInfo{
 		Breaker:       rc.breaker.state(),
 		Mode:          string(rc.mode),
 		Serialization: string(rc.ser),
-	}, nil
+	}
+
+	if rc.client != nil {
+		stats := rc.client.PoolStats()
+		if stats != nil {
+			info.Hits = int64(stats.Hits)
+			info.Misses = int64(stats.Misses)
+			info.Timeouts = int64(stats.Timeouts)
+			info.TotalConns = stats.TotalConns
+			info.IdleConns = stats.IdleConns
+			info.StaleConns = stats.StaleConns
+		}
+
+		ctx := context.Background()
+		_ = rc.do(ctx, func(c context.Context) error {
+			rawInfo, err := rc.client.Info(c).Result()
+			if err == nil {
+				for _, line := range strings.Split(rawInfo, "\n") {
+					line = strings.TrimSpace(line)
+					if strings.HasPrefix(line, "redis_version:") {
+						info.Version = strings.TrimPrefix(line, "redis_version:")
+					} else if strings.HasPrefix(line, "used_memory_human:") {
+						info.MemoryUsed = strings.TrimPrefix(line, "used_memory_human:")
+					} else if strings.HasPrefix(line, "uptime_in_days:") {
+						info.UptimeDays = strings.TrimPrefix(line, "uptime_in_days:")
+					} else if strings.HasPrefix(line, "connected_clients:") {
+						info.ConnectedClients = strings.TrimPrefix(line, "connected_clients:")
+					}
+				}
+			}
+			return nil
+		})
+	}
+
+	return info, nil
 }
