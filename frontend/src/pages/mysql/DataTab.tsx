@@ -1,13 +1,13 @@
-import React, {useState, useEffect} from 'react'
+import React, { useState, useEffect } from 'react'
 import Icon from '../../components/Icon'
-import ResizableTable, {ColDef} from '../../components/ResizableTable'
+import ResizableTable, { ColDef } from '../../components/ResizableTable'
 import g from '../../styles/global.module.less'
 import my from './DataTab.module.less'
 import sh from './mysqlShared.module.less'
 import db from './dbTable.module.less'
-import {MysqlQueryResult} from '../../types'
-import {Grid} from './mysqlTypes'
-import {RowDrafts, NewRow} from './mysqlTypes'
+import { MysqlQueryResult } from '../../types'
+import { Grid } from './mysqlTypes'
+import { RowDrafts, NewRow } from './mysqlTypes'
 import CellEditorInline from './CellEditorInline'
 
 const ROW_NUM_W = 40
@@ -66,7 +66,7 @@ export default function DataTab(props: {
     const getColW = (key: string) => colWidths[key] ?? DEFAULT_COL_W
 
     const handleColResize = (key: string, newWidth: number) => {
-        setColWidths((prev) => ({...prev, [key]: newWidth}))
+        setColWidths((prev) => ({ ...prev, [key]: newWidth }))
     }
 
     // Build ColDef array for ResizableTable
@@ -82,7 +82,7 @@ export default function DataTab(props: {
             width: getColW(c),
             minWidth: 50,
         })),
-        {key: '__rowact__', label: '操作', width: ROW_ACT_W, minWidth: 38},
+        { key: '__rowact__', label: '操作', width: ROW_ACT_W, minWidth: 38 },
     ]
 
     if (!selected) {
@@ -106,22 +106,22 @@ export default function DataTab(props: {
                 {dataView === 'data' && (
                     <span className={my.mysqlCrudActions}>
                         <button className={`${g.btn} ${g.sm}`} disabled={busy || saving} onClick={onAddRow} title="新增一行">
-                            <Icon name="plus" size={13}/> 新建行
+                            <Icon name="plus" size={13} /> 新建行
                         </button>
                         <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || saving || !dirtyCount} onClick={onSaveAll} title="保存所有修改">
                             {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
                         </button>
                         <button className={g.iconBtn} title="刷新数据" disabled={busy || saving} onClick={() => onOpenTable(selected, page)}>
-                            <Icon name="refresh" size={13}/>
+                            <Icon name="refresh" size={13} />
                         </button>
                     </span>
                 )}
                 {dataView === 'index' && (
                     <span className={my.mysqlCrudActions}>
-                        <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onAddIndex}><Icon name="plus" size={13}/> 新建索引</button>
+                        <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onAddIndex}><Icon name="plus" size={13} /> 新建索引</button>
                     </span>
                 )}
-                <button className={g.iconBtn} title="关闭表" onClick={onCloseTable}><Icon name="close" size={13}/></button>
+                <button className={g.iconBtn} title="关闭表" onClick={onCloseTable}><Icon name="close" size={13} /></button>
             </div>
 
             {dataView === 'data' && (
@@ -135,74 +135,74 @@ export default function DataTab(props: {
                         className={my.mysqlEditTable}
                     >
                         <tbody>
-                        {newRows.map((nr, idx) => (
-                            <tr key={`new-${idx}`} className={my.rowNew}>
-                                {columns.map((c) => {
-                                    const cell = nr[c] || {value: '', isNull: false}
-                                    return (
-                                        <td key={c}>
-                                            <input className={sh.mysqlCellInput} value={cell.value}
-                                                   onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
-                                                   onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }}/>
-                                        </td>
-                                    )
-                                })}
-                                <td className={my.mysqlRowact}>
-                                    <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
-                                        <Icon name="trash" size={13}/>
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {rows.map((_, i) => (
-                            <tr key={i}>
-                                {columns.map((c) => {
-                                    const disp = onCellDisplay(i, c)
-                                    const isEditing = editing?.row === i && editing?.col === c
-                                    const dirty = !!drafts[i]?.[c]
-                                    return (
-                                        <td key={c}
-                                            className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + db.dbNullCell : ''}`}
-                                            onClick={() => !isEditing && onSetEditing({row: i, col: c})}
-                                            title="点击编辑">
-                                            {isEditing ? (
-                                                <CellEditorInline value={disp.text === 'NULL' ? '' : disp.text} isNull={disp.isNull}
-                                                                   onCommit={(v, n) => onCommitEdit(i, c, v, n)} onCancel={() => onSetEditing(null)}/>
-                                            ) : disp.isNull ? (
-                                                <span className={sh.mysqlNull}>NULL</span>
-                                            ) : (
-                                                String(disp.text)
-                                            )}
-                                        </td>
-                                    )
-                                })}
-                                <td className={my.mysqlRowact}>
-                                    <button className={`${g.iconBtn} ${g.danger}`} title="删除该行" disabled={busy || saving} onClick={() => onDeleteRow(i)}>
-                                        <Icon name="trash" size={13}/>
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
-                        {!rows.length && !newRows.length && (
-                            <tr><td colSpan={columns.length + 2} className={db.dbEmpty}>无数据，可点击「新建行」插入</td></tr>
-                        )}
+                            {newRows.map((nr, idx) => (
+                                <tr key={`new-${idx}`} className={my.rowNew}>
+                                    {columns.map((c) => {
+                                        const cell = nr[c] || { value: '', isNull: false }
+                                        return (
+                                            <td key={c}>
+                                                <input className={sh.mysqlCellInput} value={cell.value}
+                                                    onChange={(e) => onUpdateNewCell(idx, c, e.target.value, false)}
+                                                    onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur() }} />
+                                            </td>
+                                        )
+                                    })}
+                                    <td className={my.mysqlRowact}>
+                                        <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
+                                            <Icon name="trash" size={13} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {rows.map((_, i) => (
+                                <tr key={i}>
+                                    {columns.map((c) => {
+                                        const disp = onCellDisplay(i, c)
+                                        const isEditing = editing?.row === i && editing?.col === c
+                                        const dirty = !!drafts[i]?.[c]
+                                        return (
+                                            <td key={c}
+                                                className={`${dirty ? my.cellDirty : ''}${disp.isNull ? ' ' + db.dbNullCell : ''}`}
+                                                onClick={() => !isEditing && onSetEditing({ row: i, col: c })}
+                                                title="点击编辑">
+                                                {isEditing ? (
+                                                    <CellEditorInline value={disp.text === 'NULL' ? '' : disp.text} isNull={disp.isNull}
+                                                        onCommit={(v, n) => onCommitEdit(i, c, v, n)} onCancel={() => onSetEditing(null)} />
+                                                ) : disp.isNull ? (
+                                                    <span className={sh.mysqlNull}>NULL</span>
+                                                ) : (
+                                                    String(disp.text)
+                                                )}
+                                            </td>
+                                        )
+                                    })}
+                                    <td className={my.mysqlRowact}>
+                                        <button className={`${g.iconBtn} ${g.danger}`} title="删除该行" disabled={busy || saving} onClick={() => onDeleteRow(i)}>
+                                            <Icon name="trash" size={13} />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                            {!rows.length && !newRows.length && (
+                                <tr><td colSpan={columns.length + 2} className={db.dbEmpty}>无数据，可点击「新建行」插入</td></tr>
+                            )}
                         </tbody>
                     </ResizableTable>
                     <div className={my.mysqlPager}>
                         <span className={my.mysqlCount}>
                             共 {totalRows} 行 · 第 {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} 行
                         </span>
-                        <span className={g.spacer}/>
-                        <button className={g.iconBtn} title="首页" disabled={busy || page <= 1} onClick={() => onGoPage(1)}><Icon name="chevrons-left" size={13}/></button>
-                        <button className={g.iconBtn} title="上一页" disabled={busy || page <= 1} onClick={() => onGoPage(page - 1)}><Icon name="chevron-left" size={13}/></button>
+                        <span className={g.spacer} />
+                        <button className={g.iconBtn} title="首页" disabled={busy || page <= 1} onClick={() => onGoPage(1)}><Icon name="chevrons-left" size={13} /></button>
+                        <button className={g.iconBtn} title="上一页" disabled={busy || page <= 1} onClick={() => onGoPage(page - 1)}><Icon name="chevron-left" size={13} /></button>
                         <span className={my.mysqlPageJump}>
                             <input key={page} type="number" min={1} max={totalPages} defaultValue={page} disabled={busy}
-                                   onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value); if (v) onGoPage(v) } }}
-                                   onBlur={(e) => { const v = Number(e.target.value); if (v && v !== page) onGoPage(v) }}/>
+                                onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value); if (v) onGoPage(v) } }}
+                                onBlur={(e) => { const v = Number(e.target.value); if (v && v !== page) onGoPage(v) }} />
                             <span className={my.mysqlPageTotal}>/ {totalPages} 页</span>
                         </span>
-                        <button className={g.iconBtn} title="下一页" disabled={busy || page >= totalPages} onClick={() => onGoPage(page + 1)}><Icon name="chevron-right" size={13}/></button>
-                        <button className={g.iconBtn} title="末页" disabled={busy || page >= totalPages} onClick={() => onGoPage(totalPages)}><Icon name="chevrons-right" size={13}/></button>
+                        <button className={g.iconBtn} title="下一页" disabled={busy || page >= totalPages} onClick={() => onGoPage(page + 1)}><Icon name="chevron-right" size={13} /></button>
+                        <button className={g.iconBtn} title="末页" disabled={busy || page >= totalPages} onClick={() => onGoPage(totalPages)}><Icon name="chevrons-right" size={13} /></button>
                         <select className={my.mysqlPageSize} value={pageSize} disabled={busy} onChange={(e) => onChangePageSize(Number(e.target.value))}>
                             <option value={20}>20 行/页</option>
                             <option value={50}>50 行/页</option>
@@ -216,31 +216,30 @@ export default function DataTab(props: {
 
             {dataView === 'struct' && (
                 <div className={db.dbTableScroll}>
-                    {structData ? <Grid columns={structData.columns} rows={structData.rows}/> :
+                    {structData ? <Grid columns={structData.columns} rows={structData.rows} /> :
                         <div className={db.dbEmpty}>加载中…</div>}
                 </div>
             )}
 
             {dataView === 'index' && (
                 <div className={db.dbTableScroll}>
-                    <div className={my.mysqlCount}>{indexData.length} 个索引</div>
                     <table className={db.dbTable}>
                         <thead><tr><th>索引名</th><th>列</th><th>唯一</th><th>类型</th><th>操作</th></tr></thead>
                         <tbody>
-                        {indexData.map((ix, i) => (
-                            <tr key={i}>
-                                <td>{ix['Key_name']}</td>
-                                <td>{ix['Column_name']}</td>
-                                <td>{ix['Non_unique'] === 0 ? '是' : '否'}</td>
-                                <td>{ix['Index_type']}</td>
-                                <td>
-                                    {ix['Key_name'] !== 'PRIMARY' && (
-                                        <button className={g.iconBtn} title="删除索引" onClick={() => onDropIndex(ix['Key_name'])}><Icon name="trash" size={13}/></button>
-                                    )}
-                                </td>
-                            </tr>
-                        ))}
-                        {indexData.length === 0 && <tr><td colSpan={5} className={db.dbEmpty}>暂无索引</td></tr>}
+                            {indexData.map((ix, i) => (
+                                <tr key={i}>
+                                    <td>{ix['Key_name']}</td>
+                                    <td>{ix['Column_name']}</td>
+                                    <td>{ix['Non_unique'] === 0 ? '是' : '否'}</td>
+                                    <td>{ix['Index_type']}</td>
+                                    <td>
+                                        {ix['Key_name'] !== 'PRIMARY' && (
+                                            <button className={g.iconBtn} title="删除索引" onClick={() => onDropIndex(ix['Key_name'])}><Icon name="trash" size={13} /></button>
+                                        )}
+                                    </td>
+                                </tr>
+                            ))}
+                            {indexData.length === 0 && <tr><td colSpan={5} className={db.dbEmpty}>暂无索引</td></tr>}
                         </tbody>
                     </table>
                 </div>
