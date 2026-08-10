@@ -254,17 +254,6 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
         }
     }
 
-    const breadcrumbs = useMemo(() => {
-        const parts = path.split('/').filter(Boolean)
-        const crumbs = [{name: '/', full: '/'}]
-        let acc = ''
-        for (const part of parts) {
-            acc += `/${part}`
-            crumbs.push({name: part, full: acc})
-        }
-        return crumbs
-    }, [path])
-
     return (
         <section
             className={`${fp.filePanel}${dragOver ? ' ' + fp.dragOver : ''}`}
@@ -305,16 +294,6 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
             </div>
 
             <div className={fp.fileSubbar}>
-                <div className={fp.crumbs}>
-                    {breadcrumbs.map((crumb, i) => (
-                        <React.Fragment key={crumb.full}>
-                            {i > 0 && <span className={fp.crumbSep}>/</span>}
-                            <button className={fp.crumb} onClick={() => load(crumb.full)}>
-                                {crumb.name}
-                            </button>
-                        </React.Fragment>
-                    ))}
-                </div>
                 <input
                     className={fp.filterInput}
                     value={filter}
