@@ -16,6 +16,7 @@ interface Props {
 
 const PAGE_SIZE = 100
 const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+const DEFAULT_SQLITE_COL_DEF = `"id" INTEGER PRIMARY KEY AUTOINCREMENT,\n"name" TEXT,\n"created_at" DATETIME DEFAULT CURRENT_TIMESTAMP`
 
 function quoteIdent(s: string): string {
     return `"${s.replace(/"/g, '""')}"`
@@ -39,6 +40,13 @@ export default function SqliteClient({session, onClose}: Props) {
     const [info, setInfo] = useState<{ path: string; size: number }>({path: session.path, size: session.size})
     const [pathError, setPathError] = useState('')
     const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
+
+    // 新建表 Modal 状态
+    const [createModalOpen, setCreateModalOpen] = useState(false)
+    const [newTableName, setNewTableName] = useState('')
+    const [newTableSql, setNewTableSql] = useState(DEFAULT_SQLITE_COL_DEF)
+    const [createModalMsg, setCreateModalMsg] = useState('')
+    const [createModalBusy, setCreateModalBusy] = useState(false)
 
     // 数据态
     const [rows, setRows] = useState<Record<string, any>[]>([])
@@ -303,7 +311,7 @@ export default function SqliteClient({session, onClose}: Props) {
             open: true,
             title: '清空表数据',
             danger: true,
-            message: `确认清空表 "${tableName}" 吗？表中所有数据将被清空且不可恢复！`,
+            message: `确认清空表 "${tableName}" 吗？该操作不可恢复。`,
             onConfirm: async () => {
                 setConfirmState(emptyConfirm)
                 setBusy(true)
@@ -325,9 +333,9 @@ export default function SqliteClient({session, onClose}: Props) {
     const confirmDropTable = (tableName: string) => {
         setConfirmState({
             open: true,
-            title: '删除表 (Drop Table)',
+            title: '删除表',
             danger: true,
-            message: `确认删除表 "${tableName}" 吗？该表及其结构将被永久删除且不可恢复！`,
+            message: `确认删除表 "${tableName}" 吗？该操作不可恢复。`,
             onConfirm: async () => {
                 setConfirmState(emptyConfirm)
                 setBusy(true)
@@ -346,6 +354,33 @@ export default function SqliteClient({session, onClose}: Props) {
                 }
             },
         })
+    }
+
+    // ---- 新建表 Handlers ----
+    const handleOpenCreateTable = () => {
+        setNewTableName('')
+        setNewTableSql(DEFAULT_SQLITE_COL_DEF)
+        setCreateModalMsg('')
+        setCreateModalOpen(true)
+    }
+
+    const handleConfirmCreateTable = async () => {
+        const tName = newTableName.trim()
+        const colsSql = newTableSql.trim()
+        if (!tName || !colsSql) return
+        setCreateModalBusy(true)
+        setCreateModalMsg('')
+        try {
+            const sql = `CREATE TABLE ${quoteIdent(tName)} (${colsSql})`
+            await API.sqliteRun(id, sql)
+            setCreateModalOpen(false)
+            await loadTables()
+            await openTable(tName)
+        } catch (e) {
+            setCreateModalMsg(errorMessage(e))
+        } finally {
+            setCreateModalBusy(false)
+        }
     }
 
     // ---- 批量保存更改 ----
@@ -421,10 +456,57 @@ export default function SqliteClient({session, onClose}: Props) {
         <div className={sq.sqlitePane}>
             <ConfirmModal state={confirmState} onCancel={() => setConfirmState(emptyConfirm)} />
 
+            {createModalOpen && (
+                <div className={g.modalMask} onClick={() => !createModalBusy && setCreateModalOpen(false)}>
+                    <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
+                        <div className={g.modalHead}>
+                            <span>在 SQLite 中新建表</span>
+                            <button className={g.iconBtn} disabled={createModalBusy} onClick={() => setCreateModalOpen(false)}>
+                                <Icon name="close" size={14}/>
+                            </button>
+                        </div>
+                        <div className={g.modalBody}>
+                            {createModalMsg && <div className={`${g.ioMsg} ${g.err}`}>{createModalMsg}</div>}
+                            <div className={g.field}>
+                                <label>表名称</label>
+                                <input
+                                    value={newTableName}
+                                    onChange={(e) => setNewTableName(e.target.value)}
+                                    placeholder="例如 users / orders"
+                                    autoFocus
+                                />
+                            </div>
+                            <div className={g.field}>
+                                <label>列定义 (SQL)</label>
+                                <textarea
+                                    style={{ width: '100%', height: 90, fontFamily: 'monospace', fontSize: 12, padding: 8, borderRadius: 4, border: '1px solid var(--border)', background: 'var(--bg-2)', color: 'var(--text)', resize: 'vertical' }}
+                                    value={newTableSql}
+                                    onChange={(e) => setNewTableSql(e.target.value)}
+                                    placeholder={`"id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT`}
+                                />
+                            </div>
+                        </div>
+                        <div className={g.modalFoot}>
+                            <button className={`${g.btn} ${g.sm}`} disabled={createModalBusy} onClick={() => setCreateModalOpen(false)}>取消</button>
+                            <button
+                                className={`${g.btn} ${g.sm} ${g.primary}`}
+                                disabled={createModalBusy || !newTableName.trim() || !newTableSql.trim()}
+                                onClick={handleConfirmCreateTable}
+                            >
+                                {createModalBusy ? '创建中…' : '确定'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className={sq.sqliteSide}>
                 <div className={sq.sqliteHead}>
                     <Icon name="database" size={13}/>
                     <span className={sq.sqliteTitle}>SQLite</span>
+                    <button className={`${g.btn} ${g.xs}`} onClick={handleOpenCreateTable} disabled={busy} title="在数据库中新建表">
+                        <Icon name="table" size={12}/> 建表
+                    </button>
                     <button className={`${g.btn} ${g.xs}`} onClick={switchFile} disabled={busy} title="选择其他数据库文件">
                         <Icon name="folder" size={12}/> 切换文件
                     </button>
@@ -453,11 +535,11 @@ export default function SqliteClient({session, onClose}: Props) {
                                 {t.type === 'view' && <span className={sh.mongoBadge} style={{marginLeft: 4}}>视图</span>}
                             </button>
                             <div className={sq.sqliteTableMenu}>
-                                <button className={g.iconBtn} title="清空表数据" onClick={(e) => { e.stopPropagation(); confirmTruncateTable(t.name); }}>
-                                    <Icon name="refresh" size={12}/>
-                                </button>
-                                <button className={g.iconBtn} title="删除表 (Drop)" onClick={(e) => { e.stopPropagation(); confirmDropTable(t.name); }}>
+                                <button className={g.iconBtn} title="清空" onClick={(e) => { e.stopPropagation(); confirmTruncateTable(t.name); }}>
                                     <Icon name="trash" size={12}/>
+                                </button>
+                                <button className={g.iconBtn} title="删除表" onClick={(e) => { e.stopPropagation(); confirmDropTable(t.name); }}>
+                                    <Icon name="close" size={12}/>
                                 </button>
                             </div>
                         </div>
