@@ -151,6 +151,8 @@ export function MqttUnsubscribe(arg1:string,arg2:string):Promise<void>;
 
 export function MysqlBackup(arg1:string,arg2:string):Promise<string>;
 
+export function MysqlBackupToFile(arg1:string,arg2:string):Promise<string>;
+
 export function MysqlClose(arg1:string):Promise<void>;
 
 export function MysqlCloseEx(arg1:string):Promise<void>;

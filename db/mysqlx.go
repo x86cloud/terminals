@@ -774,18 +774,272 @@ func (m *MysqlManagerEx) MysqlSlowLog(id string, limit int) ([]map[string]any, e
 
 
 
-func (m *MysqlManagerEx) MysqlExport(id, db, mode, source, table, sqlText string, limit int) (string, error) {
-	if mode == "json" {
-		return m.MysqlExportJSON(id, db, source, table, sqlText, limit)
+func buildExportQuery(source, table, sqlText string, limit int) (string, error) {
+	var query string
+	if source == "table" {
+		t := strings.TrimSpace(table)
+		if t == "" {
+			return "", errors.New("未指定表名")
+		}
+		if limit > 0 {
+			query = fmt.Sprintf("SELECT * FROM %s LIMIT %d", quoteIdent(t), limit)
+		} else {
+			query = fmt.Sprintf("SELECT * FROM %s", quoteIdent(t))
+		}
+	} else {
+		query = strings.TrimSpace(sqlText)
+		if query == "" {
+			return "", errors.New("未指定查询语句")
+		}
+		if limit > 0 && !strings.Contains(strings.ToUpper(query), "LIMIT") {
+			query = fmt.Sprintf("%s LIMIT %d", query, limit)
+		}
 	}
-	return m.MysqlQueryCSV(id, db, sqlText, limit)
+	return query, nil
+}
+
+func (m *MysqlManagerEx) MysqlExportCSV(id, db, source, table, sqlText string, limit int) (string, error) {
+	query, err := buildExportQuery(source, table, sqlText, limit)
+	if err != nil {
+		return "", err
+	}
+	cols, rows, err := m.queryEx(id, db, query)
+	if err != nil {
+		return "", err
+	}
+	var sb strings.Builder
+	w := csv.NewWriter(&sb)
+	if err := w.Write(cols); err != nil {
+		return "", err
+	}
+	for _, r := range rows {
+		rec := make([]string, len(cols))
+		for i, c := range cols {
+			rec[i] = asString(r[c])
+		}
+		if err := w.Write(rec); err != nil {
+			return "", err
+		}
+	}
+	w.Flush()
+	return sb.String(), nil
+}
+
+func (m *MysqlManagerEx) MysqlExportSQL(id, db, source, table, sqlText string, limit int) (string, error) {
+	query, err := buildExportQuery(source, table, sqlText, limit)
+	if err != nil {
+		return "", err
+	}
+	cols, rows, err := m.queryEx(id, db, query)
+	if err != nil {
+		return "", err
+	}
+	targetTable := strings.TrimSpace(table)
+	if targetTable == "" {
+		targetTable = "export_data"
+	}
+	quotedTarget := quoteIdent(targetTable)
+
+	quotedCols := make([]string, len(cols))
+	for i, c := range cols {
+		quotedCols[i] = quoteIdent(c)
+	}
+	colHeader := strings.Join(quotedCols, ", ")
+
+	var sb strings.Builder
+	sb.WriteString(fmt.Sprintf("-- Exported data for table %s\n", quotedTarget))
+	sb.WriteString("SET FOREIGN_KEY_CHECKS=0;\n\n")
+
+	for _, r := range rows {
+		valStrs := make([]string, len(cols))
+		for i, c := range cols {
+			valStrs[i] = formatSQLValue(r[c])
+		}
+		sb.WriteString(fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s);\n", quotedTarget, colHeader, strings.Join(valStrs, ", ")))
+	}
+	sb.WriteString("\nSET FOREIGN_KEY_CHECKS=1;\n")
+	return sb.String(), nil
+}
+
+func formatSQLValue(v any) string {
+	if v == nil {
+		return "NULL"
+	}
+	switch t := v.(type) {
+	case []byte:
+		return "'" + strings.ReplaceAll(strings.ReplaceAll(string(t), "\\", "\\\\"), "'", "\\'") + "'"
+	case string:
+		return "'" + strings.ReplaceAll(strings.ReplaceAll(t, "\\", "\\\\"), "'", "\\'") + "'"
+	case bool:
+		if t {
+			return "1"
+		}
+		return "0"
+	case time.Time:
+		return "'" + t.Format("2006-01-02 15:04:05") + "'"
+	default:
+		return fmt.Sprint(v)
+	}
+}
+
+func (m *MysqlManagerEx) MysqlExport(id, db, mode, source, table, sqlText string, limit int) (string, error) {
+	switch mode {
+	case "json":
+		return m.MysqlExportJSON(id, db, source, table, sqlText, limit)
+	case "sql":
+		return m.MysqlExportSQL(id, db, source, table, sqlText, limit)
+	case "csv":
+		return m.MysqlExportCSV(id, db, source, table, sqlText, limit)
+	default:
+		return "", errors.New("不支持的导出模式: " + mode)
+	}
+}
+
+func splitSQLStatements(sqlText string) []string {
+	var stmts []string
+	var current strings.Builder
+	inSingleQuote := false
+	inDoubleQuote := false
+	inBacktick := false
+
+	lines := strings.Split(sqlText, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "--") || (strings.HasPrefix(trimmed, "/*") && strings.HasSuffix(trimmed, "*/")) {
+			continue
+		}
+		for i := 0; i < len(line); i++ {
+			ch := line[i]
+			if ch == '\'' && !inDoubleQuote && !inBacktick {
+				inSingleQuote = !inSingleQuote
+			} else if ch == '"' && !inSingleQuote && !inBacktick {
+				inDoubleQuote = !inDoubleQuote
+			} else if ch == '`' && !inSingleQuote && !inDoubleQuote {
+				inBacktick = !inBacktick
+			}
+
+			if ch == ';' && !inSingleQuote && !inDoubleQuote && !inBacktick {
+				stmt := strings.TrimSpace(current.String())
+				if stmt != "" {
+					stmts = append(stmts, stmt)
+				}
+				current.Reset()
+			} else {
+				current.WriteByte(ch)
+			}
+		}
+		current.WriteString("\n")
+	}
+	stmt := strings.TrimSpace(current.String())
+	if stmt != "" {
+		stmts = append(stmts, stmt)
+	}
+	return stmts
+}
+
+func truncateStr(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
+}
+
+func (m *MysqlManagerEx) MysqlImportSQL(id, db, content string) (string, error) {
+	mc, ok := m.Get(id)
+	if !ok {
+		return "", errors.New("MySQL 连接不存在或已断开")
+	}
+	if strings.TrimSpace(db) != "" {
+		if _, e := mc.db.Exec("USE " + quoteIdent(db)); e != nil {
+			return "", fmt.Errorf("切换数据库失败: %w", e)
+		}
+	}
+	stmts := splitSQLStatements(content)
+	if len(stmts) == 0 {
+		return "SQL 内容为空或无有效 SQL 语句", nil
+	}
+	var count int
+	for _, s := range stmts {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, err := mc.db.Exec(s); err != nil {
+			return "", fmt.Errorf("执行 SQL 失败: %w (语句: %s)", err, truncateStr(s, 80))
+		}
+		count++
+	}
+	return fmt.Sprintf("成功执行 %d 条 SQL 语句", count), nil
+}
+
+func (m *MysqlManagerEx) MysqlImportCSV(id, db, table, content string) (string, error) {
+	mc, ok := m.Get(id)
+	if !ok {
+		return "", errors.New("MySQL 连接不存在或已断开")
+	}
+	table = strings.TrimSpace(table)
+	if table == "" {
+		return "", errors.New("未指定目标表名")
+	}
+	if strings.TrimSpace(db) != "" {
+		if _, e := mc.db.Exec("USE " + quoteIdent(db)); e != nil {
+			return "", fmt.Errorf("切换数据库失败: %w", e)
+		}
+	}
+	r := csv.NewReader(strings.NewReader(content))
+	r.FieldsPerRecord = -1
+	records, err := r.ReadAll()
+	if err != nil {
+		return "", fmt.Errorf("CSV 解析失败: %w", err)
+	}
+	if len(records) < 2 {
+		return "CSV 文件无有效数据（需至少包含首行列名与一行数据）", nil
+	}
+	headers := records[0]
+	colsQuoted := make([]string, len(headers))
+	placeholders := make([]string, len(headers))
+	for i, h := range headers {
+		colsQuoted[i] = quoteIdent(strings.TrimSpace(h))
+		placeholders[i] = "?"
+	}
+	insertSQL := fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)",
+		quoteIdent(table), strings.Join(colsQuoted, ", "), strings.Join(placeholders, ", "))
+
+	var count int64
+	for i := 1; i < len(records); i++ {
+		row := records[i]
+		args := make([]any, len(headers))
+		for j := range headers {
+			if j < len(row) {
+				v := strings.TrimSpace(row[j])
+				if v == "" || strings.ToUpper(v) == "NULL" {
+					args[j] = nil
+				} else {
+					args[j] = v
+				}
+			} else {
+				args[j] = nil
+			}
+		}
+		if _, err := mc.db.Exec(insertSQL, args...); err != nil {
+			return "", fmt.Errorf("第 %d 行插入失败: %w", i+1, err)
+		}
+		count++
+	}
+	return fmt.Sprintf("成功导入 %d 行数据到表 `%s`", count, table), nil
 }
 
 func (m *MysqlManagerEx) MysqlImport(id, db, mode, table, content string) (string, error) {
-	if mode == "json" {
+	switch mode {
+	case "json":
 		return m.MysqlImportJSON(id, db, table, content)
+	case "sql":
+		return m.MysqlImportSQL(id, db, content)
+	case "csv":
+		return m.MysqlImportCSV(id, db, table, content)
+	default:
+		return "", errors.New("不支持的导入模式: " + mode)
 	}
-	return "", errors.New("暂不支持的导入格式")
 }
 
 // ===================== ER 图数据 =====================
@@ -851,21 +1105,9 @@ func (m *MysqlManagerEx) MysqlExportJSON(id, db, source, table, sqlText string, 
 	if !ok {
 		return "", errors.New("MySQL 连接不存在或已断开")
 	}
-	var query string
-	if source == "table" {
-		if table == "" {
-			return "", errors.New("未指定表名")
-		}
-		if limit > 0 {
-			query = fmt.Sprintf("SELECT * FROM %s LIMIT %d", quoteIdent(table), limit)
-		} else {
-			query = fmt.Sprintf("SELECT * FROM %s", quoteIdent(table))
-		}
-	} else {
-		if strings.TrimSpace(sqlText) == "" {
-			return "", errors.New("未指定查询语句")
-		}
-		query = sqlText
+	query, err := buildExportQuery(source, table, sqlText, limit)
+	if err != nil {
+		return "", err
 	}
 	if strings.TrimSpace(db) != "" {
 		if _, e := mc.db.Exec("USE " + quoteIdent(db)); e != nil {
@@ -1021,26 +1263,65 @@ func (m *MysqlManagerEx) MysqlQueryCSV(id, db, sqlText string, limit int) (strin
 	return sb.String(), nil
 }
 
-// MysqlBackup 通过 mysqldump 风格的逻辑导出（这里用 SELECT 拼装，等价于已实现的 Export），
-// 额外提供一个占位以表明备份恢复入口存在。
+// MysqlBackup 通过 mysqldump 风格逻辑导出全量 SQL（包含建表 DDL 与插入 DML 数据）。
 func (m *MysqlManagerEx) MysqlBackup(id, db string) (string, error) {
 	tables, err := m.MysqlTables(id, db)
 	if err != nil {
 		return "", err
 	}
 	var sb strings.Builder
-	sb.WriteString("SET FOREIGN_KEY_CHECKS=0;\n")
+	sb.WriteString(fmt.Sprintf("-- MySQL Database Backup: `%s`\n", db))
+	sb.WriteString(fmt.Sprintf("-- Backup Date: %s\n\n", time.Now().Format("2006-01-02 15:04:05")))
+	sb.WriteString("SET FOREIGN_KEY_CHECKS=0;\n\n")
+
 	for _, t := range tables {
-		content, e := m.MysqlExport(id, db, "sql", "table", t, "", 0)
-		if e != nil {
-			continue
+		sb.WriteString(fmt.Sprintf("-- ----------------------------\n"))
+		sb.WriteString(fmt.Sprintf("-- Table structure for `%s`\n", t))
+		sb.WriteString(fmt.Sprintf("-- ----------------------------\n"))
+		sb.WriteString(fmt.Sprintf("DROP TABLE IF EXISTS %s;\n", quoteIdent(t)))
+
+		_, drows, err := m.queryEx(id, db, fmt.Sprintf("SHOW CREATE TABLE %s", quoteIdent(t)))
+		if err == nil && len(drows) > 0 {
+			if createSql, ok := drows[0]["Create Table"].(string); ok {
+				sb.WriteString(createSql + ";\n\n")
+			}
 		}
-		sb.WriteString("-- ---- table: " + t + " ----\n")
-		sb.WriteString(content)
-		sb.WriteString("\n")
+
+		sb.WriteString(fmt.Sprintf("-- ----------------------------\n"))
+		sb.WriteString(fmt.Sprintf("-- Records of `%s`\n", t))
+		sb.WriteString(fmt.Sprintf("-- ----------------------------\n"))
+		dataSql, e := m.MysqlExportSQL(id, db, "table", t, "", 0)
+		if e == nil {
+			sb.WriteString(dataSql)
+			sb.WriteString("\n")
+		}
 	}
 	sb.WriteString("SET FOREIGN_KEY_CHECKS=1;\n")
 	return sb.String(), nil
+}
+
+func (m *MysqlManagerEx) MysqlBackupToFile(id, db string) (string, error) {
+	content, err := m.MysqlBackup(id, db)
+	if err != nil {
+		return "", err
+	}
+	path, err := wruntime.SaveFileDialog(m.ctx, wruntime.SaveDialogOptions{
+		Title:           "备份数据库",
+		DefaultFilename: db + "_backup.sql",
+		Filters: []wruntime.FileFilter{
+			{DisplayName: "SQL 文件 (*.sql)", Pattern: "*.sql"},
+		},
+	})
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		return "", fmt.Errorf("写入备份文件失败: %w", err)
+	}
+	return path, nil
 }
 
 var _ = strconv.Itoa

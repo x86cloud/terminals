@@ -50,6 +50,9 @@ func (a *App) startup(ctx context.Context) {
 	a.transfers.SetContext(ctx)
 	a.mqttMgr.SetContext(ctx)
 	a.wsMgr.SetContext(ctx)
+	a.mongoMgr.SetContext(ctx)
+	db.SqliteMgr.SetContext(ctx)
+	db.MysqlExMgr.SetContext(ctx)
 }
 
 func (a *App) shutdown(ctx context.Context) {

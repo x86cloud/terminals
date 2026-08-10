@@ -5,6 +5,7 @@ import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteQueryResult, SqliteIndexInfo} from '../../types'
 import {ConfirmModal, ConfirmState} from '../../components/Modal'
+import ObjModal from '../mysql/ObjModal'
 import g from '../../styles/global.module.less'
 import sq from './SqliteClient.module.less'
 import db from '../mysql/dbTable.module.less'
@@ -43,6 +44,13 @@ export default function SqliteClient({session, onClose}: Props) {
     const [info, setInfo] = useState<{ path: string; size: number }>({path: session.path, size: session.size})
     const [pathError, setPathError] = useState('')
     const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
+
+    // 建表弹窗态
+    const [createModalOpen, setCreateModalOpen] = useState(false)
+    const [createTableName, setCreateTableName] = useState('')
+    const [createColDefs, setCreateColDefs] = useState('')
+    const [createBusy, setCreateBusy] = useState(false)
+    const [createMsg, setCreateMsg] = useState('')
 
     // 数据态
     const [rows, setRows] = useState<Record<string, any>[]>([])
@@ -356,6 +364,39 @@ export default function SqliteClient({session, onClose}: Props) {
         })
     }
 
+    // ---- 新建表操作 (CREATE TABLE) ----
+    const handleOpenCreateModal = () => {
+        setCreateTableName('')
+        setCreateColDefs('"id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT')
+        setCreateMsg('')
+        setCreateModalOpen(true)
+    }
+
+    const handleConfirmCreateTable = async () => {
+        const tName = createTableName.trim()
+        const cols = createColDefs.trim()
+        if (!tName || !cols) {
+            setCreateMsg('失败：表名和列定义不能为空')
+            return
+        }
+        setCreateBusy(true)
+        setCreateMsg('')
+        try {
+            const sql = `CREATE TABLE ${quoteIdent(tName)} (${cols})`
+            await API.sqliteRun(id, sql)
+            setCreateMsg(`已成功创建表 ${tName}`)
+            await loadTables()
+            await openTable(tName)
+            setTimeout(() => {
+                setCreateModalOpen(false)
+                setCreateBusy(false)
+            }, 700)
+        } catch (e) {
+            setCreateMsg(`失败：${errorMessage(e)}`)
+            setCreateBusy(false)
+        }
+    }
+
     // ---- 批量保存更改 ----
     const handleSaveAll = async () => {
         if (!selected || dirtyCount === 0) return
@@ -429,12 +470,31 @@ export default function SqliteClient({session, onClose}: Props) {
         <div className={sq.sqlitePane}>
             <ConfirmModal state={confirmState} onCancel={() => setConfirmState(emptyConfirm)} />
 
+            {createModalOpen && (
+                <ObjModal
+                    kind="createtable"
+                    busy={createBusy}
+                    msg={createMsg}
+                    name={createTableName}
+                    extra={createColDefs}
+                    placeholder='"id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT'
+                    onName={setCreateTableName}
+                    onExtra={setCreateColDefs}
+                    onClose={() => !createBusy && setCreateModalOpen(false)}
+                    onConfirm={handleConfirmCreateTable}
+                />
+            )}
+
             <div className={sq.sqliteSide}>
                 <div className={sq.sqliteHead}>
                     <Icon name="database" size={13}/>
                     <span className={sq.sqliteTitle}>SQLite</span>
+                    <span className={g.spacer}/>
+                    <button className={`${g.btn} ${g.xs}`} onClick={handleOpenCreateModal} disabled={busy} title="新建表">
+                        <Icon name="plus" size={12}/> 新建表
+                    </button>
                     <button className={`${g.btn} ${g.xs}`} onClick={switchFile} disabled={busy} title="选择其他数据库文件">
-                        <Icon name="folder" size={12}/> 切换文件
+                        <Icon name="folder" size={12}/> 切换
                     </button>
                 </div>
                 <div className={sq.sqlitePath} title={info.path}>

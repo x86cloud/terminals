@@ -71,7 +71,6 @@ export default function DataTab(props: {
 
     // Build ColDef array for ResizableTable
     const dataCols: ColDef[] = [
-        {key: '__rownum__', label: '#', width: ROW_NUM_W, minWidth: 32},
         ...columns.map((c) => ({
             key: c,
             label: (
@@ -138,7 +137,6 @@ export default function DataTab(props: {
                         <tbody>
                         {newRows.map((nr, idx) => (
                             <tr key={`new-${idx}`} className={my.rowNew}>
-                                <td className={my.mysqlRownum}>+</td>
                                 {columns.map((c) => {
                                     const cell = nr[c] || {value: '', isNull: false}
                                     return (
@@ -158,7 +156,6 @@ export default function DataTab(props: {
                         ))}
                         {rows.map((_, i) => (
                             <tr key={i}>
-                                <td className={my.mysqlRownum}>{(page - 1) * pageSize + i + 1}</td>
                                 {columns.map((c) => {
                                     const disp = onCellDisplay(i, c)
                                     const isEditing = editing?.row === i && editing?.col === c

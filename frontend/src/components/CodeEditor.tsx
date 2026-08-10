@@ -1,16 +1,19 @@
 import React, {useMemo, useRef} from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import {json} from '@codemirror/lang-json'
+import {sql} from '@codemirror/lang-sql'
 import {EditorView, keymap} from '@codemirror/view'
 import {EditorState} from '@codemirror/state'
 import {lightEditorTheme} from './editorTheme'
 
-export type LangKey = 'json' | 'plain'
+export type LangKey = 'json' | 'plain' | 'sql'
 
 function langExt(lang: LangKey) {
     switch (lang) {
         case 'json':
             return json()
+        case 'sql':
+            return sql()
         default:
             return []
     }

@@ -15,6 +15,9 @@ func (a *App) SqliteOpenFile() (string, error) {
 }
 
 func (a *App) SqliteConnect(id string, filePath string) (bool, error) {
+	if a.ctx != nil {
+		db.SqliteMgr.SetContext(a.ctx)
+	}
 	return db.SqliteMgr.SqliteConnect(id, filePath)
 }
 

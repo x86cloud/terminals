@@ -342,6 +342,7 @@ export const API = {
     mysqlQueryCSV: (id: string, db: string, sqlText: string, limit: number): Promise<string> =>
         app().MysqlQueryCSV(id, db, sqlText, limit),
     mysqlBackup: (id: string, db: string): Promise<string> => app().MysqlBackup(id, db),
+    mysqlBackupToFile: (id: string, db: string): Promise<string> => app().MysqlBackupToFile(id, db),
     readLocalFile: (filePath: string): Promise<string> => app().ReadLocalFile(filePath),
     writeLocalFile: (filePath: string, content: string): Promise<void> => app().WriteLocalFile(filePath, content),
     mqttConnect: (id: string): Promise<MqttSessionInfo> => app().MqttConnect(id),

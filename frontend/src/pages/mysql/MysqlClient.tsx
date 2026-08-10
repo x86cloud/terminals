@@ -703,9 +703,9 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     <button className={`${g.btn} ${g.sm}`} title="整库备份（SQL）" disabled={busy || !db} onClick={async () => {
                         try {
                             setBusy(true)
-                            const sqlText = await API.mysqlBackup(session.id, db)
-                            const path = await API.mysqlExportToFileEx(session.id, db, 'sql', 'table', db, sqlText, 0)
-                            if (path) notify(`已备份到：${path}`)
+                            setError('')
+                            const path = await API.mysqlBackupToFile(session.id, db)
+                            if (path) notify(`已成功备份数据库到：${path}`)
                         } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
                     }}>
                         <Icon name="copy" size={13}/> 备份

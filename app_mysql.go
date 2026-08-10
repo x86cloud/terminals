@@ -159,10 +159,16 @@ func (a *App) MysqlImportJSON(serverID, dbName, table, content string) (string, 
 }
 
 func (a *App) MysqlExportToFileEx(serverID, dbName, mode, source, table, sqlText string, limit int) (string, error) {
+	if a.ctx != nil {
+		db.MysqlExMgr.SetContext(a.ctx)
+	}
 	return db.MysqlExMgr.MysqlExportToFileEx(serverID, dbName, mode, source, table, sqlText, limit)
 }
 
 func (a *App) MysqlImportFromFileEx(serverID, dbName, mode, table string) (string, error) {
+	if a.ctx != nil {
+		db.MysqlExMgr.SetContext(a.ctx)
+	}
 	return db.MysqlExMgr.MysqlImportFromFileEx(serverID, dbName, mode, table)
 }
 
@@ -172,4 +178,11 @@ func (a *App) MysqlQueryCSV(serverID, dbName, sqlText string, limit int) (string
 
 func (a *App) MysqlBackup(serverID, dbName string) (string, error) {
 	return db.MysqlExMgr.MysqlBackup(serverID, dbName)
+}
+
+func (a *App) MysqlBackupToFile(serverID, dbName string) (string, error) {
+	if a.ctx != nil {
+		db.MysqlExMgr.SetContext(a.ctx)
+	}
+	return db.MysqlExMgr.MysqlBackupToFile(serverID, dbName)
 }

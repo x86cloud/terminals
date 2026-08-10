@@ -290,6 +290,10 @@ export function MysqlBackup(arg1, arg2) {
   return window['go']['main']['App']['MysqlBackup'](arg1, arg2);
 }
 
+export function MysqlBackupToFile(arg1, arg2) {
+  return window['go']['main']['App']['MysqlBackupToFile'](arg1, arg2);
+}
+
 export function MysqlClose(arg1) {
   return window['go']['main']['App']['MysqlClose'](arg1);
 }

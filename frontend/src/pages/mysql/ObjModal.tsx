@@ -1,5 +1,6 @@
 import React from 'react'
 import Icon from '../../components/Icon'
+import CodeEditor from '../../components/CodeEditor'
 import g from '../../styles/global.module.less'
 import my from './ObjModal.module.less'
 
@@ -7,21 +8,22 @@ export type ObjModalKind = 'createdb' | 'createtable' | 'dropdb' | 'droptable' |
 
 export default function ObjModal(props: {
     kind: ObjModalKind
-    db: string
+    db?: string
+    placeholder?: string
     busy: boolean
     msg: string
     name: string
     extra: string
-    unique: boolean
+    unique?: boolean
     onName: (v: string) => void
     onExtra: (v: string) => void
-    onUnique: (v: boolean) => void
+    onUnique?: (v: boolean) => void
     onClose: () => void
     onConfirm: () => void
 }) {
-    const {kind, db, busy, msg, name, extra, unique, onName, onExtra, onUnique, onClose, onConfirm} = props
+    const { kind, db, placeholder, busy, msg, name, extra, unique = false, onName, onExtra, onUnique, onClose, onConfirm } = props
     const titleMap: Record<string, string> = {
-        createdb: '新建数据库', dropdb: '删除数据库', createtable: `在 ${db} 中新建表`,
+        createdb: '新建数据库', dropdb: '删除数据库', createtable: db ? `在 ${db} 中新建表` : '新建表',
         droptable: '删除表', truncate: '清空表数据', createindex: '新建索引', dropindex: '删除索引',
     }
     const needName = !['truncate', 'dropindex'].includes(kind)
@@ -34,34 +36,43 @@ export default function ObjModal(props: {
             <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
                 <div className={g.modalHead}>
                     <span>{titleMap[kind] || '数据库操作'}</span>
-                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><Icon name="close" size={14}/></button>
+                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><Icon name="close" size={14} /></button>
                 </div>
                 <div className={g.modalBody}>
                     {msg && <div className={`${g.ioMsg} ${msg.startsWith('失败') ? g.err : g.ok}`}>{msg}</div>}
                     {needName && (
                         <div className={g.field}>
-                            <label>{kind === 'createindex' ? '索引名称' : kind === 'createdb' ? '数据库名' : '名称'}</label>
-                            <input value={name} onChange={(e) => onName(e.target.value)} placeholder={kind === 'createdb' ? '例如 app_db' : '名称'}/>
+                            <label>{kind === 'createindex' ? '索引名称' : kind === 'createdb' ? '数据库名' : '表名'}</label>
+                            <input value={name} onChange={(e) => onName(e.target.value)} placeholder={kind === 'createdb' ? '例如 app_db' : '例如 users'} />
                         </div>
                     )}
                     {needDef && (
                         <div className={g.field}>
                             <label>列定义（SQL）</label>
-                            <textarea className={my.mysqlSqlInput} rows={4} value={extra} onChange={(e) => onExtra(e.target.value)}
-                                      placeholder="`id` INT PRIMARY KEY AUTO_INCREMENT, `name` VARCHAR(64)"/>
+                            <div style={{ border: '1px solid var(--border, #d4dbe6)', borderRadius: '6px', overflow: 'hidden' }}>
+                                <CodeEditor
+                                    value={extra}
+                                    onChange={onExtra}
+                                    lang="sql"
+                                    height="160px"
+                                    minHeight="80px"
+                                    placeholder={placeholder || "`id` INT PRIMARY KEY AUTO_INCREMENT, `name` VARCHAR(64)"}
+                                    lineNumbers={true}
+                                />
+                            </div>
                         </div>
                     )}
                     {needCols && (
                         <>
                             <div className={g.field}>
                                 <label>索引列（逗号分隔）</label>
-                                <input value={extra} onChange={(e) => onExtra(e.target.value)} placeholder="col1, col2"/>
+                                <input value={extra} onChange={(e) => onExtra(e.target.value)} placeholder="col1, col2" />
                             </div>
                             <label className={g.switchField}>
                                 <span>唯一索引 (UNIQUE)</span>
                                 <span className={g.switch}>
-                                    <input type="checkbox" checked={unique} onChange={(e) => onUnique(e.target.checked)}/>
-                                    <span className={g.slider}/>
+                                    <input type="checkbox" checked={unique} onChange={(e) => onUnique?.(e.target.checked)} />
+                                    <span className={g.slider} />
                                 </span>
                             </label>
                         </>

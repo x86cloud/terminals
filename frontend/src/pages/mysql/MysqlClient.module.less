@@ -108,9 +108,10 @@
     padding: 8px 12px;
     border-bottom: 1px solid @border;
 
-    /* 工具栏按钮任何情况下不被压缩/遮挡，标题与错误信息优先收缩 */
-    .btn, .iconBtn {
+    /* 工具栏按钮任何情况下不被压缩/遮挡 */
+    > button {
         flex-shrink: 0;
+        white-space: nowrap;
     }
 }
 
@@ -119,6 +120,7 @@
     font-size: 13px;
     .ellipsis();
     min-width: 0;
+    flex-shrink: 0;
 }
 
 .mysqlError {
@@ -128,9 +130,11 @@
     padding: 3px 8px;
     border-radius: @radius-md;
     min-width: 0;
+    max-width: 350px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex-shrink: 1;
 }
 
 .mysqlTabs {
