@@ -338,12 +338,18 @@
 }
 
 .serverActions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     opacity: 0;
     transition: opacity 0.15s ease;
+    flex: none;
 }
 
-.serverItem:hover .serverActions {
+.serverItem:hover .serverActions,
+.serverItem.connecting .serverActions {
     opacity: 1;
+    pointer-events: auto;
 }
 
 .sessionItem {
@@ -378,20 +384,28 @@
 }
 
 .spinner {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 16px;
     height: 16px;
-    border: 2px solid @accent-soft;
-    border-top-color: @accent;
-    border-right-color: @accent;
-    border-radius: 50%;
-    animation: spin .7s linear infinite;
-    box-sizing: border-box;
     flex: none;
     margin: auto 0;
-    box-shadow: 0 0 6px rgba(28, 143, 196, 0.3);
+}
+
+.spinSvg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    color: @accent;
+    animation: spin 0.75s linear infinite;
+    transform-origin: 50% 50%;
 }
 
 @keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
     to {
         transform: rotate(360deg);
     }

@@ -261,7 +261,12 @@ export default function Sidebar({
                     </span>
                     <span className={s.serverActions}>
                         {connectingId === server.id ? (
-                            <span className={s.spinner} title="连接中…"/>
+                            <span className={s.spinner} title="连接中…">
+                                <svg className={s.spinSvg} viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <circle cx="12" cy="12" r="9" strokeOpacity="0.22" strokeWidth="2.5"/>
+                                    <path d="M12 3a9 9 0 0 1 9 9" strokeWidth="2.5" strokeLinecap="round"/>
+                                </svg>
+                            </span>
                         ) : (
                             <button
                                 className={g.iconBtn}
