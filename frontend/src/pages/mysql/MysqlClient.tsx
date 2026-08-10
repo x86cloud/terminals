@@ -267,10 +267,25 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     }
 
     const commitEdit = (row: number, col: string, value: string, isNull: boolean) => {
-        setDrafts((prev) => ({
-            ...prev,
-            [row]: {...(prev[row] || {}), [col]: {value, isNull}},
-        }))
+        const orig = rows[row]?.[col]
+        const origIsNull = orig === null || orig === undefined
+        const origVal = origIsNull ? '' : String(orig)
+
+        setDrafts((prev) => {
+            const rowDraft = { ...(prev[row] || {}) }
+            if (isNull === origIsNull && value === origVal) {
+                delete rowDraft[col]
+            } else {
+                rowDraft[col] = {value, isNull}
+            }
+            const next = { ...prev }
+            if (Object.keys(rowDraft).length === 0) {
+                delete next[row]
+            } else {
+                next[row] = rowDraft
+            }
+            return next
+        })
         setEditing(null)
     }
 
