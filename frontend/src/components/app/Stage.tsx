@@ -11,10 +11,10 @@ import ApiClient from '../../pages/api/ApiClient'
 import DevTools from '../DevTools'
 import g from '../../styles/global.module.less'
 import a from './Stage.module.less'
-import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo} from '../../types'
+import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo } from '../../types'
 
-const hiddenPane = {display: 'none' as const}
-const shownPane = {display: 'flex' as const, flex: 1, minHeight: 0, minWidth: 0}
+const hiddenPane = { display: 'none' as const }
+const shownPane = { display: 'flex' as const, flex: 1, minHeight: 0, minWidth: 0 }
 
 export interface StageProps {
     sessions: SessionInfo[]
@@ -52,7 +52,7 @@ export interface StageProps {
 export default function Stage(props: StageProps) {
     const {
         sessions, activeId, nativeDrop, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId,         mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, devToolsOpen, devToolsActive, apiOpen, apiActive,
+        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, devToolsOpen, devToolsActive, apiOpen, apiActive,
         onPathChange, onNotify, onCloseRedis, onRedisDbChange, onCloseMysql, onMysqlChange,
         onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseDevTools, onCloseApi, onNewServer,
     } = props
@@ -133,7 +133,7 @@ export default function Stage(props: StageProps) {
             {devToolsOpen && (
                 <div style={devToolsActive ? shownPane : hiddenPane}>
                     <ErrorBoundary title="DevTools 页面渲染异常" onClose={onCloseDevTools}>
-                        <DevTools onClose={() => onCloseDevTools()}/>
+                        <DevTools onClose={() => onCloseDevTools()} />
                     </ErrorBoundary>
                 </div>
             )}
@@ -141,18 +141,18 @@ export default function Stage(props: StageProps) {
             {apiOpen && (
                 <div style={apiActive ? shownPane : hiddenPane}>
                     <ErrorBoundary title="API 页面渲染异常" onClose={onCloseApi}>
-                        <ApiClient onClose={onCloseApi}/>
+                        <ApiClient onClose={onCloseApi} />
                     </ErrorBoundary>
                 </div>
             )}
 
             {empty && (
                 <div className={g.emptyStage}>
-                    <Icon name="terminal" size={44}/>
+                    <Icon name="terminal" size={44} />
                     <h2>多协议开发运维客户端</h2>
                     <p>
                         xClient 是一款跨平台桌面客户端，集成了 SSH 终端、SFTP、Redis、MySQL、SQLite、
-                        MQTT 与 HTTP 接口调试等常用运维工具，所有连接在同一窗口内统一管理。
+                        MQTT 与 HTTP 接口调试等常用运维工具。
                     </p>
                     <a className={g.emptyLink} href="https://github.com/x86cloud/terminals" target="_blank" rel="noreferrer">
                         GitHub: https://github.com/x86cloud/terminals

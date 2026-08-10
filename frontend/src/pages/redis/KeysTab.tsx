@@ -215,23 +215,46 @@ export default function KeysTab({
                 )}
 
                 <div className={k.redisCli}>
-                    <div className={k.redisCliHead}>命令行</div>
+                    <div className={k.redisCliHead}>命令行 (CLI)</div>
                     <div className={k.redisCliRow}>
-                        <CodeEditor
-                            value={cliInput}
-                            onChange={setCliInput}
-                            lang="plain"
-                            height="56px"
-                            placeholder="例如 GET foo / HGETALL myhash"
-                            onEnter={async (v) => {
-                                if (!v.trim()) return
-                                const res = await runRaw(v)
-                                setCliResult(res || '')
-                                setCliInput('')
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                            <CodeEditor
+                                value={cliInput}
+                                onChange={setCliInput}
+                                lang="plain"
+                                height="56px"
+                                placeholder="输入 Redis 原生命令（例如：GET foo / HSET myhash field val）"
+                                onEnter={async (v) => {
+                                    if (!v.trim()) return
+                                    const res = await runRaw(v)
+                                    setCliResult(res || '(空结果)')
+                                }}
+                            />
+                        </div>
+                        <button
+                            className={`${g.btn} ${g.primary} ${g.sm}`}
+                            style={{ alignSelf: 'flex-end', height: 32, padding: '0 16px', flexShrink: 0 }}
+                            onClick={async () => {
+                                if (!cliInput.trim()) return
+                                const res = await runRaw(cliInput)
+                                setCliResult(res || '(空结果)')
                             }}
-                        />
+                        >
+                            执行
+                        </button>
                     </div>
-                    <pre className={k.redisCliResult}>{cliResult}</pre>
+                    {cliResult && (
+                        <div className={k.cliResultWrapper}>
+                            <pre className={k.redisCliResult}>{cliResult}</pre>
+                            <button
+                                className={k.cliClearBtn}
+                                title="清空输出"
+                                onClick={() => setCliResult('')}
+                            >
+                                清空
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

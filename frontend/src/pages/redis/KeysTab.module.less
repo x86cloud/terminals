@@ -188,8 +188,8 @@
 .redisCli {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    margin-top: 12px;
+    gap: 8px;
+    margin-top: 16px;
     padding-top: 12px;
     border-top: 1px solid @border;
 }
@@ -202,16 +202,42 @@
 
 .redisCliRow {
     display: flex;
+    align-items: flex-end;
     gap: 8px;
+}
+
+.cliResultWrapper {
+    position: relative;
+    margin-top: 4px;
+}
+
+.cliClearBtn {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    color: @text-dim;
+    border: 1px solid @border;
+    cursor: pointer;
+    line-height: 1.2;
+
+    &:hover {
+        color: @text;
+        border-color: @accent;
+    }
 }
 
 .redisCliResult {
     font-family: monospace;
     font-size: 12px;
     background: @bg-2;
-    padding: 8px;
+    padding: 8px 12px;
+    padding-right: 50px;
     border-radius: @radius-sm;
-    max-height: 120px;
+    max-height: 140px;
     overflow-y: auto;
     white-space: pre-wrap;
     border: 1px solid @border;
