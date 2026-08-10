@@ -15,6 +15,11 @@ interface Props {
     onClose: () => void
 }
 
+interface NewRowDraft {
+    _id: string
+    data: Record<string, string>
+}
+
 const PAGE_SIZE = 100
 
 export default function SqliteClient({session, onClose}: Props) {
@@ -22,6 +27,7 @@ export default function SqliteClient({session, onClose}: Props) {
     const [selected, setSelected] = useState<string | null>(null)
     const [dataView, setDataView] = useState<'data' | 'struct' | 'index'>('data')
     const [busy, setBusy] = useState(false)
+    const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
     const [info, setInfo] = useState<{ path: string; size: number }>({path: session.path, size: session.size})
     const [pathError, setPathError] = useState('')
@@ -33,6 +39,9 @@ export default function SqliteClient({session, onClose}: Props) {
     const [totalRows, setTotalRows] = useState(0)
     const [selectedRowIdx, setSelectedRowIdx] = useState<number | null>(null)
 
+    // 数据顶部草稿新增行 (像 MySQL 一样)
+    const [newRows, setNewRows] = useState<NewRowDraft[]>([])
+
     // 单元格在线编辑
     const [editingCell, setEditingCell] = useState<{ rowIdx: number; col: string } | null>(null)
 
@@ -40,7 +49,7 @@ export default function SqliteClient({session, onClose}: Props) {
     const [structData, setStructData] = useState<SqliteColumnInfo[]>([])
     const [indexData, setIndexData] = useState<SqliteIndexInfo[]>([])
 
-    // 对象弹窗态 (新建表/删表/新建索引/删索引)
+    // 对象弹窗态 (新建表/删表/清空表/新建索引/删索引)
     const [objModal, setObjModal] = useState<{
         open: boolean
         kind: SqliteObjModalKind
@@ -58,10 +67,6 @@ export default function SqliteClient({session, onClose}: Props) {
         msg: '',
         busy: false,
     })
-
-    // 新增行弹窗
-    const [insertModalOpen, setInsertModalOpen] = useState(false)
-    const [insertData, setInsertData] = useState<Record<string, string>>({})
 
     const id = session.id
 
@@ -103,6 +108,7 @@ export default function SqliteClient({session, onClose}: Props) {
             if (!ok) throw new Error('无法打开该 SQLite 文件')
             setSelected(null)
             setRows([])
+            setNewRows([])
             setColumns([])
             setStructData([])
             setIndexData([])
@@ -124,6 +130,7 @@ export default function SqliteClient({session, onClose}: Props) {
         setError('')
         setSelectedRowIdx(null)
         setEditingCell(null)
+        setNewRows([])
         try {
             const [data, cnt, struct] = await Promise.all([
                 API.sqliteSelect(id, table, PAGE_SIZE, (toPage - 1) * PAGE_SIZE),
@@ -233,28 +240,35 @@ export default function SqliteClient({session, onClose}: Props) {
         }
     }
 
-    const handleInsertSubmit = async () => {
-        if (!selected) return
-        const cols: string[] = []
-        const vals: any[] = []
-        for (const col of columns) {
-            const v = insertData[col]
-            if (v !== undefined && v !== '') {
-                cols.push(col)
-                vals.push(v)
-            }
-        }
-        if (cols.length === 0) {
-            setError('请至少填写一个字段的值')
-            return
-        }
+    const handleAddRowDraft = () => {
+        setNewRows((prev) => [{_id: String(Date.now() + Math.random()), data: {}}, ...prev])
+    }
+
+    const handleSaveNewRows = async () => {
+        if (!selected || newRows.length === 0) return
+        setSaving(true)
+        setError('')
         try {
-            await API.sqliteInsert(id, selected, cols, vals)
-            setInsertModalOpen(false)
-            setInsertData({})
+            for (const nr of newRows) {
+                const cols: string[] = []
+                const vals: any[] = []
+                for (const col of columns) {
+                    const v = nr.data[col]
+                    if (v !== undefined && v !== '') {
+                        cols.push(col)
+                        vals.push(v)
+                    }
+                }
+                if (cols.length > 0) {
+                    await API.sqliteInsert(id, selected, cols, vals)
+                }
+            }
+            setNewRows([])
             await openTable(selected, page)
         } catch (e) {
-            setError('新增记录失败: ' + errorMessage(e))
+            setError('保存新增行失败: ' + errorMessage(e))
+        } finally {
+            setSaving(false)
         }
     }
 
@@ -439,11 +453,19 @@ export default function SqliteClient({session, onClose}: Props) {
                         <div style={{marginLeft: 'auto', display: 'flex', gap: 6, paddingRight: 8}}>
                             {dataView === 'data' && (
                                 <>
-                                    <button className={`${g.btn} ${g.xs}`} onClick={() => openTable(selected, page)} title="刷新">
-                                        <Icon name="refresh" size={12}/> 刷新
+                                    <button className={`${g.btn} ${g.xs}`} onClick={handleAddRowDraft} title="在表格顶部新增一行草稿">
+                                        <Icon name="plus" size={12}/> 新建行
                                     </button>
-                                    <button className={`${g.btn} ${g.xs} ${g.primary}`} onClick={() => setInsertModalOpen(true)} title="新增行">
-                                        <Icon name="plus" size={12}/> 新增记录
+                                    <button
+                                        className={`${g.btn} ${g.xs} ${g.primary}`}
+                                        disabled={newRows.length === 0 || saving}
+                                        onClick={handleSaveNewRows}
+                                        title="保存顶部新增行"
+                                    >
+                                        {saving ? '保存中…' : `保存${newRows.length ? ` (${newRows.length})` : ''}`}
+                                    </button>
+                                    <button className={`${g.btn} ${g.xs}`} onClick={() => openTable(selected, page)} title="刷新数据">
+                                        <Icon name="refresh" size={12}/> 刷新
                                     </button>
                                     <button
                                         className={`${g.btn} ${g.xs} ${g.danger}`}
@@ -505,18 +527,59 @@ export default function SqliteClient({session, onClose}: Props) {
                                     <table className={db.dbTable}>
                                         <thead>
                                         <tr>
+                                            <th style={{width: 36, textAlign: 'center'}}>#</th>
                                             {columns.map((c) => (
                                                 <th key={c}>{c}</th>
                                             ))}
                                         </tr>
                                         </thead>
                                         <tbody>
+                                        {/* 顶部渲染新增草稿行 (与 MySQL 保持一致) */}
+                                        {newRows.map((nr, nrIdx) => (
+                                            <tr key={nr._id} style={{background: 'rgba(0, 122, 255, 0.08)'}}>
+                                                <td style={{width: 36, textAlign: 'center'}}>
+                                                    <button
+                                                        className={g.iconBtn}
+                                                        title="移除该草稿行"
+                                                        onClick={() =>
+                                                            setNewRows((prev) => prev.filter((_, i) => i !== nrIdx))
+                                                        }
+                                                    >
+                                                        <Icon name="close" size={12}/>
+                                                    </button>
+                                                </td>
+                                                {columns.map((c) => (
+                                                    <td key={c} style={{padding: '2px 6px'}}>
+                                                        <input
+                                                            className={sh.mysqlCellInput}
+                                                            value={nr.data[c] ?? ''}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value
+                                                                setNewRows((prev) => {
+                                                                    const next = [...prev]
+                                                                    next[nrIdx] = {
+                                                                        ...next[nrIdx],
+                                                                        data: {...next[nrIdx].data, [c]: val},
+                                                                    }
+                                                                    return next
+                                                                })
+                                                            }}
+                                                            placeholder="输入新值"
+                                                        />
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        ))}
+
                                         {rows.map((r, i) => (
                                             <tr
                                                 key={i}
                                                 className={selectedRowIdx === i ? db.selectedTr : ''}
                                                 onClick={() => setSelectedRowIdx(i)}
                                             >
+                                                <td style={{width: 36, textAlign: 'center', color: '#888', fontSize: 11}}>
+                                                    {(page - 1) * PAGE_SIZE + i + 1}
+                                                </td>
                                                 {columns.map((c) => {
                                                     const isEditing = editingCell?.rowIdx === i && editingCell?.col === c
                                                     const v = r[c]
@@ -661,41 +724,6 @@ export default function SqliteClient({session, onClose}: Props) {
                     onClose={() => setObjModal((prev) => ({...prev, open: false}))}
                     onConfirm={handleObjConfirm}
                 />
-            )}
-
-            {insertModalOpen && (
-                <div className={g.modalMask} onClick={() => setInsertModalOpen(false)}>
-                    <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
-                        <div className={g.modalHead}>
-                            <span>新增记录到 {selected}</span>
-                            <button className={g.iconBtn} onClick={() => setInsertModalOpen(false)}>
-                                <Icon name="close" size={14}/>
-                            </button>
-                        </div>
-                        <div className={g.modalBody}>
-                            {columns.map((col) => (
-                                <div key={col} className={g.field}>
-                                    <label>{col}</label>
-                                    <input
-                                        value={insertData[col] || ''}
-                                        onChange={(e) =>
-                                            setInsertData((prev) => ({...prev, [col]: e.target.value}))
-                                        }
-                                        placeholder="留空则插入默认值/NULL"
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                        <div className={g.modalFoot}>
-                            <button className={`${g.btn} ${g.sm}`} onClick={() => setInsertModalOpen(false)}>
-                                取消
-                            </button>
-                            <button className={`${g.btn} ${g.sm} ${g.primary}`} onClick={handleInsertSubmit}>
-                                保存插入
-                            </button>
-                        </div>
-                    </div>
-                </div>
             )}
         </div>
     )
