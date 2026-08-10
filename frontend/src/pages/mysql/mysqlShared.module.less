@@ -67,15 +67,18 @@
 /* 单元格内联编辑器（DataTab / CellEditorInline 共用） */
 .mysqlCellInput {
     width: 100%;
-    min-width: 60px;
+    min-width: 0 !important;
+    display: block;
+    box-sizing: border-box;
     border: none !important;
     outline: none !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: @text;
+    color: inherit;
     padding: 0 !important;
     margin: 0 !important;
     font: inherit;
+    line-height: inherit;
 
     &.isNull {
         color: @text-faint;

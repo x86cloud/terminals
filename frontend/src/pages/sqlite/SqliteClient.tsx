@@ -536,7 +536,7 @@ export default function SqliteClient({session, onClose}: Props) {
                                                     </button>
                                                 </td>
                                                 {columns.map((c) => (
-                                                    <td key={c} style={{ padding: '2px 4px' }}>
+                                                    <td key={c}>
                                                         <input
                                                             className={db.dbCellInput}
                                                             value={nr[c] ?? ''}
@@ -564,7 +564,7 @@ export default function SqliteClient({session, onClose}: Props) {
 
                                                     if (isEd) {
                                                         return (
-                                                            <td key={c} style={{ padding: '2px 4px' }}>
+                                                            <td key={c} className={dirty ? db.dbDirtyCell : ''}>
                                                                 <input
                                                                     className={db.dbCellInput}
                                                                     autoFocus
