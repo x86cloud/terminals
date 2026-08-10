@@ -659,3 +659,45 @@ func (m *RedisManager) DBSize(id string) (int, error) {
 	}
 	return int(n), nil
 }
+
+type RedisCmdResult struct {
+	Result string `json:"result"`
+	Error  string `json:"error"`
+}
+
+type RedisPipelineResult struct {
+	Results []RedisCmdResult `json:"results"`
+	Error   string           `json:"error"`
+}
+
+type RedisTransactionResult struct {
+	Results []RedisCmdResult `json:"results"`
+	Aborted bool             `json:"aborted"`
+	Error   string           `json:"error"`
+}
+
+type RedisQueueItem struct {
+	ID      string `json:"id"`
+	Payload any    `json:"payload"`
+	Empty   bool   `json:"empty,omitempty"`
+}
+
+type RedisSlowLogEntry struct {
+	ID        int64  `json:"id"`
+	Timestamp int64  `json:"timestamp"`
+	Duration  int64  `json:"duration"`
+	Command   string `json:"command"`
+	Client    string `json:"client"`
+}
+
+type RedisMonitorInfo struct {
+	Breaker       string `json:"breaker"`
+	Hits          int64  `json:"hits"`
+	Misses        int64  `json:"misses"`
+	Timeouts      int64  `json:"timeouts"`
+	TotalConns    uint32 `json:"totalConns"`
+	IdleConns     uint32 `json:"idleConns"`
+	StaleConns    uint32 `json:"staleConns"`
+	Mode          string `json:"mode"`
+	Serialization string `json:"serialization"`
+}

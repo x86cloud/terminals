@@ -3,6 +3,9 @@
 import {proto} from '../models';
 import {ssh} from '../models';
 import {core} from '../models';
+import {mongo} from '../models';
+import {db} from '../models';
+import {redis} from '../models';
 
 export function ApiRequest(arg1:proto.ApiRequest):Promise<proto.ApiResponse>;
 
@@ -44,13 +47,261 @@ export function ListTransfers():Promise<Array<ssh.Transfer>>;
 
 export function MakeDir(arg1:string,arg2:string,arg3:string):Promise<void>;
 
+export function MongoAggregate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean,arg6:number):Promise<mongo.MongoFindResult>;
+
+export function MongoAggregateExplain(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MongoBulkWrite(arg1:string,arg2:string,arg3:string,arg4:Array<mongo.MongoBulkOp>,arg5:boolean):Promise<Record<string, any>>;
+
+export function MongoClientStats(arg1:string):Promise<Record<string, any>>;
+
+export function MongoClose(arg1:string):Promise<void>;
+
+export function MongoCollectionStats(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
+
+export function MongoCollections(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function MongoConnect(arg1:string):Promise<boolean>;
+
+export function MongoCountDocuments(arg1:string,arg2:string,arg3:string,arg4:string):Promise<number>;
+
+export function MongoCreateCollection(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MongoCreateDatabase(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MongoCreateIndex(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean,arg7:boolean,arg8:number):Promise<string>;
+
+export function MongoCurrentOps(arg1:string):Promise<Array<string>>;
+
+export function MongoDatabases(arg1:string):Promise<Array<Record<string, any>>>;
+
+export function MongoDeleteMany(arg1:string,arg2:string,arg3:string,arg4:string):Promise<number>;
+
+export function MongoDeleteOne(arg1:string,arg2:string,arg3:string,arg4:string):Promise<number>;
+
+export function MongoDistinct(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<Array<string>>;
+
+export function MongoDropCollection(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MongoDropDatabase(arg1:string,arg2:string):Promise<void>;
+
+export function MongoDropIndex(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function MongoExplain(arg1:string,arg2:mongo.MongoQuerySpec,arg3:string):Promise<string>;
+
+export function MongoFind(arg1:string,arg2:mongo.MongoQuerySpec):Promise<mongo.MongoFindResult>;
+
+export function MongoFindOneAndUpdate(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<string>;
+
+export function MongoGetValidator(arg1:string,arg2:string,arg3:string):Promise<Record<string, any>>;
+
+export function MongoHealthCheck(arg1:string):Promise<Record<string, any>>;
+
+export function MongoIndexStats(arg1:string,arg2:string,arg3:string):Promise<Array<string>>;
+
+export function MongoIndexes(arg1:string,arg2:string,arg3:string):Promise<Array<Record<string, any>>>;
+
+export function MongoInferSchema(arg1:string,arg2:string,arg3:string,arg4:number):Promise<Array<Record<string, any>>>;
+
+export function MongoInsertMany(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<Record<string, any>>;
+
+export function MongoInsertOne(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MongoParseURI(arg1:string):Promise<mongo.MongoURIInfo>;
+
+export function MongoRenameCollection(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function MongoReplaceOne(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<Record<string, any>>;
+
+export function MongoRunCommand(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function MongoServerStatus(arg1:string):Promise<Record<string, any>>;
+
+export function MongoSetValidator(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<void>;
+
+export function MongoTestConnection(arg1:core.ServerConfig):Promise<Record<string, any>>;
+
+export function MongoTransaction(arg1:string,arg2:Array<mongo.MongoTxOp>):Promise<Record<string, any>>;
+
+export function MongoUnwatch(arg1:string,arg2:string):Promise<void>;
+
+export function MongoUpdateMany(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<Record<string, any>>;
+
+export function MongoUpdateOne(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<Record<string, any>>;
+
+export function MongoValidateDocument(arg1:string,arg2:string,arg3:string,arg4:string):Promise<Record<string, any>>;
+
+export function MongoWatch(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string):Promise<string>;
+
+export function MongoWatchList(arg1:string):Promise<Array<string>>;
+
 export function MoveServerToGroup(arg1:string,arg2:string):Promise<void>;
+
+export function MqttClose(arg1:string):Promise<void>;
+
+export function MqttConnect(arg1:string):Promise<boolean>;
+
+export function MqttPublish(arg1:string,arg2:string,arg3:string,arg4:number,arg5:boolean):Promise<void>;
+
+export function MqttSubscribe(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function MqttSubscriptions(arg1:string):Promise<Array<Record<string, any>>>;
+
+export function MqttUnsubscribe(arg1:string,arg2:string):Promise<void>;
+
+export function MysqlBackup(arg1:string,arg2:string):Promise<string>;
+
+export function MysqlClose(arg1:string):Promise<void>;
+
+export function MysqlCloseEx(arg1:string):Promise<void>;
+
+export function MysqlConnect(arg1:string):Promise<boolean>;
+
+export function MysqlConnectEx(arg1:string):Promise<boolean>;
+
+export function MysqlCount(arg1:string,arg2:string,arg3:string):Promise<number>;
+
+export function MysqlCreateDatabase(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MysqlCreateIndex(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:boolean):Promise<void>;
+
+export function MysqlCreateTable(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function MysqlDatabases(arg1:string):Promise<Array<string>>;
+
+export function MysqlDelete(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:Array<any>):Promise<number>;
+
+export function MysqlDescribe(arg1:string,arg2:string,arg3:string):Promise<db.MysqlQueryResult>;
+
+export function MysqlDropDatabase(arg1:string,arg2:string):Promise<void>;
+
+export function MysqlDropIndex(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function MysqlDropTable(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MysqlExport(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:number):Promise<string>;
+
+export function MysqlExportJSON(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number):Promise<string>;
+
+export function MysqlExportToFile(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:number):Promise<string>;
+
+export function MysqlExportToFileEx(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:string,arg7:number):Promise<string>;
+
+export function MysqlGrants(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function MysqlImport(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string):Promise<string>;
+
+export function MysqlImportFromFile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MysqlImportFromFileEx(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MysqlImportJSON(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function MysqlIndexes(arg1:string,arg2:string,arg3:string):Promise<Array<Record<string, any>>>;
+
+export function MysqlInsert(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:Array<any>):Promise<number>;
+
+export function MysqlProcessList(arg1:string):Promise<Array<Record<string, any>>>;
+
+export function MysqlQueryCSV(arg1:string,arg2:string,arg3:string,arg4:number):Promise<string>;
+
+export function MysqlRun(arg1:string,arg2:string,arg3:string):Promise<db.MysqlQueryResult>;
+
+export function MysqlSchema(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function MysqlSelect(arg1:string,arg2:string,arg3:string,arg4:number,arg5:number):Promise<db.MysqlQueryResult>;
+
+export function MysqlSlowLog(arg1:string,arg2:number):Promise<Array<Record<string, any>>>;
+
+export function MysqlStatus(arg1:string):Promise<Record<string, any>>;
+
+export function MysqlTableStatus(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function MysqlTables(arg1:string,arg2:string):Promise<Array<string>>;
+
+export function MysqlTruncateTable(arg1:string,arg2:string,arg3:string):Promise<void>;
+
+export function MysqlUpdate(arg1:string,arg2:string,arg3:string,arg4:Array<string>,arg5:Array<any>,arg6:Array<string>,arg7:Array<any>):Promise<number>;
+
+export function MysqlUsers(arg1:string):Promise<Array<Record<string, any>>>;
+
+export function MysqlVariables(arg1:string):Promise<Record<string, any>>;
 
 export function ReadLocalFile(arg1:string):Promise<string>;
 
 export function ReadLocalFileBase64(arg1:string):Promise<string>;
 
 export function ReadRemoteFile(arg1:string,arg2:string):Promise<string>;
+
+export function RedisClose(arg1:string):Promise<void>;
+
+export function RedisConnect(arg1:string):Promise<boolean>;
+
+export function RedisDBSize(arg1:string):Promise<number>;
+
+export function RedisDelete(arg1:string,arg2:string):Promise<void>;
+
+export function RedisExpire(arg1:string,arg2:string,arg3:number):Promise<void>;
+
+export function RedisGet(arg1:string,arg2:string):Promise<redis.RedisValue>;
+
+export function RedisHashFieldDel(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+
+export function RedisHashFieldGet(arg1:string,arg2:string,arg3:string):Promise<string>;
+
+export function RedisHashFieldSet(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function RedisInfo(arg1:string,arg2:string):Promise<string>;
+
+export function RedisKeys(arg1:string,arg2:string,arg3:string):Promise<redis.RedisKeysResult>;
+
+export function RedisKeyspaceNotify(arg1:string,arg2:number,arg3:string):Promise<void>;
+
+export function RedisListPop(arg1:string,arg2:string,arg3:boolean):Promise<string>;
+
+export function RedisListPush(arg1:string,arg2:string,arg3:string,arg4:boolean):Promise<number>;
+
+export function RedisModeInfo(arg1:string):Promise<Record<string, any>>;
+
+export function RedisMonitor(arg1:string):Promise<redis.RedisMonitorInfo>;
+
+export function RedisPSubscribe(arg1:string,arg2:string):Promise<void>;
+
+export function RedisPipeline(arg1:string,arg2:Array<string>):Promise<redis.RedisPipelineResult>;
+
+export function RedisPublish(arg1:string,arg2:string,arg3:string):Promise<number>;
+
+export function RedisQueueDequeue(arg1:string,arg2:string,arg3:string,arg4:number):Promise<redis.RedisQueueItem>;
+
+export function RedisQueueEnqueue(arg1:string,arg2:string,arg3:string,arg4:string):Promise<string>;
+
+export function RedisQueueLength(arg1:string,arg2:string,arg3:string):Promise<number>;
+
+export function RedisRaw(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function RedisSelectDB(arg1:string,arg2:number):Promise<void>;
+
+export function RedisSet(arg1:string,arg2:string,arg3:string,arg4:string,arg5:number):Promise<void>;
+
+export function RedisSetAdd(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+
+export function RedisSetRem(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+
+export function RedisSlowLog(arg1:string,arg2:number):Promise<Array<redis.RedisSlowLogEntry>>;
+
+export function RedisStringAppend(arg1:string,arg2:string,arg3:string):Promise<number>;
+
+export function RedisSubscribe(arg1:string,arg2:string):Promise<void>;
+
+export function RedisSubscriptions(arg1:string):Promise<Array<string>>;
+
+export function RedisTransaction(arg1:string,arg2:Array<string>,arg3:Array<string>):Promise<redis.RedisTransactionResult>;
+
+export function RedisUnsubscribe(arg1:string,arg2:string):Promise<void>;
+
+export function RedisZSetAdd(arg1:string,arg2:string,arg3:string,arg4:number):Promise<number>;
+
+export function RedisZSetRem(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
 
 export function RemovePath(arg1:string,arg2:string):Promise<void>;
 
@@ -101,6 +352,28 @@ export function SaveServer(arg1:core.ServerConfig):Promise<core.ServerConfig>;
 export function SelectPrivateKey():Promise<string>;
 
 export function SendInput(arg1:string,arg2:string):Promise<void>;
+
+export function SqliteClose(arg1:string):Promise<void>;
+
+export function SqliteConnect(arg1:string,arg2:string):Promise<boolean>;
+
+export function SqliteCount(arg1:string,arg2:string):Promise<number>;
+
+export function SqliteDescribe(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function SqliteIndexes(arg1:string,arg2:string):Promise<Array<Record<string, any>>>;
+
+export function SqliteInfo(arg1:string):Promise<Record<string, any>>;
+
+export function SqliteOpenFile():Promise<string>;
+
+export function SqliteRun(arg1:string,arg2:string):Promise<Record<string, any>>;
+
+export function SqliteSchema(arg1:string):Promise<Record<string, any>>;
+
+export function SqliteSelect(arg1:string,arg2:string,arg3:number,arg4:number):Promise<Record<string, any>>;
+
+export function SqliteTables(arg1:string):Promise<Array<Record<string, any>>>;
 
 export function UploadData(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
 

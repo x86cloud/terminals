@@ -82,8 +82,364 @@ export function MakeDir(arg1, arg2, arg3) {
   return window['go']['main']['App']['MakeDir'](arg1, arg2, arg3);
 }
 
+export function MongoAggregate(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoAggregate'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoAggregateExplain(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoAggregateExplain'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoBulkWrite(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MongoBulkWrite'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MongoClientStats(arg1) {
+  return window['go']['main']['App']['MongoClientStats'](arg1);
+}
+
+export function MongoClose(arg1) {
+  return window['go']['main']['App']['MongoClose'](arg1);
+}
+
+export function MongoCollectionStats(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoCollectionStats'](arg1, arg2, arg3);
+}
+
+export function MongoCollections(arg1, arg2) {
+  return window['go']['main']['App']['MongoCollections'](arg1, arg2);
+}
+
+export function MongoConnect(arg1) {
+  return window['go']['main']['App']['MongoConnect'](arg1);
+}
+
+export function MongoCountDocuments(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoCountDocuments'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoCreateCollection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoCreateCollection'](arg1, arg2, arg3);
+}
+
+export function MongoCreateDatabase(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoCreateDatabase'](arg1, arg2, arg3);
+}
+
+export function MongoCreateIndex(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['main']['App']['MongoCreateIndex'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+}
+
+export function MongoCurrentOps(arg1) {
+  return window['go']['main']['App']['MongoCurrentOps'](arg1);
+}
+
+export function MongoDatabases(arg1) {
+  return window['go']['main']['App']['MongoDatabases'](arg1);
+}
+
+export function MongoDeleteMany(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDeleteMany'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoDeleteOne(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDeleteOne'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoDistinct(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MongoDistinct'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MongoDropCollection(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoDropCollection'](arg1, arg2, arg3);
+}
+
+export function MongoDropDatabase(arg1, arg2) {
+  return window['go']['main']['App']['MongoDropDatabase'](arg1, arg2);
+}
+
+export function MongoDropIndex(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoDropIndex'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoExplain(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoExplain'](arg1, arg2, arg3);
+}
+
+export function MongoFind(arg1, arg2) {
+  return window['go']['main']['App']['MongoFind'](arg1, arg2);
+}
+
+export function MongoFindOneAndUpdate(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoFindOneAndUpdate'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoGetValidator(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoGetValidator'](arg1, arg2, arg3);
+}
+
+export function MongoHealthCheck(arg1) {
+  return window['go']['main']['App']['MongoHealthCheck'](arg1);
+}
+
+export function MongoIndexStats(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoIndexStats'](arg1, arg2, arg3);
+}
+
+export function MongoIndexes(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoIndexes'](arg1, arg2, arg3);
+}
+
+export function MongoInferSchema(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoInferSchema'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoInsertMany(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MongoInsertMany'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MongoInsertOne(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoInsertOne'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoParseURI(arg1) {
+  return window['go']['main']['App']['MongoParseURI'](arg1);
+}
+
+export function MongoRenameCollection(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoRenameCollection'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoReplaceOne(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoReplaceOne'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoRunCommand(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MongoRunCommand'](arg1, arg2, arg3);
+}
+
+export function MongoServerStatus(arg1) {
+  return window['go']['main']['App']['MongoServerStatus'](arg1);
+}
+
+export function MongoSetValidator(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoSetValidator'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoTestConnection(arg1) {
+  return window['go']['main']['App']['MongoTestConnection'](arg1);
+}
+
+export function MongoTransaction(arg1, arg2) {
+  return window['go']['main']['App']['MongoTransaction'](arg1, arg2);
+}
+
+export function MongoUnwatch(arg1, arg2) {
+  return window['go']['main']['App']['MongoUnwatch'](arg1, arg2);
+}
+
+export function MongoUpdateMany(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoUpdateMany'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoUpdateOne(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoUpdateOne'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoValidateDocument(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MongoValidateDocument'](arg1, arg2, arg3, arg4);
+}
+
+export function MongoWatch(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MongoWatch'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MongoWatchList(arg1) {
+  return window['go']['main']['App']['MongoWatchList'](arg1);
+}
+
 export function MoveServerToGroup(arg1, arg2) {
   return window['go']['main']['App']['MoveServerToGroup'](arg1, arg2);
+}
+
+export function MqttClose(arg1) {
+  return window['go']['main']['App']['MqttClose'](arg1);
+}
+
+export function MqttConnect(arg1) {
+  return window['go']['main']['App']['MqttConnect'](arg1);
+}
+
+export function MqttPublish(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MqttPublish'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MqttSubscribe(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MqttSubscribe'](arg1, arg2, arg3);
+}
+
+export function MqttSubscriptions(arg1) {
+  return window['go']['main']['App']['MqttSubscriptions'](arg1);
+}
+
+export function MqttUnsubscribe(arg1, arg2) {
+  return window['go']['main']['App']['MqttUnsubscribe'](arg1, arg2);
+}
+
+export function MysqlBackup(arg1, arg2) {
+  return window['go']['main']['App']['MysqlBackup'](arg1, arg2);
+}
+
+export function MysqlClose(arg1) {
+  return window['go']['main']['App']['MysqlClose'](arg1);
+}
+
+export function MysqlCloseEx(arg1) {
+  return window['go']['main']['App']['MysqlCloseEx'](arg1);
+}
+
+export function MysqlConnect(arg1) {
+  return window['go']['main']['App']['MysqlConnect'](arg1);
+}
+
+export function MysqlConnectEx(arg1) {
+  return window['go']['main']['App']['MysqlConnectEx'](arg1);
+}
+
+export function MysqlCount(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlCount'](arg1, arg2, arg3);
+}
+
+export function MysqlCreateDatabase(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlCreateDatabase'](arg1, arg2, arg3);
+}
+
+export function MysqlCreateIndex(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MysqlCreateIndex'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MysqlCreateTable(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MysqlCreateTable'](arg1, arg2, arg3, arg4);
+}
+
+export function MysqlDatabases(arg1) {
+  return window['go']['main']['App']['MysqlDatabases'](arg1);
+}
+
+export function MysqlDelete(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlDelete'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlDescribe(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlDescribe'](arg1, arg2, arg3);
+}
+
+export function MysqlDropDatabase(arg1, arg2) {
+  return window['go']['main']['App']['MysqlDropDatabase'](arg1, arg2);
+}
+
+export function MysqlDropIndex(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MysqlDropIndex'](arg1, arg2, arg3, arg4);
+}
+
+export function MysqlDropTable(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlDropTable'](arg1, arg2, arg3);
+}
+
+export function MysqlExport(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['MysqlExport'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function MysqlExportJSON(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['MysqlExportJSON'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function MysqlExportToFile(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['MysqlExportToFile'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function MysqlExportToFileEx(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['MysqlExportToFileEx'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function MysqlGrants(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlGrants'](arg1, arg2, arg3);
+}
+
+export function MysqlImport(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlImport'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlImportFromFile(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MysqlImportFromFile'](arg1, arg2, arg3, arg4);
+}
+
+export function MysqlImportFromFileEx(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MysqlImportFromFileEx'](arg1, arg2, arg3, arg4);
+}
+
+export function MysqlImportJSON(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MysqlImportJSON'](arg1, arg2, arg3, arg4);
+}
+
+export function MysqlIndexes(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlIndexes'](arg1, arg2, arg3);
+}
+
+export function MysqlInsert(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlInsert'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlProcessList(arg1) {
+  return window['go']['main']['App']['MysqlProcessList'](arg1);
+}
+
+export function MysqlQueryCSV(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['MysqlQueryCSV'](arg1, arg2, arg3, arg4);
+}
+
+export function MysqlRun(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlRun'](arg1, arg2, arg3);
+}
+
+export function MysqlSchema(arg1, arg2) {
+  return window['go']['main']['App']['MysqlSchema'](arg1, arg2);
+}
+
+export function MysqlSelect(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['MysqlSelect'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function MysqlSlowLog(arg1, arg2) {
+  return window['go']['main']['App']['MysqlSlowLog'](arg1, arg2);
+}
+
+export function MysqlStatus(arg1) {
+  return window['go']['main']['App']['MysqlStatus'](arg1);
+}
+
+export function MysqlTableStatus(arg1, arg2) {
+  return window['go']['main']['App']['MysqlTableStatus'](arg1, arg2);
+}
+
+export function MysqlTables(arg1, arg2) {
+  return window['go']['main']['App']['MysqlTables'](arg1, arg2);
+}
+
+export function MysqlTruncateTable(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MysqlTruncateTable'](arg1, arg2, arg3);
+}
+
+export function MysqlUpdate(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['MysqlUpdate'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
+export function MysqlUsers(arg1) {
+  return window['go']['main']['App']['MysqlUsers'](arg1);
+}
+
+export function MysqlVariables(arg1) {
+  return window['go']['main']['App']['MysqlVariables'](arg1);
 }
 
 export function ReadLocalFile(arg1) {
@@ -96,6 +452,146 @@ export function ReadLocalFileBase64(arg1) {
 
 export function ReadRemoteFile(arg1, arg2) {
   return window['go']['main']['App']['ReadRemoteFile'](arg1, arg2);
+}
+
+export function RedisClose(arg1) {
+  return window['go']['main']['App']['RedisClose'](arg1);
+}
+
+export function RedisConnect(arg1) {
+  return window['go']['main']['App']['RedisConnect'](arg1);
+}
+
+export function RedisDBSize(arg1) {
+  return window['go']['main']['App']['RedisDBSize'](arg1);
+}
+
+export function RedisDelete(arg1, arg2) {
+  return window['go']['main']['App']['RedisDelete'](arg1, arg2);
+}
+
+export function RedisExpire(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisExpire'](arg1, arg2, arg3);
+}
+
+export function RedisGet(arg1, arg2) {
+  return window['go']['main']['App']['RedisGet'](arg1, arg2);
+}
+
+export function RedisHashFieldDel(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisHashFieldDel'](arg1, arg2, arg3);
+}
+
+export function RedisHashFieldGet(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisHashFieldGet'](arg1, arg2, arg3);
+}
+
+export function RedisHashFieldSet(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['RedisHashFieldSet'](arg1, arg2, arg3, arg4);
+}
+
+export function RedisInfo(arg1, arg2) {
+  return window['go']['main']['App']['RedisInfo'](arg1, arg2);
+}
+
+export function RedisKeys(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisKeys'](arg1, arg2, arg3);
+}
+
+export function RedisKeyspaceNotify(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisKeyspaceNotify'](arg1, arg2, arg3);
+}
+
+export function RedisListPop(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisListPop'](arg1, arg2, arg3);
+}
+
+export function RedisListPush(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['RedisListPush'](arg1, arg2, arg3, arg4);
+}
+
+export function RedisModeInfo(arg1) {
+  return window['go']['main']['App']['RedisModeInfo'](arg1);
+}
+
+export function RedisMonitor(arg1) {
+  return window['go']['main']['App']['RedisMonitor'](arg1);
+}
+
+export function RedisPSubscribe(arg1, arg2) {
+  return window['go']['main']['App']['RedisPSubscribe'](arg1, arg2);
+}
+
+export function RedisPipeline(arg1, arg2) {
+  return window['go']['main']['App']['RedisPipeline'](arg1, arg2);
+}
+
+export function RedisPublish(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisPublish'](arg1, arg2, arg3);
+}
+
+export function RedisQueueDequeue(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['RedisQueueDequeue'](arg1, arg2, arg3, arg4);
+}
+
+export function RedisQueueEnqueue(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['RedisQueueEnqueue'](arg1, arg2, arg3, arg4);
+}
+
+export function RedisQueueLength(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisQueueLength'](arg1, arg2, arg3);
+}
+
+export function RedisRaw(arg1, arg2) {
+  return window['go']['main']['App']['RedisRaw'](arg1, arg2);
+}
+
+export function RedisSelectDB(arg1, arg2) {
+  return window['go']['main']['App']['RedisSelectDB'](arg1, arg2);
+}
+
+export function RedisSet(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['RedisSet'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function RedisSetAdd(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisSetAdd'](arg1, arg2, arg3);
+}
+
+export function RedisSetRem(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisSetRem'](arg1, arg2, arg3);
+}
+
+export function RedisSlowLog(arg1, arg2) {
+  return window['go']['main']['App']['RedisSlowLog'](arg1, arg2);
+}
+
+export function RedisStringAppend(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisStringAppend'](arg1, arg2, arg3);
+}
+
+export function RedisSubscribe(arg1, arg2) {
+  return window['go']['main']['App']['RedisSubscribe'](arg1, arg2);
+}
+
+export function RedisSubscriptions(arg1) {
+  return window['go']['main']['App']['RedisSubscriptions'](arg1);
+}
+
+export function RedisTransaction(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisTransaction'](arg1, arg2, arg3);
+}
+
+export function RedisUnsubscribe(arg1, arg2) {
+  return window['go']['main']['App']['RedisUnsubscribe'](arg1, arg2);
+}
+
+export function RedisZSetAdd(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['RedisZSetAdd'](arg1, arg2, arg3, arg4);
+}
+
+export function RedisZSetRem(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RedisZSetRem'](arg1, arg2, arg3);
 }
 
 export function RemovePath(arg1, arg2) {
@@ -196,6 +692,50 @@ export function SelectPrivateKey() {
 
 export function SendInput(arg1, arg2) {
   return window['go']['main']['App']['SendInput'](arg1, arg2);
+}
+
+export function SqliteClose(arg1) {
+  return window['go']['main']['App']['SqliteClose'](arg1);
+}
+
+export function SqliteConnect(arg1, arg2) {
+  return window['go']['main']['App']['SqliteConnect'](arg1, arg2);
+}
+
+export function SqliteCount(arg1, arg2) {
+  return window['go']['main']['App']['SqliteCount'](arg1, arg2);
+}
+
+export function SqliteDescribe(arg1, arg2) {
+  return window['go']['main']['App']['SqliteDescribe'](arg1, arg2);
+}
+
+export function SqliteIndexes(arg1, arg2) {
+  return window['go']['main']['App']['SqliteIndexes'](arg1, arg2);
+}
+
+export function SqliteInfo(arg1) {
+  return window['go']['main']['App']['SqliteInfo'](arg1);
+}
+
+export function SqliteOpenFile() {
+  return window['go']['main']['App']['SqliteOpenFile']();
+}
+
+export function SqliteRun(arg1, arg2) {
+  return window['go']['main']['App']['SqliteRun'](arg1, arg2);
+}
+
+export function SqliteSchema(arg1) {
+  return window['go']['main']['App']['SqliteSchema'](arg1);
+}
+
+export function SqliteSelect(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SqliteSelect'](arg1, arg2, arg3, arg4);
+}
+
+export function SqliteTables(arg1) {
+  return window['go']['main']['App']['SqliteTables'](arg1);
 }
 
 export function UploadData(arg1, arg2, arg3, arg4) {

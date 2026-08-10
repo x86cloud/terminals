@@ -221,6 +221,150 @@ export namespace core {
 
 }
 
+export namespace db {
+	
+	export class MysqlQueryResult {
+	    columns: string[];
+	    rows: any[];
+	    affected: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MysqlQueryResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.columns = source["columns"];
+	        this.rows = source["rows"];
+	        this.affected = source["affected"];
+	    }
+	}
+
+}
+
+export namespace mongo {
+	
+	export class MongoBulkOp {
+	    type: string;
+	    filter: string;
+	    document: string;
+	    upsert: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoBulkOp(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.filter = source["filter"];
+	        this.document = source["document"];
+	        this.upsert = source["upsert"];
+	    }
+	}
+	export class MongoFindResult {
+	    documents: string[];
+	    count: number;
+	    total: number;
+	    durationMs: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoFindResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.documents = source["documents"];
+	        this.count = source["count"];
+	        this.total = source["total"];
+	        this.durationMs = source["durationMs"];
+	    }
+	}
+	export class MongoQuerySpec {
+	    database: string;
+	    collection: string;
+	    filter: string;
+	    projection: string;
+	    sort: string;
+	    limit: number;
+	    skip: number;
+	    hint: string;
+	    collation: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoQuerySpec(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.database = source["database"];
+	        this.collection = source["collection"];
+	        this.filter = source["filter"];
+	        this.projection = source["projection"];
+	        this.sort = source["sort"];
+	        this.limit = source["limit"];
+	        this.skip = source["skip"];
+	        this.hint = source["hint"];
+	        this.collation = source["collation"];
+	    }
+	}
+	export class MongoTxOp {
+	    type: string;
+	    database: string;
+	    collection: string;
+	    filter: string;
+	    document: string;
+	    upsert: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoTxOp(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.database = source["database"];
+	        this.collection = source["collection"];
+	        this.filter = source["filter"];
+	        this.document = source["document"];
+	        this.upsert = source["upsert"];
+	    }
+	}
+	export class MongoURIInfo {
+	    scheme: string;
+	    hosts: string[];
+	    username: string;
+	    password: string;
+	    database: string;
+	    authSource: string;
+	    authMech: string;
+	    replicaSet: string;
+	    tls: boolean;
+	    srv: boolean;
+	    options: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new MongoURIInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.scheme = source["scheme"];
+	        this.hosts = source["hosts"];
+	        this.username = source["username"];
+	        this.password = source["password"];
+	        this.database = source["database"];
+	        this.authSource = source["authSource"];
+	        this.authMech = source["authMech"];
+	        this.replicaSet = source["replicaSet"];
+	        this.tls = source["tls"];
+	        this.srv = source["srv"];
+	        this.options = source["options"];
+	    }
+	}
+
+}
+
 export namespace proto {
 	
 	export class ApiAuth {
@@ -381,6 +525,225 @@ export namespace proto {
 	        this.url = source["url"];
 	        this.status = source["status"];
 	        this.error = source["error"];
+	    }
+	}
+
+}
+
+export namespace redis {
+	
+	export class RedisCmdResult {
+	    result: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisCmdResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.result = source["result"];
+	        this.error = source["error"];
+	    }
+	}
+	export class RedisKeyItem {
+	    key: string;
+	    type: string;
+	    ttl: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisKeyItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.type = source["type"];
+	        this.ttl = source["ttl"];
+	    }
+	}
+	export class RedisKeysResult {
+	    keys: RedisKeyItem[];
+	    cursor: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisKeysResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.keys = this.convertValues(source["keys"], RedisKeyItem);
+	        this.cursor = source["cursor"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class RedisMonitorInfo {
+	    breaker: string;
+	    hits: number;
+	    misses: number;
+	    timeouts: number;
+	    totalConns: number;
+	    idleConns: number;
+	    staleConns: number;
+	    mode: string;
+	    serialization: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisMonitorInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.breaker = source["breaker"];
+	        this.hits = source["hits"];
+	        this.misses = source["misses"];
+	        this.timeouts = source["timeouts"];
+	        this.totalConns = source["totalConns"];
+	        this.idleConns = source["idleConns"];
+	        this.staleConns = source["staleConns"];
+	        this.mode = source["mode"];
+	        this.serialization = source["serialization"];
+	    }
+	}
+	export class RedisPipelineResult {
+	    results: RedisCmdResult[];
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisPipelineResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.results = this.convertValues(source["results"], RedisCmdResult);
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class RedisQueueItem {
+	    id: string;
+	    payload: any;
+	    empty?: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisQueueItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.payload = source["payload"];
+	        this.empty = source["empty"];
+	    }
+	}
+	export class RedisSlowLogEntry {
+	    id: number;
+	    timestamp: number;
+	    duration: number;
+	    command: string;
+	    client: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisSlowLogEntry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.timestamp = source["timestamp"];
+	        this.duration = source["duration"];
+	        this.command = source["command"];
+	        this.client = source["client"];
+	    }
+	}
+	export class RedisTransactionResult {
+	    results: RedisCmdResult[];
+	    aborted: boolean;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisTransactionResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.results = this.convertValues(source["results"], RedisCmdResult);
+	        this.aborted = source["aborted"];
+	        this.error = source["error"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class RedisValue {
+	    key: string;
+	    type: string;
+	    ttl: number;
+	    value: string;
+	    size: number;
+	    rawJson?: any;
+	
+	    static createFrom(source: any = {}) {
+	        return new RedisValue(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.key = source["key"];
+	        this.type = source["type"];
+	        this.ttl = source["ttl"];
+	        this.value = source["value"];
+	        this.size = source["size"];
+	        this.rawJson = source["rawJson"];
 	    }
 	}
 
