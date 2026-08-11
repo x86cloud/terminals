@@ -245,11 +245,37 @@ export default function AiAgentPanel({ settings }: Props) {
         }
     }
 
-    // Token Usage Calculation
-    const sysPrompt = settings.aiSystemPrompt || ''
-    const totalChars = messages.reduce((acc, m) => acc + (m.content ? m.content.length : 0), 0) + sysPrompt.length
-    const usedTokens = Math.ceil(totalChars / 3.0)
+    // Token Usage Calculation (Calculates actual input sent to LLM after compression)
     const maxTokens = settings.aiMaxContextTokens || 4096
+    const strategy = settings.aiCompressionStrategy || 'summary'
+    const sysPrompt = settings.aiSystemPrompt || ''
+
+    const getEffectiveContext = () => {
+        const rawTotalChars = messages.reduce((acc, m) => acc + (m.content ? m.content.length : 0), 0)
+        const estRawTokens = Math.ceil(rawTotalChars / 3.0)
+        if (estRawTokens <= maxTokens || messages.length <= 4) {
+            return {
+                effectiveMessages: messages,
+                compressedText: '',
+            }
+        }
+        if (strategy === 'sliding') {
+            const cutIdx = Math.max(0, messages.length - 4)
+            return {
+                effectiveMessages: messages.slice(cutIdx),
+                compressedText: '已触发滑动窗口截断，只保留最新 4 条对话',
+            }
+        }
+        const cutIdx = Math.max(0, messages.length - 3)
+        return {
+            effectiveMessages: messages.slice(cutIdx),
+            compressedText: '已触发摘要压缩，只保留最新对话',
+        }
+    }
+
+    const { effectiveMessages, compressedText } = getEffectiveContext()
+    const effectiveChars = effectiveMessages.reduce((acc, m) => acc + (m.content ? m.content.length : 0), 0) + sysPrompt.length
+    const usedTokens = Math.ceil(effectiveChars / 3.0)
     const percent = Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10)
 
     const formatTokenK = (num: number) => {
@@ -289,14 +315,6 @@ export default function AiAgentPanel({ settings }: Props) {
                     </button>
                 </div>
             </div>
-
-            {/* Notice Banner */}
-            {noticeText && (
-                <div className={s.noticeBanner}>
-                    <Icon name="info" size={13} />
-                    <span>{noticeText}</span>
-                </div>
-            )}
 
             {/* Chat List */}
             <div className={s.chatList} ref={chatListRef}>
@@ -506,7 +524,12 @@ export default function AiAgentPanel({ settings }: Props) {
 
                             {isRingHovered && (
                                 <div className={s.tooltipCard}>
-                                    {percent.toFixed(1)}% · {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)} 上下文已使用
+                                    <div>{percent.toFixed(1)}% · {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)} 输入上下文已使用</div>
+                                    {compressedText && (
+                                        <div style={{ marginTop: 4, color: '#faad14', fontSize: 11, fontWeight: 500 }}>
+                                            ℹ️ {compressedText}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
