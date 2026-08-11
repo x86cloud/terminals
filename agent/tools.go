@@ -59,7 +59,7 @@ func (wm *WorkspaceManager) EmitToolStart(toolName, detail string) {
 func (wm *WorkspaceManager) ResolvePath(targetPath string) (string, error) {
 	dir := wm.GetDir()
 	if dir == "" {
-		return "", fmt.Errorf("当前未设置工作空间目录，请先选择工作空间")
+		return "", fmt.Errorf("当前未设置工作目录，请先选择工作目录")
 	}
 
 	cleanedDir := filepath.Clean(dir)
@@ -72,7 +72,7 @@ func (wm *WorkspaceManager) ResolvePath(targetPath string) (string, error) {
 
 	rel, err := filepath.Rel(cleanedDir, fullPath)
 	if err != nil || strings.HasPrefix(rel, "..") {
-		return "", fmt.Errorf("越权操作拒绝: 目标路径 %s 超出工作空间范围", targetPath)
+		return "", fmt.Errorf("越权操作拒绝: 目标路径 %s 超出工作目录范围", targetPath)
 	}
 
 	return fullPath, nil
@@ -170,7 +170,7 @@ type SearchOutput struct {
 
 // BuildWorkspaceTools creates Eino invokable tools for file operations
 func BuildWorkspaceTools(wm *WorkspaceManager) ([]tool.BaseTool, error) {
-	listTool, err := utils.InferTool("workspace_list_dir", "查看工作空间目录下的文件和子目录列表",
+	listTool, err := utils.InferTool("workspace_list_dir", "查看工作目录下的文件和子目录列表",
 		func(ctx context.Context, input *ListDirInput) (*ListDirOutput, error) {
 			wm.EmitToolStart("workspace_list_dir", fmt.Sprintf("正在列出文件目录 [%s]...", input.Path))
 			fullPath, err := wm.ResolvePath(input.Path)
@@ -204,7 +204,7 @@ func BuildWorkspaceTools(wm *WorkspaceManager) ([]tool.BaseTool, error) {
 		return nil, err
 	}
 
-	readTool, err := utils.InferTool("workspace_read_file", "读取工作空间内指定文本文件的完整内容",
+	readTool, err := utils.InferTool("workspace_read_file", "读取工作目录内指定文本文件的完整内容",
 		func(ctx context.Context, input *ReadFileInput) (*ReadFileOutput, error) {
 			wm.EmitToolStart("workspace_read_file", fmt.Sprintf("正在读取文件 [%s]...", input.Path))
 			fullPath, err := wm.ResolvePath(input.Path)
@@ -229,7 +229,7 @@ func BuildWorkspaceTools(wm *WorkspaceManager) ([]tool.BaseTool, error) {
 		return nil, err
 	}
 
-	writeTool, err := utils.InferTool("workspace_write_file", "新建或改写工作空间内指定文本文件的内容",
+	writeTool, err := utils.InferTool("workspace_write_file", "新建或改写工作目录内指定文本文件的内容",
 		func(ctx context.Context, input *WriteFileInput) (*WriteFileOutput, error) {
 			wm.EmitToolStart("workspace_write_file", fmt.Sprintf("正在写入文件 [%s]...", input.Path))
 			fullPath, err := wm.ResolvePath(input.Path)
@@ -253,7 +253,7 @@ func BuildWorkspaceTools(wm *WorkspaceManager) ([]tool.BaseTool, error) {
 		return nil, err
 	}
 
-	deleteTool, err := utils.InferTool("workspace_delete", "删除工作空间内的指定文件或目录（需要用户在界面二次确认）",
+	deleteTool, err := utils.InferTool("workspace_delete", "删除工作目录内的指定文件或目录（需要用户在界面二次确认）",
 		func(ctx context.Context, input *DeleteFileInput) (*DeleteFileOutput, error) {
 			wm.EmitToolStart("workspace_delete", fmt.Sprintf("正在删除 [%s]...", input.Path))
 			fullPath, err := wm.ResolvePath(input.Path)
@@ -284,12 +284,12 @@ func BuildWorkspaceTools(wm *WorkspaceManager) ([]tool.BaseTool, error) {
 		return nil, err
 	}
 
-	searchTool, err := utils.InferTool("workspace_search", "在工作空间内搜索文件名或指定关键字",
+	searchTool, err := utils.InferTool("workspace_search", "在工作目录内搜索文件名或指定关键字",
 		func(ctx context.Context, input *SearchInput) (*SearchOutput, error) {
 			wm.EmitToolStart("workspace_search", fmt.Sprintf("正在搜索关键字 [%s]...", input.Query))
 			rootDir := wm.GetDir()
 			if rootDir == "" {
-				return nil, fmt.Errorf("未设置工作空间目录")
+				return nil, fmt.Errorf("未设置工作目录")
 			}
 			var matches []SearchMatch
 			q := strings.ToLower(input.Query)

@@ -136,7 +136,7 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 	sysPrompt = fmt.Sprintf("%s\n当前系统时间为: [%s]", sysPrompt, currentTime)
 	wsDir := DefaultWorkspaceMgr.GetDir()
 	if wsDir != "" {
-		sysPrompt = fmt.Sprintf("%s\n当前绑定的工作空间本地目录为: [%s]。你可以使用挂载的工具在该目录下查看文件列表、读取文件、写入/修改文件、删除文件或搜索内容。", sysPrompt, wsDir)
+		sysPrompt = fmt.Sprintf("%s\n当前绑定的工作目录为: [%s]。你可以使用挂载的工具在该目录下查看文件列表、读取文件、写入/修改文件、删除文件或搜索内容。", sysPrompt, wsDir)
 	}
 
 	if strings.TrimSpace(sysPrompt) != "" {

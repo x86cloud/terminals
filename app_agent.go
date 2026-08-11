@@ -64,7 +64,7 @@ func (a *App) AgentSelectWorkspaceDir() (string, error) {
 		return "", errors.New("app context is nil")
 	}
 	dir, err := wruntime.OpenDirectoryDialog(a.ctx, wruntime.OpenDialogOptions{
-		Title: "选择工作空间文件夹",
+		Title: "选择工作目录",
 	})
 	if err != nil {
 		return "", err

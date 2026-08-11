@@ -421,7 +421,7 @@ export default function AiAgentPanel({ settings }: Props) {
                     <div className={s.workspaceInline}>
                         <div className={s.wsPath}>
                             <Icon name="folder" size={13} />
-                            <span>工作空间:</span>
+                            <span>工作目录:</span>
                             {workspaceDir ? (
                                 <span className={s.pathText} title={workspaceDir}>{workspaceDir}</span>
                             ) : (
@@ -439,7 +439,7 @@ export default function AiAgentPanel({ settings }: Props) {
                             {workspaceDir && (
                                 <button
                                     className={`${g.btn} ${g.xs}`}
-                                    title="清除工作空间关联"
+                                    title="清除工作目录关联"
                                     disabled={isGenerating}
                                     onClick={handleClearWorkspace}
                                 >
