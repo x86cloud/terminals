@@ -4,7 +4,7 @@ import {FitAddon} from 'xterm-addon-fit'
 import {WebLinksAddon} from 'xterm-addon-web-links'
 import {SearchAddon} from 'xterm-addon-search'
 import 'xterm/css/xterm.css'
-import {API, subscribe} from '../../../api'
+import {API, emitEvent, subscribe} from '../../../api'
 import {base64ToBytes} from '../../../utils'
 import ContextMenu, {closedMenu, MenuState} from '../../../components/ContextMenu'
 import Icon from '../../../components/Icon'
@@ -327,6 +327,7 @@ export default function TerminalView({sessionId, active}: Props) {
                 onContextMenu={(e) => {
                     e.preventDefault()
                     const hasSelection = termRef.current?.hasSelection() ?? false
+                    const selectionText = termRef.current?.getSelection() ?? ''
                     setMenu({
                         open: true,
                         x: e.clientX,
@@ -340,6 +341,18 @@ export default function TerminalView({sessionId, active}: Props) {
                                 onClick: copySelection,
                             },
                             {key: 'paste', label: '粘贴', icon: 'file', onClick: paste},
+                            {
+                                key: 'askAi',
+                                label: '问AI',
+                                icon: 'bot',
+                                disabled: !hasSelection,
+                                onClick: () => {
+                                    if (selectionText) {
+                                        const prompt = `请分析并解答以下终端选中的内容：\n\`\`\`\n${selectionText}\n\`\`\``
+                                        emitEvent('agent:ask', prompt)
+                                    }
+                                },
+                            },
                             {
                                 key: 'search',
                                 label: '查找 (Ctrl+F)',

@@ -535,6 +535,13 @@ export function subscribe(event: string, handler: AnyFn): () => void {
     }
 }
 
+export function emitEvent(event: string, ...args: any[]): void {
+    subscribers.get(event)?.forEach((fn) => fn(...args))
+    if (w.runtime?.EventsEmit) {
+        w.runtime.EventsEmit(event, ...args)
+    }
+}
+
 /** 注册系统级文件拖放（返回 false 表示当前环境不支持，需要走浏览器降级方案） */
 export function registerNativeFileDrop(handler: (paths: string[]) => void): boolean {
     const rt = w.runtime

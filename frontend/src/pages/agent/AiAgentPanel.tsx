@@ -66,6 +66,44 @@ export default function AiAgentPanel({ settings }: Props) {
     }, [messages, streamingText, pendingConfirm, activeToolCall])
 
     // Subscribe to Wails event stream
+    const handleSendRef = useRef<(customText?: string) => Promise<void>>(async () => {})
+
+    // Send Message Handler
+    const handleSend = async (customText?: any) => {
+        const text = (typeof customText === 'string' ? customText : input).trim()
+        if ((!text && images.length === 0) || isGenerating) return
+
+        const userMsg: AiMessage = {
+            role: 'user',
+            content: text,
+            images: images.length > 0 && customText === undefined ? [...images] : undefined,
+            timestamp: Date.now(),
+        }
+
+        const newHistory = [...messages, userMsg]
+        saveHistory(newHistory)
+        setInput('')
+        setImages([])
+        setNoticeText('')
+        setIsGenerating(true)
+        setStreamingText('')
+
+        try {
+            await API.agentSend(SESSION_ID, newHistory)
+        } catch (e: any) {
+            setIsGenerating(false)
+            setStreamingText('')
+            saveHistory([
+                ...newHistory,
+                { role: 'assistant', content: `❌ 发送失败: ${e.message || String(e)}`, timestamp: Date.now() },
+            ])
+        }
+    }
+
+    useEffect(() => {
+        handleSendRef.current = handleSend
+    })
+
     useEffect(() => {
         const unSubChunk = subscribe(`agent:chunk:${SESSION_ID}`, (chunk: string) => {
             setStreamingText((prev) => prev + chunk)
@@ -78,10 +116,9 @@ export default function AiAgentPanel({ settings }: Props) {
         const unSubError = subscribe(`agent:error:${SESSION_ID}`, (errText: string) => {
             setIsGenerating(false)
             setStreamingText('')
-            setActiveToolCall('')
-            setMessages((prev) => [
-                ...prev,
-                { role: 'assistant', content: `❌ 请求失败: ${errText}`, timestamp: Date.now() },
+            saveHistory([
+                ...messages,
+                { role: 'assistant', content: `❌ 运行时错误: ${errText}`, timestamp: Date.now() },
             ])
         })
 
@@ -110,6 +147,15 @@ export default function AiAgentPanel({ settings }: Props) {
             }
         })
 
+        const unSubAsk = subscribe('agent:ask', (prompt: string) => {
+            if (prompt) {
+                setInput(prompt)
+                setTimeout(() => {
+                    handleSendRef.current(prompt)
+                }, 50)
+            }
+        })
+
         return () => {
             unSubChunk()
             unSubNotice()
@@ -117,6 +163,7 @@ export default function AiAgentPanel({ settings }: Props) {
             unSubDone()
             unSubConfirm()
             unSubToolStart()
+            unSubAsk()
         }
     }, [])
 
@@ -140,38 +187,6 @@ export default function AiAgentPanel({ settings }: Props) {
         if (!pendingConfirm) return
         await API.agentConfirmTool(pendingConfirm.confirmID, approved)
         setPendingConfirm(null)
-    }
-
-    // Send Message Handler
-    const handleSend = async () => {
-        const text = input.trim()
-        if ((!text && images.length === 0) || isGenerating) return
-
-        const userMsg: AiMessage = {
-            role: 'user',
-            content: text,
-            images: images.length > 0 ? [...images] : undefined,
-            timestamp: Date.now(),
-        }
-
-        const newHistory = [...messages, userMsg]
-        saveHistory(newHistory)
-        setInput('')
-        setImages([])
-        setNoticeText('')
-        setIsGenerating(true)
-        setStreamingText('')
-
-        try {
-            await API.agentSend(SESSION_ID, newHistory)
-        } catch (e: any) {
-            setIsGenerating(false)
-            setStreamingText('')
-            saveHistory([
-                ...newHistory,
-                { role: 'assistant', content: `❌ 发送失败: ${e.message || String(e)}`, timestamp: Date.now() },
-            ])
-        }
     }
 
     // Image Upload & Paste Handlers

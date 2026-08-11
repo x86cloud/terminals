@@ -320,11 +320,16 @@ export default function App() {
                 prev.map((s) => (s.id === sessionId ? {...s, connected: false} : s))
             )
         })
+        const offAsk = subscribe('agent:ask', () => {
+            setAiAgentOpen(true)
+            activateTab('aiAgent')
+        })
         return () => {
             offTransfer()
             offClosed()
+            offAsk()
         }
-    }, [])
+    }, [activateTab])
 
     /* ---------------- 系统级文件拖拽 ---------------- */
 
