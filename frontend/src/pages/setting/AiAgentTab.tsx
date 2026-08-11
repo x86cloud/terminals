@@ -96,7 +96,7 @@ export default function AiAgentTab({
                 </div>
 
                 <div className={s.formGroup}>
-                    <label className={s.label}>Base URL（基础 API 请求地址）</label>
+                    <label className={s.label}>Base URL（OpenAI）</label>
                     <input
                         type="text"
                         className={s.input}

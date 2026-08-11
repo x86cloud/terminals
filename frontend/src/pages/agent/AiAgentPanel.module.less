@@ -6,7 +6,7 @@
     flex-direction: column;
     height: 100%;
     width: 100%;
-    background: @bg;
+    background: @bg-1;
     color: @text;
     overflow: hidden;
 }
@@ -16,7 +16,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 10px 16px;
-    background: @bg-elev;
+    background: @bg-1;
     border-bottom: 1px solid @border;
     flex-shrink: 0;
 
@@ -121,7 +121,9 @@
             .markdownBody {
                 color: #fff;
 
-                p, span, code {
+                p,
+                span,
+                code {
                     color: #fff;
                 }
             }
@@ -540,6 +542,7 @@
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
     }

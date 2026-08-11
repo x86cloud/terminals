@@ -261,7 +261,7 @@ export default function AiAgentPanel({ settings }: Props) {
                         disabled={isGenerating || messages.length === 0}
                         onClick={handleClear}
                     >
-                        <Icon name="trash" size={13} /> 清空历史
+                        <Icon name="trash" size={13} />
                     </button>
                 </div>
             </div>
