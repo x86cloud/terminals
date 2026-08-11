@@ -5,9 +5,26 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="93adcaf8-ffc1-4c37-b4d2-d30e84398be7" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/mongo.go" beforeDir="false" afterPath="$PROJECT_DIR$/mongo.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/redis.go" beforeDir="false" afterPath="$PROJECT_DIR$/redis.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/ssh.go" beforeDir="false" afterPath="$PROJECT_DIR$/ssh.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/app.go" beforeDir="false" afterPath="$PROJECT_DIR$/app.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/config.go" beforeDir="false" afterPath="$PROJECT_DIR$/core/config.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/core/settings.go" beforeDir="false" afterPath="$PROJECT_DIR$/core/settings.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package-lock.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package-lock.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/package.json.md5" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/package.json.md5" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/api.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/api.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Icon.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Icon.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/Sidebar.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/Sidebar.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/app/SessionTabs.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/app/SessionTabs.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/components/app/Stage.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/components/app/Stage.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/pages/setting/SettingsModal.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/pages/setting/SettingsModal.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/src/types.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/src/types.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/wailsjs/go/main/App.d.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/wailsjs/go/main/App.d.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/wailsjs/go/main/App.js" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/wailsjs/go/main/App.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/frontend/wailsjs/go/models.ts" beforeDir="false" afterPath="$PROJECT_DIR$/frontend/wailsjs/go/models.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.mod" beforeDir="false" afterPath="$PROJECT_DIR$/go.mod" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/go.sum" beforeDir="false" afterPath="$PROJECT_DIR$/go.sum" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -20,39 +37,62 @@
     </persistenceIdMap>
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="156" />
+    <option name="cachedIndexableFilesCount" value="215" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Go File" />
+      </list>
+    </option>
   </component>
   <component name="GOROOT" url="file://C:/Program Files/Go" />
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "x86cloud"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;x86cloud&quot;
   }
-}]]></component>
-  <component name="GithubPullRequestsUISettings"><![CDATA[{
-  "selectedUrlAndAccountId": {
-    "url": "https://github.com/x86cloud/terminals.git",
-    "accountId": "bd01abbe-baaa-432a-92db-330071efcca5"
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/x86cloud/terminals.git&quot;,
+    &quot;accountId&quot;: &quot;bd01abbe-baaa-432a-92db-330071efcca5&quot;
   }
-}]]></component>
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 5,
-  "fromUser": false
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5,
+  &quot;fromUser&quot;: false
+}</component>
   <component name="ProjectId" id="3HgHoofwRFWIq4OsxaE0DcJC4s1" />
+  <component name="ProjectSessionTemplates">
+    <option name="panelTemplate">
+      <template>
+        <option name="modeId" value="Agent" />
+        <option name="model">
+          <model>
+            <option name="modelType" value="builtin_id" />
+            <option name="modelValue" value="auto" />
+          </model>
+        </option>
+        <option name="targetType" value="BACKGROUND" />
+        <option name="worktreeMode" value="WORKSPACE" />
+      </template>
+    </option>
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "DefaultGoTemplateProperty": "Go File",
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.GoLinterPluginOnboardingV2": "true",
     "RunOnceActivity.GoLinterPluginStorageMigration": "true",
@@ -93,5 +133,19 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
+  </component>
+  <component name="VgoModernizerVersionTracker">
+    <upgrades>
+      <map>
+        <entry key="$PROJECT_DIR$/go.mod">
+          <value>
+            <VersionUpgradeInfo>
+              <version>1.26.5</version>
+              <timestamp>1786410359524</timestamp>
+            </VersionUpgradeInfo>
+          </value>
+        </entry>
+      </map>
+    </upgrades>
   </component>
 </project>

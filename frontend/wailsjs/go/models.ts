@@ -1,3 +1,26 @@
+export namespace agent {
+	
+	export class FrontendMessage {
+	    role: string;
+	    content: string;
+	    images?: string[];
+	    timestamp?: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new FrontendMessage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.role = source["role"];
+	        this.content = source["content"];
+	        this.images = source["images"];
+	        this.timestamp = source["timestamp"];
+	    }
+	}
+
+}
+
 export namespace core {
 	
 	export class AppSettings {
@@ -7,6 +30,16 @@ export namespace core {
 	    autoConnect: boolean;
 	    dbDefaultLimit: string;
 	    globalFontFamily: string;
+	    aiBaseUrl: string;
+	    aiApiKey: string;
+	    aiModel: string;
+	    aiTemperature: number;
+	    aiMaxContextTokens: number;
+	    aiCompressionStrategy: string;
+	    aiEnableMultimodal: boolean;
+	    aiSystemPrompt: string;
+	    aiWorkspaceDir: string;
+	    aiEnableWebSearch: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -20,6 +53,16 @@ export namespace core {
 	        this.autoConnect = source["autoConnect"];
 	        this.dbDefaultLimit = source["dbDefaultLimit"];
 	        this.globalFontFamily = source["globalFontFamily"];
+	        this.aiBaseUrl = source["aiBaseUrl"];
+	        this.aiApiKey = source["aiApiKey"];
+	        this.aiModel = source["aiModel"];
+	        this.aiTemperature = source["aiTemperature"];
+	        this.aiMaxContextTokens = source["aiMaxContextTokens"];
+	        this.aiCompressionStrategy = source["aiCompressionStrategy"];
+	        this.aiEnableMultimodal = source["aiEnableMultimodal"];
+	        this.aiSystemPrompt = source["aiSystemPrompt"];
+	        this.aiWorkspaceDir = source["aiWorkspaceDir"];
+	        this.aiEnableWebSearch = source["aiEnableWebSearch"];
 	    }
 	}
 	export class ServerConfig {

@@ -1,0 +1,226 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-bottom: 16px;
+}
+
+.headerSection {
+    margin-bottom: 4px;
+
+    .sectionTitle {
+        font-size: 15px;
+        font-weight: 600;
+        color: @text;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .sectionDesc {
+        font-size: 12px;
+        color: @text-dim;
+        margin-top: 4px;
+        line-height: 1.5;
+    }
+}
+
+.card {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 4px;
+
+    .cardTitle {
+        font-size: 13px;
+        font-weight: 600;
+        color: @text;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid @border;
+        margin-bottom: 2px;
+    }
+}
+
+.presetsRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .presetLabel {
+        font-size: 12px;
+        color: @text-dim;
+    }
+
+    .presetBtn {
+        font-size: 11.5px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        border: 1px solid @border;
+        background: @bg-1;
+        color: @text;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+            border-color: @accent;
+            color: @accent;
+            background: @bg-2;
+        }
+    }
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .label {
+        font-size: 12.5px;
+        font-weight: 500;
+        color: @text;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .subLabel {
+            font-size: 11px;
+            font-weight: normal;
+            color: @text-dim;
+        }
+    }
+
+    .helpText {
+        font-size: 11px;
+        color: @text-dim;
+        line-height: 1.4;
+    }
+}
+
+.rowGroup {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+
+    .formGroup {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.input, .select, .textarea {
+    width: 100%;
+    box-sizing: border-box;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 7px 10px;
+    color: @text;
+    font-size: 12.5px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+    &:focus {
+        border-color: @accent;
+        box-shadow: 0 0 0 2px rgba(var(--accent-rgb, 24, 144, 255), 0.1);
+    }
+
+    &::placeholder {
+        color: @text-dim;
+        opacity: 0.6;
+    }
+}
+
+.textarea {
+    resize: vertical;
+    min-height: 72px;
+    line-height: 1.5;
+}
+
+.select {
+    cursor: pointer;
+}
+
+.toggleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+
+    .toggleInfo {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+
+        .toggleTitle {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: @text;
+        }
+
+        .toggleSub {
+            font-size: 11px;
+            color: @text-dim;
+        }
+    }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 36px;
+        height: 20px;
+        flex-shrink: 0;
+
+        input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+
+            &:checked + .slider {
+                background-color: @accent;
+            }
+
+            &:checked + .slider:before {
+                transform: translateX(16px);
+            }
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: @border;
+            transition: .2s;
+            border-radius: 20px;
+
+            &:before {
+                position: absolute;
+                content: "";
+                height: 14px;
+                width: 14px;
+                left: 3px;
+                bottom: 3px;
+                background-color: white;
+                transition: .2s;
+                border-radius: 50%;
+            }
+        }
+    }
+}

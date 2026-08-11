@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@ant-design/x-markdown": "^2.9.0",
     "@codemirror/lang-json": "^6.0.2",
     "@codemirror/lang-sql": "^6.10.0",
     "@codemirror/language": "^6.12.4",

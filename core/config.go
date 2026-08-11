@@ -453,13 +453,37 @@ func (s *Store) persist() error {
 	return os.Rename(tmp, s.file)
 }
 
+func fillAiDefaults(settings *AppSettings) {
+	if settings.AiBaseURL == "" {
+		settings.AiBaseURL = "https://api.deepseek.com"
+	}
+	if settings.AiModel == "" {
+		settings.AiModel = "deepseek-chat"
+	}
+	if settings.AiTemperature <= 0 {
+		settings.AiTemperature = 0.7
+	}
+	if settings.AiMaxContextTokens <= 0 {
+		settings.AiMaxContextTokens = 4096
+	}
+	if settings.AiCompressionStrategy == "" {
+		settings.AiCompressionStrategy = "summary"
+	}
+	if settings.AiSystemPrompt == "" {
+		settings.AiSystemPrompt = "你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。"
+	}
+}
+
 func (s *Store) GetSettings() AppSettings {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	if s.settings.ThemeMode == "" {
-		return DefaultAppSettings()
+		st := DefaultAppSettings()
+		return st
 	}
-	return s.settings
+	st := s.settings
+	fillAiDefaults(&st)
+	return st
 }
 
 func (s *Store) SaveSettings(settings AppSettings) (AppSettings, error) {
@@ -477,6 +501,7 @@ func (s *Store) SaveSettings(settings AppSettings) (AppSettings, error) {
 	if settings.DbDefaultLimit == "" {
 		settings.DbDefaultLimit = "50"
 	}
+	fillAiDefaults(&settings)
 	s.settings = settings
 	if err := s.persist(); err != nil {
 		return settings, err

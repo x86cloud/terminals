@@ -155,11 +155,13 @@ export default function App() {
     const [sqliteSessions, setSqliteSessions] = useState<SqliteSessionInfo[]>([])
     const [activeSqliteId, setActiveSqliteId] = useState<string | null>(null)
 
-    // ---- 工具面板 (API 调试 / 开发工具集 / 设置) ----
+    // ---- 工具面板 (API 调试 / 开发工具集 / AI 智能体 / 设置) ----
     const [apiOpen, setApiOpen] = useState(false)
     const [apiActive, setApiActive] = useState(false)
     const [devToolsOpen, setDevToolsOpen] = useState(false)
     const [devToolsActive, setDevToolsActive] = useState(false)
+    const [aiAgentOpen, setAiAgentOpen] = useState(false)
+    const [aiAgentActive, setAiAgentActive] = useState(false)
     const [settingsOpen, setSettingsOpen] = useState(false)
     const [settings, setSettings] = useState<AppSettings>(getCachedSettings())
 
@@ -185,7 +187,7 @@ export default function App() {
         window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000)
     }, [])
 
-    const activateTab = useCallback((kind: ActiveKind | null, id: string | null = null) => {
+    const activateTab = useCallback((kind: 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite' | 'api' | 'devtools' | 'aiAgent' | null, id: string | null = null) => {
         setActiveId(kind === 'ssh' ? id : null)
         setActiveRedisId(kind === 'redis' ? id : null)
         setActiveMysqlId(kind === 'mysql' ? id : null)
@@ -194,6 +196,7 @@ export default function App() {
         setActiveSqliteId(kind === 'sqlite' ? id : null)
         setApiActive(kind === 'api')
         setDevToolsActive(kind === 'devtools')
+        setAiAgentActive(kind === 'aiAgent')
     }, [])
 
     /* ---------------- 基础数据加载与事件订阅 ---------------- */
@@ -548,6 +551,16 @@ export default function App() {
 
     /* ---------------- 工具面板与 Tab 激活 ---------------- */
 
+    const openAiAgent = useCallback(() => {
+        setAiAgentOpen(true)
+        activateTab('aiAgent')
+    }, [activateTab])
+
+    const closeAiAgent = useCallback(() => {
+        setAiAgentOpen(false)
+        setAiAgentActive(false)
+    }, [])
+
     const openApiTool = useCallback(() => {
         setApiOpen(true)
         activateTab('api')
@@ -600,6 +613,7 @@ export default function App() {
                 onRenameGroup={renameGroup}
                 onDeleteGroup={deleteGroup}
                 onMoveServer={moveServer}
+                onOpenAiAgent={openAiAgent}
                 onOpenApi={openApiTool}
                 onOpenDevTools={openDevTools}
                 onOpenSettings={() => setSettingsOpen(true)}
@@ -620,6 +634,8 @@ export default function App() {
                     activeMongoId={activeMongoId}
                     sqliteSessions={sqliteSessions}
                     activeSqliteId={activeSqliteId}
+                    aiAgentOpen={aiAgentOpen}
+                    aiAgentActive={aiAgentActive}
                     devToolsOpen={devToolsOpen}
                     devToolsActive={devToolsActive}
                     apiOpen={apiOpen}
@@ -631,6 +647,8 @@ export default function App() {
                     onCloseMqtt={(id) => void closeMqttSession(id)}
                     onCloseMongo={(id) => void closeMongoSession(id)}
                     onCloseSqlite={(id) => void closeSqliteSession(id)}
+                    onActivateAiAgent={openAiAgent}
+                    onCloseAiAgent={closeAiAgent}
                     onActivateDevTools={openDevTools}
                     onCloseDevTools={closeDevTools}
                     onActivateApi={openApiTool}
@@ -651,10 +669,13 @@ export default function App() {
                     activeMongoId={activeMongoId}
                     sqliteSessions={sqliteSessions}
                     activeSqliteId={activeSqliteId}
+                    aiAgentOpen={aiAgentOpen}
+                    aiAgentActive={aiAgentActive}
                     devToolsOpen={devToolsOpen}
                     devToolsActive={devToolsActive}
                     apiOpen={apiOpen}
                     apiActive={apiActive}
+                    settings={settings}
                     onPathChange={handlePathChange}
                     onNotify={notify}
                     onCloseRedis={(id) => void closeRedisSession(id)}
@@ -668,6 +689,7 @@ export default function App() {
                     onCloseMqtt={(id) => void closeMqttSession(id)}
                     onCloseMongo={(id) => void closeMongoSession(id)}
                     onCloseSqlite={(id) => void closeSqliteSession(id)}
+                    onCloseAiAgent={closeAiAgent}
                     onMongoChange={(id, database) =>
                         setMongoSessions((prev) => prev.map((x) => (x.id === id ? {...x, database} : x)))
                     }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"terminal/agent"
 	"terminal/core"
 	"terminal/db"
 	"terminal/mongo"
@@ -53,6 +54,7 @@ func (a *App) startup(ctx context.Context) {
 	a.mongoMgr.SetContext(ctx)
 	db.SqliteMgr.SetContext(ctx)
 	db.MysqlExMgr.SetContext(ctx)
+	agent.DefaultManager.SetContext(ctx)
 }
 
 func (a *App) shutdown(ctx context.Context) {

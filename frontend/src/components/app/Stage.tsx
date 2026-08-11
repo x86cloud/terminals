@@ -8,10 +8,11 @@ import MqttClient from '../../pages/mqtt/MqttClient'
 import MongoClient from '../../pages/mongo/MongoClient'
 import SqliteClient from '../../pages/sqlite/SqliteClient'
 import ApiClient from '../../pages/api/ApiClient'
+import AiAgentPanel from '../../pages/agent/AiAgentPanel'
 import DevTools from '../DevTools'
 import g from '../../styles/global.module.less'
 import a from './Stage.module.less'
-import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo } from '../../types'
+import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, AppSettings } from '../../types'
 
 const hiddenPane = { display: 'none' as const }
 const shownPane = { display: 'flex' as const, flex: 1, minHeight: 0, minWidth: 0 }
@@ -30,10 +31,13 @@ export interface StageProps {
     activeMongoId: string | null
     sqliteSessions: SqliteSessionInfo[]
     activeSqliteId: string | null
+    aiAgentOpen: boolean
+    aiAgentActive: boolean
     devToolsOpen: boolean
     devToolsActive: boolean
     apiOpen: boolean
     apiActive: boolean
+    settings: AppSettings
     onPathChange: (sessionId: string, p: string) => void
     onNotify: (msg: string, kind?: 'info' | 'error') => void
     onCloseRedis: (id: string) => void
@@ -44,6 +48,7 @@ export interface StageProps {
     onCloseMongo: (id: string) => void
     onMongoChange: (id: string, database: string) => void
     onCloseSqlite: (id: string) => void
+    onCloseAiAgent: () => void
     onCloseDevTools: () => void
     onCloseApi: () => void
     onNewServer: () => void
@@ -52,12 +57,12 @@ export interface StageProps {
 export default function Stage(props: StageProps) {
     const {
         sessions, activeId, nativeDrop, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, devToolsOpen, devToolsActive, apiOpen, apiActive,
+        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive, settings,
         onPathChange, onNotify, onCloseRedis, onRedisDbChange, onCloseMysql, onMysqlChange,
-        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseDevTools, onCloseApi, onNewServer,
+        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseAiAgent, onCloseDevTools, onCloseApi, onNewServer,
     } = props
 
-    const empty = sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen
+    const empty = sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen && !aiAgentOpen
 
     return (
         <div className={a.stage}>
@@ -129,6 +134,14 @@ export default function Stage(props: StageProps) {
                     </ErrorBoundary>
                 </div>
             ))}
+
+            {aiAgentOpen && (
+                <div style={aiAgentActive ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="AI 智能体渲染异常" onClose={onCloseAiAgent}>
+                        <AiAgentPanel settings={settings} />
+                    </ErrorBoundary>
+                </div>
+            )}
 
             {devToolsOpen && (
                 <div style={devToolsActive ? shownPane : hiddenPane}>

@@ -861,6 +861,23 @@ export interface AppSettings {
     autoConnect: boolean
     dbDefaultLimit: string
     globalFontFamily?: string
+    aiBaseUrl?: string
+    aiApiKey?: string
+    aiModel?: string
+    aiTemperature?: number
+    aiMaxContextTokens?: number
+    aiCompressionStrategy?: 'summary' | 'sliding'
+    aiEnableMultimodal?: boolean
+    aiSystemPrompt?: string
+    aiWorkspaceDir?: string
+    aiEnableWebSearch?: boolean
+}
+
+export interface AiMessage {
+    role: 'system' | 'user' | 'assistant'
+    content: string
+    images?: string[]
+    timestamp?: number
 }
 
 export interface SSHDockerContainer {

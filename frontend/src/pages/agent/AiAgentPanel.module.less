@@ -1,0 +1,546 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.agentContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: @bg;
+    color: @text;
+    overflow: hidden;
+}
+
+.headerBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: @bg-elev;
+    border-bottom: 1px solid @border;
+    flex-shrink: 0;
+
+    .titleSection {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 14px;
+
+        .modelTag {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: @bg-2;
+            color: @text-dim;
+            border: 1px solid @border;
+        }
+
+        .badgeMultimodal {
+            font-size: 11px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            background: rgba(72, 199, 116, 0.15);
+            color: #48c774;
+            border: 1px solid rgba(72, 199, 116, 0.3);
+        }
+    }
+
+    .actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+}
+
+.noticeBanner {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 16px;
+    background: rgba(250, 173, 20, 0.12);
+    color: #faad14;
+    border-bottom: 1px solid rgba(250, 173, 20, 0.25);
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.chatList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: @text-dim;
+    gap: 12px;
+
+    .emptyIcon {
+        opacity: 0.5;
+    }
+
+    .emptyTitle {
+        font-size: 16px;
+        font-weight: 600;
+        color: @text;
+    }
+
+    .emptySub {
+        font-size: 13px;
+        max-width: 400px;
+        text-align: center;
+        line-height: 1.5;
+    }
+}
+
+.messageRow {
+    display: flex;
+    gap: 12px;
+
+    &.user {
+        flex-direction: row-reverse;
+
+        .avatar {
+            background: @accent-dim;
+            color: #fff;
+        }
+
+        .bubble {
+            background: @accent-dim;
+            color: #fff;
+            border-radius: 12px 2px 12px 12px;
+
+            .markdownBody {
+                color: #fff;
+
+                p, span, code {
+                    color: #fff;
+                }
+            }
+        }
+    }
+
+    &.assistant {
+        flex-direction: row;
+
+        .avatar {
+            background: @bg-elev;
+            color: @accent;
+            border: 1px solid @border;
+        }
+
+        .bubble {
+            background: @bg-elev;
+            color: @text;
+            border: 1px solid @border;
+            border-radius: 2px 12px 12px 12px;
+        }
+    }
+
+    &.system {
+        justify-content: center;
+
+        .systemNotice {
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            background: @bg-2;
+            color: @text-dim;
+            border: 1px solid @border;
+        }
+    }
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.6;
+    word-break: break-word;
+}
+
+.imageGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+
+    .imgThumb {
+        max-width: 200px;
+        max-height: 150px;
+        border-radius: 6px;
+        object-fit: cover;
+        border: 1px solid @border;
+    }
+}
+
+.markdownBody {
+    font-size: 13px;
+    line-height: 1.6;
+
+    p {
+        margin: 0 0 8px 0;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+
+    pre {
+        background: @bg-1;
+        border: 1px solid @border;
+        border-radius: 6px;
+        padding: 10px;
+        overflow-x: auto;
+        font-family: Consolas, monospace;
+        font-size: 12px;
+        margin: 8px 0;
+    }
+
+    code {
+        font-family: Consolas, monospace;
+        background: rgba(0, 0, 0, 0.08);
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-size: 12px;
+    }
+}
+
+.inputArea {
+    padding: 12px 16px;
+    background: @bg-elev;
+    border-top: 1px solid @border;
+    flex-shrink: 0;
+}
+
+.previewBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    overflow-x: auto;
+
+    .previewItem {
+        position: relative;
+
+        img {
+            width: 50px;
+            height: 50px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid @border;
+        }
+
+        .removeBtn {
+            position: absolute;
+            top: -4px;
+            right: -4px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+    }
+}
+
+.inputBoxRow {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+
+    .textarea {
+        flex: 1;
+        background: @bg;
+        border: 1px solid @border;
+        border-radius: 8px;
+        padding: 8px 12px;
+        color: @text;
+        font-family: inherit;
+        font-size: 13px;
+        line-height: 1.5;
+        resize: none;
+        outline: none;
+        min-height: 40px;
+        max-height: 120px;
+
+        &:focus {
+            border-color: @accent;
+        }
+    }
+}
+
+.toolbarRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 12px;
+    color: @text-dim;
+
+    .workspaceInline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 60%;
+
+        .wsPath {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: @text;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            .pathText {
+                font-family: Consolas, monospace;
+                color: @accent;
+                font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 220px;
+            }
+
+            .unsetText {
+                color: @text-dim;
+            }
+        }
+
+        .wsActions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+    }
+
+    .toolbarRight {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        .sendBtn {
+            height: 26px;
+            padding: 0 14px;
+            font-size: 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .divider {
+            width: 1px;
+            height: 14px;
+            background: rgba(127, 127, 127, 0.3);
+        }
+    }
+
+    .contextRingWrapper {
+        position: relative;
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+
+        .ringBtn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.2s ease;
+
+            &:hover {
+                background: rgba(127, 127, 127, 0.15);
+            }
+
+            svg {
+                transform: rotate(-90deg);
+            }
+        }
+
+        .tooltipCard {
+            position: absolute;
+            bottom: calc(100% + 8px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #ffffff;
+            color: #1f1f1f;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            border-radius: 6px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            white-space: nowrap;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+            z-index: 100;
+            pointer-events: none;
+
+            &::after {
+                content: '';
+                position: absolute;
+                top: 100%;
+                left: 50%;
+                transform: translateX(-50%);
+                border-width: 5px;
+                border-style: solid;
+                border-color: #ffffff transparent transparent transparent;
+            }
+        }
+    }
+
+    .workspaceInline {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        max-width: 65%;
+
+        .wsPath {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            color: @text;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+
+            .pathText {
+                font-family: Consolas, monospace;
+                color: @accent;
+                font-weight: 500;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                max-width: 200px;
+            }
+
+            .unsetText {
+                color: @text-dim;
+            }
+        }
+
+        .wsActions {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+    }
+}
+
+.confirmBox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: rgba(255, 77, 79, 0.1);
+    border: 1px solid rgba(255, 77, 79, 0.3);
+    border-radius: 8px;
+    color: #ff4d4f;
+    font-size: 12.5px;
+    margin-top: 8px;
+
+    .confirmInfo {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+
+        strong {
+            color: @text;
+            word-break: break-all;
+        }
+    }
+
+    .confirmBtnGroup {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .btnApprove {
+            background: #ff4d4f;
+            color: #fff;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            font-weight: 500;
+
+            &:hover {
+                opacity: 0.9;
+            }
+        }
+
+        .btnReject {
+            background: @bg-2;
+            color: @text;
+            border: 1px solid @border;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+
+            &:hover {
+                background: @bg-3;
+            }
+        }
+    }
+}
+
+.toolCallPill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: rgba(24, 144, 255, 0.1);
+    border: 1px solid rgba(24, 144, 255, 0.25);
+    border-radius: 12px;
+    color: @accent;
+    font-size: 12px;
+    margin-bottom: 8px;
+    font-weight: 500;
+
+    .spinIcon {
+        animation: spin 1.2s linear infinite;
+    }
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

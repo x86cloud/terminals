@@ -31,6 +31,7 @@ interface Props {
     onRenameGroup: (g: ServerGroup) => void
     onDeleteGroup: (id: string) => void
     onMoveServer: (serverId: string, groupId: string) => void
+    onOpenAiAgent: () => void
     onOpenApi: () => void
     onOpenDevTools: () => void
     onOpenSettings: () => void
@@ -61,6 +62,7 @@ export default function Sidebar({
                                     onRenameGroup,
                                     onDeleteGroup,
                                     onMoveServer,
+                                    onOpenAiAgent,
                                     onOpenApi,
                                     onOpenDevTools,
                                     onOpenSettings,
@@ -474,6 +476,10 @@ export default function Sidebar({
             </div>
 
             <div className={s.tools}>
+                <button className={s.toolItem} onClick={onOpenAiAgent}>
+                    <Icon name="bot" size={15}/>
+                    <span>AI 智能体</span>
+                </button>
                 <button className={s.toolItem} onClick={onOpenDevTools}>
                     <Icon name="chart" size={15}/>
                     <span>开发工具</span>

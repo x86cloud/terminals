@@ -3,6 +3,7 @@ import Icon from '../../components/Icon'
 import {AppSettings} from '../../types'
 import {applyThemeMode, applyGlobalFont} from '../../utils/theme'
 import AppearanceTab from './AppearanceTab'
+import AiAgentTab from './AiAgentTab'
 import AboutTab from './AboutTab'
 import g from '../../styles/global.module.less'
 import s from './SettingsModal.module.less'
@@ -14,17 +15,38 @@ interface Props {
     onSave: (newSettings: AppSettings) => void
 }
 
-type SettingsTab = 'appearance' | 'about'
+type SettingsTab = 'appearance' | 'aiAgent' | 'about'
 
 export default function SettingsModal({open, settings, onClose, onSave}: Props) {
     const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
     const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('light')
     const [globalFontFamily, setGlobalFontFamily] = useState('system')
 
+    const [aiBaseUrl, setAiBaseUrl] = useState('https://api.deepseek.com')
+    const [aiApiKey, setAiApiKey] = useState('')
+    const [aiModel, setAiModel] = useState('deepseek-chat')
+    const [aiTemperature, setAiTemperature] = useState(0.7)
+    const [aiMaxContextTokens, setAiMaxContextTokens] = useState(4096)
+    const [aiCompressionStrategy, setAiCompressionStrategy] = useState<'summary' | 'sliding'>('summary')
+    const [aiEnableMultimodal, setAiEnableMultimodal] = useState(false)
+    const [aiEnableWebSearch, setAiEnableWebSearch] = useState(false)
+    const [aiSystemPrompt, setAiSystemPrompt] = useState('你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
+    const [aiWorkspaceDir, setAiWorkspaceDir] = useState('')
+
     useEffect(() => {
         if (open && settings) {
             setThemeMode(settings.themeMode || 'light')
             setGlobalFontFamily(settings.globalFontFamily || 'system')
+            setAiBaseUrl(settings.aiBaseUrl || 'https://api.deepseek.com')
+            setAiApiKey(settings.aiApiKey || '')
+            setAiModel(settings.aiModel || 'deepseek-chat')
+            setAiTemperature(settings.aiTemperature ?? 0.7)
+            setAiMaxContextTokens(settings.aiMaxContextTokens || 4096)
+            setAiCompressionStrategy(settings.aiCompressionStrategy || 'summary')
+            setAiEnableMultimodal(!!settings.aiEnableMultimodal)
+            setAiEnableWebSearch(!!settings.aiEnableWebSearch)
+            setAiSystemPrompt(settings.aiSystemPrompt || '你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
+            setAiWorkspaceDir(settings.aiWorkspaceDir || '')
         }
     }, [open, settings])
 
@@ -51,7 +73,18 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             ...settings,
             themeMode,
             globalFontFamily,
+            aiBaseUrl,
+            aiApiKey,
+            aiModel,
+            aiTemperature,
+            aiMaxContextTokens,
+            aiCompressionStrategy,
+            aiEnableMultimodal,
+            aiEnableWebSearch,
+            aiSystemPrompt,
+            aiWorkspaceDir,
         })
+        onClose()
     }
 
     return (
@@ -77,6 +110,12 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                             <Icon name="chart" size={14}/> 外观主题
                         </button>
                         <button
+                            className={`${s.navItem}${activeTab === 'aiAgent' ? ' ' + s.active : ''}`}
+                            onClick={() => setActiveTab('aiAgent')}
+                        >
+                            <Icon name="bot" size={14}/> AI 智能体
+                        </button>
+                        <button
                             className={`${s.navItem}${activeTab === 'about' ? ' ' + s.active : ''}`}
                             onClick={() => setActiveTab('about')}
                         >
@@ -92,6 +131,31 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                                 globalFontFamily={globalFontFamily}
                                 onThemeChange={handleThemeChange}
                                 onGlobalFontChange={handleGlobalFontChange}
+                            />
+                        )}
+
+                        {activeTab === 'aiAgent' && (
+                            <AiAgentTab
+                                aiBaseUrl={aiBaseUrl}
+                                aiApiKey={aiApiKey}
+                                aiModel={aiModel}
+                                aiTemperature={aiTemperature}
+                                aiMaxContextTokens={aiMaxContextTokens}
+                                aiCompressionStrategy={aiCompressionStrategy}
+                                aiEnableMultimodal={aiEnableMultimodal}
+                                aiEnableWebSearch={aiEnableWebSearch}
+                                aiSystemPrompt={aiSystemPrompt}
+                                onChange={(fields) => {
+                                    if (fields.aiBaseUrl !== undefined) setAiBaseUrl(fields.aiBaseUrl)
+                                    if (fields.aiApiKey !== undefined) setAiApiKey(fields.aiApiKey)
+                                    if (fields.aiModel !== undefined) setAiModel(fields.aiModel)
+                                    if (fields.aiTemperature !== undefined) setAiTemperature(fields.aiTemperature)
+                                    if (fields.aiMaxContextTokens !== undefined) setAiMaxContextTokens(fields.aiMaxContextTokens)
+                                    if (fields.aiCompressionStrategy !== undefined) setAiCompressionStrategy(fields.aiCompressionStrategy)
+                                    if (fields.aiEnableMultimodal !== undefined) setAiEnableMultimodal(fields.aiEnableMultimodal)
+                                    if (fields.aiEnableWebSearch !== undefined) setAiEnableWebSearch(fields.aiEnableWebSearch)
+                                    if (fields.aiSystemPrompt !== undefined) setAiSystemPrompt(fields.aiSystemPrompt)
+                                }}
                             />
                         )}
 

@@ -55,6 +55,7 @@ import type {
     SSHDockerContainer,
     SSHDockerImage,
     AppSettings,
+    AiMessage,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -345,6 +346,18 @@ export const API = {
     mysqlBackupToFile: (id: string, db: string): Promise<string> => app().MysqlBackupToFile(id, db),
     readLocalFile: (filePath: string): Promise<string> => app().ReadLocalFile(filePath),
     writeLocalFile: (filePath: string, content: string): Promise<void> => app().WriteLocalFile(filePath, content),
+
+    // AI Agent
+    agentSend: (sessionId: string, messages: AiMessage[]): Promise<string> =>
+        app().AgentSend(sessionId, messages),
+    agentGetHistory: (): Promise<AiMessage[]> => app().AgentGetHistory(),
+    agentSaveHistory: (messages: AiMessage[]): Promise<void> => app().AgentSaveHistory(messages),
+    agentClearHistory: (): Promise<void> => app().AgentClearHistory(),
+    agentSelectWorkspaceDir: (): Promise<string> => app().AgentSelectWorkspaceDir(),
+    agentSetWorkspaceDir: (dir: string): Promise<string> => app().AgentSetWorkspaceDir(dir),
+    agentGetWorkspaceDir: (): Promise<string> => app().AgentGetWorkspaceDir(),
+    agentConfirmTool: (confirmId: string, approved: boolean): Promise<boolean> =>
+        app().AgentConfirmTool(confirmId, approved),
     mqttConnect: (id: string): Promise<MqttSessionInfo> => app().MqttConnect(id),
     mqttClose: (id: string): Promise<void> => app().MqttClose(id),
     mqttPublish: (

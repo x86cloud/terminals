@@ -19,6 +19,7 @@ export type IconName =
     | 'search'
     | 'newFolder'
     | 'copy'
+    | 'check'
     | 'panel'
     | 'database'
     | 'table'
@@ -36,8 +37,37 @@ export type IconName =
     | 'layers'
     | 'maximize'
     | 'minimize'
+    | 'bot'
+    | 'user'
+    | 'info'
+    | 'paperclip'
 
 const PATHS: Record<IconName, React.ReactNode> = {
+    bot: (
+        <>
+            <rect x="3" y="11" width="18" height="10" rx="2"/>
+            <circle cx="12" cy="5" r="2"/>
+            <path d="M12 7v4M8 15h.01M16 15h.01"/>
+        </>
+    ),
+    user: (
+        <>
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+        </>
+    ),
+    info: (
+        <>
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </>
+    ),
+    paperclip: (
+        <>
+            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </>
+    ),
     maximize: (
         <>
             <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
@@ -194,6 +224,7 @@ const PATHS: Record<IconName, React.ReactNode> = {
             <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
         </>
     ),
+    check: <path d="M20 6L9 17l-5-5"/>,
 }
 
 interface Props {
