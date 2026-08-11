@@ -1,12 +1,12 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react'
-import {Terminal} from 'xterm'
-import {FitAddon} from 'xterm-addon-fit'
-import {WebLinksAddon} from 'xterm-addon-web-links'
-import {SearchAddon} from 'xterm-addon-search'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { Terminal } from 'xterm'
+import { FitAddon } from 'xterm-addon-fit'
+import { WebLinksAddon } from 'xterm-addon-web-links'
+import { SearchAddon } from 'xterm-addon-search'
 import 'xterm/css/xterm.css'
-import {API, emitEvent, subscribe} from '../../../api'
-import {base64ToBytes} from '../../../utils'
-import ContextMenu, {closedMenu, MenuState} from '../../../components/ContextMenu'
+import { API, emitEvent, subscribe } from '../../../api'
+import { base64ToBytes } from '../../../utils'
+import ContextMenu, { closedMenu, MenuState } from '../../../components/ContextMenu'
 import Icon from '../../../components/Icon'
 import t from './Terminal.module.less'
 
@@ -61,7 +61,7 @@ const DARK_TERM_THEME = {
     brightWhite: '#ffffff',
 }
 
-export default function TerminalView({sessionId, active}: Props) {
+export default function TerminalView({ sessionId, active }: Props) {
     const hostRef = useRef<HTMLDivElement>(null)
     const termRef = useRef<Terminal | null>(null)
     const fitRef = useRef<FitAddon | null>(null)
@@ -126,7 +126,7 @@ export default function TerminalView({sessionId, active}: Props) {
             }
         })
 
-        observer.observe(document.documentElement, {attributes: true, attributeFilter: ['data-theme']})
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
         return () => observer.disconnect()
     }, [])
 
@@ -166,7 +166,7 @@ export default function TerminalView({sessionId, active}: Props) {
             API.sendInput(sessionId, data).catch(() => undefined)
         })
 
-        term.onResize(({cols, rows}) => {
+        term.onResize(({ cols, rows }) => {
             debouncedResize(cols, rows)
         })
 
@@ -256,12 +256,12 @@ export default function TerminalView({sessionId, active}: Props) {
 
     const handleSearchNext = () => {
         if (!searchQuery || !searchRef.current) return
-        searchRef.current.findNext(searchQuery, {caseSensitive, incremental: true})
+        searchRef.current.findNext(searchQuery, { caseSensitive, incremental: true })
     }
 
     const handleSearchPrev = () => {
         if (!searchQuery || !searchRef.current) return
-        searchRef.current.findPrevious(searchQuery, {caseSensitive})
+        searchRef.current.findPrevious(searchQuery, { caseSensitive })
     }
 
     const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -280,7 +280,7 @@ export default function TerminalView({sessionId, active}: Props) {
         const q = e.target.value
         setSearchQuery(q)
         if (q && searchRef.current) {
-            searchRef.current.findNext(q, {caseSensitive, incremental: true})
+            searchRef.current.findNext(q, { caseSensitive, incremental: true })
         }
     }
 
@@ -303,7 +303,7 @@ export default function TerminalView({sessionId, active}: Props) {
                             const next = !caseSensitive
                             setCaseSensitive(next)
                             if (searchQuery && searchRef.current) {
-                                searchRef.current.findNext(searchQuery, {caseSensitive: next, incremental: true})
+                                searchRef.current.findNext(searchQuery, { caseSensitive: next, incremental: true })
                             }
                         }}
                     >
@@ -340,7 +340,7 @@ export default function TerminalView({sessionId, active}: Props) {
                                 disabled: !hasSelection,
                                 onClick: copySelection,
                             },
-                            {key: 'paste', label: '粘贴', icon: 'file', onClick: paste},
+                            { key: 'paste', label: '粘贴', icon: 'file', onClick: paste },
                             {
                                 key: 'askAi',
                                 label: '问AI',
@@ -348,7 +348,7 @@ export default function TerminalView({sessionId, active}: Props) {
                                 disabled: !hasSelection,
                                 onClick: () => {
                                     if (selectionText) {
-                                        const prompt = `请分析并解答以下终端选中的内容：\n\`\`\`\n${selectionText}\n\`\`\``
+                                        const prompt = `请分析并解答以下远程服务器上终端选中的内容：\n\`\`\`\n${selectionText}\n\`\`\``
                                         emitEvent('agent:ask', prompt)
                                     }
                                 },
@@ -359,7 +359,7 @@ export default function TerminalView({sessionId, active}: Props) {
                                 icon: 'search',
                                 onClick: () => setSearchOpen(true),
                             },
-                            {key: 'd', label: '', divider: true},
+                            { key: 'd', label: '', divider: true },
                             {
                                 key: 'clear',
                                 label: '清屏',
@@ -370,7 +370,7 @@ export default function TerminalView({sessionId, active}: Props) {
                     })
                 }}
             />
-            <ContextMenu state={menu} onClose={() => setMenu(closedMenu)}/>
+            <ContextMenu state={menu} onClose={() => setMenu(closedMenu)} />
         </div>
     )
 }

@@ -535,6 +535,18 @@ export function subscribe(event: string, handler: AnyFn): () => void {
     }
 }
 
+let pendingAskPrompt: string | null = null
+
+export function setPendingAsk(prompt: string): void {
+    pendingAskPrompt = prompt
+}
+
+export function consumePendingAsk(): string | null {
+    const p = pendingAskPrompt
+    pendingAskPrompt = null
+    return p
+}
+
 export function emitEvent(event: string, ...args: any[]): void {
     subscribers.get(event)?.forEach((fn) => fn(...args))
     if (w.runtime?.EventsEmit) {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Icon from '../../components/Icon'
 import MarkdownViewer from '../../components/common/MarkdownViewer'
-import { API, subscribe } from '../../api'
+import { API, consumePendingAsk, subscribe } from '../../api'
 import { AiMessage, AppSettings } from '../../types'
 import g from '../../styles/global.module.less'
 import s from './AiAgentPanel.module.less'
@@ -147,11 +147,20 @@ export default function AiAgentPanel({ settings }: Props) {
             }
         })
 
+        const pendingPrompt = consumePendingAsk()
+        if (pendingPrompt) {
+            setInput(pendingPrompt)
+            setTimeout(() => {
+                handleSendRef.current(pendingPrompt)
+            }, 100)
+        }
+
         const unSubAsk = subscribe('agent:ask', (prompt: string) => {
-            if (prompt) {
-                setInput(prompt)
+            const finalPrompt = prompt || consumePendingAsk()
+            if (finalPrompt) {
+                setInput(finalPrompt)
                 setTimeout(() => {
-                    handleSendRef.current(prompt)
+                    handleSendRef.current(finalPrompt)
                 }, 50)
             }
         })

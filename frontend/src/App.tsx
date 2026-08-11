@@ -6,7 +6,7 @@ import {ConfirmModal, ConfirmState} from './components/Modal'
 import SessionTabs from './components/app/SessionTabs'
 import Stage from './components/app/Stage'
 import TransferBar from './components/TransferBar'
-import {API, registerNativeFileDrop, subscribe, unregisterNativeFileDrop} from './api'
+import {API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop} from './api'
 import {
     ServerConfig,
     ServerGroup,
@@ -320,7 +320,10 @@ export default function App() {
                 prev.map((s) => (s.id === sessionId ? {...s, connected: false} : s))
             )
         })
-        const offAsk = subscribe('agent:ask', () => {
+        const offAsk = subscribe('agent:ask', (prompt: string) => {
+            if (prompt) {
+                setPendingAsk(prompt)
+            }
             setAiAgentOpen(true)
             activateTab('aiAgent')
         })
