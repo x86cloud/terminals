@@ -387,6 +387,10 @@ func (m *AgentManager) StreamChat(
 
 		if event.Output != nil && event.Output.MessageOutput != nil {
 			mv := event.Output.MessageOutput
+			if mv.Role == schema.Tool || (mv.Role != schema.Assistant && mv.ToolName != "") {
+				continue
+			}
+
 			if mv.IsStreaming && mv.MessageStream != nil {
 				defer mv.MessageStream.Close()
 				for {
@@ -458,15 +462,17 @@ func (m *AgentManager) StreamChat(
 					}
 				}
 			} else if mv.Message != nil {
-				if mv.Message.ReasoningContent != "" {
-					reasoningResp.WriteString(mv.Message.ReasoningContent)
-					if onReasoningChunk != nil {
-						onReasoningChunk(mv.Message.ReasoningContent)
+				if mv.Role == schema.Assistant || mv.Role == "" {
+					if mv.Message.ReasoningContent != "" {
+						reasoningResp.WriteString(mv.Message.ReasoningContent)
+						if onReasoningChunk != nil {
+							onReasoningChunk(mv.Message.ReasoningContent)
+						}
 					}
-				}
-				if mv.Message.Content != "" {
-					fullResp.WriteString(mv.Message.Content)
-					onChunk(mv.Message.Content)
+					if mv.Message.Content != "" {
+						fullResp.WriteString(mv.Message.Content)
+						onChunk(mv.Message.Content)
+					}
 				}
 			}
 		}
