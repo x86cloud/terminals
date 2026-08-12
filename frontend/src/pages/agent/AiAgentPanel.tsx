@@ -147,6 +147,31 @@ export default function AiAgentPanel({ settings }: Props) {
             }
         })
 
+        const unSubToolEvent = subscribe(`agent:tool_event:${SESSION_ID}`, (evt: any) => {
+            if (evt && evt.id) {
+                setMessages((prev) => {
+                    const updated = [
+                        ...prev,
+                        {
+                            role: 'assistant' as const,
+                            content: '',
+                            tool_calls: [{ id: evt.id, name: evt.name, args: evt.args }],
+                            timestamp: Date.now(),
+                        },
+                        {
+                            role: 'tool' as const,
+                            tool_call_id: evt.id,
+                            name: evt.name,
+                            content: evt.result,
+                            timestamp: Date.now(),
+                        },
+                    ]
+                    API.agentSaveHistory(updated).catch(() => { })
+                    return updated
+                })
+            }
+        })
+
         const pendingPrompt = consumePendingAsk()
         if (pendingPrompt) {
             setInput(pendingPrompt)
@@ -172,9 +197,15 @@ export default function AiAgentPanel({ settings }: Props) {
             unSubDone()
             unSubConfirm()
             unSubToolStart()
+            unSubToolEvent()
             unSubAsk()
         }
     }, [])
+
+    const [expandedTools, setExpandedTools] = useState<Record<number, boolean>>({})
+    const toggleExpandTool = (idx: number) => {
+        setExpandedTools((prev) => ({ ...prev, [idx]: !prev[idx] }))
+    }
 
     const handleSelectWorkspace = async () => {
         try {
@@ -333,31 +364,61 @@ export default function AiAgentPanel({ settings }: Props) {
                     </div>
                 )}
 
-                {messages.map((msg, idx) => (
-                    <div key={idx} className={`${s.messageRow} ${s[msg.role]}`}>
-                        {msg.role !== 'system' && (
-                            <div className={s.avatar}>
-                                <Icon name={msg.role === 'user' ? 'user' : 'bot'} size={16} />
+                {messages.map((msg, idx) => {
+                    if (msg.role === 'tool') {
+                        const isExpanded = !!expandedTools[idx]
+                        return (
+                            <div key={idx} className={s.toolMsgRow}>
+                                <div className={s.toolMsgCard}>
+                                    <div className={s.toolHeader} onClick={() => toggleExpandTool(idx)}>
+                                        <div className={s.toolHeaderLeft}>
+                                            <Icon name="terminal" size={13} />
+                                            <span>🛠️ 工具调用: <strong>{msg.name || 'tool'}</strong></span>
+                                            <span className={s.toolStatusTag}>已完成</span>
+                                        </div>
+                                        <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
+                                    </div>
+                                    {isExpanded && (
+                                        <div className={s.toolBody}>
+                                            <div className={s.toolSectionTitle}>返回结果:</div>
+                                            <pre className={s.toolCode}>{msg.content}</pre>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                        )}
-                        <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
-                            {msg.images && msg.images.length > 0 && (
-                                <div className={s.imageGrid}>
-                                    {msg.images.map((img, i) => (
-                                        <img key={i} src={img} alt="attached" className={s.imgThumb} />
-                                    ))}
+                        )
+                    }
+
+                    if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content) {
+                        return null
+                    }
+
+                    return (
+                        <div key={idx} className={`${s.messageRow} ${s[msg.role]}`}>
+                            {msg.role !== 'system' && (
+                                <div className={s.avatar}>
+                                    <Icon name={msg.role === 'user' ? 'user' : 'bot'} size={16} />
                                 </div>
                             )}
-                            <div className={s.markdownBody}>
-                                {msg.role === 'assistant' ? (
-                                    <MarkdownViewer content={msg.content} />
-                                ) : (
-                                    msg.content.split('\n').map((line, i) => <p key={i}>{line}</p>)
+                            <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
+                                {msg.images && msg.images.length > 0 && (
+                                    <div className={s.imageGrid}>
+                                        {msg.images.map((img, i) => (
+                                            <img key={i} src={img} alt="attached" className={s.imgThumb} />
+                                        ))}
+                                    </div>
                                 )}
+                                <div className={s.markdownBody}>
+                                    {msg.role === 'assistant' ? (
+                                        <MarkdownViewer content={msg.content} />
+                                    ) : (
+                                        msg.content.split('\n').map((line, i) => <p key={i}>{line}</p>)
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    )
+                })}
 
                 {/* Streaming Response Bubble */}
                 {isGenerating && (

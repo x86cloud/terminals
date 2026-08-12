@@ -18,11 +18,20 @@ import (
 	"github.com/cloudwego/eino/schema"
 )
 
+type ToolCallItem struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Args string `json:"args"`
+}
+
 type FrontendMessage struct {
-	Role      string   `json:"role"`
-	Content   string   `json:"content"`
-	Images    []string `json:"images,omitempty"`
-	Timestamp int64    `json:"timestamp,omitempty"`
+	Role       string         `json:"role"`
+	Content    string         `json:"content"`
+	Images     []string       `json:"images,omitempty"`
+	ToolCalls  []ToolCallItem `json:"tool_calls,omitempty"`
+	ToolCallID string         `json:"tool_call_id,omitempty"`
+	Name       string         `json:"name,omitempty"`
+	Timestamp  int64          `json:"timestamp,omitempty"`
 }
 
 type AgentManager struct {
@@ -192,7 +201,19 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 		case "system":
 			out = append(out, schema.SystemMessage(content))
 		case "assistant":
-			out = append(out, schema.AssistantMessage(content, nil))
+			var toolCalls []schema.ToolCall
+			for _, tc := range msg.ToolCalls {
+				toolCalls = append(toolCalls, schema.ToolCall{
+					ID: tc.ID,
+					Function: schema.FunctionCall{
+						Name:      tc.Name,
+						Arguments: tc.Args,
+					},
+				})
+			}
+			out = append(out, schema.AssistantMessage(content, toolCalls))
+		case "tool":
+			out = append(out, schema.ToolMessage(content, msg.ToolCallID))
 		case "user":
 			if len(msg.Images) > 0 && m.cfg.AiEnableMultimodal {
 				var parts []schema.MessageInputPart
@@ -225,6 +246,16 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 	return out
 }
 
+func alignCutToUserMessage(messages []FrontendMessage, cutIdx int) int {
+	for cutIdx > 0 && cutIdx < len(messages) && strings.ToLower(messages[cutIdx].Role) != "user" {
+		cutIdx--
+	}
+	if cutIdx < 0 {
+		return 0
+	}
+	return cutIdx
+}
+
 func (m *AgentManager) applyContextCompression(ctx context.Context, messages []FrontendMessage) ([]FrontendMessage, string) {
 	maxTokens := m.cfg.AiMaxContextTokens
 	if maxTokens <= 0 {
@@ -243,15 +274,12 @@ func (m *AgentManager) applyContextCompression(ctx context.Context, messages []F
 	}
 
 	if strategy == "sliding" {
-		cutIdx := len(messages) - 4
-		if cutIdx < 0 {
-			cutIdx = 0
-		}
+		cutIdx := alignCutToUserMessage(messages, len(messages)-4)
 		return messages[cutIdx:], "已触发滑动窗口截断，保留最新对话"
 	}
 
 	// Strategy == "summary"
-	cutIdx := len(messages) - 3
+	cutIdx := alignCutToUserMessage(messages, len(messages)-3)
 	if cutIdx <= 0 {
 		return messages, ""
 	}

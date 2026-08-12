@@ -14,11 +14,12 @@ import (
 )
 
 type WorkspaceManager struct {
-	mu             sync.RWMutex
-	dir            string
-	confirmChanMap sync.Map // confirmID -> chan bool
-	onEmitConfirm  func(confirmID, action, path, desc string)
+	mu              sync.RWMutex
+	dir             string
+	confirmChanMap  sync.Map // confirmID -> chan bool
+	onEmitConfirm   func(confirmID, action, path, desc string)
 	onEmitToolStart func(toolName, detail string)
+	onEmitToolEvent func(callID, toolName, input, output string)
 }
 
 var DefaultWorkspaceMgr = &WorkspaceManager{}
@@ -47,12 +48,27 @@ func (wm *WorkspaceManager) SetEmitToolStartFunc(fn func(toolName, detail string
 	wm.onEmitToolStart = fn
 }
 
+func (wm *WorkspaceManager) SetEmitToolEventFunc(fn func(callID, toolName, input, output string)) {
+	wm.mu.Lock()
+	defer wm.mu.Unlock()
+	wm.onEmitToolEvent = fn
+}
+
 func (wm *WorkspaceManager) EmitToolStart(toolName, detail string) {
 	wm.mu.RLock()
 	fn := wm.onEmitToolStart
 	wm.mu.RUnlock()
 	if fn != nil {
 		fn(toolName, detail)
+	}
+}
+
+func (wm *WorkspaceManager) EmitToolEvent(callID, toolName, input, output string) {
+	wm.mu.RLock()
+	fn := wm.onEmitToolEvent
+	wm.mu.RUnlock()
+	if fn != nil {
+		fn(callID, toolName, input, output)
 	}
 }
 

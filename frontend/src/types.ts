@@ -875,10 +875,19 @@ export interface AppSettings {
     aiBlockHighRiskCommands?: boolean
 }
 
+export interface ToolCallItem {
+    id: string
+    name: string
+    args: string
+}
+
 export interface AiMessage {
-    role: 'system' | 'user' | 'assistant'
+    role: 'system' | 'user' | 'assistant' | 'tool'
     content: string
     images?: string[]
+    tool_calls?: ToolCallItem[]
+    tool_call_id?: string
+    name?: string
     timestamp?: number
 }
 

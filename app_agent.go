@@ -27,6 +27,14 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 				"detail":   detail,
 			})
 		})
+		agent.DefaultWorkspaceMgr.SetEmitToolEventFunc(func(callID, toolName, input, output string) {
+			wruntime.EventsEmit(a.ctx, "agent:tool_event:"+sessionID, map[string]string{
+				"id":     callID,
+				"name":   toolName,
+				"args":   input,
+				"result": output,
+			})
+		})
 	}
 
 	cfg := a.store.GetSettings()

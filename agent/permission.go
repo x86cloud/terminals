@@ -203,12 +203,21 @@ func (w *PermissionWrappedTool) InvokableRun(ctx context.Context, input string, 
 	if info != nil {
 		toolName = info.Name
 	}
+	callID := fmt.Sprintf("call_%d_%d", time.Now().UnixNano(), time.Now().Nanosecond()%1000)
+
+	emitResult := func(res string, err error) (string, error) {
+		if err == nil && w.guard != nil && w.guard.wm != nil {
+			w.guard.wm.EmitToolEvent(callID, toolName, input, res)
+		}
+		return res, err
+	}
 
 	lvl, reason := w.guard.Audit(ctx, toolName, input)
 
 	switch lvl {
 	case PermissionLevelForbidden:
-		return fmt.Sprintf("【权限审查模块拦截】操作拒绝: %s。系统已拦截该命令以保证服务器安全，请提示用户该操作存在高危风险。", reason), nil
+		msg := fmt.Sprintf("【权限审查模块拦截】操作拒绝: %s。系统已拦截该命令以保证服务器安全，请提示用户该操作存在高危风险。", reason)
+		return emitResult(msg, nil)
 
 	case PermissionLevelUserConfirm:
 		if w.guard.wm != nil {
@@ -227,13 +236,16 @@ func (w *PermissionWrappedTool) InvokableRun(ctx context.Context, input string, 
 			desc := fmt.Sprintf("动作: %s (%s)\n参数与命令内容:\n%s", descText, toolName, formattedInput)
 			approved := w.guard.wm.RequestConfirmation(ctx, confirmID, "permission_guard", toolName, desc)
 			if !approved {
-				return "【用户拒绝】用户在权限审查界面取消了该工具的执行操作", nil
+				msg := "【用户拒绝】用户在权限审查界面取消了该工具的执行操作"
+				return emitResult(msg, nil)
 			}
 		}
-		return w.target.InvokableRun(ctx, input, opts...)
+		res, err := w.target.InvokableRun(ctx, input, opts...)
+		return emitResult(res, err)
 
 	default:
-		return w.target.InvokableRun(ctx, input, opts...)
+		res, err := w.target.InvokableRun(ctx, input, opts...)
+		return emitResult(res, err)
 	}
 }
 
