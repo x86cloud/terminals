@@ -97,12 +97,10 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 	}
 
 	if cfg.AiEnableThinking {
-		modelConfig.ExtraFields["thinking"] = map[string]any{
-			"type": "enabled",
-		}
-	} else {
-		modelConfig.ExtraFields["thinking"] = map[string]any{
-			"type": "disabled",
+		modelConfig.ExtraFields = map[string]any{
+			"thinking": map[string]any{
+				"type": "enabled",
+			},
 		}
 	}
 	effort := strings.TrimSpace(cfg.AiReasoningEffort)
