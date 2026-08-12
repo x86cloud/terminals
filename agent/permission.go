@@ -153,6 +153,7 @@ func (g *PermissionGuard) auditShellCommand(ctx context.Context, input string) (
 		regexp.MustCompile(`(?i)\b(reboot|shutdown|init\s+0|poweroff)\b`),
 		regexp.MustCompile(`(?i)>\s*/dev/sd[a-z]`),
 		regexp.MustCompile(`:\(\)\{\s*:\|\:&\s*\};:`),
+		regexp.MustCompile(`(?i)\bdocker\s+.*\bprune\b`),
 	}
 
 	for _, re := range highRiskRegexes {
