@@ -208,7 +208,7 @@ func (w *PermissionWrappedTool) InvokableRun(ctx context.Context, input string, 
 
 	switch lvl {
 	case PermissionLevelForbidden:
-		return "", fmt.Errorf("【权限审查模块拦截】操作拒绝: %s", reason)
+		return fmt.Sprintf("【权限审查模块拦截】操作拒绝: %s。系统已拦截该命令以保证服务器安全，请提示用户该操作存在高危风险。", reason), nil
 
 	case PermissionLevelUserConfirm:
 		if w.guard.wm != nil {
