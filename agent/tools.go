@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -98,10 +99,17 @@ func (wm *WorkspaceManager) RequestConfirmation(ctx context.Context, confirmID, 
 		emitFn(confirmID, action, path, description)
 	}
 
+	confirmCtx := ctx
+	var cancel context.CancelFunc
+	if _, ok := confirmCtx.Deadline(); !ok {
+		confirmCtx, cancel = context.WithTimeout(ctx, 3*time.Minute)
+		defer cancel()
+	}
+
 	select {
 	case approved := <-ch:
 		return approved
-	case <-ctx.Done():
+	case <-confirmCtx.Done():
 		return false
 	}
 }

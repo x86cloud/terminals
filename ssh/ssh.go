@@ -415,10 +415,12 @@ func (m *SessionManager) Resize(sessionID string, cols, rows int) error {
 }
 
 func (s *Session) ExecCombined(cmd string) (string, error) {
-	return s.ExecCombinedContext(context.Background(), cmd)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	return s.ExecCombinedWithContext(ctx, cmd)
 }
 
-func (s *Session) ExecCombinedContext(ctx context.Context, cmd string) (string, error) {
+func (s *Session) ExecCombinedWithContext(ctx context.Context, cmd string) (string, error) {
 	if s.isClosed() || s.client == nil {
 		return "", errors.New("会话已断开")
 	}
@@ -426,32 +428,39 @@ func (s *Session) ExecCombinedContext(ctx context.Context, cmd string) (string, 
 	if err != nil {
 		return "", fmt.Errorf("创建 SSH Session 失败: %w", err)
 	}
-	defer sess.Close()
+
+	execCtx := ctx
+	var cancel context.CancelFunc
+	if _, ok := execCtx.Deadline(); !ok {
+		execCtx, cancel = context.WithTimeout(ctx, 60*time.Second)
+		defer cancel()
+	}
 
 	type execResult struct {
 		out []byte
 		err error
 	}
-	done := make(chan execResult, 1)
-
-	// Prepend non-interactive environment variables to prevent pagers (less/more) from blocking stdin
-	envPrefix := "export PAGER=cat SYSTEMD_PAGER=\"\" TERM=dumb DEBIAN_FRONTEND=noninteractive; "
-	fullCmd := envPrefix + cmd
+	resChan := make(chan execResult, 1)
 
 	go func() {
-		out, err := sess.CombinedOutput(fullCmd)
-		done <- execResult{out: out, err: err}
+		out, err := sess.CombinedOutput(cmd)
+		resChan <- execResult{out: out, err: err}
 	}()
 
 	select {
-	case res := <-done:
+	case res := <-resChan:
+		sess.Close()
 		if res.err != nil && len(res.out) == 0 {
 			return "", res.err
 		}
 		return string(res.out), nil
-	case <-ctx.Done():
-		_ = sess.Signal(golangssh.SIGKILL)
-		_ = sess.Close()
-		return "", fmt.Errorf("远程 Shell 命令执行超时或取消 (%w)。若命令涉及 ping、tail -f 或交互式程序，请指定 -c 4 计数或非阻塞参数重试", ctx.Err())
+
+	case <-execCtx.Done():
+		sess.Signal(golangssh.SIGKILL)
+		sess.Close()
+		if errors.Is(execCtx.Err(), context.DeadlineExceeded) {
+			return "", fmt.Errorf("命令执行超时 (超过 60 秒上限)，已终止在服务器上运行: %s", cmd)
+		}
+		return "", fmt.Errorf("命令执行已被中断: %w", execCtx.Err())
 	}
 }
