@@ -400,10 +400,20 @@ func (m *AgentManager) StreamChat(
 			return fullResp.String(), reasoningResp.String(), notice, fmt.Errorf("接收 AI 响应流中断: %w", err)
 		}
 		if chunk != nil {
-			if chunk.ReasoningContent != "" {
-				reasoningResp.WriteString(chunk.ReasoningContent)
+			reasoningText := chunk.ReasoningContent
+			if reasoningText == "" && chunk.Extra != nil {
+				if r, ok := chunk.Extra["reasoning-content"].(string); ok && r != "" {
+					reasoningText = r
+				} else if r, ok := chunk.Extra["reasoning_content"].(string); ok && r != "" {
+					reasoningText = r
+				} else if r, ok := chunk.Extra["thinking"].(string); ok && r != "" {
+					reasoningText = r
+				}
+			}
+			if reasoningText != "" {
+				reasoningResp.WriteString(reasoningText)
 				if onReasoningChunk != nil {
-					onReasoningChunk(chunk.ReasoningContent)
+					onReasoningChunk(reasoningText)
 				}
 			}
 
