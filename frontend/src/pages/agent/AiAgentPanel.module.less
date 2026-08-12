@@ -601,11 +601,61 @@
     }
 }
 
+.pipelineMinimalContainer {
+    margin-bottom: 8px;
+    font-size: 12px;
+    color: @text-dim;
+
+    .pipelineMasterHeader {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 0;
+        cursor: pointer;
+        user-select: none;
+        color: @text-dim;
+        transition: color 0.15s ease;
+
+        &:hover {
+            color: @text;
+        }
+
+        .pipelineMasterLeft {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            .spinIcon {
+                animation: spin 1.2s linear infinite;
+                color: @accent;
+            }
+
+            .pipelineBrainIcon {
+                font-size: 12px;
+                opacity: 0.8;
+            }
+
+            .pipelineMasterTitle {
+                font-size: 12px;
+                font-weight: 500;
+            }
+        }
+
+        .expandIcon {
+            opacity: 0.7;
+        }
+    }
+}
+
 .stepsListContainer {
     display: flex;
     flex-direction: column;
     gap: 6px;
+    margin-top: 4px;
     margin-bottom: 8px;
+    margin-left: 4px;
+    padding-left: 8px;
+    border-left: 2px solid rgba(127, 127, 127, 0.15);
 
     .stepBlockRow {
         display: flex;
