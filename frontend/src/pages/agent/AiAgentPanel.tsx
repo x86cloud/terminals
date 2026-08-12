@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import Icon from '../../components/Icon'
 import MarkdownViewer from '../../components/common/MarkdownViewer'
 import { API, consumePendingAsk, subscribe } from '../../api'
-import { AiMessage, AppSettings } from '../../types'
+import { AiMessage, AppSettings, ProcessStep } from '../../types'
 import g from '../../styles/global.module.less'
 import s from './AiAgentPanel.module.less'
 
@@ -19,6 +19,7 @@ export default function AiAgentPanel({ settings }: Props) {
     const [isGenerating, setIsGenerating] = useState(false)
     const [streamingText, setStreamingText] = useState('')
     const [streamingReasoningText, setStreamingReasoningText] = useState('')
+    const [activeSteps, setActiveSteps] = useState<ProcessStep[]>([])
     const [noticeText, setNoticeText] = useState('')
     const [workspaceDir, setWorkspaceDir] = useState<string>('')
     const [activeToolCall, setActiveToolCall] = useState<string>('')
@@ -64,7 +65,7 @@ export default function AiAgentPanel({ settings }: Props) {
 
     useEffect(() => {
         scrollToBottom()
-    }, [messages, streamingText, streamingReasoningText, pendingConfirm, activeToolCall])
+    }, [messages, streamingText, pendingConfirm, activeToolCall, activeSteps])
 
     // Subscribe to Wails event stream
     const handleSendRef = useRef<(customText?: string) => Promise<void>>(async () => { })
@@ -88,12 +89,16 @@ export default function AiAgentPanel({ settings }: Props) {
         setNoticeText('')
         setIsGenerating(true)
         setStreamingText('')
+        setStreamingReasoningText('')
+        setActiveSteps([])
 
         try {
             await API.agentSend(SESSION_ID, newHistory)
         } catch (e: any) {
             setIsGenerating(false)
             setStreamingText('')
+            setStreamingReasoningText('')
+            setActiveSteps([])
             saveHistory([
                 ...newHistory,
                 { role: 'assistant', content: `❌ 发送失败: ${e.message || String(e)}`, timestamp: Date.now() },
@@ -118,7 +123,27 @@ export default function AiAgentPanel({ settings }: Props) {
         })
 
         const unSubReasoning = subscribe(`agent:reasoning_chunk:${SESSION_ID}`, (chunk: string) => {
-            setStreamingReasoningText((prev) => prev + chunk)
+            setStreamingReasoningText((prev) => {
+                const nextText = prev + chunk
+                setActiveSteps((steps) => {
+                    const idx = steps.findIndex((s) => s.type === 'think')
+                    const thinkStep: ProcessStep = {
+                        id: 'step_think_active',
+                        type: 'think',
+                        title: '思考过程',
+                        content: nextText,
+                        status: 'running',
+                        timestamp: Date.now(),
+                    }
+                    if (idx >= 0) {
+                        const updated = [...steps]
+                        updated[idx] = thinkStep
+                        return updated
+                    }
+                    return [thinkStep, ...steps]
+                })
+                return nextText
+            })
         })
 
         const unSubNotice = subscribe(`agent:notice:${SESSION_ID}`, (notice: string) => {
@@ -129,6 +154,7 @@ export default function AiAgentPanel({ settings }: Props) {
             setIsGenerating(false)
             setStreamingText('')
             setStreamingReasoningText('')
+            setActiveSteps([])
             saveHistory([
                 ...messages,
                 { role: 'assistant', content: `❌ 运行时错误: ${errText}`, timestamp: Date.now() },
@@ -143,18 +169,25 @@ export default function AiAgentPanel({ settings }: Props) {
             const content = typeof data === 'object' && data !== null ? data.content : String(data || '')
             const reasoning = typeof data === 'object' && data !== null ? data.reasoning_content : ''
 
-            setMessages((prev) => {
-                const updated = [
-                    ...prev,
-                    {
-                        role: 'assistant' as const,
-                        content: content,
-                        reasoning_content: reasoning || streamingReasoningText,
-                        timestamp: Date.now(),
-                    },
-                ]
-                API.agentSaveHistory(updated).catch(() => { })
-                return updated
+            setActiveSteps((currentSteps) => {
+                const finalSteps = currentSteps.map((s) =>
+                    s.type === 'think' ? { ...s, status: 'completed' as const } : s
+                )
+                setMessages((prev) => {
+                    const updated = [
+                        ...prev,
+                        {
+                            role: 'assistant' as const,
+                            content: content,
+                            reasoning_content: reasoning || streamingReasoningText,
+                            process_steps: finalSteps,
+                            timestamp: Date.now(),
+                        },
+                    ]
+                    API.agentSaveHistory(updated).catch(() => { })
+                    return updated
+                })
+                return []
             })
             setStreamingReasoningText('')
         })
@@ -171,25 +204,23 @@ export default function AiAgentPanel({ settings }: Props) {
 
         const unSubToolEvent = subscribe(`agent:tool_event:${SESSION_ID}`, (evt: any) => {
             if (evt && evt.id) {
-                setMessages((prev) => {
-                    const updated = [
-                        ...prev,
-                        {
-                            role: 'assistant' as const,
-                            content: '',
-                            tool_calls: [{ id: evt.id, name: evt.name, args: evt.args }],
-                            timestamp: Date.now(),
-                        },
-                        {
-                            role: 'tool' as const,
-                            tool_call_id: evt.id,
-                            name: evt.name,
-                            content: evt.result,
-                            timestamp: Date.now(),
-                        },
-                    ]
-                    API.agentSaveHistory(updated).catch(() => { })
-                    return updated
+                const toolStep: ProcessStep = {
+                    id: evt.id,
+                    type: 'tool',
+                    title: evt.name || 'tool',
+                    summary: evt.args || '',
+                    content: evt.result || '',
+                    status: 'completed',
+                    timestamp: Date.now(),
+                }
+                setActiveSteps((prev) => {
+                    const idx = prev.findIndex((s) => s.id === evt.id)
+                    if (idx >= 0) {
+                        const updated = [...prev]
+                        updated[idx] = toolStep
+                        return updated
+                    }
+                    return [...prev, toolStep]
                 })
             }
         })
@@ -342,31 +373,124 @@ export default function AiAgentPanel({ settings }: Props) {
         return '#1890ff'
     }
 
-    const ThinkingCard = ({ reasoningContent, isStreaming = false }: { reasoningContent?: string; isStreaming?: boolean }) => {
-        const [userToggled, setUserToggled] = useState(false)
+    const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
+        if (msg.process_steps && msg.process_steps.length > 0) {
+            return msg.process_steps
+        }
+        const steps: ProcessStep[] = []
+        if (msg.reasoning_content) {
+            steps.push({
+                id: `think_${msg.timestamp || Date.now()}`,
+                type: 'think',
+                title: '思考过程',
+                content: msg.reasoning_content,
+                status: 'completed',
+                timestamp: msg.timestamp || Date.now(),
+            })
+        }
+        if (msg.tool_calls && msg.tool_calls.length > 0) {
+            msg.tool_calls.forEach((tc) => {
+                steps.push({
+                    id: tc.id || `tool_${Date.now()}`,
+                    type: 'tool',
+                    title: tc.name,
+                    summary: tc.args,
+                    content: '',
+                    status: 'completed',
+                    timestamp: msg.timestamp || Date.now(),
+                })
+            })
+        }
+        return steps
+    }
 
-        if (!reasoningContent) return null
+    const ProcessPipeline = ({
+        steps,
+        isStreaming = false,
+    }: {
+        steps: ProcessStep[]
+        isStreaming?: boolean
+    }) => {
+        const [masterExpanded, setMasterExpanded] = useState(isStreaming)
+        const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({})
 
-        const isExpanded = isStreaming ? !userToggled : userToggled
+        if (!steps || steps.length === 0) return null
+
+        const thinkCount = steps.filter((s) => s.type === 'think').length
+        const toolCount = steps.filter((s) => s.type === 'tool').length
+
+        const toggleStep = (stepId: string, e: React.MouseEvent) => {
+            e.stopPropagation()
+            setExpandedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
+        }
 
         return (
-            <div className={s.thinkingCard}>
-                <div className={s.thinkingHeader} onClick={() => setUserToggled(!userToggled)}>
-                    <div className={s.thinkingTitleLeft}>
+            <div className={s.pipelineContainer}>
+                <div className={s.pipelineMasterHeader} onClick={() => setMasterExpanded(!masterExpanded)}>
+                    <div className={s.pipelineMasterLeft}>
                         {isStreaming ? (
-                            <Icon name="refresh" size={12} className={s.spinIcon} />
+                            <Icon name="refresh" size={13} className={s.spinIcon} />
                         ) : (
-                            <span className={s.thinkingBrainIcon}>💭</span>
+                            <span className={s.pipelineBrainIcon}>💭</span>
                         )}
-                        <span className={s.thinkingLabel}>
-                            {isStreaming ? '正在思考中…' : '已完成深度思考'}
+                        <span className={s.pipelineMasterTitle}>
+                            {isStreaming ? '推演中…' : '思考与推演过程'}
+                        </span>
+                        <span className={s.pipelineSummaryBadge}>
+                            {thinkCount > 0 && `${thinkCount} 次思考`}
+                            {thinkCount > 0 && toolCount > 0 && ' · '}
+                            {toolCount > 0 && `${toolCount} 次工具调用`}
                         </span>
                     </div>
-                    <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
+                    <div className={s.pipelineMasterRight}>
+                        <Icon name={masterExpanded ? 'chevron-down' : 'chevron-right'} size={13} className={s.expandIcon} />
+                    </div>
                 </div>
-                {isExpanded && (
-                    <div className={s.thinkingBody}>
-                        <MarkdownViewer content={reasoningContent} streaming={isStreaming} />
+
+                {masterExpanded && (
+                    <div className={s.pipelineStepsList}>
+                        {steps.map((step) => {
+                            const isStepExpanded = expandedSteps[step.id] ?? (isStreaming && step.status === 'running')
+                            return (
+                                <div key={step.id} className={s.pipelineStepRow}>
+                                    <div className={s.pipelineStepHeader} onClick={(e) => toggleStep(step.id, e)}>
+                                        <div className={s.pipelineStepHeaderLeft}>
+                                            {step.type === 'tool' ? (
+                                                <Icon name="terminal" size={12} className={s.stepToolIcon} />
+                                            ) : (
+                                                <span className={s.stepThinkIcon}>💭</span>
+                                            )}
+                                            <span className={s.stepTitle}>
+                                                {step.type === 'tool' ? `🛠️ ${step.title}` : step.title}
+                                            </span>
+                                            {step.summary && (
+                                                <span className={s.stepSummaryText} title={step.summary}>
+                                                    [{step.summary}]
+                                                </span>
+                                            )}
+                                            <span className={s.stepStatusTag}>
+                                                {step.status === 'running' ? '执行中…' : '已完成'}
+                                            </span>
+                                        </div>
+                                        <Icon
+                                            name={isStepExpanded ? 'chevron-down' : 'chevron-right'}
+                                            size={12}
+                                            className={s.expandIcon}
+                                        />
+                                    </div>
+
+                                    {isStepExpanded && (
+                                        <div className={s.pipelineStepBody}>
+                                            {step.type === 'think' ? (
+                                                <MarkdownViewer content={step.content} streaming={isStreaming && step.status === 'running'} />
+                                            ) : (
+                                                <pre className={s.toolCode}>{step.content}</pre>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )
+                        })}
                     </div>
                 )}
             </div>
@@ -419,32 +543,14 @@ export default function AiAgentPanel({ settings }: Props) {
 
                 {messages.map((msg, idx) => {
                     if (msg.role === 'tool') {
-                        const isExpanded = !!expandedTools[idx]
-                        return (
-                            <div key={idx} className={s.toolMsgRow}>
-                                <div className={s.toolMsgCard}>
-                                    <div className={s.toolHeader} onClick={() => toggleExpandTool(idx)}>
-                                        <div className={s.toolHeaderLeft}>
-                                            <Icon name="terminal" size={13} />
-                                            <span>🛠️ 工具调用: <strong>{msg.name || 'tool'}</strong></span>
-                                            <span className={s.toolStatusTag}>已完成</span>
-                                        </div>
-                                        <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
-                                    </div>
-                                    {isExpanded && (
-                                        <div className={s.toolBody}>
-                                            <div className={s.toolSectionTitle}>返回结果:</div>
-                                            <pre className={s.toolCode}>{msg.content}</pre>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        )
-                    }
-
-                    if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content) {
                         return null
                     }
+
+                    if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content && (!msg.process_steps || msg.process_steps.length === 0)) {
+                        return null
+                    }
+
+                    const steps = getStepsForMessage(msg)
 
                     return (
                         <div key={idx} className={`${s.messageRow} ${s[msg.role]}`}>
@@ -454,8 +560,8 @@ export default function AiAgentPanel({ settings }: Props) {
                                 </div>
                             )}
                             <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
-                                {msg.role === 'assistant' && msg.reasoning_content && (
-                                    <ThinkingCard reasoningContent={msg.reasoning_content} isStreaming={false} />
+                                {msg.role === 'assistant' && steps.length > 0 && (
+                                    <ProcessPipeline steps={steps} isStreaming={false} />
                                 )}
                                 {msg.images && msg.images.length > 0 && (
                                     <div className={s.imageGrid}>
@@ -483,8 +589,8 @@ export default function AiAgentPanel({ settings }: Props) {
                             <Icon name="bot" size={16} />
                         </div>
                         <div className={s.bubble}>
-                            {streamingReasoningText && (
-                                <ThinkingCard reasoningContent={streamingReasoningText} isStreaming={true} />
+                            {activeSteps.length > 0 && (
+                                <ProcessPipeline steps={activeSteps} isStreaming={true} />
                             )}
                             {activeToolCall && (
                                 <div className={s.toolCallPill}>
@@ -496,7 +602,7 @@ export default function AiAgentPanel({ settings }: Props) {
                             <div className={s.markdownBody}>
                                 {streamingText ? (
                                     <MarkdownViewer content={streamingText} streaming={true} />
-                                ) : !streamingReasoningText ? (
+                                ) : activeSteps.length === 0 ? (
                                     <span style={{ color: '#888' }}>思考中…</span>
                                 ) : null}
                             </div>

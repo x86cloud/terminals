@@ -24,10 +24,21 @@ type ToolCallItem struct {
 	Args string `json:"args"`
 }
 
+type ProcessStep struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"` // "think" | "tool"
+	Title     string `json:"title"`
+	Summary   string `json:"summary,omitempty"`
+	Content   string `json:"content"`
+	Timestamp int64  `json:"timestamp"`
+	Status    string `json:"status,omitempty"`
+}
+
 type FrontendMessage struct {
 	Role             string         `json:"role"`
 	Content          string         `json:"content"`
 	ReasoningContent string         `json:"reasoning_content,omitempty"`
+	ProcessSteps     []ProcessStep  `json:"process_steps,omitempty"`
 	Images           []string       `json:"images,omitempty"`
 	ToolCalls        []ToolCallItem `json:"tool_calls,omitempty"`
 	ToolCallID       string         `json:"tool_call_id,omitempty"`

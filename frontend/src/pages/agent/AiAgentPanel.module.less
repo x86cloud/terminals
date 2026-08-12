@@ -601,33 +601,38 @@
     }
 }
 
-.thinkingCard {
+.pipelineContainer {
     margin-bottom: 10px;
-    background: rgba(0, 0, 0, 0.03);
-    border: 1px dashed rgba(127, 127, 127, 0.3);
+    background: rgba(0, 0, 0, 0.02);
+    border: 1px solid @border;
     border-radius: 8px;
     overflow: hidden;
     transition: all 0.2s;
 
-    .thinkingHeader {
+    .pipelineMasterHeader {
         display: flex;
         align-items: center;
         justify-content: space-between;
         padding: 6px 12px;
-        background: rgba(0, 0, 0, 0.02);
+        background: rgba(0, 0, 0, 0.035);
         cursor: pointer;
         user-select: none;
+        transition: background 0.2s;
 
-        .thinkingTitleLeft {
+        &:hover {
+            background: rgba(0, 0, 0, 0.06);
+        }
+
+        .pipelineMasterLeft {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            color: @text-dim;
+            gap: 8px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: @text;
 
-            .thinkingBrainIcon {
-                font-size: 13px;
+            .pipelineBrainIcon {
+                font-size: 13.5px;
             }
 
             .spinIcon {
@@ -635,8 +640,13 @@
                 color: @accent;
             }
 
-            .thinkingLabel {
+            .pipelineSummaryBadge {
+                font-size: 11px;
+                font-weight: normal;
                 color: @text-dim;
+                background: rgba(0, 0, 0, 0.05);
+                padding: 1px 7px;
+                border-radius: 10px;
             }
         }
 
@@ -645,14 +655,79 @@
         }
     }
 
-    .thinkingBody {
-        padding: 10px 12px;
-        border-top: 1px solid rgba(0, 0, 0, 0.05);
-        font-size: 12px;
-        line-height: 1.6;
-        color: @text-dim;
-        max-height: 350px;
-        overflow-y: auto;
+    .pipelineStepsList {
+        padding: 6px 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        background: @bg-1;
+        border-top: 1px solid @border;
+    }
+
+    .pipelineStepRow {
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 6px;
+        overflow: hidden;
+        background: @bg-2;
+
+        .pipelineStepHeader {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 5px 10px;
+            cursor: pointer;
+            user-select: none;
+
+            &:hover {
+                background: rgba(0, 0, 0, 0.03);
+            }
+
+            .pipelineStepHeaderLeft {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                font-size: 12px;
+                color: @text;
+                min-width: 0;
+
+                .stepTitle {
+                    font-weight: 500;
+                }
+
+                .stepSummaryText {
+                    color: @accent;
+                    font-family: Consolas, monospace;
+                    font-size: 11.5px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                    max-width: 260px;
+                }
+
+                .stepStatusTag {
+                    font-size: 10.5px;
+                    color: @ok;
+                    background: rgba(47, 158, 68, 0.1);
+                    padding: 1px 6px;
+                    border-radius: 4px;
+                    margin-left: 4px;
+                    white-space: nowrap;
+                }
+            }
+
+            .expandIcon {
+                color: @text-dim;
+            }
+        }
+
+        .pipelineStepBody {
+            padding: 8px 12px;
+            border-top: 1px solid rgba(0, 0, 0, 0.06);
+            background: @bg-1;
+            font-size: 12px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
     }
 }
 

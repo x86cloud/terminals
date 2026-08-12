@@ -16,10 +16,35 @@ export namespace agent {
 	        this.args = source["args"];
 	    }
 	}
+	export class ProcessStep {
+	    id: string;
+	    type: string;
+	    title: string;
+	    summary?: string;
+	    content: string;
+	    timestamp: number;
+	    status?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ProcessStep(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.type = source["type"];
+	        this.title = source["title"];
+	        this.summary = source["summary"];
+	        this.content = source["content"];
+	        this.timestamp = source["timestamp"];
+	        this.status = source["status"];
+	    }
+	}
 	export class FrontendMessage {
 	    role: string;
 	    content: string;
 	    reasoning_content?: string;
+	    process_steps?: ProcessStep[];
 	    images?: string[];
 	    tool_calls?: ToolCallItem[];
 	    tool_call_id?: string;
@@ -35,6 +60,7 @@ export namespace agent {
 	        this.role = source["role"];
 	        this.content = source["content"];
 	        this.reasoning_content = source["reasoning_content"];
+	        this.process_steps = this.convertValues(source["process_steps"], ProcessStep);
 	        this.images = source["images"];
 	        this.tool_calls = this.convertValues(source["tool_calls"], ToolCallItem);
 	        this.tool_call_id = source["tool_call_id"];
@@ -60,6 +86,7 @@ export namespace agent {
 		    return a;
 		}
 	}
+	
 
 }
 

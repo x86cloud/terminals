@@ -883,10 +883,21 @@ export interface ToolCallItem {
     args: string
 }
 
+export interface ProcessStep {
+    id: string
+    type: 'think' | 'tool'
+    title: string
+    summary?: string
+    content: string
+    timestamp: number
+    status?: 'running' | 'completed' | 'failed'
+}
+
 export interface AiMessage {
     role: 'system' | 'user' | 'assistant' | 'tool'
     content: string
     reasoning_content?: string
+    process_steps?: ProcessStep[]
     images?: string[]
     tool_calls?: ToolCallItem[]
     tool_call_id?: string
