@@ -19,7 +19,7 @@ export default function AiAgentPanel({ settings }: Props) {
     const [isGenerating, setIsGenerating] = useState(false)
     const [streamingText, setStreamingText] = useState('')
     const [streamingReasoningText, setStreamingReasoningText] = useState('')
-    const [toolEvents, setToolEvents] = useState<any[]>([])
+    const [activeSteps, setActiveSteps] = useState<ProcessStep[]>([])
     const [noticeText, setNoticeText] = useState('')
     const [workspaceDir, setWorkspaceDir] = useState<string>('')
     const [activeToolCall, setActiveToolCall] = useState<string>('')
@@ -32,30 +32,6 @@ export default function AiAgentPanel({ settings }: Props) {
     const [isRingHovered, setIsRingHovered] = useState(false)
     const chatListRef = useRef<HTMLDivElement>(null)
     const fileInputRef = useRef<HTMLInputElement>(null)
-
-    // Derived active steps during streaming
-    const activeSteps: ProcessStep[] = []
-    if (streamingReasoningText) {
-        activeSteps.push({
-            id: 'step_think_active',
-            type: 'think',
-            title: '思考过程',
-            content: streamingReasoningText,
-            status: streamingText ? 'completed' : 'running',
-            timestamp: Date.now(),
-        })
-    }
-    toolEvents.forEach((evt, i) => {
-        activeSteps.push({
-            id: evt.id || `tool_${i}`,
-            type: 'tool',
-            title: evt.name || 'tool',
-            summary: evt.args || '',
-            content: evt.result || '',
-            status: 'completed',
-            timestamp: Date.now(),
-        })
-    })
 
     // Load persistent history and workspace dir on mount
     useEffect(() => {
@@ -89,7 +65,7 @@ export default function AiAgentPanel({ settings }: Props) {
 
     useEffect(() => {
         scrollToBottom()
-    }, [messages, streamingText, streamingReasoningText, pendingConfirm, activeToolCall, toolEvents])
+    }, [messages, streamingText, pendingConfirm, activeToolCall, activeSteps])
 
     // Subscribe to Wails event stream
     const handleSendRef = useRef<(customText?: string) => Promise<void>>(async () => { })
@@ -114,7 +90,7 @@ export default function AiAgentPanel({ settings }: Props) {
         setIsGenerating(true)
         setStreamingText('')
         setStreamingReasoningText('')
-        setToolEvents([])
+        setActiveSteps([])
 
         try {
             await API.agentSend(SESSION_ID, newHistory)
@@ -122,7 +98,7 @@ export default function AiAgentPanel({ settings }: Props) {
             setIsGenerating(false)
             setStreamingText('')
             setStreamingReasoningText('')
-            setToolEvents([])
+            setActiveSteps([])
             saveHistory([
                 ...newHistory,
                 { role: 'assistant', content: `❌ 发送失败: ${e.message || String(e)}`, timestamp: Date.now() },
@@ -147,7 +123,27 @@ export default function AiAgentPanel({ settings }: Props) {
         })
 
         const unSubReasoning = subscribe(`agent:reasoning_chunk:${SESSION_ID}`, (chunk: string) => {
-            setStreamingReasoningText((prev) => prev + chunk)
+            setStreamingReasoningText((prev) => {
+                const nextText = prev + chunk
+                setActiveSteps((steps) => {
+                    const idx = steps.findIndex((s) => s.type === 'think')
+                    const thinkStep: ProcessStep = {
+                        id: 'step_think_active',
+                        type: 'think',
+                        title: '思考过程',
+                        content: nextText,
+                        status: 'running',
+                        timestamp: Date.now(),
+                    }
+                    if (idx >= 0) {
+                        const updated = [...steps]
+                        updated[idx] = thinkStep
+                        return updated
+                    }
+                    return [thinkStep, ...steps]
+                })
+                return nextText
+            })
         })
 
         const unSubNotice = subscribe(`agent:notice:${SESSION_ID}`, (notice: string) => {
@@ -158,7 +154,7 @@ export default function AiAgentPanel({ settings }: Props) {
             setIsGenerating(false)
             setStreamingText('')
             setStreamingReasoningText('')
-            setToolEvents([])
+            setActiveSteps([])
             saveHistory([
                 ...messages,
                 { role: 'assistant', content: `❌ 运行时错误: ${errText}`, timestamp: Date.now() },
@@ -173,46 +169,27 @@ export default function AiAgentPanel({ settings }: Props) {
             const content = typeof data === 'object' && data !== null ? data.content : String(data || '')
             const reasoning = typeof data === 'object' && data !== null ? data.reasoning_content : ''
 
-            const finalSteps: ProcessStep[] = []
-            const currentReasoning = reasoning || streamingReasoningText
-            if (currentReasoning) {
-                finalSteps.push({
-                    id: 'step_think_' + Date.now(),
-                    type: 'think',
-                    title: '思考过程',
-                    content: currentReasoning,
-                    status: 'completed',
-                    timestamp: Date.now(),
+            setActiveSteps((currentSteps) => {
+                const finalSteps = currentSteps.map((s) =>
+                    s.type === 'think' ? { ...s, status: 'completed' as const } : s
+                )
+                setMessages((prev) => {
+                    const updated = [
+                        ...prev,
+                        {
+                            role: 'assistant' as const,
+                            content: content,
+                            reasoning_content: reasoning || streamingReasoningText,
+                            process_steps: finalSteps,
+                            timestamp: Date.now(),
+                        },
+                    ]
+                    API.agentSaveHistory(updated).catch(() => { })
+                    return updated
                 })
-            }
-            toolEvents.forEach((evt, i) => {
-                finalSteps.push({
-                    id: evt.id || `tool_${i}`,
-                    type: 'tool',
-                    title: evt.name || 'tool',
-                    summary: evt.args || '',
-                    content: evt.result || '',
-                    status: 'completed',
-                    timestamp: Date.now(),
-                })
-            })
-
-            setMessages((prev) => {
-                const updated = [
-                    ...prev,
-                    {
-                        role: 'assistant' as const,
-                        content: content,
-                        reasoning_content: currentReasoning,
-                        process_steps: finalSteps.length > 0 ? finalSteps : undefined,
-                        timestamp: Date.now(),
-                    },
-                ]
-                API.agentSaveHistory(updated).catch(() => { })
-                return updated
+                return []
             })
             setStreamingReasoningText('')
-            setToolEvents([])
         })
 
         const unSubConfirm = subscribe(`agent:confirm_request:${SESSION_ID}`, (req: any) => {
@@ -227,14 +204,23 @@ export default function AiAgentPanel({ settings }: Props) {
 
         const unSubToolEvent = subscribe(`agent:tool_event:${SESSION_ID}`, (evt: any) => {
             if (evt && evt.id) {
-                setToolEvents((prev) => {
+                const toolStep: ProcessStep = {
+                    id: evt.id,
+                    type: 'tool',
+                    title: evt.name || 'tool',
+                    summary: evt.args || '',
+                    content: evt.result || '',
+                    status: 'completed',
+                    timestamp: Date.now(),
+                }
+                setActiveSteps((prev) => {
                     const idx = prev.findIndex((s) => s.id === evt.id)
                     if (idx >= 0) {
                         const updated = [...prev]
-                        updated[idx] = evt
+                        updated[idx] = toolStep
                         return updated
                     }
-                    return [...prev, evt]
+                    return [...prev, toolStep]
                 })
             }
         })
@@ -438,57 +424,46 @@ export default function AiAgentPanel({ settings }: Props) {
             setExpandedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
         }
 
+        const formatSummary = (s: ProcessStep) => {
+            if (s.type === 'think') return 'Thought process'
+            if (s.summary) return `${s.title} ${s.summary}`
+            return s.title
+        }
+
         return (
-            <div className={s.pipelineContainer}>
+            <div className={s.pipelineMinimalContainer}>
                 <div className={s.pipelineMasterHeader} onClick={() => setMasterExpanded(!masterExpanded)}>
                     <div className={s.pipelineMasterLeft}>
                         {isStreaming ? (
-                            <Icon name="refresh" size={13} className={s.spinIcon} />
+                            <Icon name="refresh" size={12} className={s.spinIcon} />
                         ) : (
                             <span className={s.pipelineBrainIcon}>💭</span>
                         )}
                         <span className={s.pipelineMasterTitle}>
-                            {isStreaming ? '推演中…' : '思考与推演过程'}
-                        </span>
-                        <span className={s.pipelineSummaryBadge}>
-                            {thinkCount > 0 && `${thinkCount} 次思考`}
-                            {thinkCount > 0 && toolCount > 0 && ' · '}
-                            {toolCount > 0 && `${toolCount} 次工具调用`}
+                            {isStreaming ? '推演中…' : `Thought process (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`}
                         </span>
                     </div>
-                    <div className={s.pipelineMasterRight}>
-                        <Icon name={masterExpanded ? 'chevron-down' : 'chevron-right'} size={13} className={s.expandIcon} />
-                    </div>
+                    <Icon name={masterExpanded ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
                 </div>
 
                 {masterExpanded && (
                     <div className={s.pipelineStepsList}>
                         {steps.map((step) => {
-                            const isStepExpanded = expandedSteps[step.id] ?? true
+                            const isStepExpanded = expandedSteps[step.id] ?? (isStreaming && step.status === 'running')
                             return (
                                 <div key={step.id} className={s.pipelineStepRow}>
                                     <div className={s.pipelineStepHeader} onClick={(e) => toggleStep(step.id, e)}>
                                         <div className={s.pipelineStepHeaderLeft}>
-                                            {step.type === 'tool' ? (
-                                                <Icon name="terminal" size={12} className={s.stepToolIcon} />
-                                            ) : (
-                                                <span className={s.stepThinkIcon}>💭</span>
-                                            )}
-                                            <span className={s.stepTitle}>
-                                                {step.type === 'tool' ? `🛠️ ${step.title}` : step.title}
+                                            <span className={s.stepIconText}>
+                                                {step.type === 'tool' ? '🛠️' : '💭'}
                                             </span>
-                                            {step.summary && (
-                                                <span className={s.stepSummaryText} title={step.summary}>
-                                                    [{step.summary}]
-                                                </span>
-                                            )}
-                                            <span className={s.stepStatusTag}>
-                                                {step.status === 'running' ? '执行中…' : '已完成'}
+                                            <span className={s.stepTitleText}>
+                                                {formatSummary(step)}
                                             </span>
                                         </div>
                                         <Icon
                                             name={isStepExpanded ? 'chevron-down' : 'chevron-right'}
-                                            size={12}
+                                            size={11}
                                             className={s.expandIcon}
                                         />
                                     </div>
@@ -498,7 +473,7 @@ export default function AiAgentPanel({ settings }: Props) {
                                             {step.type === 'think' ? (
                                                 <MarkdownViewer content={step.content} streaming={isStreaming && step.status === 'running'} />
                                             ) : (
-                                                <pre className={s.toolCode}>{step.content}</pre>
+                                                <pre className={s.toolCodeMinimal}>{step.content}</pre>
                                             )}
                                         </div>
                                     )}
