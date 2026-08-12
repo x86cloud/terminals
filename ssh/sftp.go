@@ -621,6 +621,57 @@ func (m *SessionManager) RemoveRemotePath(sessionID, target string) error {
 	return m.removeRemote(client, target)
 }
 
+func (m *SessionManager) WriteFileContent(sessionID, remotePath string, data []byte) error {
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return err
+	}
+	client, err := session.sftpConn()
+	if err != nil {
+		return err
+	}
+	remotePath = NormalizeRemote(remotePath)
+	remoteDir := path.Dir(remotePath)
+	if err := mkdirAllRemote(client, remoteDir); err != nil {
+		return fmt.Errorf("创建远程目录失败: %w", err)
+	}
+
+	f, err := client.Create(remotePath)
+	if err != nil {
+		return fmt.Errorf("创建远程文件失败: %w", err)
+	}
+	defer f.Close()
+
+	if _, err := f.Write(data); err != nil {
+		return fmt.Errorf("写入远程文件内容失败: %w", err)
+	}
+	m.NotifyDirChanged(sessionID, remoteDir)
+	return nil
+}
+
+func (m *SessionManager) ReadFileContent(sessionID, remotePath string) ([]byte, error) {
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	client, err := session.sftpConn()
+	if err != nil {
+		return nil, err
+	}
+	remotePath = NormalizeRemote(remotePath)
+	f, err := client.Open(remotePath)
+	if err != nil {
+		return nil, fmt.Errorf("打开远程文件失败: %w", err)
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(io.LimitReader(f, 10*1024*1024))
+	if err != nil {
+		return nil, fmt.Errorf("读取远程文件内容失败: %w", err)
+	}
+	return data, nil
+}
+
 func (m *SessionManager) NotifyDirChanged(sessionID, dir string) {
 	if m.ctx == nil {
 		return
