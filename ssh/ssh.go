@@ -443,7 +443,8 @@ func (s *Session) ExecCombinedWithContext(ctx context.Context, cmd string) (stri
 	resChan := make(chan execResult, 1)
 
 	go func() {
-		out, err := sess.CombinedOutput(cmd)
+		safeCmd := fmt.Sprintf("exec 0</dev/null; %s", cmd)
+		out, err := sess.CombinedOutput(safeCmd)
 		resChan <- execResult{out: out, err: err}
 	}()
 

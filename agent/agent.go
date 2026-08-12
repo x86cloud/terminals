@@ -125,6 +125,7 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 	ag, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: cm,
 		Model:            cm,
+		MaxStep:          25,
 		ToolsConfig: compose.ToolsNodeConfig{
 			Tools: wrappedTools,
 		},
