@@ -58,13 +58,13 @@ const baseTheme = EditorView.theme(
 
 const highlightStyle = HighlightStyle.define([
     {tag: t.comment, color: 'var(--text-faint, #8a94a6)', fontStyle: 'italic'},
-    {tag: [t.keyword, t.operator, t.modifier], color: 'var(--accent-dim, #1577a6)'},
+    {tag: [t.keyword, t.operator, t.modifier], color: 'var(--accent-dim, #255cd8)'},
     {tag: [t.string, t.special(t.string)], color: 'var(--ok, #2f9e44)'},
     {tag: [t.number, t.bool, t.null, t.atom], color: 'var(--warn, #c97a1a)'},
-    {tag: [t.propertyName, t.attributeName], color: 'var(--accent, #1c8fc4)'},
+    {tag: [t.propertyName, t.attributeName], color: 'var(--accent, #3370ff)'},
     {tag: [t.variableName], color: 'var(--text, #1f2733)'},
     {tag: [t.typeName, t.className], color: 'var(--warn, #b5731a)'},
-    {tag: [t.function(t.variableName), t.function(t.propertyName)], color: 'var(--accent-dim, #1577a6)'},
+    {tag: [t.function(t.variableName), t.function(t.propertyName)], color: 'var(--accent-dim, #255cd8)'},
     {tag: [t.bracket, t.punctuation, t.separator], color: 'var(--text-dim, #6b7686)'},
     {tag: t.invalid, color: 'var(--danger, #d6453f)'},
 ])

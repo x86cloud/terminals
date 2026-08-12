@@ -18,7 +18,7 @@ interface Props {
 const LIGHT_TERM_THEME = {
     background: '#ffffff',
     foreground: '#1f2733',
-    cursor: '#1577a6',
+    cursor: '#255cd8',
     selectionBackground: '#cfe4f1',
     black: '#1f2733',
     red: '#d6453f',
