@@ -278,6 +278,7 @@
         opacity: 0;
         transform: translateY(-4px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -312,9 +313,12 @@
 }
 
 @keyframes connectingPulse {
-    0%, 100% {
+
+    0%,
+    100% {
         background: @accent-soft;
     }
+
     50% {
         background: rgba(28, 143, 196, 0.22);
     }
@@ -406,7 +410,99 @@
     from {
         transform: rotate(0deg);
     }
+
     to {
         transform: rotate(360deg);
+    }
+}
+
+// ============================================================
+// 底部工具栏 — 毛玻璃效果
+// ============================================================
+
+.tools {
+    flex: none;
+    padding: 6px 8px;
+    border-top: 1px solid rgba(127, 127, 127, 0.12);
+    // 毛玻璃背景
+    background: rgba(238, 241, 246, 0.75);
+    backdrop-filter: blur(16px) saturate(1.6);
+    -webkit-backdrop-filter: blur(16px) saturate(1.6);
+    position: relative;
+    z-index: 2;
+
+    // 顶部渐变光晕分隔线
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 12%;
+        right: 12%;
+        height: 1px;
+        background: linear-gradient(90deg,
+                transparent 0%,
+                var(--accent, #3370ff) 50%,
+                transparent 100%);
+        opacity: 0.2;
+    }
+}
+
+// 暗色模式工具栏背景
+:global([data-theme='dark']) .tools {
+    background: rgba(20, 22, 25, 0.75);
+}
+
+.toolItem {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 8px 10px;
+    margin-bottom: 2px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: background 0.2s ease, color 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    text-align: left;
+
+    // hover 冻绪层渐变
+    &::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg,
+                var(--accent-soft, rgba(51, 112, 255, 0.1)) 0%,
+                transparent 70%);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        pointer-events: none;
+    }
+
+    &:hover {
+        color: @accent;
+
+        &::before {
+            opacity: 1;
+        }
+
+        svg {
+            color: @accent;
+        }
+    }
+
+    &:last-child {
+        margin-bottom: 0;
+    }
+
+    svg {
+        color: @text-faint;
+        transition: color 0.2s ease;
+        flex: none;
     }
 }
