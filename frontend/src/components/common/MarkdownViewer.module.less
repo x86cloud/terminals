@@ -102,16 +102,16 @@
         margin: 16px 0;
     }
 
-    a {
-        color: @accent;
-        text-decoration: none;
+    pre {
+        line-height: 1.35;
 
-        &:hover {
-            text-decoration: underline;
+        code, span {
+            background: transparent !important;
+            border-radius: 0 !important;
         }
     }
 
-    .inlineCode {
+    .inlineCode, :not(pre) > code {
         font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
         font-size: 0.9em;
         padding: 2px 6px;
@@ -119,6 +119,15 @@
         border: 1px solid rgba(127, 127, 127, 0.2);
         border-radius: 4px;
         color: @accent;
+    }
+
+    a {
+        color: @accent;
+        text-decoration: none;
+
+        &:hover {
+            text-decoration: underline;
+        }
     }
 }
 
@@ -180,7 +189,7 @@
         overflow-x: auto;
         font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
         font-size: 12.5px;
-        line-height: 1.5;
+        line-height: 1.35;
         color: #d4d4d4;
         background: #1e1e1e;
         white-space: pre;
