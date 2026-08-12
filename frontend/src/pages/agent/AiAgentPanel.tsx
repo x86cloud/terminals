@@ -383,16 +383,21 @@ export default function AiAgentPanel({ settings }: Props) {
 
                             {pendingConfirm && (
                                 <div className={s.confirmBox}>
-                                    <div className={s.confirmInfo}>
-                                        <Icon name="trash" size={15} />
-                                        <span>安全确认：Agent 请求删除文件/目录 <strong>{pendingConfirm.path}</strong></span>
+                                    <div className={s.confirmHeader}>
+                                        <Icon name="shield" size={15} />
+                                        <span>安全确认：Agent 请求执行 <strong>{pendingConfirm.path || '敏感操作'}</strong></span>
                                     </div>
-                                    <div className={s.confirmBtnGroup}>
+                                    {pendingConfirm.description && (
+                                        <div className={s.confirmBody}>
+                                            <pre className={s.confirmCode}>{pendingConfirm.description}</pre>
+                                        </div>
+                                    )}
+                                    <div className={s.confirmFooter}>
                                         <button className={s.btnApprove} onClick={() => handleConfirmTool(true)}>
-                                            同意删除
+                                            <Icon name="check" size={12} /> 同意执行
                                         </button>
                                         <button className={s.btnReject} onClick={() => handleConfirmTool(false)}>
-                                            拒绝
+                                            <Icon name="close" size={12} /> 拒绝
                                         </button>
                                     </div>
                                 </div>

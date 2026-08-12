@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"time"
@@ -213,7 +214,14 @@ func (w *PermissionWrappedTool) InvokableRun(ctx context.Context, input string, 
 			if descText == "" {
 				descText = toolName
 			}
-			desc := fmt.Sprintf("【权限审查触发】即将执行敏感操作 [%s (%s)]：\n%s", descText, toolName, input)
+			formattedInput := input
+			var prettyObj interface{}
+			if err := json.Unmarshal([]byte(input), &prettyObj); err == nil {
+				if prettyBytes, err := json.MarshalIndent(prettyObj, "", "  "); err == nil {
+					formattedInput = string(prettyBytes)
+				}
+			}
+			desc := fmt.Sprintf("动作: %s (%s)\n参数与命令内容:\n%s", descText, toolName, formattedInput)
 			approved := w.guard.wm.RequestConfirmation(ctx, confirmID, "permission_guard", toolName, desc)
 			if !approved {
 				return "【用户拒绝】用户在权限审查界面取消了该工具的执行操作", nil
