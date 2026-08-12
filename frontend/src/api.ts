@@ -350,6 +350,7 @@ export const API = {
     // AI Agent
     agentSend: (sessionId: string, messages: AiMessage[]): Promise<string> =>
         app().AgentSend(sessionId, messages),
+    agentStopSend: (sessionId: string): Promise<boolean> => app().AgentStopSend(sessionId),
     agentGetHistory: (): Promise<AiMessage[]> => app().AgentGetHistory(),
     agentSaveHistory: (messages: AiMessage[]): Promise<void> => app().AgentSaveHistory(messages),
     agentClearHistory: (): Promise<void> => app().AgentClearHistory(),

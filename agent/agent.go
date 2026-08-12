@@ -35,13 +35,14 @@ type FrontendMessage struct {
 }
 
 type AgentManager struct {
-	mu      sync.RWMutex
-	ctx     context.Context
-	cfg     core.AppSettings
-	cm      *openai.ChatModel
-	agent   *react.Agent
-	storage *Storage
-	sshMgr  *ssh.SessionManager
+	mu        sync.RWMutex
+	ctx       context.Context
+	cfg       core.AppSettings
+	cm        *openai.ChatModel
+	agent     *react.Agent
+	storage   *Storage
+	sshMgr    *ssh.SessionManager
+	cancelMap sync.Map // sessionID -> context.CancelFunc
 }
 
 var DefaultManager = NewAgentManager()
@@ -134,7 +135,7 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 	ag, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: cm,
 		Model:            cm,
-		MaxStep:          25,
+		MaxStep:          100,
 		ToolsConfig: compose.ToolsNodeConfig{
 			Tools: wrappedTools,
 		},
@@ -311,8 +312,17 @@ func (m *AgentManager) applyContextCompression(ctx context.Context, messages []F
 	return messages[cutIdx:], "已触发滑动窗口截断，保留最新对话"
 }
 
+func (m *AgentManager) StopChat(sessionID string) {
+	if cancelVal, ok := m.cancelMap.LoadAndDelete(sessionID); ok {
+		if cancel, ok := cancelVal.(context.CancelFunc); ok {
+			cancel()
+		}
+	}
+}
+
 func (m *AgentManager) StreamChat(
 	ctx context.Context,
+	sessionID string,
 	messages []FrontendMessage,
 	onChunk func(chunk string),
 ) (string, string, error) {
@@ -325,20 +335,38 @@ func (m *AgentManager) StreamChat(
 		return "", "", errors.New("AI Agent 未配置或 API Key 为空，请在设置中配置 API Key")
 	}
 
-	compressedMsgs, notice := m.applyContextCompression(ctx, messages)
+	chatCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	if sessionID != "" {
+		m.cancelMap.Store(sessionID, cancel)
+		defer m.cancelMap.Delete(sessionID)
+	}
+
+	compressedMsgs, notice := m.applyContextCompression(chatCtx, messages)
 	schemaMsgs := m.buildSchemaMessages(compressedMsgs, cfg.AiSystemPrompt)
 
-	sr, err := ag.Stream(ctx, schemaMsgs)
+	sr, err := ag.Stream(chatCtx, schemaMsgs)
 	if err != nil {
+		if errors.Is(chatCtx.Err(), context.Canceled) {
+			return "", notice, errors.New("用户手动停止了推导")
+		}
 		return "", "", fmt.Errorf("AI Agent 推导请求失败: %w", err)
 	}
 	defer sr.Close()
 
 	var fullResp strings.Builder
 	for {
+		if errors.Is(chatCtx.Err(), context.Canceled) {
+			return fullResp.String(), notice, errors.New("用户手动停止了推导")
+		}
+
 		chunk, err := sr.Recv()
 		if errors.Is(err, io.EOF) {
 			break
+		}
+		if errors.Is(chatCtx.Err(), context.Canceled) {
+			return fullResp.String(), notice, errors.New("用户手动停止了推导")
 		}
 		if err != nil {
 			return fullResp.String(), notice, fmt.Errorf("接收 AI 响应流中断: %w", err)

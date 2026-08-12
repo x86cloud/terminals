@@ -34,6 +34,10 @@ export function AgentSetWorkspaceDir(arg1) {
   return window['go']['main']['App']['AgentSetWorkspaceDir'](arg1);
 }
 
+export function AgentStopSend(arg1) {
+  return window['go']['main']['App']['AgentStopSend'](arg1);
+}
+
 export function ApiRequest(arg1) {
   return window['go']['main']['App']['ApiRequest'](arg1);
 }

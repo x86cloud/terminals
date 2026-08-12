@@ -42,8 +42,16 @@ export type IconName =
     | 'info'
     | 'paperclip'
     | 'shield'
+    | 'stop'
+    | 'square'
 
 const PATHS: Record<IconName, React.ReactNode> = {
+    stop: (
+        <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="currentColor" />
+    ),
+    square: (
+        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    ),
     shield: (
         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     ),

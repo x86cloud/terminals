@@ -100,6 +100,13 @@ export default function AiAgentPanel({ settings }: Props) {
         }
     }
 
+    const handleStop = async () => {
+        try {
+            await API.agentStopSend(SESSION_ID)
+        } catch { }
+        setIsGenerating(false)
+    }
+
     useEffect(() => {
         handleSendRef.current = handleSend
     })
@@ -602,13 +609,24 @@ export default function AiAgentPanel({ settings }: Props) {
 
                         <div className={s.divider} />
 
-                        <button
-                            className={`${g.btn} ${g.primary} ${s.sendBtn}`}
-                            disabled={isGenerating || (!input.trim() && images.length === 0)}
-                            onClick={handleSend}
-                        >
-                            {isGenerating ? '推导中…' : '发送'}
-                        </button>
+                        {isGenerating ? (
+                            <button
+                                className={`${g.btn} ${s.stopBtn}`}
+                                title="停止 AI 智能体推导"
+                                onClick={handleStop}
+                            >
+                                <Icon name="stop" size={13} />
+                                <span>停止</span>
+                            </button>
+                        ) : (
+                            <button
+                                className={`${g.btn} ${g.primary} ${s.sendBtn}`}
+                                disabled={!input.trim() && images.length === 0}
+                                onClick={handleSend}
+                            >
+                                发送
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

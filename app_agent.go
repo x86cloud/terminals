@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"strings"
 	"terminal/agent"
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
@@ -43,6 +44,7 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 
 	fullText, notice, err := agent.DefaultManager.StreamChat(
 		context.Background(),
+		sessionID,
 		messages,
 		func(chunk string) {
 			if a.ctx != nil {
@@ -56,6 +58,18 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 	}
 
 	if err != nil {
+		if err.Error() == "用户手动停止了推导" {
+			stoppedText := fullText
+			if strings.TrimSpace(stoppedText) != "" {
+				stoppedText += "\n\n⏹️ [用户手动停止了推导]"
+			} else {
+				stoppedText = "⏹️ [用户手动停止了推导]"
+			}
+			if a.ctx != nil {
+				wruntime.EventsEmit(a.ctx, "agent:done:"+sessionID, stoppedText)
+			}
+			return stoppedText, nil
+		}
 		if a.ctx != nil {
 			wruntime.EventsEmit(a.ctx, "agent:error:"+sessionID, err.Error())
 		}
@@ -66,6 +80,11 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 		wruntime.EventsEmit(a.ctx, "agent:done:"+sessionID, fullText)
 	}
 	return fullText, nil
+}
+
+func (a *App) AgentStopSend(sessionID string) bool {
+	agent.DefaultManager.StopChat(sessionID)
+	return true
 }
 
 func (a *App) AgentSelectWorkspaceDir() (string, error) {

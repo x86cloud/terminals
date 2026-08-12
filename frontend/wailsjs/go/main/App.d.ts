@@ -24,6 +24,8 @@ export function AgentSend(arg1:string,arg2:Array<agent.FrontendMessage>):Promise
 
 export function AgentSetWorkspaceDir(arg1:string):Promise<string>;
 
+export function AgentStopSend(arg1:string):Promise<boolean>;
+
 export function ApiRequest(arg1:proto.ApiRequest):Promise<proto.ApiResponse>;
 
 export function CancelTransfer(arg1:string):Promise<void>;
