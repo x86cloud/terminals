@@ -1,1 +1,18 @@
-<svg t="1786267217642" class="icon" viewBox="0 0 1032 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" p-id="25175" width="200" height="200"><path d="M772.883335 989.397333H224.392141c-119.574223 0-216.513998-96.934484-216.513999-216.513998V224.38685c0-119.574223 96.934484-216.513998 216.513999-216.513998H772.893917c119.574223 0 216.513998 96.934484 216.513998 216.513998v548.491194c0 119.579514-96.934484 216.513998-216.513998 216.513998z" fill="#1296db" p-id="25176" data-spm-anchor-id="a313x.search_index.0.i19.5caf3a81xSYCh5" class=""></path><path d="M781.433421 162.255872V344.1198a687.202584 687.202584 0 0 0-181.906255-181.911546h181.869219l0.037036 0.042327z m-0.037036 400.05514v165.467445H710.725903c0-273.327627-221.572094-494.89443-494.89443-494.89443V162.213545H381.208973a590.379209 590.379209 0 0 1 400.229739 400.097467h-0.037036z" fill="#9ed6f4" p-id="25177" data-spm-anchor-id="a313x.search_index.0.i18.5caf3a81xSYCh5" class="selected"></path><path d="M215.842055 326.225993c221.259931 0 400.615975 179.361335 400.615974 400.610684H522.179574a306.342811 306.342811 0 0 0-306.337519-306.337519V326.225993z" fill="#FFFFFF" p-id="25178" data-spm-anchor-id="a313x.search_index.0.i21.5caf3a81xSYCh5" class=""></path><path d="M215.842055 515.745846a212.101392 212.101392 0 0 1 212.101392 212.101392H215.842055V515.745846z" fill="#FFFFFF" p-id="25179" data-spm-anchor-id="a313x.search_index.0.i22.5caf3a81xSYCh5" class=""></path></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="100%" height="100%">
+  <defs>
+    <linearGradient id="mqtt-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#8b5cf6" />
+      <stop offset="100%" stop-color="#6d28d9" />
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="44" height="44" rx="10" fill="url(#mqtt-bg)" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"/>
+  <circle cx="24" cy="32" r="3" fill="#ffffff"/>
+  <circle cx="12" cy="18" r="2.5" fill="#a7f3d0"/>
+  <circle cx="36" cy="18" r="2.5" fill="#a7f3d0"/>
+  <circle cx="24" cy="12" r="3" fill="#38bdf8"/>
+  <line x1="24" y1="32" x2="12" y2="18" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="2 2"/>
+  <line x1="24" y1="32" x2="36" y2="18" stroke="#ffffff" stroke-width="1.5" stroke-dasharray="2 2"/>
+  <line x1="24" y1="32" x2="24" y2="12" stroke="#ffffff" stroke-width="2"/>
+  <path d="M16 22 A 10 10 0 0 1 32 22" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  <path d="M12 17 A 15 15 0 0 1 36 17" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" opacity="0.9"/>
+</svg>
