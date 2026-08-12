@@ -404,20 +404,16 @@ export default function AiAgentPanel({ settings }: Props) {
         return steps
     }
 
-    const ProcessPipeline = ({
+    const ProcessStepsList = ({
         steps,
         isStreaming = false,
     }: {
         steps: ProcessStep[]
         isStreaming?: boolean
     }) => {
-        const [masterExpanded, setMasterExpanded] = useState(isStreaming)
         const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({})
 
         if (!steps || steps.length === 0) return null
-
-        const thinkCount = steps.filter((s) => s.type === 'think').length
-        const toolCount = steps.filter((s) => s.type === 'tool').length
 
         const toggleStep = (stepId: string, e: React.MouseEvent) => {
             e.stopPropagation()
@@ -431,57 +427,39 @@ export default function AiAgentPanel({ settings }: Props) {
         }
 
         return (
-            <div className={s.pipelineMinimalContainer}>
-                <div className={s.pipelineMasterHeader} onClick={() => setMasterExpanded(!masterExpanded)}>
-                    <div className={s.pipelineMasterLeft}>
-                        {isStreaming ? (
-                            <Icon name="refresh" size={12} className={s.spinIcon} />
-                        ) : (
-                            <span className={s.pipelineBrainIcon}>💭</span>
-                        )}
-                        <span className={s.pipelineMasterTitle}>
-                            {isStreaming ? '推演中…' : `Thought process (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`}
-                        </span>
-                    </div>
-                    <Icon name={masterExpanded ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
-                </div>
+            <div className={s.stepsListContainer}>
+                {steps.map((step) => {
+                    const isStepExpanded = expandedSteps[step.id] ?? (isStreaming && step.status === 'running')
+                    return (
+                        <div key={step.id} className={s.stepBlockRow}>
+                            <div className={s.stepBlockHeader} onClick={(e) => toggleStep(step.id, e)}>
+                                <div className={s.stepBlockHeaderLeft}>
+                                    <span className={s.stepIconText}>
+                                        {step.type === 'tool' ? '🛠️' : '💭'}
+                                    </span>
+                                    <span className={s.stepTitleText}>
+                                        {formatSummary(step)}
+                                    </span>
+                                </div>
+                                <Icon
+                                    name={isStepExpanded ? 'chevron-down' : 'chevron-right'}
+                                    size={11}
+                                    className={s.expandIcon}
+                                />
+                            </div>
 
-                {masterExpanded && (
-                    <div className={s.pipelineStepsList}>
-                        {steps.map((step) => {
-                            const isStepExpanded = expandedSteps[step.id] ?? (isStreaming && step.status === 'running')
-                            return (
-                                <div key={step.id} className={s.pipelineStepRow}>
-                                    <div className={s.pipelineStepHeader} onClick={(e) => toggleStep(step.id, e)}>
-                                        <div className={s.pipelineStepHeaderLeft}>
-                                            <span className={s.stepIconText}>
-                                                {step.type === 'tool' ? '🛠️' : '💭'}
-                                            </span>
-                                            <span className={s.stepTitleText}>
-                                                {formatSummary(step)}
-                                            </span>
-                                        </div>
-                                        <Icon
-                                            name={isStepExpanded ? 'chevron-down' : 'chevron-right'}
-                                            size={11}
-                                            className={s.expandIcon}
-                                        />
-                                    </div>
-
-                                    {isStepExpanded && (
-                                        <div className={s.pipelineStepBody}>
-                                            {step.type === 'think' ? (
-                                                <MarkdownViewer content={step.content} streaming={isStreaming && step.status === 'running'} />
-                                            ) : (
-                                                <pre className={s.toolCodeMinimal}>{step.content}</pre>
-                                            )}
-                                        </div>
+                            {isStepExpanded && (
+                                <div className={s.stepBlockBody}>
+                                    {step.type === 'think' ? (
+                                        <MarkdownViewer content={step.content} streaming={isStreaming && step.status === 'running'} />
+                                    ) : (
+                                        <pre className={s.toolCodeMinimal}>{step.content}</pre>
                                     )}
                                 </div>
-                            )
-                        })}
-                    </div>
-                )}
+                            )}
+                        </div>
+                    )
+                })}
             </div>
         )
     }
@@ -550,7 +528,7 @@ export default function AiAgentPanel({ settings }: Props) {
                             )}
                             <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
                                 {msg.role === 'assistant' && steps.length > 0 && (
-                                    <ProcessPipeline steps={steps} isStreaming={false} />
+                                    <ProcessStepsList steps={steps} isStreaming={false} />
                                 )}
                                 {msg.images && msg.images.length > 0 && (
                                     <div className={s.imageGrid}>
@@ -579,7 +557,7 @@ export default function AiAgentPanel({ settings }: Props) {
                         </div>
                         <div className={s.bubble}>
                             {activeSteps.length > 0 && (
-                                <ProcessPipeline steps={activeSteps} isStreaming={true} />
+                                <ProcessStepsList steps={activeSteps} isStreaming={true} />
                             )}
                             {activeToolCall && (
                                 <div className={s.toolCallPill}>
