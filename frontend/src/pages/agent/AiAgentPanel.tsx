@@ -598,28 +598,6 @@ export default function AiAgentPanel({ settings }: Props) {
                                     <span style={{ color: '#888' }}>思考中…</span>
                                 ) : null}
                             </div>
-
-                            {pendingConfirm && (
-                                <div className={s.confirmBox}>
-                                    <div className={s.confirmHeader}>
-                                        <Icon name="shield" size={15} />
-                                        <span>安全确认：Agent 请求执行 <strong>{pendingConfirm.path || '敏感操作'}</strong></span>
-                                    </div>
-                                    {pendingConfirm.description && (
-                                        <div className={s.confirmBody}>
-                                            <pre className={s.confirmCode}>{pendingConfirm.description}</pre>
-                                        </div>
-                                    )}
-                                    <div className={s.confirmFooter}>
-                                        <button className={s.btnApprove} onClick={() => handleConfirmTool(true)}>
-                                            <Icon name="check" size={12} /> 同意执行
-                                        </button>
-                                        <button className={s.btnReject} onClick={() => handleConfirmTool(false)}>
-                                            <Icon name="close" size={12} /> 拒绝
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                     </div>
                 )}
@@ -627,6 +605,28 @@ export default function AiAgentPanel({ settings }: Props) {
 
             {/* Input Area */}
             <div className={s.inputArea}>
+                {/* Floating Permission Approval Box */}
+                {pendingConfirm && (
+                    <div className={s.confirmBox}>
+                        <div className={s.confirmHeader}>
+                            <Icon name="shield" size={15} />
+                            <span>安全审批：Agent 请求执行 <strong>{pendingConfirm.path || '高风险指令'}</strong></span>
+                        </div>
+                        {pendingConfirm.description && (
+                            <div className={s.confirmBody}>
+                                <pre className={s.confirmCode}>{pendingConfirm.description}</pre>
+                            </div>
+                        )}
+                        <div className={s.confirmFooter}>
+                            <button className={s.btnApprove} onClick={() => handleConfirmTool(true)}>
+                                <Icon name="check" size={12} /> 同意执行
+                            </button>
+                            <button className={s.btnReject} onClick={() => handleConfirmTool(false)}>
+                                <Icon name="close" size={12} /> 拒绝
+                            </button>
+                        </div>
+                    </div>
+                )}
                 {/* Images Preview Bar */}
                 {images.length > 0 && (
                     <div className={s.previewBar}>
