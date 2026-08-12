@@ -434,8 +434,12 @@ func (s *Session) ExecCombinedContext(ctx context.Context, cmd string) (string, 
 	}
 	done := make(chan execResult, 1)
 
+	// Prepend non-interactive environment variables to prevent pagers (less/more) from blocking stdin
+	envPrefix := "export PAGER=cat SYSTEMD_PAGER=\"\" TERM=dumb DEBIAN_FRONTEND=noninteractive; "
+	fullCmd := envPrefix + cmd
+
 	go func() {
-		out, err := sess.CombinedOutput(cmd)
+		out, err := sess.CombinedOutput(fullCmd)
 		done <- execResult{out: out, err: err}
 	}()
 

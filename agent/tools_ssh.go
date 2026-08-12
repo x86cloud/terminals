@@ -160,7 +160,7 @@ func BuildSSHTools(sm *ssh.SessionManager, wm *WorkspaceManager) ([]tool.BaseToo
 				return nil, fmt.Errorf("命令不能为空")
 			}
 
-			// 自动防阻塞修正（如未加 -c 的 ping、tail -f、top 等）
+			// 自动防阻塞修正（如未加 -c 的 ping、tail -f、top、systemctl、journalctl 等）
 			if strings.HasPrefix(cmd, "ping ") && !strings.Contains(cmd, "-c") {
 				cmd = cmd + " -c 4"
 			} else if strings.HasPrefix(cmd, "tail -f ") {
@@ -173,11 +173,19 @@ func BuildSSHTools(sm *ssh.SessionManager, wm *WorkspaceManager) ([]tool.BaseToo
 				cmd = "top -b -n 1"
 			}
 
+			// 为 systemctl 与 journalctl 注入 --no-pager
+			if strings.Contains(cmd, "systemctl ") && !strings.Contains(cmd, "--no-pager") {
+				cmd = strings.ReplaceAll(cmd, "systemctl ", "systemctl --no-pager ")
+			}
+			if strings.Contains(cmd, "journalctl ") && !strings.Contains(cmd, "--no-pager") {
+				cmd = strings.ReplaceAll(cmd, "journalctl ", "journalctl --no-pager ")
+			}
+
 			if wm != nil {
 				wm.EmitToolStart("ssh_exec_command", fmt.Sprintf("正在在 [%s] 执行命令: %s", info.Title, cmd))
 			}
 
-			execCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			execCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 			defer cancel()
 
 			out, err := sess.ExecCombinedContext(execCtx, cmd)
