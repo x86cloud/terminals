@@ -871,6 +871,8 @@ export interface AppSettings {
     aiSystemPrompt?: string
     aiWorkspaceDir?: string
     aiEnableWebSearch?: boolean
+    aiEnablePermissionGuard?: boolean
+    aiBlockHighRiskCommands?: boolean
 }
 
 export interface AiMessage {

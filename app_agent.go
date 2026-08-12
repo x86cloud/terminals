@@ -30,6 +30,7 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 	}
 
 	cfg := a.store.GetSettings()
+	agent.DefaultManager.SetSSHManager(a.sessions)
 	_ = agent.DefaultManager.InitOrUpdate(cfg)
 
 	fullText, notice, err := agent.DefaultManager.StreamChat(

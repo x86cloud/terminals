@@ -11,6 +11,8 @@ interface Props {
     aiCompressionStrategy: 'summary' | 'sliding'
     aiEnableMultimodal: boolean
     aiEnableWebSearch?: boolean
+    aiEnablePermissionGuard?: boolean
+    aiBlockHighRiskCommands?: boolean
     aiSystemPrompt: string
     onChange: (fields: Partial<{
         aiBaseUrl: string
@@ -21,6 +23,8 @@ interface Props {
         aiCompressionStrategy: 'summary' | 'sliding'
         aiEnableMultimodal: boolean
         aiEnableWebSearch: boolean
+        aiEnablePermissionGuard: boolean
+        aiBlockHighRiskCommands: boolean
         aiSystemPrompt: string
     }>) => void
 }
@@ -34,6 +38,8 @@ export default function AiAgentTab({
     aiCompressionStrategy,
     aiEnableMultimodal,
     aiEnableWebSearch = false,
+    aiEnablePermissionGuard = true,
+    aiBlockHighRiskCommands = true,
     aiSystemPrompt,
     onChange,
 }: Props) {
@@ -213,7 +219,54 @@ export default function AiAgentTab({
                 </div>
             </div>
 
-            {/* 卡片 3：系统提示词 */}
+            {/* 卡片 3：权限与安全审查 (Permission Guard) */}
+            <div className={s.card}>
+                <div className={s.cardTitle}>
+                    <Icon name="shield" size={14} />
+                    <span>权限与安全审查 (Permission Guard)</span>
+                </div>
+
+                <div className={s.toggleRow}>
+                    <div className={s.toggleInfo}>
+                        <span className={s.toggleTitle}>开启全局 Tool 权限审查引擎</span>
+                        <span className={s.toggleSub}>统一管控所有 Tool 调用的安全策略（放行 / 用户确认 / 高危拦截）</span>
+                    </div>
+                    <label className={s.switch}>
+                        <input
+                            type="checkbox"
+                            checked={aiEnablePermissionGuard}
+                            onChange={(e) => onChange({ aiEnablePermissionGuard: e.target.checked })}
+                        />
+                        <span className={s.slider} />
+                    </label>
+                </div>
+
+                <div className={s.toggleRow}>
+                    <div className={s.toggleInfo}>
+                        <span className={s.toggleTitle}>开启高危 Shell 命令动态拦截</span>
+                        <span className={s.toggleSub}>自动解析 ssh_exec 命令参数，若命中有毁灭性风险的命令模式（如 rm -rf /、mkfs、reboot 等）直接拒绝</span>
+                    </div>
+                    <label className={s.switch}>
+                        <input
+                            type="checkbox"
+                            checked={aiBlockHighRiskCommands}
+                            onChange={(e) => onChange({ aiBlockHighRiskCommands: e.target.checked })}
+                        />
+                        <span className={s.slider} />
+                    </label>
+                </div>
+
+                <div className={s.helpText} style={{ marginTop: 8 }}>
+                    <strong>Tools 默认权限标定说明：</strong>
+                    <ul style={{ marginTop: 4, paddingLeft: 16, lineHeight: 1.6 }}>
+                        <li><span style={{ color: '#48c774' }}>🟢 只读放行 (ReadOnly):</span> 文件读取、目录列出、系统概况、网络搜索、进程/容器查看等无害操作</li>
+                        <li><span style={{ color: '#faad14' }}>🟡 界面二次确认 (UserConfirm):</span> 目录/文件改动 (workspace_write_file, ssh_write_file)、远程 Shell 命令执行 (ssh_exec_command) 等变更操作</li>
+                        <li><span style={{ color: '#ff4d4f' }}>🔴 动态高危拦截 (Forbidden):</span> 命中黑名单规则的高危删盘/洗盘命令直接拒绝执行</li>
+                    </ul>
+                </div>
+            </div>
+
+            {/* 卡片 4：系统提示词 */}
             <div className={s.card}>
                 <div className={s.cardTitle}>
                     <Icon name="edit" size={14} />

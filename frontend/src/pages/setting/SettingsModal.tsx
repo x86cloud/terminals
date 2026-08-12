@@ -30,6 +30,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
     const [aiCompressionStrategy, setAiCompressionStrategy] = useState<'summary' | 'sliding'>('summary')
     const [aiEnableMultimodal, setAiEnableMultimodal] = useState(false)
     const [aiEnableWebSearch, setAiEnableWebSearch] = useState(false)
+    const [aiEnablePermissionGuard, setAiEnablePermissionGuard] = useState(true)
+    const [aiBlockHighRiskCommands, setAiBlockHighRiskCommands] = useState(true)
     const [aiSystemPrompt, setAiSystemPrompt] = useState('你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
     const [aiWorkspaceDir, setAiWorkspaceDir] = useState('')
 
@@ -45,6 +47,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             setAiCompressionStrategy(settings.aiCompressionStrategy || 'summary')
             setAiEnableMultimodal(!!settings.aiEnableMultimodal)
             setAiEnableWebSearch(!!settings.aiEnableWebSearch)
+            setAiEnablePermissionGuard(settings.aiEnablePermissionGuard ?? true)
+            setAiBlockHighRiskCommands(settings.aiBlockHighRiskCommands ?? true)
             setAiSystemPrompt(settings.aiSystemPrompt || '你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
             setAiWorkspaceDir(settings.aiWorkspaceDir || '')
         }
@@ -81,6 +85,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             aiCompressionStrategy,
             aiEnableMultimodal,
             aiEnableWebSearch,
+            aiEnablePermissionGuard,
+            aiBlockHighRiskCommands,
             aiSystemPrompt,
             aiWorkspaceDir,
         })
@@ -144,6 +150,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                                 aiCompressionStrategy={aiCompressionStrategy}
                                 aiEnableMultimodal={aiEnableMultimodal}
                                 aiEnableWebSearch={aiEnableWebSearch}
+                                aiEnablePermissionGuard={aiEnablePermissionGuard}
+                                aiBlockHighRiskCommands={aiBlockHighRiskCommands}
                                 aiSystemPrompt={aiSystemPrompt}
                                 onChange={(fields) => {
                                     if (fields.aiBaseUrl !== undefined) setAiBaseUrl(fields.aiBaseUrl)
@@ -154,6 +162,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                                     if (fields.aiCompressionStrategy !== undefined) setAiCompressionStrategy(fields.aiCompressionStrategy)
                                     if (fields.aiEnableMultimodal !== undefined) setAiEnableMultimodal(fields.aiEnableMultimodal)
                                     if (fields.aiEnableWebSearch !== undefined) setAiEnableWebSearch(fields.aiEnableWebSearch)
+                                    if (fields.aiEnablePermissionGuard !== undefined) setAiEnablePermissionGuard(fields.aiEnablePermissionGuard)
+                                    if (fields.aiBlockHighRiskCommands !== undefined) setAiBlockHighRiskCommands(fields.aiBlockHighRiskCommands)
                                     if (fields.aiSystemPrompt !== undefined) setAiSystemPrompt(fields.aiSystemPrompt)
                                 }}
                             />

@@ -8,9 +8,11 @@ import (
 	"strings"
 	"sync"
 	"terminal/core"
+	"terminal/ssh"
 	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
@@ -30,6 +32,7 @@ type AgentManager struct {
 	cm      *openai.ChatModel
 	agent   *react.Agent
 	storage *Storage
+	sshMgr  *ssh.SessionManager
 }
 
 var DefaultManager = NewAgentManager()
@@ -42,6 +45,12 @@ func NewAgentManager() *AgentManager {
 
 func (m *AgentManager) SetContext(ctx context.Context) {
 	m.ctx = ctx
+}
+
+func (m *AgentManager) SetSSHManager(sm *ssh.SessionManager) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.sshMgr = sm
 }
 
 func (m *AgentManager) Storage() *Storage {
@@ -90,17 +99,34 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 		DefaultWorkspaceMgr.SetDir(cfg.AiWorkspaceDir)
 	}
 
-	tools, _ := BuildWorkspaceTools(DefaultWorkspaceMgr)
+	guard := NewPermissionGuard(cfg.AiEnablePermissionGuard, cfg.AiBlockHighRiskCommands, DefaultWorkspaceMgr)
+
+	var rawTools []tool.BaseTool
+	workspaceTools, _ := BuildWorkspaceTools(DefaultWorkspaceMgr)
+	rawTools = append(rawTools, workspaceTools...)
+
 	if cfg.AiEnableWebSearch {
 		if webSearchTool, err := BuildWebSearchTool(DefaultWorkspaceMgr); err == nil {
-			tools = append(tools, webSearchTool)
+			rawTools = append(rawTools, webSearchTool)
 		}
 	}
+
+	if m.sshMgr != nil {
+		if sshTools, err := BuildSSHTools(m.sshMgr, DefaultWorkspaceMgr); err == nil {
+			rawTools = append(rawTools, sshTools...)
+		}
+	}
+
+	var wrappedTools []tool.BaseTool
+	for _, t := range rawTools {
+		wrappedTools = append(wrappedTools, WrapToolWithPermissionGuard(t, guard))
+	}
+
 	ag, err := react.NewAgent(ctx, &react.AgentConfig{
 		ToolCallingModel: cm,
 		Model:            cm,
 		ToolsConfig: compose.ToolsNodeConfig{
-			Tools: tools,
+			Tools: wrappedTools,
 		},
 		StreamToolCallChecker: func(ctx context.Context, sr *schema.StreamReader[*schema.Message]) (bool, error) {
 			defer sr.Close()
@@ -133,10 +159,24 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 	var out []*schema.Message
 	// 加入当前系统时间
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
-	sysPrompt = fmt.Sprintf("%s\n当前系统时间为: [%s]", sysPrompt, currentTime)
+	sysPrompt = fmt.Sprintf("%s\n当前系统时间为: [%s]。", sysPrompt, currentTime)
 	wsDir := DefaultWorkspaceMgr.GetDir()
 	if wsDir != "" {
-		sysPrompt = fmt.Sprintf("%s\n当前绑定的工作目录为: [%s]。你可以使用挂载的工具在该目录下查看文件列表、读取文件、写入/修改文件、删除文件或搜索内容。", sysPrompt, wsDir)
+		sysPrompt = fmt.Sprintf("%s\n当前绑定的工作目录为: [%s]。", sysPrompt, wsDir)
+	}
+
+	if m.sshMgr != nil {
+		sessions := m.sshMgr.List()
+		var activeHosts []string
+		for _, s := range sessions {
+			if s.Connected {
+				activeHosts = append(activeHosts, fmt.Sprintf("%s (%s:%d)", s.Title, s.Host, s.Port))
+			}
+		}
+		if len(activeHosts) > 0 {
+			sysPrompt = fmt.Sprintf("%s\n当前客户端共有 [%d] 个已连通激活的远程 SSH 服务器: [%s]。你可以使用 SSH 工具进行系统概况查询、文件与 Shell 命令行运维。",
+				sysPrompt, len(activeHosts), strings.Join(activeHosts, ", "))
+		}
 	}
 
 	if strings.TrimSpace(sysPrompt) != "" {

@@ -40,6 +40,8 @@ export namespace core {
 	    aiSystemPrompt: string;
 	    aiWorkspaceDir: string;
 	    aiEnableWebSearch: boolean;
+	    aiEnablePermissionGuard: boolean;
+	    aiBlockHighRiskCommands: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -63,6 +65,8 @@ export namespace core {
 	        this.aiSystemPrompt = source["aiSystemPrompt"];
 	        this.aiWorkspaceDir = source["aiWorkspaceDir"];
 	        this.aiEnableWebSearch = source["aiEnableWebSearch"];
+	        this.aiEnablePermissionGuard = source["aiEnablePermissionGuard"];
+	        this.aiBlockHighRiskCommands = source["aiBlockHighRiskCommands"];
 	    }
 	}
 	export class ServerConfig {

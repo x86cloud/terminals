@@ -41,8 +41,12 @@ export type IconName =
     | 'user'
     | 'info'
     | 'paperclip'
+    | 'shield'
 
 const PATHS: Record<IconName, React.ReactNode> = {
+    shield: (
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    ),
     bot: (
         <>
             <rect x="3" y="11" width="18" height="10" rx="2"/>
