@@ -874,7 +874,7 @@ export interface AppSettings {
     aiEnablePermissionGuard?: boolean
     aiBlockHighRiskCommands?: boolean
     aiEnableThinking?: boolean
-    aiReasoningEffort?: 'low' | 'medium' | 'high'
+    aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
 }
 
 export interface ToolCallItem {

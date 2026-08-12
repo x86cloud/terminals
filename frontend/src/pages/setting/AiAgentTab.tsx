@@ -14,7 +14,7 @@ interface Props {
     aiEnablePermissionGuard?: boolean
     aiBlockHighRiskCommands?: boolean
     aiEnableThinking?: boolean
-    aiReasoningEffort?: 'low' | 'medium' | 'high'
+    aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
     aiSystemPrompt: string
     onChange: (fields: Partial<{
         aiBaseUrl: string
@@ -28,7 +28,7 @@ interface Props {
         aiEnablePermissionGuard: boolean
         aiBlockHighRiskCommands: boolean
         aiEnableThinking: boolean
-        aiReasoningEffort: 'low' | 'medium' | 'high'
+        aiReasoningEffort: 'none' | 'low' | 'medium' | 'high'
         aiSystemPrompt: string
     }>) => void
 }
@@ -45,7 +45,7 @@ export default function AiAgentTab({
     aiEnablePermissionGuard = true,
     aiBlockHighRiskCommands = true,
     aiEnableThinking = false,
-    aiReasoningEffort = 'medium',
+    aiReasoningEffort = 'none',
     aiSystemPrompt,
     onChange,
 }: Props) {
@@ -161,8 +161,8 @@ export default function AiAgentTab({
 
                 <div className={s.switchRow} style={{ marginTop: 12 }}>
                     <div className={s.switchInfo}>
-                        <div className={s.switchLabel}>开启深度思考 (Thinking / Reasoning)</div>
-                        <div className={s.switchDesc}>开启后向 Reasoning 模型透传思考深度等级参数（适用于 OpenAI o1/o3-mini、DeepSeek R1 等）</div>
+                        <div className={s.switchLabel}>开启深度思考模式 (thinking)</div>
+                        <div className={s.switchDesc}>开启后在 ExtraFields 中透传 {`{"thinking": {"type": "enabled"}}`}（适用于 Claude / DeepSeek R1 / 硅基流动等思考模型）</div>
                     </div>
                     <label className={s.switch}>
                         <input
@@ -174,20 +174,20 @@ export default function AiAgentTab({
                     </label>
                 </div>
 
-                {aiEnableThinking && (
-                    <div className={s.formGroup} style={{ marginTop: 12 }}>
-                        <label className={s.label}>思考深度等级 (reasoning_effort)</label>
-                        <select
-                            className={s.select}
-                            value={aiReasoningEffort}
-                            onChange={(e) => onChange({ aiReasoningEffort: e.target.value as 'low' | 'medium' | 'high' })}
-                        >
-                            <option value="low">低 (low) - 速度最快，消耗 Token 较少</option>
-                            <option value="medium">中 (medium) - 平衡思考深度与推理速度（默认推荐）</option>
-                            <option value="high">高 (high) - 极深逻辑推演，适合复杂运维决策</option>
-                        </select>
-                    </div>
-                )}
+                <div className={s.formGroup} style={{ marginTop: 12 }}>
+                    <label className={s.label}>思考深度等级 (reasoning_effort)</label>
+                    <select
+                        className={s.select}
+                        value={aiReasoningEffort}
+                        onChange={(e) => onChange({ aiReasoningEffort: e.target.value as 'none' | 'low' | 'medium' | 'high' })}
+                    >
+                        <option value="none">未指定 / 关闭 (none)</option>
+                        <option value="low">低 (low) - 速度最快，消耗 Token 较少</option>
+                        <option value="medium">中 (medium) - 平衡思考深度与推理速度</option>
+                        <option value="high">高 (high) - 极深逻辑推演，适合复杂运维决策</option>
+                    </select>
+                    <div className={s.helpText}>向 API 独立发送 reasoning_effort 参数（适用于 OpenAI o1/o3-mini / DeepSeek 等）</div>
+                </div>
             </div>
 
             {/* 卡片 2：上下文管理与多模态 */}

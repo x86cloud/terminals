@@ -95,12 +95,19 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 		Temperature: &temp,
 	}
 
+	extraFields := make(map[string]any)
 	if cfg.AiEnableThinking {
-		effort := strings.TrimSpace(cfg.AiReasoningEffort)
-		if effort == "" {
-			effort = "medium"
+		extraFields["thinking"] = map[string]any{
+			"type": "enabled",
 		}
+	}
+	effort := strings.TrimSpace(cfg.AiReasoningEffort)
+	if effort != "" && effort != "none" {
 		modelConfig.ReasoningEffort = openai.ReasoningEffortLevel(effort)
+		extraFields["reasoning_effort"] = effort
+	}
+	if len(extraFields) > 0 {
+		modelConfig.ExtraFields = extraFields
 	}
 
 	ctx := m.ctx
