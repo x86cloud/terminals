@@ -34,7 +34,7 @@ func main() {
 		AssetServer: &assetserver.Options{
 			Assets: assets,
 		},
-		BackgroundColour: &options.RGBA{R: 245, G: 245, B: 245, A: 1},
+		BackgroundColour: &options.RGBA{R: 238, G: 241, B: 246, A: 1},
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,
 		DragAndDrop: &options.DragAndDrop{
@@ -52,8 +52,8 @@ func main() {
 				DarkModeTitleTextInactive:  windows.RGB(146, 153, 166),
 				DarkModeBorder:             windows.RGB(56, 60, 71),
 				DarkModeBorderInactive:     windows.RGB(56, 60, 71),
-				LightModeTitleBar:          windows.RGB(245, 245, 245),
-				LightModeTitleBarInactive:  windows.RGB(245, 245, 245),
+				LightModeTitleBar:          windows.RGB(238, 241, 246),
+				LightModeTitleBarInactive:  windows.RGB(238, 241, 246),
 				LightModeTitleText:         windows.RGB(31, 39, 51),
 				LightModeTitleTextInactive: windows.RGB(107, 118, 134),
 				LightModeBorder:            windows.RGB(212, 219, 230),

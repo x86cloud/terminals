@@ -371,9 +371,9 @@ export default function AiAgentPanel({ settings }: Props) {
     }
 
     const getRingColor = (pct: number) => {
-        if (pct >= 90) return 'var(--danger, #d6453f)'
-        if (pct >= 70) return 'var(--warn, #c97a1a)'
-        return 'var(--accent, #3370ff)'
+        if (pct >= 90) return '#ff4d4f'
+        if (pct >= 70) return '#faad14'
+        return '#1890ff'
     }
 
     const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
@@ -525,7 +525,7 @@ export default function AiAgentPanel({ settings }: Props) {
                         <div className={s.emptySub}>
                             支持多轮对话、智能上下文压缩、打字机流式推演与多模态识别。
                             {!settings.aiApiKey && (
-                                <div style={{ color: 'var(--danger, #d6453f)', marginTop: 8 }}>
+                                <div style={{ color: '#e05c5c', marginTop: 8 }}>
                                     ⚠️ 当前未配置 API Key，请点击右上角「设置」-「AI 智能体」填入 Key。
                                 </div>
                             )}
@@ -595,7 +595,7 @@ export default function AiAgentPanel({ settings }: Props) {
                                 {streamingText ? (
                                     <MarkdownViewer content={streamingText} streaming={true} />
                                 ) : activeSteps.length === 0 ? (
-                                    <span style={{ color: 'var(--text-dim, #6b7686)' }}>思考中…</span>
+                                    <span style={{ color: '#888' }}>思考中…</span>
                                 ) : null}
                             </div>
                         </div>
@@ -758,7 +758,7 @@ export default function AiAgentPanel({ settings }: Props) {
                                 <div className={s.tooltipCard}>
                                     <div>{percent.toFixed(1)}% · {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)} 输入上下文已使用</div>
                                     {compressedText && (
-                                        <div style={{ marginTop: 4, color: 'var(--warn, #c97a1a)', fontSize: 11, fontWeight: 500 }}>
+                                        <div style={{ marginTop: 4, color: '#faad14', fontSize: 11, fontWeight: 500 }}>
                                             ℹ️ {compressedText}
                                         </div>
                                     )}

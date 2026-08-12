@@ -403,13 +403,13 @@
             position: absolute;
             bottom: calc(100% + 10px);
             right: -6px;
-            background: @bg-1;
-            color: @text;
-            border: 1px solid @border;
+            background: #ffffff;
+            color: #1f1f1f;
+            border: 1px solid rgba(0, 0, 0, 0.15);
             border-radius: 6px;
             padding: 6px 12px;
             font-size: 12px;
-            font-family: inherit;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             white-space: nowrap;
             box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
             z-index: 999;
@@ -422,7 +422,7 @@
                 right: 14px;
                 border-width: 5px;
                 border-style: solid;
-                border-color: @bg-1 transparent transparent transparent;
+                border-color: #ffffff transparent transparent transparent;
             }
         }
     }
@@ -577,8 +577,8 @@
     align-items: center;
     gap: 6px;
     padding: 4px 10px;
-    background: @accent-soft;
-    border: 1px solid @accent-dim-2;
+    background: rgba(24, 144, 255, 0.1);
+    border: 1px solid rgba(24, 144, 255, 0.25);
     border-radius: 12px;
     color: @accent;
     font-size: 12px;
@@ -750,8 +750,8 @@
     justify-content: flex-start;
 
     .toolMsgCard {
-        background: @accent-soft;
-        border: 1px solid @accent-dim-2;
+        background: rgba(24, 144, 255, 0.04);
+        border: 1px solid rgba(24, 144, 255, 0.2);
         border-radius: 6px;
         width: 100%;
         max-width: 680px;
@@ -762,13 +762,13 @@
             align-items: center;
             justify-content: space-between;
             padding: 8px 12px;
-            background: @accent-soft;
+            background: rgba(24, 144, 255, 0.08);
             cursor: pointer;
             user-select: none;
             transition: background 0.2s;
 
             &:hover {
-                background: @accent-dim-2;
+                background: rgba(24, 144, 255, 0.14);
             }
 
             .toolHeaderLeft {
@@ -799,7 +799,7 @@
 
         .toolBody {
             padding: 8px 12px;
-            border-top: 1px solid @border;
+            border-top: 1px solid rgba(24, 144, 255, 0.15);
 
             .toolSectionTitle {
                 font-size: 11.5px;
@@ -815,7 +815,7 @@
                 font-family: Consolas, Monaco, monospace;
                 font-size: 11.5px;
                 color: @text;
-                background: @bg-2;
+                background: rgba(0, 0, 0, 0.04);
                 padding: 6px 10px;
                 border-radius: 4px;
                 max-height: 240px;
