@@ -199,7 +199,11 @@ func (w *PermissionWrappedTool) InvokableRun(ctx context.Context, input string, 
 	case PermissionLevelUserConfirm:
 		if w.guard.wm != nil {
 			confirmID := fmt.Sprintf("guard_%d", time.Now().UnixNano())
-			desc := fmt.Sprintf("【权限审查触发】即将执行工具 [%s]：\n%s", toolName, input)
+			descText := w.rule.Description
+			if descText == "" {
+				descText = toolName
+			}
+			desc := fmt.Sprintf("【权限审查触发】即将执行敏感操作 [%s (%s)]：\n%s", descText, toolName, input)
 			approved := w.guard.wm.RequestConfirmation(ctx, confirmID, "permission_guard", toolName, desc)
 			if !approved {
 				return "【用户拒绝】用户在权限审查界面取消了该工具的执行操作", nil

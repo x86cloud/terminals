@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -253,22 +252,12 @@ func BuildWorkspaceTools(wm *WorkspaceManager) ([]tool.BaseTool, error) {
 		return nil, err
 	}
 
-	deleteTool, err := utils.InferTool("workspace_delete", "删除工作目录内的指定文件或目录（需要用户在界面二次确认）",
+	deleteTool, err := utils.InferTool("workspace_delete", "删除工作目录内的指定文件或目录（受权限审查模块监管与二次确认）",
 		func(ctx context.Context, input *DeleteFileInput) (*DeleteFileOutput, error) {
 			wm.EmitToolStart("workspace_delete", fmt.Sprintf("正在删除 [%s]...", input.Path))
 			fullPath, err := wm.ResolvePath(input.Path)
 			if err != nil {
 				return nil, err
-			}
-
-			confirmID := fmt.Sprintf("delete_%d", time.Now().UnixNano())
-			approved := wm.RequestConfirmation(ctx, confirmID, "delete", input.Path, fmt.Sprintf("确认要删除工作空间中的文件/目录 [%s] 吗？", input.Path))
-			if !approved {
-				return &DeleteFileOutput{
-					Path:    input.Path,
-					Success: false,
-					Message: "用户在界面拒绝了删除操作",
-				}, nil
 			}
 
 			if err := os.RemoveAll(fullPath); err != nil {
