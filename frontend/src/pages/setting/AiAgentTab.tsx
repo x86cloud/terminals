@@ -14,7 +14,7 @@ interface Props {
     aiEnablePermissionGuard?: boolean
     aiBlockHighRiskCommands?: boolean
     aiEnableThinking?: boolean
-    aiReasoningEffort?: 'low' | 'medium' | 'high'
+    aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
     aiSystemPrompt: string
     onChange: (fields: Partial<{
         aiBaseUrl: string
@@ -28,7 +28,7 @@ interface Props {
         aiEnablePermissionGuard: boolean
         aiBlockHighRiskCommands: boolean
         aiEnableThinking: boolean
-        aiReasoningEffort: 'low' | 'medium' | 'high'
+        aiReasoningEffort: 'none' | 'low' | 'medium' | 'high'
         aiSystemPrompt: string
     }>) => void
 }
@@ -45,7 +45,7 @@ export default function AiAgentTab({
     aiEnablePermissionGuard = true,
     aiBlockHighRiskCommands = true,
     aiEnableThinking = false,
-    aiReasoningEffort = 'medium',
+    aiReasoningEffort = 'none',
     aiSystemPrompt,
     onChange,
 }: Props) {
@@ -159,71 +159,6 @@ export default function AiAgentTab({
                     </div>
                 </div>
 
-                <div className={s.switchRow} style={{ marginTop: 12 }}>
-                    <div className={s.switchInfo}>
-                        <div className={s.switchLabel}>开启深度思考模式 (Thinking / Reasoning)</div>
-                        <div className={s.switchDesc}>开启后在 ExtraFields 中透传 {`{"thinking": {"type": "enabled"}}`} 并设置 reasoning_effort 思考等级</div>
-                    </div>
-                    <label className={s.switch}>
-                        <input
-                            type="checkbox"
-                            checked={aiEnableThinking}
-                            onChange={(e) => onChange({ aiEnableThinking: e.target.checked })}
-                        />
-                        <span className={s.slider} />
-                    </label>
-                </div>
-
-                {aiEnableThinking && (
-                    <div className={s.formGroup} style={{ marginTop: 12 }}>
-                        <label className={s.label}>思考深度等级 (reasoning_effort)</label>
-                        <select
-                            className={s.select}
-                            value={aiReasoningEffort || 'medium'}
-                            onChange={(e) => onChange({ aiReasoningEffort: e.target.value as 'low' | 'medium' | 'high' })}
-                        >
-                            <option value="low">低 (low) - 速度最快，消耗 Token 较少</option>
-                            <option value="medium">中 (medium) - 平衡思考深度与推理速度（默认推荐）</option>
-                            <option value="high">高 (high) - 极深逻辑推演，适合复杂运维决策</option>
-                        </select>
-                    </div>
-                )}
-            </div>
-
-            {/* 卡片 2：上下文管理与多模态 */}
-            <div className={s.card}>
-                <div className={s.cardTitle}>
-                    <Icon name="layers" size={14} />
-                    <span>上下文管理与多模态</span>
-                </div>
-
-                <div className={s.rowGroup}>
-                    <div className={s.formGroup} style={{ flex: 1 }}>
-                        <label className={s.label}>上下文 Token 上限</label>
-                        <input
-                            type="number"
-                            className={s.input}
-                            placeholder="4096"
-                            value={aiMaxContextTokens}
-                            onChange={(e) => onChange({ aiMaxContextTokens: parseInt(e.target.value, 10) || 4096 })}
-                        />
-                        <div className={s.helpText}>超出上限后将自动触发上下文压缩</div>
-                    </div>
-
-                    <div className={s.formGroup} style={{ flex: 1 }}>
-                        <label className={s.label}>上下文压缩策略</label>
-                        <select
-                            className={s.select}
-                            value={aiCompressionStrategy}
-                            onChange={(e) => onChange({ aiCompressionStrategy: e.target.value as 'summary' | 'sliding' })}
-                        >
-                            <option value="summary">🤖 智能摘要压缩 (LLM 提炼)</option>
-                            <option value="sliding">✂️ 滑动窗口截断 (保留最新 N 轮)</option>
-                        </select>
-                        <div className={s.helpText}>控制大模型处理长对话上下文的截断方式</div>
-                    </div>
-                </div>
-
                 <div className={s.toggleRow}>
                     <div className={s.toggleInfo}>
                         <span className={s.toggleTitle}>开启多模态图像识别 (Multimodal)</span>
@@ -252,6 +187,36 @@ export default function AiAgentTab({
                         />
                         <span className={s.slider} />
                     </label>
+                </div>
+
+                <div className={s.toggleRow}>
+                    <div className={s.toggleInfo}>
+                        <span className={s.toggleTitle}>开启深度思考模式 (Thinking / Reasoning)</span>
+                        <span className={s.toggleSub}>启用后在 ExtraFields 中透传 {`{"thinking": {"type": "enabled"}}`}（适用于 Claude / DeepSeek R1 / 硅基流动等）</span>
+                    </div>
+                    <label className={s.switch}>
+                        <input
+                            type="checkbox"
+                            checked={aiEnableThinking}
+                            onChange={(e) => onChange({ aiEnableThinking: e.target.checked })}
+                        />
+                        <span className={s.slider} />
+                    </label>
+                </div>
+
+                <div className={s.formGroup} style={{ marginTop: 2 }}>
+                    <label className={s.label}>思考深度等级 (reasoning_effort)</label>
+                    <select
+                        className={s.select}
+                        value={aiReasoningEffort}
+                        onChange={(e) => onChange({ aiReasoningEffort: e.target.value as 'none' | 'low' | 'medium' | 'high' })}
+                    >
+                        <option value="none">未指定 / 关闭 (none)</option>
+                        <option value="low">低 (low) - 速度最快，消耗 Token 较少</option>
+                        <option value="medium">中 (medium) - 平衡思考深度与推理速度</option>
+                        <option value="high">高 (high) - 极深逻辑推演，适合复杂运维决策</option>
+                    </select>
+                    <div className={s.helpText}>向 API 独立发送 reasoning_effort 参数（适用于 OpenAI o1/o3-mini / DeepSeek 等）</div>
                 </div>
             </div>
 

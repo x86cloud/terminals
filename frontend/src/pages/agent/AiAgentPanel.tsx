@@ -612,6 +612,15 @@ export default function AiAgentPanel({ settings }: Props) {
                                 </button>
                             )}
                         </div>
+
+                        {settings.aiEnableWebSearch && (
+                            <span className={s.statusBadge} title="联网搜索功能已开启">🌐 联网</span>
+                        )}
+                        {settings.aiEnableThinking && (
+                            <span className={s.statusBadge} title={`深度思考模式已开启 (${settings.aiReasoningEffort || 'default'})`}>
+                                💭 思考{settings.aiReasoningEffort && settings.aiReasoningEffort !== 'none' ? ` (${settings.aiReasoningEffort})` : ''}
+                            </span>
+                        )}
                     </div>
 
                     {/* Right: Circular Context Progress Ring | Divider | Send Button */}
