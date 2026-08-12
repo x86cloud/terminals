@@ -64,7 +64,7 @@ export default function AiAgentPanel({ settings }: Props) {
 
     useEffect(() => {
         scrollToBottom()
-    }, [messages, streamingText, pendingConfirm, activeToolCall])
+    }, [messages, streamingText, streamingReasoningText, pendingConfirm, activeToolCall])
 
     // Subscribe to Wails event stream
     const handleSendRef = useRef<(customText?: string) => Promise<void>>(async () => { })
@@ -343,13 +343,15 @@ export default function AiAgentPanel({ settings }: Props) {
     }
 
     const ThinkingCard = ({ reasoningContent, isStreaming = false }: { reasoningContent?: string; isStreaming?: boolean }) => {
-        const [collapsed, setCollapsed] = useState(!isStreaming)
+        const [userToggled, setUserToggled] = useState(false)
 
         if (!reasoningContent) return null
 
+        const isExpanded = isStreaming ? !userToggled : userToggled
+
         return (
             <div className={s.thinkingCard}>
-                <div className={s.thinkingHeader} onClick={() => setCollapsed(!collapsed)}>
+                <div className={s.thinkingHeader} onClick={() => setUserToggled(!userToggled)}>
                     <div className={s.thinkingTitleLeft}>
                         {isStreaming ? (
                             <Icon name="refresh" size={12} className={s.spinIcon} />
@@ -360,9 +362,9 @@ export default function AiAgentPanel({ settings }: Props) {
                             {isStreaming ? '正在思考中…' : '已完成深度思考'}
                         </span>
                     </div>
-                    <Icon name={collapsed ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
+                    <Icon name={isExpanded ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
                 </div>
-                {!collapsed && (
+                {isExpanded && (
                     <div className={s.thinkingBody}>
                         <MarkdownViewer content={reasoningContent} streaming={isStreaming} />
                     </div>
