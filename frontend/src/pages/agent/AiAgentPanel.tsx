@@ -123,26 +123,26 @@ export default function AiAgentPanel({ settings }: Props) {
         })
 
         const unSubReasoning = subscribe(`agent:reasoning_chunk:${SESSION_ID}`, (chunk: string) => {
-            setStreamingReasoningText((prev) => {
-                const nextText = prev + chunk
-                setActiveSteps((steps) => {
-                    const idx = steps.findIndex((s) => s.type === 'think')
-                    const thinkStep: ProcessStep = {
-                        id: 'step_think_active',
-                        type: 'think',
-                        title: '思考过程',
-                        content: nextText,
-                        status: 'running',
-                        timestamp: Date.now(),
+            setStreamingReasoningText((prev) => prev + chunk)
+            setActiveSteps((steps) => {
+                const lastStep = steps.length > 0 ? steps[steps.length - 1] : null
+                if (lastStep && lastStep.type === 'think' && lastStep.status === 'running') {
+                    const updated = [...steps]
+                    updated[steps.length - 1] = {
+                        ...lastStep,
+                        content: lastStep.content + chunk,
                     }
-                    if (idx >= 0) {
-                        const updated = [...steps]
-                        updated[idx] = thinkStep
-                        return updated
-                    }
-                    return [thinkStep, ...steps]
-                })
-                return nextText
+                    return updated
+                }
+                const newThinkStep: ProcessStep = {
+                    id: `think_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+                    type: 'think',
+                    title: '思考过程',
+                    content: chunk,
+                    status: 'running',
+                    timestamp: Date.now(),
+                }
+                return [...steps, newThinkStep]
             })
         })
 
@@ -200,6 +200,9 @@ export default function AiAgentPanel({ settings }: Props) {
             if (req && req.detail) {
                 setActiveToolCall(req.detail)
             }
+            setActiveSteps((prev) =>
+                prev.map((s) => (s.type === 'think' && s.status === 'running' ? { ...s, status: 'completed' as const } : s))
+            )
         })
 
         const unSubToolEvent = subscribe(`agent:tool_event:${SESSION_ID}`, (evt: any) => {
@@ -214,13 +217,13 @@ export default function AiAgentPanel({ settings }: Props) {
                     timestamp: Date.now(),
                 }
                 setActiveSteps((prev) => {
-                    const idx = prev.findIndex((s) => s.id === evt.id)
+                    const updated = prev.map((s) => (s.type === 'think' && s.status === 'running' ? { ...s, status: 'completed' as const } : s))
+                    const idx = updated.findIndex((s) => s.id === evt.id)
                     if (idx >= 0) {
-                        const updated = [...prev]
                         updated[idx] = toolStep
                         return updated
                     }
-                    return [...prev, toolStep]
+                    return [...updated, toolStep]
                 })
             }
         })
