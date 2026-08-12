@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
+	"github.com/cloudwego/eino/adk"
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/compose"
-	"github.com/cloudwego/eino/flow/agent/react"
 	"github.com/cloudwego/eino/schema"
 )
 
@@ -51,7 +51,7 @@ type AgentManager struct {
 	ctx       context.Context
 	cfg       core.AppSettings
 	cm        *openai.ChatModel
-	agent     *react.Agent
+	runner    *adk.Runner
 	storage   *Storage
 	sshMgr    *ssh.SessionManager
 	cancelMap sync.Map // sessionID -> context.CancelFunc
@@ -85,8 +85,8 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 
 	m.cfg = cfg
 	if strings.TrimSpace(cfg.AiAPIKey) == "" {
+		m.runner = nil
 		m.cm = nil
-		m.agent = nil
 		return nil
 	}
 
@@ -156,37 +156,29 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 		wrappedTools = append(wrappedTools, WrapToolWithPermissionGuard(t, guard))
 	}
 
-	ag, err := react.NewAgent(ctx, &react.AgentConfig{
-		ToolCallingModel: cm,
-		Model:            cm,
-		MaxStep:          100,
-		ToolsConfig: compose.ToolsNodeConfig{
-			Tools: wrappedTools,
+	adkAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
+		Name:        "xclient_agent",
+		Description: "xClient AI Terminal Assistant",
+		Instruction: cfg.AiSystemPrompt,
+		Model:       cm,
+		ToolsConfig: adk.ToolsConfig{
+			ToolsNodeConfig: compose.ToolsNodeConfig{
+				Tools: wrappedTools,
+			},
 		},
-		StreamToolCallChecker: func(ctx context.Context, sr *schema.StreamReader[*schema.Message]) (bool, error) {
-			defer sr.Close()
-			hasToolCall := false
-			for {
-				msg, err := sr.Recv()
-				if errors.Is(err, io.EOF) {
-					break
-				}
-				if err != nil {
-					return false, err
-				}
-				if msg != nil && len(msg.ToolCalls) > 0 {
-					hasToolCall = true
-				}
-			}
-			return hasToolCall, nil
-		},
+		MaxIterations: 100,
 	})
 	if err != nil {
-		return fmt.Errorf("创建 Eino ChatModelAgent 失败: %w", err)
+		return fmt.Errorf("创建 Eino ADK ChatModelAgent 失败: %w", err)
 	}
 
+	runner := adk.NewRunner(ctx, adk.RunnerConfig{
+		Agent:           adkAgent,
+		EnableStreaming: true,
+	})
+
 	m.cm = cm
-	m.agent = ag
+	m.runner = runner
 	return nil
 }
 
@@ -352,11 +344,11 @@ func (m *AgentManager) StreamChat(
 	onReasoningChunk func(chunk string),
 ) (string, string, string, error) {
 	m.mu.RLock()
-	ag := m.agent
+	runner := m.runner
 	cfg := m.cfg
 	m.mu.RUnlock()
 
-	if ag == nil {
+	if runner == nil {
 		return "", "", "", errors.New("AI Agent 未配置或 API Key 为空，请在设置中配置 API Key")
 	}
 
@@ -371,14 +363,7 @@ func (m *AgentManager) StreamChat(
 	compressedMsgs, notice := m.applyContextCompression(chatCtx, messages)
 	schemaMsgs := m.buildSchemaMessages(compressedMsgs, cfg.AiSystemPrompt)
 
-	sr, err := ag.Stream(chatCtx, schemaMsgs)
-	if err != nil {
-		if errors.Is(chatCtx.Err(), context.Canceled) {
-			return "", "", notice, errors.New("用户手动停止了推导")
-		}
-		return "", "", "", fmt.Errorf("AI Agent 推导请求失败: %w", err)
-	}
-	defer sr.Close()
+	iter := runner.Run(chatCtx, schemaMsgs)
 
 	var fullResp strings.Builder
 	var reasoningResp strings.Builder
@@ -389,69 +374,99 @@ func (m *AgentManager) StreamChat(
 			return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
 		}
 
-		chunk, err := sr.Recv()
-		if errors.Is(err, io.EOF) {
+		event, ok := iter.Next()
+		if !ok || event == nil {
 			break
 		}
 		if errors.Is(chatCtx.Err(), context.Canceled) {
 			return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
 		}
-		if err != nil {
-			return fullResp.String(), reasoningResp.String(), notice, fmt.Errorf("接收 AI 响应流中断: %w", err)
+		if event.Err != nil {
+			return fullResp.String(), reasoningResp.String(), notice, fmt.Errorf("Agent 事件错误: %w", event.Err)
 		}
-		if chunk != nil {
-			reasoningText := chunk.ReasoningContent
-			if reasoningText == "" && chunk.Extra != nil {
-				if r, ok := chunk.Extra["reasoning-content"].(string); ok && r != "" {
-					reasoningText = r
-				} else if r, ok := chunk.Extra["reasoning_content"].(string); ok && r != "" {
-					reasoningText = r
-				} else if r, ok := chunk.Extra["thinking"].(string); ok && r != "" {
-					reasoningText = r
-				}
-			}
-			if reasoningText != "" {
-				reasoningResp.WriteString(reasoningText)
-				if onReasoningChunk != nil {
-					onReasoningChunk(reasoningText)
-				}
-			}
 
-			text := chunk.Content
-			if text != "" {
-				if strings.Contains(text, "<think>") {
-					parts := strings.SplitN(text, "<think>", 2)
-					if parts[0] != "" {
-						fullResp.WriteString(parts[0])
-						onChunk(parts[0])
+		if event.Output != nil && event.Output.MessageOutput != nil {
+			mv := event.Output.MessageOutput
+			if mv.IsStreaming && mv.MessageStream != nil {
+				defer mv.MessageStream.Close()
+				for {
+					if errors.Is(chatCtx.Err(), context.Canceled) {
+						return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
 					}
-					inThinkTag = true
-					text = parts[1]
-				}
-
-				if inThinkTag {
-					if strings.Contains(text, "</think>") {
-						parts := strings.SplitN(text, "</think>", 2)
-						if parts[0] != "" {
-							reasoningResp.WriteString(parts[0])
-							if onReasoningChunk != nil {
-								onReasoningChunk(parts[0])
+					chunk, err := mv.MessageStream.Recv()
+					if errors.Is(err, io.EOF) {
+						break
+					}
+					if err != nil {
+						break
+					}
+					if chunk != nil {
+						reasoningText := chunk.ReasoningContent
+						if reasoningText == "" && chunk.Extra != nil {
+							if r, ok := chunk.Extra["reasoning-content"].(string); ok && r != "" {
+								reasoningText = r
+							} else if r, ok := chunk.Extra["reasoning_content"].(string); ok && r != "" {
+								reasoningText = r
+							} else if r, ok := chunk.Extra["thinking"].(string); ok && r != "" {
+								reasoningText = r
 							}
 						}
-						inThinkTag = false
-						if parts[1] != "" {
-							fullResp.WriteString(parts[1])
-							onChunk(parts[1])
+						if reasoningText != "" {
+							reasoningResp.WriteString(reasoningText)
+							if onReasoningChunk != nil {
+								onReasoningChunk(reasoningText)
+							}
 						}
-					} else {
-						reasoningResp.WriteString(text)
-						if onReasoningChunk != nil {
-							onReasoningChunk(text)
+
+						text := chunk.Content
+						if text != "" {
+							if strings.Contains(text, "<think>") {
+								parts := strings.SplitN(text, "<think>", 2)
+								if parts[0] != "" {
+									fullResp.WriteString(parts[0])
+									onChunk(parts[0])
+								}
+								inThinkTag = true
+								text = parts[1]
+							}
+
+							if inThinkTag {
+								if strings.Contains(text, "</think>") {
+									parts := strings.SplitN(text, "</think>", 2)
+									if parts[0] != "" {
+										reasoningResp.WriteString(parts[0])
+										if onReasoningChunk != nil {
+											onReasoningChunk(parts[0])
+										}
+									}
+									inThinkTag = false
+									if parts[1] != "" {
+										fullResp.WriteString(parts[1])
+										onChunk(parts[1])
+									}
+								} else {
+									reasoningResp.WriteString(text)
+									if onReasoningChunk != nil {
+										onReasoningChunk(text)
+									}
+								}
+							} else {
+								fullResp.WriteString(text)
+								onChunk(text)
+							}
 						}
 					}
-				} else {
-					fullResp.WriteString(text)
-					onChunk(text)
+				}
+			} else if mv.Message != nil {
+				if mv.Message.ReasoningContent != "" {
+					reasoningResp.WriteString(mv.Message.ReasoningContent)
+					if onReasoningChunk != nil {
+						onReasoningChunk(mv.Message.ReasoningContent)
+					}
+				}
+				if mv.Message.Content != "" {
+					fullResp.WriteString(mv.Message.Content)
+					onChunk(mv.Message.Content)
 				}
 			}
 		}
