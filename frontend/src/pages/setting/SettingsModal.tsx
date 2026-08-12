@@ -33,7 +33,7 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
     const [aiEnablePermissionGuard, setAiEnablePermissionGuard] = useState(true)
     const [aiBlockHighRiskCommands, setAiBlockHighRiskCommands] = useState(true)
     const [aiEnableThinking, setAiEnableThinking] = useState(false)
-    const [aiReasoningEffort, setAiReasoningEffort] = useState<'none' | 'low' | 'medium' | 'high'>('none')
+    const [aiReasoningEffort, setAiReasoningEffort] = useState<'low' | 'medium' | 'high'>('medium')
     const [aiSystemPrompt, setAiSystemPrompt] = useState('你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
     const [aiWorkspaceDir, setAiWorkspaceDir] = useState('')
 
