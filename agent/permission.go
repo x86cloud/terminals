@@ -99,6 +99,11 @@ func (g *PermissionGuard) initDefaultRules() {
 		Level:       PermissionLevelReadOnly,
 		Description: "读取远程服务器文件内容",
 	}
+	g.rules["ssh_download_file"] = ToolPermissionRule{
+		ToolName:    "ssh_download_file",
+		Level:       PermissionLevelReadOnly,
+		Description: "从远程服务器下载文件至本地工作目录",
+	}
 	g.rules["ssh_list_processes"] = ToolPermissionRule{
 		ToolName:    "ssh_list_processes",
 		Level:       PermissionLevelReadOnly,
@@ -119,6 +124,11 @@ func (g *PermissionGuard) initDefaultRules() {
 		ToolName:    "ssh_delete_file",
 		Level:       PermissionLevelUserConfirm,
 		Description: "在远程服务器删除文件或目录",
+	}
+	g.rules["ssh_upload_file"] = ToolPermissionRule{
+		ToolName:    "ssh_upload_file",
+		Level:       PermissionLevelUserConfirm,
+		Description: "上传本地工作目录文件至远程服务器",
 	}
 
 	g.rules["ssh_exec_command"] = ToolPermissionRule{
