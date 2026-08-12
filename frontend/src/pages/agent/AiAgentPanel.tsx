@@ -499,7 +499,7 @@ export default function AiAgentPanel({ settings }: Props) {
                 <div className={s.titleSection}>
                     <Icon name="bot" size={16} />
                     <span>智能体</span>
-                    <span className={s.modelTag}>{settings.aiModel || 'deepseek-chat'}</span>
+                    <span className={s.modelTag}>{settings.aiModel || 'deepseek-v4-flash'}</span>
                     {settings.aiEnableMultimodal && (
                         <span className={s.badgeMultimodal}>多模态已开启</span>
                     )}

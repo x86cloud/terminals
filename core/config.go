@@ -61,33 +61,33 @@ type ServerConfig struct {
 	PrivateKey string `json:"privateKey"` // 私钥文件路径或 PEM 内容
 	Passphrase string `json:"passphrase"`
 	Remark     string `json:"remark"`
-	Type       string `json:"type"`        // ssh | redis | mysql | mqtt
+	Type       string `json:"type"`         // ssh | redis | mysql | mqtt
 	DB         int    `json:"db,omitempty"` // Redis 数据库编号
 
 	// Redis 高级配置
-	RedisMode            string `json:"redisMode,omitempty"`            // single | sentinel | cluster
-	RedisSentinels       string `json:"redisSentinels,omitempty"`       // 哨兵地址，逗号分隔
-	RedisMasterName      string `json:"redisMasterName,omitempty"`      // 哨兵 master 名称
-	RedisClusterNodes    string `json:"redisClusterNodes,omitempty"`    // 集群节点，逗号分隔
-	RedisUsername        string `json:"redisUsername,omitempty"`        // Redis 6 ACL 用户名
-	RedisSerialization   string `json:"redisSerialization,omitempty"`   // none | json
-	RedisPoolSize        int    `json:"redisPoolSize,omitempty"`         // 最大连接数
-	RedisMinIdleConns    int    `json:"redisMinIdleConns,omitempty"`     // 最小空闲连接
-	RedisMaxIdleConns    int    `json:"redisMaxIdleConns,omitempty"`     // 最大空闲连接
-	RedisPoolTimeout     int    `json:"redisPoolTimeout,omitempty"`      // 获取连接超时（秒）
-	RedisConnMaxIdleTime int    `json:"redisConnMaxIdleTime,omitempty"`  // 连接最大空闲时间（秒）
-	RedisConnMaxLifetime int    `json:"redisConnMaxLifetime,omitempty"`  // 连接最大存活时间（秒）
-	RedisDialTimeout     int    `json:"redisDialTimeout,omitempty"`      // 拨号超时（秒）
-	RedisReadTimeout     int    `json:"redisReadTimeout,omitempty"`      // 读超时（秒）
-	RedisWriteTimeout    int    `json:"redisWriteTimeout,omitempty"`     // 写超时（秒）
-	RedisMaxRetries      int    `json:"redisMaxRetries,omitempty"`       // 命令最大重试次数
-	RedisMinRetryBackoff int    `json:"redisMinRetryBackoff,omitempty"`  // 重试最小退避（秒）
-	RedisMaxRetryBackoff int    `json:"redisMaxRetryBackoff,omitempty"`  // 重试最大退避（秒）
-	RedisBreakerThreshold int   `json:"redisBreakerThreshold,omitempty"` // 熔断器打开阈值（连续失败次数）
-	RedisBreakerCooldown  int   `json:"redisBreakerCooldown,omitempty"`   // 熔断器冷却时间（秒）
+	RedisMode             string `json:"redisMode,omitempty"`             // single | sentinel | cluster
+	RedisSentinels        string `json:"redisSentinels,omitempty"`        // 哨兵地址，逗号分隔
+	RedisMasterName       string `json:"redisMasterName,omitempty"`       // 哨兵 master 名称
+	RedisClusterNodes     string `json:"redisClusterNodes,omitempty"`     // 集群节点，逗号分隔
+	RedisUsername         string `json:"redisUsername,omitempty"`         // Redis 6 ACL 用户名
+	RedisSerialization    string `json:"redisSerialization,omitempty"`    // none | json
+	RedisPoolSize         int    `json:"redisPoolSize,omitempty"`         // 最大连接数
+	RedisMinIdleConns     int    `json:"redisMinIdleConns,omitempty"`     // 最小空闲连接
+	RedisMaxIdleConns     int    `json:"redisMaxIdleConns,omitempty"`     // 最大空闲连接
+	RedisPoolTimeout      int    `json:"redisPoolTimeout,omitempty"`      // 获取连接超时（秒）
+	RedisConnMaxIdleTime  int    `json:"redisConnMaxIdleTime,omitempty"`  // 连接最大空闲时间（秒）
+	RedisConnMaxLifetime  int    `json:"redisConnMaxLifetime,omitempty"`  // 连接最大存活时间（秒）
+	RedisDialTimeout      int    `json:"redisDialTimeout,omitempty"`      // 拨号超时（秒）
+	RedisReadTimeout      int    `json:"redisReadTimeout,omitempty"`      // 读超时（秒）
+	RedisWriteTimeout     int    `json:"redisWriteTimeout,omitempty"`     // 写超时（秒）
+	RedisMaxRetries       int    `json:"redisMaxRetries,omitempty"`       // 命令最大重试次数
+	RedisMinRetryBackoff  int    `json:"redisMinRetryBackoff,omitempty"`  // 重试最小退避（秒）
+	RedisMaxRetryBackoff  int    `json:"redisMaxRetryBackoff,omitempty"`  // 重试最大退避（秒）
+	RedisBreakerThreshold int    `json:"redisBreakerThreshold,omitempty"` // 熔断器打开阈值（连续失败次数）
+	RedisBreakerCooldown  int    `json:"redisBreakerCooldown,omitempty"`  // 熔断器冷却时间（秒）
 
 	// MySQL 高级配置
-	Database   string `json:"database,omitempty"` // MySQL 默认数据库（可选）
+	Database               string `json:"database,omitempty"`               // MySQL 默认数据库（可选）
 	MysqlMaxOpenConns      int    `json:"mysqlMaxOpenConns,omitempty"`      // 连接池最大打开连接
 	MysqlMaxIdleConns      int    `json:"mysqlMaxIdleConns,omitempty"`      // 连接池最大空闲连接
 	MysqlConnMaxLifetime   int    `json:"mysqlConnMaxLifetime,omitempty"`   // 连接最大存活（秒）
@@ -125,27 +125,27 @@ type ServerConfig struct {
 	MongoCompressors         string `json:"mongoCompressors,omitempty"`         // 压缩算法，逗号分隔 snappy,zlib,zstd
 	MongoAppName             string `json:"mongoAppName,omitempty"`             // 上报给服务端的应用名
 
-	ClientID   string `json:"clientId,omitempty"` // MQTT 客户端 ID（可选）
-	UseTLS     bool   `json:"useTLS,omitempty"`    // MQTT 是否使用 TLS
+	ClientID string `json:"clientId,omitempty"` // MQTT 客户端 ID（可选）
+	UseTLS   bool   `json:"useTLS,omitempty"`   // MQTT 是否使用 TLS
 
 	// SQLite 本地文件配置
 	SqlitePath string `json:"sqlitePath,omitempty"` // 本地 .db / .sqlite 文件路径
 
 	// MQTT 高级配置
-	MqttProto          string `json:"mqttProto,omitempty"`            // 协议版本："3.1.1" | "3.1"
-	MqttKeepAlive      int    `json:"mqttKeepAlive,omitempty"`        // 心跳间隔（秒）
-	MqttConnectTimeout int    `json:"mqttConnectTimeout,omitempty"`   // 连接超时（秒）
-	MqttCleanSession   bool   `json:"mqttCleanSession,omitempty"`     // 清除会话
-	MqttAutoReconnect  bool   `json:"mqttAutoReconnect,omitempty"`    // 自动重连
-	MqttReconnectIntvl int    `json:"mqttReconnectIntvl,omitempty"`   // 重连间隔（秒）
-	MqttInsecure       bool   `json:"mqttInsecure,omitempty"`         // TLS 跳过证书校验
-	MqttCACert         string `json:"mqttCaCert,omitempty"`           // TLS CA 证书（PEM 内容或文件路径）
-	MqttClientCert     string `json:"mqttClientCert,omitempty"`       // TLS 客户端证书（PEM 内容或文件路径）
-	MqttClientKey      string `json:"mqttClientKey,omitempty"`        // TLS 客户端私钥（PEM 内容或文件路径）
-	MqttWillTopic      string `json:"mqttWillTopic,omitempty"`        // 遗嘱主题
-	MqttWillPayload    string `json:"mqttWillPayload,omitempty"`      // 遗嘱消息
-	MqttWillQos        int    `json:"mqttWillQos,omitempty"`          // 遗嘱 QoS
-	MqttWillRetained   bool   `json:"mqttWillRetained,omitempty"`     // 遗嘱保留
+	MqttProto          string `json:"mqttProto,omitempty"`          // 协议版本："3.1.1" | "3.1"
+	MqttKeepAlive      int    `json:"mqttKeepAlive,omitempty"`      // 心跳间隔（秒）
+	MqttConnectTimeout int    `json:"mqttConnectTimeout,omitempty"` // 连接超时（秒）
+	MqttCleanSession   bool   `json:"mqttCleanSession,omitempty"`   // 清除会话
+	MqttAutoReconnect  bool   `json:"mqttAutoReconnect,omitempty"`  // 自动重连
+	MqttReconnectIntvl int    `json:"mqttReconnectIntvl,omitempty"` // 重连间隔（秒）
+	MqttInsecure       bool   `json:"mqttInsecure,omitempty"`       // TLS 跳过证书校验
+	MqttCACert         string `json:"mqttCaCert,omitempty"`         // TLS CA 证书（PEM 内容或文件路径）
+	MqttClientCert     string `json:"mqttClientCert,omitempty"`     // TLS 客户端证书（PEM 内容或文件路径）
+	MqttClientKey      string `json:"mqttClientKey,omitempty"`      // TLS 客户端私钥（PEM 内容或文件路径）
+	MqttWillTopic      string `json:"mqttWillTopic,omitempty"`      // 遗嘱主题
+	MqttWillPayload    string `json:"mqttWillPayload,omitempty"`    // 遗嘱消息
+	MqttWillQos        int    `json:"mqttWillQos,omitempty"`        // 遗嘱 QoS
+	MqttWillRetained   bool   `json:"mqttWillRetained,omitempty"`   // 遗嘱保留
 
 	UpdatedAt int64 `json:"updatedAt"`
 }
@@ -458,7 +458,7 @@ func fillAiDefaults(settings *AppSettings) {
 		settings.AiBaseURL = "https://api.deepseek.com"
 	}
 	if settings.AiModel == "" {
-		settings.AiModel = "deepseek-chat"
+		settings.AiModel = "deepseek-v4-flash"
 	}
 	if settings.AiTemperature <= 0 {
 		settings.AiTemperature = 0.7

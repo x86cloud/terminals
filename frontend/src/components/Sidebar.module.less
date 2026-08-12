@@ -7,36 +7,59 @@
     display: flex;
     flex-direction: column;
     background: @bg;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border-right: 1px solid @border;
+    position: relative;
+    z-index: 10;
 }
 
 .tools {
     flex: none;
-    padding: 8px 10px;
+    padding: 10px;
     border-top: 1px solid @border;
+    background: rgba(0, 0, 0, 0.02);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
 .toolItem {
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
+    gap: 6px;
     width: 100%;
-    padding: 7px 8px;
-    margin-bottom: 6px;
-    background: @bg-2;
+    padding: 7px 10px;
+    background: rgba(255, 255, 255, 0.05);
     border: 1px solid @border;
     border-radius: @radius-md;
     color: @text;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 
     &:hover {
         border-color: @accent;
-        color: @text;
+        color: @accent;
+        background: rgba(28, 143, 196, 0.08);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(28, 143, 196, 0.12);
     }
 
     svg {
         color: @accent;
+        transition: transform 0.2s ease;
+    }
+
+    &:hover svg {
+        transform: scale(1.1);
     }
 }
 
@@ -44,7 +67,7 @@
     display: flex;
     align-items: center;
     gap: @space-md;
-    padding: 10px;
+    padding: 12px 10px 10px;
 }
 
 .sidebarSearch {
@@ -53,16 +76,17 @@
     gap: 6px;
     flex: 1;
     .fill();
-    padding: 0 8px;
-    background: @bg-2;
+    padding: 0 10px;
+    background: rgba(0, 0, 0, 0.04);
     border: 1px solid @border;
-    border-radius: @radius-md;
+    border-radius: @radius-lg;
     color: @text-dim;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    backdrop-filter: blur(8px);
 
     &:focus-within {
         border-color: @accent;
-        box-shadow: 0 0 0 2px rgba(91, 155, 255, 0.2);
+        box-shadow: 0 0 0 3px rgba(28, 143, 196, 0.15);
         background: @bg-1;
     }
 
@@ -72,7 +96,13 @@
         border: none;
         outline: none;
         color: @text;
-        padding: 6px 0;
+        padding: 7px 0;
+        font-size: 12.5px;
+
+        &::placeholder {
+            color: @text-dim;
+            opacity: 0.7;
+        }
     }
 }
 
@@ -88,11 +118,11 @@
     color: @text-dim;
     cursor: pointer;
     border-radius: 50%;
-    transition: color 0.15s ease, background 0.15s ease;
+    transition: all 0.15s ease;
 
     &:hover {
         color: @text;
-        background: @bg-3;
+        background: rgba(127, 127, 127, 0.2);
     }
 }
 
@@ -100,7 +130,7 @@
     flex: 1;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 0 8px 12px;
+    padding: 2px 8px 12px;
 }
 
 .sidebarEmpty {
@@ -115,7 +145,7 @@
 /* ---------------- 分组 ---------------- */
 
 .groupBlock {
-    margin-bottom: 2px;
+    margin-bottom: 4px;
     border-radius: @radius-md;
 
     &.dropActive {
@@ -128,12 +158,13 @@
 .groupHeader {
     display: flex;
     align-items: center;
-    gap: 2px;
-    padding: 3px 4px;
+    gap: 4px;
+    padding: 4px 6px;
     border-radius: @radius-md;
+    transition: background 0.18s ease;
 
     &:hover {
-        background: @bg-2;
+        background: rgba(127, 127, 127, 0.08);
     }
 
     .iconBtn {
@@ -175,31 +206,33 @@
     justify-content: flex-start;
     flex: 1;
     min-width: 0;
-    gap: 6px;
-    padding: 4px 4px;
+    gap: 8px;
+    padding: 3px 2px;
     background: transparent;
     border: none;
     border-radius: @radius-md;
     color: @text;
     cursor: pointer;
     text-align: left;
-    font-size: 13px;
+    font-size: 12.5px;
     font-weight: 600;
 }
 
 .groupName {
     .ellipsis();
     min-width: 0;
+    letter-spacing: 0.2px;
 }
 
 .groupCount {
     flex: none;
     font-size: 11px;
     color: @text-dim;
-    background: @bg-3;
+    background: rgba(127, 127, 127, 0.12);
     border-radius: 999px;
     padding: 1px 7px;
-    font-weight: 400;
+    font-weight: 500;
+    backdrop-filter: blur(4px);
 }
 
 .groupActions {
@@ -231,30 +264,38 @@
     position: fixed;
     z-index: 300;
     min-width: 160px;
-    padding: 4px;
-    background: @bg-1;
+    padding: 6px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid @border;
-    border-radius: @radius-md;
-    box-shadow: @shadow-pop;
+    border-radius: @radius-lg;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+}
+
+:global([data-theme='dark']) .movePopover {
+    background: rgba(30, 32, 37, 0.85);
 }
 
 .movePopTitle {
     padding: 4px 8px;
-    font-size: 12px;
+    font-size: 11.5px;
     color: @text-dim;
+    font-weight: 500;
 }
 
 .moveItem {
     display: block;
     width: 100%;
     text-align: left;
-    padding: 6px 8px;
+    padding: 6px 10px;
     background: transparent;
     border: none;
     border-radius: @radius-sm;
     color: @text;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 12.5px;
+    transition: all 0.15s ease;
 
     &:hover {
         background: @accent-soft;
@@ -287,16 +328,18 @@
 .serverItem {
     display: flex;
     align-items: center;
-    gap: @space-md;
-    padding: 7px 8px;
+    gap: 8px;
+    padding: 7px 10px;
+    margin: 2px 0;
     border-radius: @radius-md;
     cursor: default;
     user-select: none;
-    transition: background 0.2s ease, border-left-color 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     border-left: 3px solid transparent;
 
     &:hover {
-        background: @bg-2;
+        background: rgba(127, 127, 127, 0.08);
+        transform: translateX(2px);
     }
 
     &.connecting {
@@ -325,10 +368,14 @@
     flex-direction: column;
     .fill();
     flex: 1;
+    gap: 1px;
 }
 
 .serverName {
     .ellipsis();
+    font-size: 13px;
+    font-weight: 500;
+    color: @text;
 }
 
 .serverSub {
@@ -355,25 +402,50 @@
 .sessionItem {
     display: flex;
     align-items: center;
-    gap: 7px;
-    width: calc(100% - 22px);
+    gap: 8px;
+    width: calc(100% - 16px);
     box-sizing: border-box;
-    margin: 1px 0 1px 22px;
-    padding: 4px 8px;
+    margin: 2px 0 2px 16px;
+    padding: 5px 10px;
     background: transparent;
-    border: none;
-    border-radius: 5px;
+    border: 1px solid transparent;
+    border-radius: @radius-md;
     color: @text-dim;
     text-align: left;
     cursor: pointer;
+    font-size: 12.5px;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
 
     &:hover {
-        background: @bg-2;
+        background: rgba(127, 127, 127, 0.08);
+        color: @text;
+        border-color: rgba(127, 127, 127, 0.12);
+        transform: translateX(3px);
     }
 
     &.active {
-        background: @bg-3;
-        color: @text;
+        background: rgba(28, 143, 196, 0.12);
+        color: @accent;
+        border-color: rgba(28, 143, 196, 0.25);
+        font-weight: 500;
+        box-shadow: 0 2px 8px rgba(28, 143, 196, 0.12);
+
+        &::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 20%;
+            bottom: 20%;
+            width: 3px;
+            background: @accent;
+            border-radius: 0 2px 2px 0;
+        }
+
+        svg {
+            color: @accent;
+        }
     }
 }
 

@@ -1,26 +1,26 @@
 package core
 
 type AppSettings struct {
-	ThemeMode             string  `json:"themeMode"`
-	FontFamily            string  `json:"fontFamily"`
-	FontSize              string  `json:"fontSize"`
-	AutoConnect           bool    `json:"autoConnect"`
-	DbDefaultLimit        string  `json:"dbDefaultLimit"`
-	GlobalFontFamily      string  `json:"globalFontFamily"`
-	AiBaseURL             string  `json:"aiBaseUrl"`
-	AiAPIKey              string  `json:"aiApiKey"`
-	AiModel               string  `json:"aiModel"`
-	AiTemperature         float64 `json:"aiTemperature"`
-	AiMaxContextTokens    int     `json:"aiMaxContextTokens"`
-	AiCompressionStrategy string  `json:"aiCompressionStrategy"` // "summary" | "sliding"
-	AiEnableMultimodal    bool    `json:"aiEnableMultimodal"`
-	AiSystemPrompt        string  `json:"aiSystemPrompt"`
-	AiWorkspaceDir           string  `json:"aiWorkspaceDir"`
-	AiEnableWebSearch        bool    `json:"aiEnableWebSearch"`
-	AiEnablePermissionGuard  bool    `json:"aiEnablePermissionGuard"`
-	AiBlockHighRiskCommands  bool    `json:"aiBlockHighRiskCommands"`
-	AiEnableThinking         bool    `json:"aiEnableThinking"`
-	AiReasoningEffort        string  `json:"aiReasoningEffort"` // "low" | "medium" | "high"
+	ThemeMode               string  `json:"themeMode"`
+	FontFamily              string  `json:"fontFamily"`
+	FontSize                string  `json:"fontSize"`
+	AutoConnect             bool    `json:"autoConnect"`
+	DbDefaultLimit          string  `json:"dbDefaultLimit"`
+	GlobalFontFamily        string  `json:"globalFontFamily"`
+	AiBaseURL               string  `json:"aiBaseUrl"`
+	AiAPIKey                string  `json:"aiApiKey"`
+	AiModel                 string  `json:"aiModel"`
+	AiTemperature           float64 `json:"aiTemperature"`
+	AiMaxContextTokens      int     `json:"aiMaxContextTokens"`
+	AiCompressionStrategy   string  `json:"aiCompressionStrategy"` // "summary" | "sliding"
+	AiEnableMultimodal      bool    `json:"aiEnableMultimodal"`
+	AiSystemPrompt          string  `json:"aiSystemPrompt"`
+	AiWorkspaceDir          string  `json:"aiWorkspaceDir"`
+	AiEnableWebSearch       bool    `json:"aiEnableWebSearch"`
+	AiEnablePermissionGuard bool    `json:"aiEnablePermissionGuard"`
+	AiBlockHighRiskCommands bool    `json:"aiBlockHighRiskCommands"`
+	AiEnableThinking        bool    `json:"aiEnableThinking"`
+	AiReasoningEffort       string  `json:"aiReasoningEffort"` // "low" | "medium" | "high"
 }
 
 func DefaultAppSettings() AppSettings {
@@ -33,8 +33,8 @@ func DefaultAppSettings() AppSettings {
 		GlobalFontFamily:        "system",
 		AiBaseURL:               "https://api.deepseek.com",
 		AiAPIKey:                "",
-		AiModel:                 "deepseek-chat",
-		AiTemperature:          0.7,
+		AiModel:                 "deepseek-v4-flash",
+		AiTemperature:           0.7,
 		AiMaxContextTokens:      4096,
 		AiCompressionStrategy:   "summary",
 		AiEnableMultimodal:      false,

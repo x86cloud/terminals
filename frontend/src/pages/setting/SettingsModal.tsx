@@ -1,7 +1,7 @@
-import React, {useEffect, useState} from 'react'
+import React, { useEffect, useState } from 'react'
 import Icon from '../../components/Icon'
-import {AppSettings} from '../../types'
-import {applyThemeMode, applyGlobalFont} from '../../utils/theme'
+import { AppSettings } from '../../types'
+import { applyThemeMode, applyGlobalFont } from '../../utils/theme'
 import AppearanceTab from './AppearanceTab'
 import AiAgentTab from './AiAgentTab'
 import AboutTab from './AboutTab'
@@ -17,14 +17,14 @@ interface Props {
 
 type SettingsTab = 'appearance' | 'aiAgent' | 'about'
 
-export default function SettingsModal({open, settings, onClose, onSave}: Props) {
+export default function SettingsModal({ open, settings, onClose, onSave }: Props) {
     const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
     const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('light')
     const [globalFontFamily, setGlobalFontFamily] = useState('system')
 
     const [aiBaseUrl, setAiBaseUrl] = useState('https://api.deepseek.com')
     const [aiApiKey, setAiApiKey] = useState('')
-    const [aiModel, setAiModel] = useState('deepseek-chat')
+    const [aiModel, setAiModel] = useState('deepseek-v4-flash')
     const [aiTemperature, setAiTemperature] = useState(0.7)
     const [aiMaxContextTokens, setAiMaxContextTokens] = useState(4096)
     const [aiCompressionStrategy, setAiCompressionStrategy] = useState<'summary' | 'sliding'>('summary')
@@ -43,7 +43,7 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             setGlobalFontFamily(settings.globalFontFamily || 'system')
             setAiBaseUrl(settings.aiBaseUrl || 'https://api.deepseek.com')
             setAiApiKey(settings.aiApiKey || '')
-            setAiModel(settings.aiModel || 'deepseek-chat')
+            setAiModel(settings.aiModel || 'deepseek-v4-flash')
             setAiTemperature(settings.aiTemperature ?? 0.7)
             setAiMaxContextTokens(settings.aiMaxContextTokens || 4096)
             setAiCompressionStrategy(settings.aiCompressionStrategy || 'summary')
@@ -104,11 +104,11 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             <div className={s.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={s.header}>
                     <div className={s.title}>
-                        <Icon name="settings" size={16}/>
+                        <Icon name="settings" size={16} />
                         <span>设置</span>
                     </div>
                     <button className={g.iconBtn} onClick={handleCancel} title="关闭">
-                        <Icon name="close" size={14}/>
+                        <Icon name="close" size={14} />
                     </button>
                 </div>
 
@@ -119,19 +119,19 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                             className={`${s.navItem}${activeTab === 'appearance' ? ' ' + s.active : ''}`}
                             onClick={() => setActiveTab('appearance')}
                         >
-                            <Icon name="chart" size={14}/> 外观主题
+                            <Icon name="chart" size={14} /> 外观主题
                         </button>
                         <button
                             className={`${s.navItem}${activeTab === 'aiAgent' ? ' ' + s.active : ''}`}
                             onClick={() => setActiveTab('aiAgent')}
                         >
-                            <Icon name="bot" size={14}/> AI 智能体
+                            <Icon name="bot" size={14} /> AI 智能体
                         </button>
                         <button
                             className={`${s.navItem}${activeTab === 'about' ? ' ' + s.active : ''}`}
                             onClick={() => setActiveTab('about')}
                         >
-                            <Icon name="home" size={14}/> 关于应用
+                            <Icon name="home" size={14} /> 关于应用
                         </button>
                     </div>
 

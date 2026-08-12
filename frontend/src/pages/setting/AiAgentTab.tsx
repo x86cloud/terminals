@@ -54,7 +54,7 @@ export default function AiAgentTab({
             case 'deepseek':
                 onChange({
                     aiBaseUrl: 'https://api.deepseek.com',
-                    aiModel: 'deepseek-chat',
+                    aiModel: 'deepseek-v4-flash',
                 })
                 break
             case 'openai':
@@ -136,7 +136,7 @@ export default function AiAgentTab({
                         <input
                             type="text"
                             className={s.input}
-                            placeholder="deepseek-chat"
+                            placeholder="deepseek-v4-flash"
                             value={aiModel}
                             onChange={(e) => onChange({ aiModel: e.target.value })}
                         />
