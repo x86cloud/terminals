@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"terminal/ssh"
+	"time"
 
 	"github.com/cloudwego/eino/components/tool"
 	"github.com/cloudwego/eino/components/tool/utils"
@@ -158,10 +159,28 @@ func BuildSSHTools(sm *ssh.SessionManager, wm *WorkspaceManager) ([]tool.BaseToo
 			if cmd == "" {
 				return nil, fmt.Errorf("命令不能为空")
 			}
+
+			// 自动防阻塞修正（如未加 -c 的 ping、tail -f、top 等）
+			if strings.HasPrefix(cmd, "ping ") && !strings.Contains(cmd, "-c") {
+				cmd = cmd + " -c 4"
+			} else if strings.HasPrefix(cmd, "tail -f ") {
+				cmd = strings.Replace(cmd, "tail -f ", "tail -n 100 ", 1)
+			} else if cmd == "top" || strings.HasPrefix(cmd, "top ") {
+				if !strings.Contains(cmd, "-b") {
+					cmd = "top -b -n 1"
+				}
+			} else if cmd == "htop" {
+				cmd = "top -b -n 1"
+			}
+
 			if wm != nil {
 				wm.EmitToolStart("ssh_exec_command", fmt.Sprintf("正在在 [%s] 执行命令: %s", info.Title, cmd))
 			}
-			out, err := sess.ExecCombined(cmd)
+
+			execCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			defer cancel()
+
+			out, err := sess.ExecCombinedContext(execCtx, cmd)
 			if err != nil && out == "" {
 				return nil, fmt.Errorf("执行命令失败: %w", err)
 			}

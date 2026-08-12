@@ -415,6 +415,10 @@ func (m *SessionManager) Resize(sessionID string, cols, rows int) error {
 }
 
 func (s *Session) ExecCombined(cmd string) (string, error) {
+	return s.ExecCombinedContext(context.Background(), cmd)
+}
+
+func (s *Session) ExecCombinedContext(ctx context.Context, cmd string) (string, error) {
 	if s.isClosed() || s.client == nil {
 		return "", errors.New("会话已断开")
 	}
@@ -423,9 +427,27 @@ func (s *Session) ExecCombined(cmd string) (string, error) {
 		return "", fmt.Errorf("创建 SSH Session 失败: %w", err)
 	}
 	defer sess.Close()
-	out, err := sess.CombinedOutput(cmd)
-	if err != nil && len(out) == 0 {
-		return "", err
+
+	type execResult struct {
+		out []byte
+		err error
 	}
-	return string(out), nil
+	done := make(chan execResult, 1)
+
+	go func() {
+		out, err := sess.CombinedOutput(cmd)
+		done <- execResult{out: out, err: err}
+	}()
+
+	select {
+	case res := <-done:
+		if res.err != nil && len(res.out) == 0 {
+			return "", res.err
+		}
+		return string(res.out), nil
+	case <-ctx.Done():
+		_ = sess.Signal(golangssh.SIGKILL)
+		_ = sess.Close()
+		return "", fmt.Errorf("远程 Shell 命令执行超时或取消 (%w)。若命令涉及 ping、tail -f 或交互式程序，请指定 -c 4 计数或非阻塞参数重试", ctx.Err())
+	}
 }
