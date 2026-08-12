@@ -42,13 +42,18 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 	agent.DefaultManager.SetSSHManager(a.sessions)
 	_ = agent.DefaultManager.InitOrUpdate(cfg)
 
-	fullText, notice, err := agent.DefaultManager.StreamChat(
+	fullText, reasoningText, notice, err := agent.DefaultManager.StreamChat(
 		context.Background(),
 		sessionID,
 		messages,
 		func(chunk string) {
 			if a.ctx != nil {
 				wruntime.EventsEmit(a.ctx, "agent:chunk:"+sessionID, chunk)
+			}
+		},
+		func(chunk string) {
+			if a.ctx != nil {
+				wruntime.EventsEmit(a.ctx, "agent:reasoning_chunk:"+sessionID, chunk)
 			}
 		},
 	)
@@ -66,7 +71,10 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 				stoppedText = "⏹️ [用户手动停止了推导]"
 			}
 			if a.ctx != nil {
-				wruntime.EventsEmit(a.ctx, "agent:done:"+sessionID, stoppedText)
+				wruntime.EventsEmit(a.ctx, "agent:done:"+sessionID, map[string]string{
+					"content":           stoppedText,
+					"reasoning_content": reasoningText,
+				})
 			}
 			return stoppedText, nil
 		}
@@ -77,7 +85,10 @@ func (a *App) AgentSend(sessionID string, messages []agent.FrontendMessage) (str
 	}
 
 	if a.ctx != nil {
-		wruntime.EventsEmit(a.ctx, "agent:done:"+sessionID, fullText)
+		wruntime.EventsEmit(a.ctx, "agent:done:"+sessionID, map[string]string{
+			"content":           fullText,
+			"reasoning_content": reasoningText,
+		})
 	}
 	return fullText, nil
 }

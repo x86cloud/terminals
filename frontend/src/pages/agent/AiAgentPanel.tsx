@@ -18,6 +18,7 @@ export default function AiAgentPanel({ settings }: Props) {
     const [images, setImages] = useState<string[]>([])
     const [isGenerating, setIsGenerating] = useState(false)
     const [streamingText, setStreamingText] = useState('')
+    const [streamingReasoningText, setStreamingReasoningText] = useState('')
     const [noticeText, setNoticeText] = useState('')
     const [workspaceDir, setWorkspaceDir] = useState<string>('')
     const [activeToolCall, setActiveToolCall] = useState<string>('')
@@ -116,6 +117,10 @@ export default function AiAgentPanel({ settings }: Props) {
             setStreamingText((prev) => prev + chunk)
         })
 
+        const unSubReasoning = subscribe(`agent:reasoning_chunk:${SESSION_ID}`, (chunk: string) => {
+            setStreamingReasoningText((prev) => prev + chunk)
+        })
+
         const unSubNotice = subscribe(`agent:notice:${SESSION_ID}`, (notice: string) => {
             setNoticeText(notice)
         })
@@ -123,25 +128,35 @@ export default function AiAgentPanel({ settings }: Props) {
         const unSubError = subscribe(`agent:error:${SESSION_ID}`, (errText: string) => {
             setIsGenerating(false)
             setStreamingText('')
+            setStreamingReasoningText('')
             saveHistory([
                 ...messages,
                 { role: 'assistant', content: `❌ 运行时错误: ${errText}`, timestamp: Date.now() },
             ])
         })
 
-        const unSubDone = subscribe(`agent:done:${SESSION_ID}`, (fullResp: string) => {
+        const unSubDone = subscribe(`agent:done:${SESSION_ID}`, (data: any) => {
             setIsGenerating(false)
             setStreamingText('')
             setActiveToolCall('')
             setPendingConfirm(null)
+            const content = typeof data === 'object' && data !== null ? data.content : String(data || '')
+            const reasoning = typeof data === 'object' && data !== null ? data.reasoning_content : ''
+
             setMessages((prev) => {
                 const updated = [
                     ...prev,
-                    { role: 'assistant' as const, content: fullResp, timestamp: Date.now() },
+                    {
+                        role: 'assistant' as const,
+                        content: content,
+                        reasoning_content: reasoning || streamingReasoningText,
+                        timestamp: Date.now(),
+                    },
                 ]
                 API.agentSaveHistory(updated).catch(() => { })
                 return updated
             })
+            setStreamingReasoningText('')
         })
 
         const unSubConfirm = subscribe(`agent:confirm_request:${SESSION_ID}`, (req: any) => {
@@ -327,6 +342,35 @@ export default function AiAgentPanel({ settings }: Props) {
         return '#1890ff'
     }
 
+    const ThinkingCard = ({ reasoningContent, isStreaming = false }: { reasoningContent?: string; isStreaming?: boolean }) => {
+        const [collapsed, setCollapsed] = useState(!isStreaming)
+
+        if (!reasoningContent) return null
+
+        return (
+            <div className={s.thinkingCard}>
+                <div className={s.thinkingHeader} onClick={() => setCollapsed(!collapsed)}>
+                    <div className={s.thinkingTitleLeft}>
+                        {isStreaming ? (
+                            <Icon name="refresh" size={12} className={s.spinIcon} />
+                        ) : (
+                            <span className={s.thinkingBrainIcon}>💭</span>
+                        )}
+                        <span className={s.thinkingLabel}>
+                            {isStreaming ? '正在思考中…' : '已完成深度思考'}
+                        </span>
+                    </div>
+                    <Icon name={collapsed ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
+                </div>
+                {!collapsed && (
+                    <div className={s.thinkingBody}>
+                        <MarkdownViewer content={reasoningContent} streaming={isStreaming} />
+                    </div>
+                )}
+            </div>
+        )
+    }
+
     const circumference = 43.98 // 2 * Math.PI * 7
     const strokeDashoffset = circumference - (circumference * (percent / 100))
 
@@ -408,6 +452,9 @@ export default function AiAgentPanel({ settings }: Props) {
                                 </div>
                             )}
                             <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
+                                {msg.role === 'assistant' && msg.reasoning_content && (
+                                    <ThinkingCard reasoningContent={msg.reasoning_content} isStreaming={false} />
+                                )}
                                 {msg.images && msg.images.length > 0 && (
                                     <div className={s.imageGrid}>
                                         {msg.images.map((img, i) => (
@@ -434,6 +481,9 @@ export default function AiAgentPanel({ settings }: Props) {
                             <Icon name="bot" size={16} />
                         </div>
                         <div className={s.bubble}>
+                            {streamingReasoningText && (
+                                <ThinkingCard reasoningContent={streamingReasoningText} isStreaming={true} />
+                            )}
                             {activeToolCall && (
                                 <div className={s.toolCallPill}>
                                     <Icon name="refresh" size={13} className={s.spinIcon} />
@@ -444,9 +494,9 @@ export default function AiAgentPanel({ settings }: Props) {
                             <div className={s.markdownBody}>
                                 {streamingText ? (
                                     <MarkdownViewer content={streamingText} streaming={true} />
-                                ) : (
+                                ) : !streamingReasoningText ? (
                                     <span style={{ color: '#888' }}>思考中…</span>
-                                )}
+                                ) : null}
                             </div>
 
                             {pendingConfirm && (

@@ -25,13 +25,14 @@ type ToolCallItem struct {
 }
 
 type FrontendMessage struct {
-	Role       string         `json:"role"`
-	Content    string         `json:"content"`
-	Images     []string       `json:"images,omitempty"`
-	ToolCalls  []ToolCallItem `json:"tool_calls,omitempty"`
-	ToolCallID string         `json:"tool_call_id,omitempty"`
-	Name       string         `json:"name,omitempty"`
-	Timestamp  int64          `json:"timestamp,omitempty"`
+	Role             string         `json:"role"`
+	Content          string         `json:"content"`
+	ReasoningContent string         `json:"reasoning_content,omitempty"`
+	Images           []string       `json:"images,omitempty"`
+	ToolCalls        []ToolCallItem `json:"tool_calls,omitempty"`
+	ToolCallID       string         `json:"tool_call_id,omitempty"`
+	Name             string         `json:"name,omitempty"`
+	Timestamp        int64          `json:"timestamp,omitempty"`
 }
 
 type AgentManager struct {
@@ -95,19 +96,18 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 		Temperature: &temp,
 	}
 
-	extraFields := make(map[string]any)
 	if cfg.AiEnableThinking {
-		extraFields["thinking"] = map[string]any{
+		modelConfig.ExtraFields["thinking"] = map[string]any{
 			"type": "enabled",
+		}
+	} else {
+		modelConfig.ExtraFields["thinking"] = map[string]any{
+			"type": "disabled",
 		}
 	}
 	effort := strings.TrimSpace(cfg.AiReasoningEffort)
 	if effort != "" && effort != "none" {
 		modelConfig.ReasoningEffort = openai.ReasoningEffortLevel(effort)
-		extraFields["reasoning_effort"] = effort
-	}
-	if len(extraFields) > 0 {
-		modelConfig.ExtraFields = extraFields
 	}
 
 	ctx := m.ctx
@@ -340,14 +340,15 @@ func (m *AgentManager) StreamChat(
 	sessionID string,
 	messages []FrontendMessage,
 	onChunk func(chunk string),
-) (string, string, error) {
+	onReasoningChunk func(chunk string),
+) (string, string, string, error) {
 	m.mu.RLock()
 	ag := m.agent
 	cfg := m.cfg
 	m.mu.RUnlock()
 
 	if ag == nil {
-		return "", "", errors.New("AI Agent 未配置或 API Key 为空，请在设置中配置 API Key")
+		return "", "", "", errors.New("AI Agent 未配置或 API Key 为空，请在设置中配置 API Key")
 	}
 
 	chatCtx, cancel := context.WithCancel(ctx)
@@ -364,16 +365,19 @@ func (m *AgentManager) StreamChat(
 	sr, err := ag.Stream(chatCtx, schemaMsgs)
 	if err != nil {
 		if errors.Is(chatCtx.Err(), context.Canceled) {
-			return "", notice, errors.New("用户手动停止了推导")
+			return "", "", notice, errors.New("用户手动停止了推导")
 		}
-		return "", "", fmt.Errorf("AI Agent 推导请求失败: %w", err)
+		return "", "", "", fmt.Errorf("AI Agent 推导请求失败: %w", err)
 	}
 	defer sr.Close()
 
 	var fullResp strings.Builder
+	var reasoningResp strings.Builder
+	inThinkTag := false
+
 	for {
 		if errors.Is(chatCtx.Err(), context.Canceled) {
-			return fullResp.String(), notice, errors.New("用户手动停止了推导")
+			return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
 		}
 
 		chunk, err := sr.Recv()
@@ -381,19 +385,58 @@ func (m *AgentManager) StreamChat(
 			break
 		}
 		if errors.Is(chatCtx.Err(), context.Canceled) {
-			return fullResp.String(), notice, errors.New("用户手动停止了推导")
+			return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
 		}
 		if err != nil {
-			return fullResp.String(), notice, fmt.Errorf("接收 AI 响应流中断: %w", err)
+			return fullResp.String(), reasoningResp.String(), notice, fmt.Errorf("接收 AI 响应流中断: %w", err)
 		}
 		if chunk != nil {
+			if chunk.ReasoningContent != "" {
+				reasoningResp.WriteString(chunk.ReasoningContent)
+				if onReasoningChunk != nil {
+					onReasoningChunk(chunk.ReasoningContent)
+				}
+			}
+
 			text := chunk.Content
 			if text != "" {
-				fullResp.WriteString(text)
-				onChunk(text)
+				if strings.Contains(text, "<think>") {
+					parts := strings.SplitN(text, "<think>", 2)
+					if parts[0] != "" {
+						fullResp.WriteString(parts[0])
+						onChunk(parts[0])
+					}
+					inThinkTag = true
+					text = parts[1]
+				}
+
+				if inThinkTag {
+					if strings.Contains(text, "</think>") {
+						parts := strings.SplitN(text, "</think>", 2)
+						if parts[0] != "" {
+							reasoningResp.WriteString(parts[0])
+							if onReasoningChunk != nil {
+								onReasoningChunk(parts[0])
+							}
+						}
+						inThinkTag = false
+						if parts[1] != "" {
+							fullResp.WriteString(parts[1])
+							onChunk(parts[1])
+						}
+					} else {
+						reasoningResp.WriteString(text)
+						if onReasoningChunk != nil {
+							onReasoningChunk(text)
+						}
+					}
+				} else {
+					fullResp.WriteString(text)
+					onChunk(text)
+				}
 			}
 		}
 	}
 
-	return fullResp.String(), notice, nil
+	return fullResp.String(), reasoningResp.String(), notice, nil
 }

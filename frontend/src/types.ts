@@ -886,6 +886,7 @@ export interface ToolCallItem {
 export interface AiMessage {
     role: 'system' | 'user' | 'assistant' | 'tool'
     content: string
+    reasoning_content?: string
     images?: string[]
     tool_calls?: ToolCallItem[]
     tool_call_id?: string

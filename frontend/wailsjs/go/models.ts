@@ -19,6 +19,7 @@ export namespace agent {
 	export class FrontendMessage {
 	    role: string;
 	    content: string;
+	    reasoning_content?: string;
 	    images?: string[];
 	    tool_calls?: ToolCallItem[];
 	    tool_call_id?: string;
@@ -33,6 +34,7 @@ export namespace agent {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.role = source["role"];
 	        this.content = source["content"];
+	        this.reasoning_content = source["reasoning_content"];
 	        this.images = source["images"];
 	        this.tool_calls = this.convertValues(source["tool_calls"], ToolCallItem);
 	        this.tool_call_id = source["tool_call_id"];
