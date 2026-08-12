@@ -56,6 +56,15 @@ body {
     box-sizing: border-box;
 }
 
+.cm-editor, .cm-theme {
+    border: none !important;
+    outline: none !important;
+}
+.cm-editor.cm-focused {
+    border: none !important;
+    outline: none !important;
+}
+
 html, body, #root {
     height: 100%;
     margin: 0;

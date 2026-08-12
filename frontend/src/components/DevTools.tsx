@@ -1,20 +1,20 @@
-import React, {useEffect, useMemo, useState} from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import Icon from './Icon'
-import {md5} from '../utils/md5'
+import { md5 } from '../utils/md5'
 import CodeEditor from './CodeEditor'
 import g from '../styles/global.module.less'
 import dt from './DevTools.module.less'
 
 type ToolKey = 'md5' | 'timestamp' | 'base64' | 'json'
 
-const TOOLS: {key: ToolKey; label: string}[] = [
-    {key: 'md5', label: 'MD5 哈希'},
-    {key: 'timestamp', label: '时间戳'},
-    {key: 'base64', label: 'Base64 编解码'},
-    {key: 'json', label: 'JSON 格式化'},
+const TOOLS: { key: ToolKey; label: string }[] = [
+    { key: 'md5', label: 'MD5 哈希' },
+    { key: 'timestamp', label: '时间戳' },
+    { key: 'base64', label: 'Base64 编解码' },
+    { key: 'json', label: 'JSON 格式化' },
 ]
 
-function CopyButton({value}: {value: string}) {
+function CopyButton({ value }: { value: string }) {
     const [copied, setCopied] = useState(false)
     const onClick = async () => {
         if (!value) return
@@ -28,7 +28,7 @@ function CopyButton({value}: {value: string}) {
     }
     return (
         <button className={`${g.btn} ${g.small}`} onClick={onClick} disabled={!value} title="复制">
-            <Icon name="copy" size={13}/>
+            <Icon name="copy" size={13} />
             {copied ? '已复制' : '复制'}
         </button>
     )
@@ -58,11 +58,11 @@ function Md5Tool() {
             />
             <div className={dt.optRow}>
                 <label className={dt.switchInline}>
-                    <input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)}/>
+                    <input type="checkbox" checked={upper} onChange={(e) => setUpper(e.target.checked)} />
                     <span>大写输出</span>
                 </label>
-                <span className={g.spacer}/>
-                <CopyButton value={hash}/>
+                <span className={g.spacer} />
+                <CopyButton value={hash} />
             </div>
             <div className={dt.resultBox}>
                 <code className={dt.resultText}>{hash || '—'}</code>
@@ -143,12 +143,12 @@ function TimestampTool() {
                 <div className={dt.tsCard}>
                     <span className={dt.tsLabel}>秒级 (s)</span>
                     <code className={dt.tsValue}>{nowSec}</code>
-                    <CopyButton value={String(nowSec)}/>
+                    <CopyButton value={String(nowSec)} />
                 </div>
                 <div className={dt.tsCard}>
                     <span className={dt.tsLabel}>毫秒级 (ms)</span>
                     <code className={dt.tsValue}>{nowMs}</code>
-                    <CopyButton value={String(nowMs)}/>
+                    <CopyButton value={String(nowMs)} />
                 </div>
             </div>
 
@@ -182,8 +182,8 @@ function TimestampTool() {
                 />
                 <div className={dt.optRow}>
                     <span className={dt.tsLabel}>对应秒级时间戳</span>
-                    <span className={g.spacer}/>
-                    <CopyButton value={tsResult}/>
+                    <span className={g.spacer} />
+                    <CopyButton value={tsResult} />
                 </div>
                 <div className={dt.resultBox}>
                     <code className={dt.resultText}>{tsResult || '—'}</code>
@@ -240,8 +240,8 @@ function Base64Tool() {
             />
             <div className={dt.optRow}>
                 <span className={dt.tsLabel}>{mode === 'encode' ? '编码结果' : '解码结果'}</span>
-                <span className={g.spacer}/>
-                <CopyButton value={result}/>
+                <span className={g.spacer} />
+                <CopyButton value={result} />
             </div>
             <div className={dt.resultBox}>
                 <code className={dt.resultText}>{result || '—'}</code>
@@ -252,7 +252,7 @@ function Base64Tool() {
 
 /* ---------------- JSON 格式化 ---------------- */
 function downloadText(filename: string, text: string) {
-    const blob = new Blob([text], {type: 'application/json'})
+    const blob = new Blob([text], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
@@ -282,7 +282,7 @@ function locate(str: string, pos: number) {
             col++
         }
     }
-    return {line, col}
+    return { line, col }
 }
 
 function JsonTool() {
@@ -311,7 +311,7 @@ function JsonTool() {
             const pos = findPos(msg)
             let detail = msg
             if (pos != null) {
-                const {line, col} = locate(input, pos)
+                const { line, col } = locate(input, pos)
                 detail = `${msg}（出错位置 ${pos}，第 ${line} 行第 ${col} 列）`
             }
             setError(detail)
@@ -348,8 +348,8 @@ function JsonTool() {
                 <button className={`${g.btn} ${g.sm}`} disabled={busy || !input.trim()} onClick={() => run('minify')}>
                     压缩
                 </button>
-                <span className={g.spacer}/>
-                <CopyButton value={input}/>
+                <span className={g.spacer} />
+                <CopyButton value={input} />
                 <button className={`${g.btn} ${g.sm}`} disabled={!input.trim()} onClick={() => downloadText('formatted.json', input)} title="下载结果">
                     下载
                 </button>
@@ -361,7 +361,7 @@ function JsonTool() {
 }
 
 /* ---------------- 主组件 ---------------- */
-export default function DevTools({onClose}: {onClose: () => void}) {
+export default function DevTools({ onClose }: { onClose: () => void }) {
     const [active, setActive] = useState<ToolKey>('md5')
 
     return (
@@ -378,18 +378,11 @@ export default function DevTools({onClose}: {onClose: () => void}) {
                 ))}
             </div>
             <div className={dt.devMain}>
-                <div className={dt.devHeader}>
-                    <span className={dt.devHeaderTitle}>常用开发工具集</span>
-                    <span className={g.spacer}/>
-                    <button className={g.iconBtn} title="关闭" onClick={onClose}>
-                        <Icon name="close" size={15}/>
-                    </button>
-                </div>
                 <div className={dt.devBody}>
-                    {active === 'md5' && <Md5Tool/>}
-                    {active === 'timestamp' && <TimestampTool/>}
-                    {active === 'base64' && <Base64Tool/>}
-                    {active === 'json' && <JsonTool/>}
+                    {active === 'md5' && <Md5Tool />}
+                    {active === 'timestamp' && <TimestampTool />}
+                    {active === 'base64' && <Base64Tool />}
+                    {active === 'json' && <JsonTool />}
                 </div>
             </div>
         </div>

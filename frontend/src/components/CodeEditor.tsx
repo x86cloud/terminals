@@ -108,6 +108,8 @@ export default function CodeEditor({
                 display: 'flex',
                 flexDirection: 'column',
                 flex: height ? 'none' : 1,
+                border: 'none',
+                outline: 'none',
             }}
             theme={lightEditorTheme}
             basicSetup={basicSetup}

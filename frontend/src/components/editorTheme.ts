@@ -13,10 +13,12 @@ const baseTheme = EditorView.theme(
             color: 'var(--text, #1f2733)',
             backgroundColor: 'var(--bg-1, #ffffff)',
             fontSize: '13px',
-            border: 'none',
+            border: 'none !important',
+            outline: 'none !important',
         },
         '&.cm-focused': {
-            outline: 'none',
+            outline: 'none !important',
+            border: 'none !important',
         },
         '.cm-content': {
             fontFamily:
