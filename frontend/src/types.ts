@@ -873,6 +873,8 @@ export interface AppSettings {
     aiEnableWebSearch?: boolean
     aiEnablePermissionGuard?: boolean
     aiBlockHighRiskCommands?: boolean
+    aiEnableThinking?: boolean
+    aiReasoningEffort?: 'low' | 'medium' | 'high'
 }
 
 export interface ToolCallItem {

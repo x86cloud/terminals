@@ -32,6 +32,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
     const [aiEnableWebSearch, setAiEnableWebSearch] = useState(false)
     const [aiEnablePermissionGuard, setAiEnablePermissionGuard] = useState(true)
     const [aiBlockHighRiskCommands, setAiBlockHighRiskCommands] = useState(true)
+    const [aiEnableThinking, setAiEnableThinking] = useState(false)
+    const [aiReasoningEffort, setAiReasoningEffort] = useState<'low' | 'medium' | 'high'>('medium')
     const [aiSystemPrompt, setAiSystemPrompt] = useState('你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
     const [aiWorkspaceDir, setAiWorkspaceDir] = useState('')
 
@@ -49,6 +51,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             setAiEnableWebSearch(!!settings.aiEnableWebSearch)
             setAiEnablePermissionGuard(settings.aiEnablePermissionGuard ?? true)
             setAiBlockHighRiskCommands(settings.aiBlockHighRiskCommands ?? true)
+            setAiEnableThinking(!!settings.aiEnableThinking)
+            setAiReasoningEffort(settings.aiReasoningEffort || 'medium')
             setAiSystemPrompt(settings.aiSystemPrompt || '你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
             setAiWorkspaceDir(settings.aiWorkspaceDir || '')
         }
@@ -87,6 +91,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
             aiEnableWebSearch,
             aiEnablePermissionGuard,
             aiBlockHighRiskCommands,
+            aiEnableThinking,
+            aiReasoningEffort,
             aiSystemPrompt,
             aiWorkspaceDir,
         })
@@ -152,6 +158,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                                 aiEnableWebSearch={aiEnableWebSearch}
                                 aiEnablePermissionGuard={aiEnablePermissionGuard}
                                 aiBlockHighRiskCommands={aiBlockHighRiskCommands}
+                                aiEnableThinking={aiEnableThinking}
+                                aiReasoningEffort={aiReasoningEffort}
                                 aiSystemPrompt={aiSystemPrompt}
                                 onChange={(fields) => {
                                     if (fields.aiBaseUrl !== undefined) setAiBaseUrl(fields.aiBaseUrl)
@@ -164,6 +172,8 @@ export default function SettingsModal({open, settings, onClose, onSave}: Props) 
                                     if (fields.aiEnableWebSearch !== undefined) setAiEnableWebSearch(fields.aiEnableWebSearch)
                                     if (fields.aiEnablePermissionGuard !== undefined) setAiEnablePermissionGuard(fields.aiEnablePermissionGuard)
                                     if (fields.aiBlockHighRiskCommands !== undefined) setAiBlockHighRiskCommands(fields.aiBlockHighRiskCommands)
+                                    if (fields.aiEnableThinking !== undefined) setAiEnableThinking(fields.aiEnableThinking)
+                                    if (fields.aiReasoningEffort !== undefined) setAiReasoningEffort(fields.aiReasoningEffort)
                                     if (fields.aiSystemPrompt !== undefined) setAiSystemPrompt(fields.aiSystemPrompt)
                                 }}
                             />

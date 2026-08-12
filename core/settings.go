@@ -19,6 +19,8 @@ type AppSettings struct {
 	AiEnableWebSearch        bool    `json:"aiEnableWebSearch"`
 	AiEnablePermissionGuard  bool    `json:"aiEnablePermissionGuard"`
 	AiBlockHighRiskCommands  bool    `json:"aiBlockHighRiskCommands"`
+	AiEnableThinking         bool    `json:"aiEnableThinking"`
+	AiReasoningEffort        string  `json:"aiReasoningEffort"` // "low" | "medium" | "high"
 }
 
 func DefaultAppSettings() AppSettings {
@@ -39,5 +41,7 @@ func DefaultAppSettings() AppSettings {
 		AiSystemPrompt:          "你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。",
 		AiEnablePermissionGuard: true,
 		AiBlockHighRiskCommands: true,
+		AiEnableThinking:        false,
+		AiReasoningEffort:       "medium",
 	}
 }

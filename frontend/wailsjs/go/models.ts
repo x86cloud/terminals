@@ -82,6 +82,8 @@ export namespace core {
 	    aiEnableWebSearch: boolean;
 	    aiEnablePermissionGuard: boolean;
 	    aiBlockHighRiskCommands: boolean;
+	    aiEnableThinking: boolean;
+	    aiReasoningEffort: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -107,6 +109,8 @@ export namespace core {
 	        this.aiEnableWebSearch = source["aiEnableWebSearch"];
 	        this.aiEnablePermissionGuard = source["aiEnablePermissionGuard"];
 	        this.aiBlockHighRiskCommands = source["aiBlockHighRiskCommands"];
+	        this.aiEnableThinking = source["aiEnableThinking"];
+	        this.aiReasoningEffort = source["aiReasoningEffort"];
 	    }
 	}
 	export class ServerConfig {

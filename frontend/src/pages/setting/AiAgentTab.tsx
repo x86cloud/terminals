@@ -13,6 +13,8 @@ interface Props {
     aiEnableWebSearch?: boolean
     aiEnablePermissionGuard?: boolean
     aiBlockHighRiskCommands?: boolean
+    aiEnableThinking?: boolean
+    aiReasoningEffort?: 'low' | 'medium' | 'high'
     aiSystemPrompt: string
     onChange: (fields: Partial<{
         aiBaseUrl: string
@@ -25,6 +27,8 @@ interface Props {
         aiEnableWebSearch: boolean
         aiEnablePermissionGuard: boolean
         aiBlockHighRiskCommands: boolean
+        aiEnableThinking: boolean
+        aiReasoningEffort: 'low' | 'medium' | 'high'
         aiSystemPrompt: string
     }>) => void
 }
@@ -40,6 +44,8 @@ export default function AiAgentTab({
     aiEnableWebSearch = false,
     aiEnablePermissionGuard = true,
     aiBlockHighRiskCommands = true,
+    aiEnableThinking = false,
+    aiReasoningEffort = 'medium',
     aiSystemPrompt,
     onChange,
 }: Props) {
@@ -152,6 +158,36 @@ export default function AiAgentTab({
                         />
                     </div>
                 </div>
+
+                <div className={s.switchRow} style={{ marginTop: 12 }}>
+                    <div className={s.switchInfo}>
+                        <div className={s.switchLabel}>开启深度思考 (Thinking / Reasoning)</div>
+                        <div className={s.switchDesc}>开启后向 Reasoning 模型透传思考深度等级参数（适用于 OpenAI o1/o3-mini、DeepSeek R1 等）</div>
+                    </div>
+                    <label className={s.switch}>
+                        <input
+                            type="checkbox"
+                            checked={aiEnableThinking}
+                            onChange={(e) => onChange({ aiEnableThinking: e.target.checked })}
+                        />
+                        <span className={s.slider} />
+                    </label>
+                </div>
+
+                {aiEnableThinking && (
+                    <div className={s.formGroup} style={{ marginTop: 12 }}>
+                        <label className={s.label}>思考深度等级 (reasoning_effort)</label>
+                        <select
+                            className={s.select}
+                            value={aiReasoningEffort}
+                            onChange={(e) => onChange({ aiReasoningEffort: e.target.value as 'low' | 'medium' | 'high' })}
+                        >
+                            <option value="low">低 (low) - 速度最快，消耗 Token 较少</option>
+                            <option value="medium">中 (medium) - 平衡思考深度与推理速度（默认推荐）</option>
+                            <option value="high">高 (high) - 极深逻辑推演，适合复杂运维决策</option>
+                        </select>
+                    </div>
+                )}
             </div>
 
             {/* 卡片 2：上下文管理与多模态 */}
@@ -254,15 +290,6 @@ export default function AiAgentTab({
                         />
                         <span className={s.slider} />
                     </label>
-                </div>
-
-                <div className={s.helpText} style={{ marginTop: 8 }}>
-                    <strong>Tools 默认权限标定说明：</strong>
-                    <ul style={{ marginTop: 4, paddingLeft: 16, lineHeight: 1.6 }}>
-                        <li><span style={{ color: '#48c774' }}>🟢 只读放行 (ReadOnly):</span> 文件读取、目录列出、系统概况、网络搜索、进程/容器查看等无害操作</li>
-                        <li><span style={{ color: '#faad14' }}>🟡 界面二次确认 (UserConfirm):</span> 目录/文件改动 (workspace_write_file, ssh_write_file)、远程 Shell 命令执行 (ssh_exec_command) 等变更操作</li>
-                        <li><span style={{ color: '#ff4d4f' }}>🔴 动态高危拦截 (Forbidden):</span> 命中黑名单规则的高危删盘/洗盘命令直接拒绝执行</li>
-                    </ul>
                 </div>
             </div>
 

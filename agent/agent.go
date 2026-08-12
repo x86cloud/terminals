@@ -95,6 +95,14 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 		Temperature: &temp,
 	}
 
+	if cfg.AiEnableThinking {
+		effort := strings.TrimSpace(cfg.AiReasoningEffort)
+		if effort == "" {
+			effort = "medium"
+		}
+		modelConfig.ReasoningEffort = openai.ReasoningEffortLevel(effort)
+	}
+
 	ctx := m.ctx
 	if ctx == nil {
 		ctx = context.Background()
