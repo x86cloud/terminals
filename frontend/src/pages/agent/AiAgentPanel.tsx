@@ -66,7 +66,7 @@ export default function AiAgentPanel({ settings }: Props) {
     }, [messages, streamingText, pendingConfirm, activeToolCall])
 
     // Subscribe to Wails event stream
-    const handleSendRef = useRef<(customText?: string) => Promise<void>>(async () => {})
+    const handleSendRef = useRef<(customText?: string) => Promise<void>>(async () => { })
 
     // Send Message Handler
     const handleSend = async (customText?: any) => {
@@ -450,12 +450,12 @@ export default function AiAgentPanel({ settings }: Props) {
 
                     <textarea
                         className={s.textarea}
-                        placeholder="有问题就会有答案"
+                        placeholder="有问题就会有答案 (Shift + Enter 换行)"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onPaste={handlePaste}
                         onKeyDown={(e) => {
-                            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                            if (e.key === 'Enter' && !e.shiftKey) {
                                 e.preventDefault()
                                 handleSend()
                             }
