@@ -33,6 +33,12 @@ export function applyThemeMode(mode: 'light' | 'dark' | 'system') {
         resolved = 'dark'
     }
     document.documentElement.setAttribute('data-theme', resolved)
+
+    // 同步更新 Windows 原生 TitleBar 颜色主题
+    const win = window as any
+    if (win.go?.main?.App?.SetNativeTheme) {
+        win.go.main.App.SetNativeTheme(mode).catch(() => undefined)
+    }
 }
 
 export function getCachedSettings(): AppSettings {

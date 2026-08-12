@@ -734,6 +734,10 @@ export function SendInput(arg1, arg2) {
   return window['go']['main']['App']['SendInput'](arg1, arg2);
 }
 
+export function SetNativeTheme(arg1) {
+  return window['go']['main']['App']['SetNativeTheme'](arg1);
+}
+
 export function SqliteClose(arg1) {
   return window['go']['main']['App']['SqliteClose'](arg1);
 }

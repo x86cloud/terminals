@@ -45,6 +45,24 @@ func NewApp() *App {
 	}
 }
 
+func (a *App) applyNativeWindowTheme(themeMode string) {
+	if a.ctx == nil {
+		return
+	}
+	switch themeMode {
+	case "dark":
+		wruntime.WindowSetDarkTheme(a.ctx)
+	case "light":
+		wruntime.WindowSetLightTheme(a.ctx)
+	default:
+		wruntime.WindowSetSystemDefaultTheme(a.ctx)
+	}
+}
+
+func (a *App) SetNativeTheme(themeMode string) {
+	a.applyNativeWindowTheme(themeMode)
+}
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.sessions.SetContext(ctx)
@@ -55,6 +73,11 @@ func (a *App) startup(ctx context.Context) {
 	db.SqliteMgr.SetContext(ctx)
 	db.MysqlExMgr.SetContext(ctx)
 	agent.DefaultManager.SetContext(ctx)
+
+	if a.store != nil {
+		settings := a.store.GetSettings()
+		a.applyNativeWindowTheme(settings.ThemeMode)
+	}
 }
 
 func (a *App) shutdown(ctx context.Context) {
@@ -103,7 +126,11 @@ func (a *App) SaveAppSettings(settings core.AppSettings) (core.AppSettings, erro
 	if a.store == nil {
 		return settings, errors.New("配置存储不可用")
 	}
-	return a.store.SaveSettings(settings)
+	res, err := a.store.SaveSettings(settings)
+	if err == nil {
+		a.applyNativeWindowTheme(settings.ThemeMode)
+	}
+	return res, err
 }
 
 // ---------- 分组管理 ----------

@@ -374,6 +374,8 @@ export function SelectPrivateKey():Promise<string>;
 
 export function SendInput(arg1:string,arg2:string):Promise<void>;
 
+export function SetNativeTheme(arg1:string):Promise<void>;
+
 export function SqliteClose(arg1:string):Promise<void>;
 
 export function SqliteConnect(arg1:string,arg2:string):Promise<boolean>;
