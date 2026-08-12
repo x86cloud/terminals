@@ -81,7 +81,21 @@ func BuildSSHTools(sm *ssh.SessionManager, wm *WorkspaceManager) ([]tool.BaseToo
 
 	resolveSession := func(sessionID string) (*ssh.Session, error) {
 		if sessionID != "" {
-			return sm.Get(sessionID)
+			if sess, err := sm.Get(sessionID); err == nil {
+				return sess, nil
+			}
+			// 允许模型通过 Session Title 或 Host 匹配 SSH 会话
+			sessions := sm.List()
+			for _, s := range sessions {
+				if s.Connected && (strings.EqualFold(s.ID, sessionID) ||
+					strings.EqualFold(s.Title, sessionID) ||
+					strings.EqualFold(s.Host, sessionID) ||
+					strings.Contains(strings.ToLower(s.Title), strings.ToLower(sessionID)) ||
+					strings.Contains(strings.ToLower(s.Host), strings.ToLower(sessionID)) ||
+					strings.Contains(strings.ToLower(sessionID), strings.ToLower(s.Host))) {
+					return sm.Get(s.ID)
+				}
+			}
 		}
 		sessions := sm.List()
 		for _, s := range sessions {
@@ -89,7 +103,7 @@ func BuildSSHTools(sm *ssh.SessionManager, wm *WorkspaceManager) ([]tool.BaseToo
 				return sm.Get(s.ID)
 			}
 		}
-		return nil, fmt.Errorf("当前没有已连通的 SSH 会话，请先在终端连接远程服务器")
+		return nil, fmt.Errorf("当前没有匹配或已连通的 SSH 会话，请先在终端连接远程服务器")
 	}
 
 	// 1. ssh_list_sessions
