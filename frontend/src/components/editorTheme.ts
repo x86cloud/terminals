@@ -21,14 +21,14 @@ const baseTheme = EditorView.theme(
         '.cm-content': {
             fontFamily:
                 "'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace",
-            caretColor: 'var(--accent, #1c8fc4)',
+            caretColor: 'var(--accent, #3370ff)',
         },
         '.cm-cursor, .cm-dropCursor': {
-            borderLeftColor: 'var(--accent, #1c8fc4)',
+            borderLeftColor: 'var(--accent, #3370ff)',
         },
         '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection':
             {
-                backgroundColor: 'var(--accent-dim-2, rgba(28, 143, 196, 0.18))',
+                backgroundColor: 'var(--accent-dim-2, rgba(51, 112, 255, 0.18))',
             },
         '.cm-gutters': {
             backgroundColor: 'var(--bg-1, #ffffff)',
@@ -40,15 +40,15 @@ const baseTheme = EditorView.theme(
             color: 'var(--text-dim, #6b7686)',
         },
         '.cm-activeLine': {
-            backgroundColor: 'var(--accent-soft, rgba(28, 143, 196, 0.06))',
+            backgroundColor: 'var(--accent-soft, rgba(51, 112, 255, 0.06))',
         },
         '.cm-activeLineGutter': {
-            backgroundColor: 'var(--accent-soft, rgba(28, 143, 196, 0.06))',
-            color: 'var(--accent, #1c8fc4)',
+            backgroundColor: 'var(--accent-soft, rgba(51, 112, 255, 0.06))',
+            color: 'var(--accent, #3370ff)',
             fontWeight: '600',
         },
         '.cm-selectionMatch': {
-            backgroundColor: 'var(--accent-dim-2, rgba(28, 143, 196, 0.12))',
+            backgroundColor: 'var(--accent-dim-2, rgba(51, 112, 255, 0.12))',
         },
         '.cm-placeholder': {
             color: 'var(--text-faint, #aab3c0)',
