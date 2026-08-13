@@ -149,22 +149,31 @@ export default function ErDiagram({
 
     const handleMouseUp = () => setIsDragging(false)
 
-    const handleWheel = (e: React.WheelEvent) => {
-        e.preventDefault()
-        const delta = e.deltaY > 0 ? -0.06 : 0.06
-        const nextScale = Math.max(0.05, Math.min(3, +(scale + delta).toFixed(2)))
-        if (canvasRef.current) {
-            const rect = canvasRef.current.getBoundingClientRect()
-            const mouseX = e.clientX - rect.left
-            const mouseY = e.clientY - rect.top
-            const ratio = nextScale / scale
-            setPan({
-                x: mouseX - (mouseX - pan.x) * ratio,
-                y: mouseY - (mouseY - pan.y) * ratio,
+    // 监听非被动 (passive: false) 滚轮事件，防止浏览器 preventDefault 报错
+    useEffect(() => {
+        const elem = canvasRef.current
+        if (!elem) return
+
+        const onWheel = (e: WheelEvent) => {
+            e.preventDefault()
+            const delta = e.deltaY > 0 ? -0.06 : 0.06
+            setScale((prevScale) => {
+                const nextScale = Math.max(0.05, Math.min(3, +(prevScale + delta).toFixed(2)))
+                const rect = elem.getBoundingClientRect()
+                const mouseX = e.clientX - rect.left
+                const mouseY = e.clientY - rect.top
+                const ratio = nextScale / prevScale
+                setPan((prevPan) => ({
+                    x: mouseX - (mouseX - prevPan.x) * ratio,
+                    y: mouseY - (mouseY - prevPan.y) * ratio,
+                }))
+                return nextScale
             })
         }
-        setScale(nextScale)
-    }
+
+        elem.addEventListener('wheel', onWheel, { passive: false })
+        return () => elem.removeEventListener('wheel', onWheel)
+    }, [])
 
     const activeTables = useMemo(() => {
         if (!hoveredTable) return null
@@ -235,7 +244,6 @@ export default function ErDiagram({
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseUp}
-                    onWheel={handleWheel}
                 >
                     <svg
                         className={my.erSvg}

@@ -1,13 +1,13 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
 import TitleBar from '@/components/TitleBar'
 import ServerDialog from '@/components/ServerDialog'
 import SettingsModal from '@/pages/setting/SettingsModal'
-import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import SessionTabs from '@/components/app/SessionTabs'
 import Stage from '@/components/app/Stage'
 import TransferBar from '@/components/TransferBar'
-import {API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop} from '@/api'
+import { API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop } from '@/api'
 import {
     ServerConfig,
     ServerGroup,
@@ -21,8 +21,8 @@ import {
     ConnType,
     AppSettings,
 } from '@/types'
-import {errorMessage} from '@/utils'
-import {applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings} from '@/utils/theme'
+import { errorMessage } from '@/utils'
+import { applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings } from '@/utils/theme'
 import g from '@/styles/global.module.less'
 import a from '@/components/App.module.less'
 
@@ -32,7 +32,7 @@ interface Toast {
     kind: 'info' | 'error'
 }
 
-const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
 type ActiveKind = ConnType | 'api' | 'devtools'
 
 /* ========================================================================== */
@@ -111,7 +111,7 @@ async function connectSqliteHelper(cfg: ServerConfig): Promise<SqliteSessionInfo
     }
     const ok = await API.sqliteConnect(cfg.id, path)
     if (!ok) throw new Error('无法打开该 SQLite 文件')
-    const stat = await API.sqliteInfo(cfg.id).catch(() => ({path, size: 0}))
+    const stat = await API.sqliteInfo(cfg.id).catch(() => ({ path, size: 0 }))
     const finalPath = stat?.path || path
     const dbName = finalPath.split(/[\\/]/).pop() || finalPath
     const displayTitle = (cfg.name && !cfg.name.includes('/') && !cfg.name.includes('\\'))
@@ -184,7 +184,7 @@ export default function App() {
     // ---- 通知与激活态同步 ----
     const notify = useCallback((message: string, kind: 'info' | 'error' = 'info') => {
         const id = Date.now() + Math.random()
-        setToasts((prev) => [...prev, {id, message, kind}])
+        setToasts((prev) => [...prev, { id, message, kind }])
         window.setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000)
     }, [])
 
@@ -219,7 +219,7 @@ export default function App() {
     }, [notify])
 
     const createGroup = useCallback(async (): Promise<ServerGroup> => {
-        const g = await API.saveGroup({id: '', name: '新分组'})
+        const g = await API.saveGroup({ id: '', name: '新分组' })
         await reloadGroups()
         return g
     }, [reloadGroups])
@@ -318,7 +318,7 @@ export default function App() {
         })
         const offClosed = subscribe('session:closed', (sessionId: string) => {
             setSessions((prev) =>
-                prev.map((s) => (s.id === sessionId ? {...s, connected: false} : s))
+                prev.map((s) => (s.id === sessionId ? { ...s, connected: false } : s))
             )
         })
         const offAsk = subscribe('agent:ask', (prompt: string) => {
@@ -366,11 +366,11 @@ export default function App() {
     /* ---------------- 服务器配置管理 ---------------- */
 
     const addServer = useCallback(() => {
-        setDialog({open: true, initial: null})
+        setDialog({ open: true, initial: null })
     }, [])
 
     const editServer = useCallback((cfg: ServerConfig) => {
-        setDialog({open: true, initial: cfg})
+        setDialog({ open: true, initial: cfg })
     }, [])
 
     const deleteServer = useCallback((cfg: ServerConfig) => {
@@ -602,40 +602,11 @@ export default function App() {
 
             <div className={a.body}>
                 <Sidebar
-                servers={servers}
-                groups={groups}
-                sessions={sessions}
-                activeSessionId={activeId}
-                connectingId={connectingId}
-                redisSessions={redisSessions}
-                activeRedisId={activeRedisId}
-                mysqlSessions={mysqlSessions}
-                activeMysqlId={activeMysqlId}
-                mqttSessions={mqttSessions}
-                activeMqttId={activeMqttId}
-                mongoSessions={mongoSessions}
-                activeMongoId={activeMongoId}
-                sqliteSessions={sqliteSessions}
-                activeSqliteId={activeSqliteId}
-                onNew={addServer}
-                onEdit={editServer}
-                onDelete={deleteServer}
-                onConnect={connect}
-                onCreateGroup={createGroup}
-                onRenameGroup={renameGroup}
-                onDeleteGroup={deleteGroup}
-                onMoveServer={moveServer}
-                onOpenAiAgent={openAiAgent}
-                onOpenApi={openApiTool}
-                onOpenDevTools={openDevTools}
-                onOpenSettings={() => setSettingsOpen(true)}
-                onFocusSession={(id, kind) => focusSession(id, kind)}
-            />
-
-            <main className={a.main}>
-                <SessionTabs
+                    servers={servers}
+                    groups={groups}
                     sessions={sessions}
-                    activeId={activeId}
+                    activeSessionId={activeId}
+                    connectingId={connectingId}
                     redisSessions={redisSessions}
                     activeRedisId={activeRedisId}
                     mysqlSessions={mysqlSessions}
@@ -646,87 +617,116 @@ export default function App() {
                     activeMongoId={activeMongoId}
                     sqliteSessions={sqliteSessions}
                     activeSqliteId={activeSqliteId}
-                    aiAgentOpen={aiAgentOpen}
-                    aiAgentActive={aiAgentActive}
-                    devToolsOpen={devToolsOpen}
-                    devToolsActive={devToolsActive}
-                    apiOpen={apiOpen}
-                    apiActive={apiActive}
-                    onFocusSession={focusSession}
-                    onCloseSession={(id) => void closeSession(id)}
-                    onCloseRedis={(id) => void closeRedisSession(id)}
-                    onCloseMysql={(id) => void closeMysqlSession(id)}
-                    onCloseMqtt={(id) => void closeMqttSession(id)}
-                    onCloseMongo={(id) => void closeMongoSession(id)}
-                    onCloseSqlite={(id) => void closeSqliteSession(id)}
-                    onActivateAiAgent={openAiAgent}
-                    onCloseAiAgent={closeAiAgent}
-                    onActivateDevTools={openDevTools}
-                    onCloseDevTools={closeDevTools}
-                    onActivateApi={openApiTool}
-                    onCloseApi={closeApiTool}
+                    onNew={addServer}
+                    onEdit={editServer}
+                    onDelete={deleteServer}
+                    onConnect={connect}
+                    onCreateGroup={createGroup}
+                    onRenameGroup={renameGroup}
+                    onDeleteGroup={deleteGroup}
+                    onMoveServer={moveServer}
+                    onOpenAiAgent={openAiAgent}
+                    onOpenApi={openApiTool}
+                    onOpenDevTools={openDevTools}
+                    onOpenSettings={() => setSettingsOpen(true)}
+                    onFocusSession={(id, kind) => focusSession(id, kind)}
                 />
 
-                <Stage
-                    sessions={sessions}
-                    activeId={activeId}
-                    nativeDrop={nativeDrop}
-                    redisSessions={redisSessions}
-                    activeRedisId={activeRedisId}
-                    mysqlSessions={mysqlSessions}
-                    activeMysqlId={activeMysqlId}
-                    mqttSessions={mqttSessions}
-                    activeMqttId={activeMqttId}
-                    mongoSessions={mongoSessions}
-                    activeMongoId={activeMongoId}
-                    sqliteSessions={sqliteSessions}
-                    activeSqliteId={activeSqliteId}
-                    aiAgentOpen={aiAgentOpen}
-                    aiAgentActive={aiAgentActive}
-                    devToolsOpen={devToolsOpen}
-                    devToolsActive={devToolsActive}
-                    apiOpen={apiOpen}
-                    apiActive={apiActive}
-                    settings={settings}
-                    onPathChange={handlePathChange}
-                    onNotify={notify}
-                    onCloseRedis={(id) => void closeRedisSession(id)}
-                    onRedisDbChange={(id, db, dbSize) =>
-                        setRedisSessions((prev) => prev.map((x) => (x.id === id ? {...x, db, dbSize} : x)))
-                    }
-                    onCloseMysql={(id) => void closeMysqlSession(id)}
-                    onMysqlChange={(id, database) =>
-                        setMysqlSessions((prev) => prev.map((x) => (x.id === id ? {...x, database} : x)))
-                    }
-                    onCloseMqtt={(id) => void closeMqttSession(id)}
-                    onCloseMongo={(id) => void closeMongoSession(id)}
-                    onCloseSqlite={(id) => void closeSqliteSession(id)}
-                    onCloseAiAgent={closeAiAgent}
-                    onMongoChange={(id, database) =>
-                        setMongoSessions((prev) => prev.map((x) => (x.id === id ? {...x, database} : x)))
-                    }
-                    onCloseDevTools={closeDevTools}
-                    onCloseApi={closeApiTool}
-                    onNewServer={addServer}
-                />
+                <main className={a.main}>
+                    <SessionTabs
+                        sessions={sessions}
+                        activeId={activeId}
+                        redisSessions={redisSessions}
+                        activeRedisId={activeRedisId}
+                        mysqlSessions={mysqlSessions}
+                        activeMysqlId={activeMysqlId}
+                        mqttSessions={mqttSessions}
+                        activeMqttId={activeMqttId}
+                        mongoSessions={mongoSessions}
+                        activeMongoId={activeMongoId}
+                        sqliteSessions={sqliteSessions}
+                        activeSqliteId={activeSqliteId}
+                        aiAgentOpen={aiAgentOpen}
+                        aiAgentActive={aiAgentActive}
+                        devToolsOpen={devToolsOpen}
+                        devToolsActive={devToolsActive}
+                        apiOpen={apiOpen}
+                        apiActive={apiActive}
+                        onFocusSession={focusSession}
+                        onCloseSession={(id) => void closeSession(id)}
+                        onCloseRedis={(id) => void closeRedisSession(id)}
+                        onCloseMysql={(id) => void closeMysqlSession(id)}
+                        onCloseMqtt={(id) => void closeMqttSession(id)}
+                        onCloseMongo={(id) => void closeMongoSession(id)}
+                        onCloseSqlite={(id) => void closeSqliteSession(id)}
+                        onActivateAiAgent={openAiAgent}
+                        onCloseAiAgent={closeAiAgent}
+                        onActivateDevTools={openDevTools}
+                        onCloseDevTools={closeDevTools}
+                        onActivateApi={openApiTool}
+                        onCloseApi={closeApiTool}
+                    />
 
-                <TransferBar
-                    transfers={transfers}
-                    onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
-                    onClear={() => {
-                        API.clearFinishedTransfers()
-                            .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
-                            .catch(() => undefined)
-                    }}
-                />
-            </main>
+                    <Stage
+                        sessions={sessions}
+                        activeId={activeId}
+                        nativeDrop={nativeDrop}
+                        redisSessions={redisSessions}
+                        activeRedisId={activeRedisId}
+                        mysqlSessions={mysqlSessions}
+                        activeMysqlId={activeMysqlId}
+                        mqttSessions={mqttSessions}
+                        activeMqttId={activeMqttId}
+                        mongoSessions={mongoSessions}
+                        activeMongoId={activeMongoId}
+                        sqliteSessions={sqliteSessions}
+                        activeSqliteId={activeSqliteId}
+                        aiAgentOpen={aiAgentOpen}
+                        aiAgentActive={aiAgentActive}
+                        devToolsOpen={devToolsOpen}
+                        devToolsActive={devToolsActive}
+                        apiOpen={apiOpen}
+                        apiActive={apiActive}
+                        settings={settings}
+                        onPathChange={handlePathChange}
+                        onNotify={notify}
+                        onCloseRedis={(id) => void closeRedisSession(id)}
+                        onRedisDbChange={(id, db, dbSize) =>
+                            setRedisSessions((prev) => prev.map((x) => (x.id === id ? { ...x, db, dbSize } : x)))
+                        }
+                        onCloseMysql={(id) => void closeMysqlSession(id)}
+                        onMysqlChange={(id, database) =>
+                            setMysqlSessions((prev) => prev.map((x) => (x.id === id ? { ...x, database } : x)))
+                        }
+                        onCloseMqtt={(id) => void closeMqttSession(id)}
+                        onCloseMongo={(id) => void closeMongoSession(id)}
+                        onCloseSqlite={(id) => void closeSqliteSession(id)}
+                        onCloseAiAgent={closeAiAgent}
+                        onMongoChange={(id, database) =>
+                            setMongoSessions((prev) => prev.map((x) => (x.id === id ? { ...x, database } : x)))
+                        }
+                        onCloseDevTools={closeDevTools}
+                        onCloseApi={closeApiTool}
+                        onNewServer={addServer}
+                    />
+
+                    <TransferBar
+                        transfers={transfers}
+                        onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
+                        onClear={() => {
+                            API.clearFinishedTransfers()
+                                .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
+                                .catch(() => undefined)
+                        }}
+                    />
+                </main>
             </div>
 
             <ServerDialog
                 open={dialog.open}
                 initial={dialog.initial}
                 groups={groups}
-                onClose={() => setDialog({open: false, initial: null})}
+                onClose={() => setDialog({ open: false, initial: null })}
                 onSaved={() => void reloadServers()}
                 onSaveAndConnect={async (cfg: ServerConfig) => {
                     await reloadServers()
@@ -744,7 +744,7 @@ export default function App() {
                 }}
             />
 
-            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
 
             <div className={g.toasts}>
                 {toasts.map((t) => (

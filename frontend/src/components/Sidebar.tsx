@@ -1,4 +1,4 @@
-import React, {useEffect, useMemo, useState} from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
     Plug,
     Search,
@@ -15,9 +15,9 @@ import {
     Settings,
 } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
-import ContextMenu, {closedMenu, MenuState, MenuItem} from '@/components/ContextMenu'
-import {ConfirmModal, ConfirmState} from '@/components/Modal'
-import {ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from '@/types'
+import ContextMenu, { closedMenu, MenuState, MenuItem } from '@/components/ContextMenu'
+import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import { ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType } from '@/types'
 import g from '@/styles/global.module.less'
 import s from '@/components/Sidebar.module.less'
 
@@ -53,35 +53,35 @@ interface Props {
 }
 
 export default function Sidebar({
-                                    servers,
-                                    groups,
-                                    sessions,
-                                    activeSessionId,
-                                    connectingId,
-                                    redisSessions,
-                                    activeRedisId,
-                                    mysqlSessions,
-                                    activeMysqlId,
-                                    mqttSessions,
-                                    activeMqttId,
-                                    mongoSessions,
-                                    activeMongoId,
-                                    sqliteSessions,
-                                    activeSqliteId,
-                                    onNew,
-                                    onEdit,
-                                    onDelete,
-                                    onConnect,
-                                    onCreateGroup,
-                                    onRenameGroup,
-                                    onDeleteGroup,
-                                    onMoveServer,
-                                    onOpenAiAgent,
-                                    onOpenApi,
-                                    onOpenDevTools,
-                                    onOpenSettings,
-                                    onFocusSession,
-                                }: Props) {
+    servers,
+    groups,
+    sessions,
+    activeSessionId,
+    connectingId,
+    redisSessions,
+    activeRedisId,
+    mysqlSessions,
+    activeMysqlId,
+    mqttSessions,
+    activeMqttId,
+    mongoSessions,
+    activeMongoId,
+    sqliteSessions,
+    activeSqliteId,
+    onNew,
+    onEdit,
+    onDelete,
+    onConnect,
+    onCreateGroup,
+    onRenameGroup,
+    onDeleteGroup,
+    onMoveServer,
+    onOpenAiAgent,
+    onOpenApi,
+    onOpenDevTools,
+    onOpenSettings,
+    onFocusSession,
+}: Props) {
     const [keyword, setKeyword] = useState('')
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     // 默认所有分组为折叠状态（未显式展开即为折叠）
@@ -89,7 +89,7 @@ export default function Sidebar({
     const [ungroupedOpen, setUngroupedOpen] = useState(true)
     const [dragId, setDragId] = useState<string | null>(null)
     const [dropGroup, setDropGroup] = useState<string | null>(null)
-    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null)
     const [moveMenu, setMoveMenu] = useState<{ serverId: string; x: number; y: number } | null>(null)
@@ -138,21 +138,21 @@ export default function Sidebar({
                 autoExpanded[g.id] = true
             }
         })
-        setExpanded((prev) => ({...prev, ...autoExpanded}))
+        setExpanded((prev) => ({ ...prev, ...autoExpanded }))
     }, [keyword, groups, servers])
 
     const kindOf = (s: ServerConfig): ConnType =>
         s.type === 'redis'
             ? 'redis'
             : s.type === 'mysql'
-            ? 'mysql'
-            : s.type === 'mqtt'
-            ? 'mqtt'
-        : s.type === 'mongo'
-            ? 'mongo'
-            : s.type === 'sqlite'
-            ? 'sqlite'
-            : 'ssh'
+                ? 'mysql'
+                : s.type === 'mqtt'
+                    ? 'mqtt'
+                    : s.type === 'mongo'
+                        ? 'mongo'
+                        : s.type === 'sqlite'
+                            ? 'sqlite'
+                            : 'ssh'
 
     const sessionsOf = (server: ServerConfig) => {
         const kind = kindOf(server)
@@ -178,13 +178,13 @@ export default function Sidebar({
         filtered.filter((s) => (s.groupId || '') === groupId)
 
     const toggleGroup = (id: string) =>
-        setExpanded((prev) => ({...prev, [id]: !prev[id]}))
+        setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
 
     const startCreateGroup = async () => {
         try {
             const g = await onCreateGroup()
-            setExpanded((prev) => ({...prev, [g.id]: true}))
-            setEditingGroup({id: g.id, name: g.name})
+            setExpanded((prev) => ({ ...prev, [g.id]: true }))
+            setEditingGroup({ id: g.id, name: g.name })
         } catch {
             /* ignore */
         }
@@ -193,13 +193,13 @@ export default function Sidebar({
     const commitRename = () => {
         if (!editingGroup) return
         const name = editingGroup.name.trim()
-        if (name) onRenameGroup({id: editingGroup.id, name})
+        if (name) onRenameGroup({ id: editingGroup.id, name })
         setEditingGroup(null)
     }
 
     const openMoveMenu = (server: ServerConfig, e: React.MouseEvent) => {
         e.preventDefault()
-        setMoveMenu({serverId: server.id, x: e.clientX, y: e.clientY})
+        setMoveMenu({ serverId: server.id, x: e.clientX, y: e.clientY })
     }
 
     const renderServer = (server: ServerConfig) => {
@@ -236,17 +236,17 @@ export default function Sidebar({
                                 disabled: connectingId === server.id,
                                 onClick: () => onConnect(server),
                             },
-                            {key: 'edit', label: '编辑', icon: 'edit', onClick: () => onEdit(server)},
+                            { key: 'edit', label: '编辑', icon: 'edit', onClick: () => onEdit(server) },
                             {
                                 key: 'move',
                                 label: '移动到分组…',
                                 icon: 'folder',
                                 onClick: () => {
                                     const r = (e.target as HTMLElement).getBoundingClientRect()
-                                    setMoveMenu({serverId: server.id, x: r.left, y: r.bottom + 4})
+                                    setMoveMenu({ serverId: server.id, x: r.left, y: r.bottom + 4 })
                                 },
                             },
-                            {key: 'd1', label: '', divider: true},
+                            { key: 'd1', label: '', divider: true },
                             {
                                 key: 'delete',
                                 label: '删除',
@@ -255,11 +255,11 @@ export default function Sidebar({
                                 onClick: () => onDelete(server),
                             },
                         ]
-                        setMenu({open: true, x: e.clientX, y: e.clientY, items})
+                        setMenu({ open: true, x: e.clientX, y: e.clientY, items })
                     }}
                 >
                     <span className={s.serverIcon}>
-                        <ClientIcon kind={kind} size={18}/>
+                        <ClientIcon kind={kind} size={18} />
                     </span>
                     <span className={s.serverText}>
                         <span className={s.serverName}>
@@ -271,16 +271,16 @@ export default function Sidebar({
                             {isRedis || isMysql || kind === 'mqtt' || kind === 'mongo'
                                 ? `${server.host}:${server.port}`
                                 : kind === 'sqlite'
-                                ? (server.sqlitePath || '')
-                                : `${server.username}@${server.host}:${server.port}`}
+                                    ? (server.sqlitePath || '')
+                                    : `${server.username}@${server.host}:${server.port}`}
                         </span>
                     </span>
                     <span className={s.serverActions}>
                         {connectingId === server.id ? (
                             <span className={s.spinner} title="连接中…">
                                 <svg className={s.spinSvg} viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                    <circle cx="12" cy="12" r="9" strokeOpacity="0.22" strokeWidth="2.5"/>
-                                    <path d="M12 3a9 9 0 0 1 9 9" strokeWidth="2.5" strokeLinecap="round"/>
+                                    <circle cx="12" cy="12" r="9" strokeOpacity="0.22" strokeWidth="2.5" />
+                                    <path d="M12 3a9 9 0 0 1 9 9" strokeWidth="2.5" strokeLinecap="round" />
                                 </svg>
                             </span>
                         ) : (
@@ -292,7 +292,7 @@ export default function Sidebar({
                                     onConnect(server)
                                 }}
                             >
-                                <Plug size={15}/>
+                                <Plug size={15} />
                             </button>
                         )}
                     </span>
@@ -304,19 +304,19 @@ export default function Sidebar({
                         className={`${s.sessionItem}${sess.id === activeId ? ' ' + s.active : ''}`}
                         onClick={() => onFocusSession(sess.id, kind)}
                     >
-                        <span className={`${g.dot}${sess.connected ? ' ' + g.on : ''}`}/>
+                        <span className={`${g.dot}${sess.connected ? ' ' + g.on : ''}`} />
                         <span className={s.sessionTitle}>
                             {isRedis
                                 ? `Redis ${server.host}:${server.port}`
                                 : isMysql
-                                ? `MySQL ${server.host}:${server.port}`
-                                : kind === 'mqtt'
-                                ? `MQTT ${server.host}:${server.port}`
-                                : kind === 'mongo'
-                                ? `MongoDB ${server.host}:${server.port}`
-                                : kind === 'sqlite'
-                                ? `SQLite ${((sess as any).title || server.name || server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
-                                : `会话 ${sess.id.slice(0, 6)}`}
+                                    ? `MySQL ${server.host}:${server.port}`
+                                    : kind === 'mqtt'
+                                        ? `MQTT ${server.host}:${server.port}`
+                                        : kind === 'mongo'
+                                            ? `MongoDB ${server.host}:${server.port}`
+                                            : kind === 'sqlite'
+                                                ? `SQLite ${((sess as any).title || server.name || server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
+                                                : `会话 ${sess.id.slice(0, 6)}`}
                         </span>
                     </button>
                 ))}
@@ -330,7 +330,7 @@ export default function Sidebar({
         <aside className={s.sidebar}>
             <div className={s.sidebarHead}>
                 <div className={s.sidebarSearch}>
-                    <Search size={14}/>
+                    <Search size={14} />
                     <input
                         value={keyword}
                         placeholder="搜索服务器 / Redis / MQTT"
@@ -338,7 +338,7 @@ export default function Sidebar({
                     />
                     {keyword && (
                         <button className={s.clearBtn} title="清空搜索" onClick={() => setKeyword('')}>
-                            <X size={12}/>
+                            <X size={12} />
                         </button>
                     )}
                 </div>
@@ -347,14 +347,14 @@ export default function Sidebar({
                     title="新建服务器"
                     onClick={() => onNew()}
                 >
-                    <Plus size={16}/>
+                    <Plus size={16} />
                 </button>
                 <button
                     className={g.iconBtn}
                     title="新建分组"
                     onClick={startCreateGroup}
                 >
-                    <Folder size={16}/>
+                    <Folder size={16} />
                 </button>
             </div>
 
@@ -395,7 +395,7 @@ export default function Sidebar({
                                     onClick={() => toggleGroup(grp.id)}
                                 >
                                     <span className={`${s.groupChevron}${isOpen ? ' ' + s.open : ''}`}>
-                                        <ChevronRight size={14}/>
+                                        <ChevronRight size={14} />
                                     </span>
                                 </button>
                                 {isEditing ? (
@@ -403,7 +403,7 @@ export default function Sidebar({
                                         className={s.groupInput}
                                         autoFocus
                                         value={editingGroup?.name ?? ''}
-                                        onChange={(e) => setEditingGroup({id: grp.id, name: e.target.value})}
+                                        onChange={(e) => setEditingGroup({ id: grp.id, name: e.target.value })}
                                         onBlur={commitRename}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter') commitRename()
@@ -420,9 +420,9 @@ export default function Sidebar({
                                     <button
                                         className={g.iconBtn}
                                         title="重命名分组"
-                                        onClick={() => setEditingGroup({id: grp.id, name: grp.name})}
+                                        onClick={() => setEditingGroup({ id: grp.id, name: grp.name })}
                                     >
-                                        <Edit size={13}/>
+                                        <Edit size={13} />
                                     </button>
                                     <button
                                         className={`${g.iconBtn} ${g.danger}`}
@@ -440,7 +440,7 @@ export default function Sidebar({
                                             })
                                         }}
                                     >
-                                        <Trash2 size={13}/>
+                                        <Trash2 size={13} />
                                     </button>
                                 </span>
                             </div>
@@ -477,7 +477,7 @@ export default function Sidebar({
                                 title={ungroupedOpen ? '折叠' : '展开'}
                                 onClick={() => setUngroupedOpen((v) => !v)}
                             >
-                                {ungroupedOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
+                                {ungroupedOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             </button>
                             <button className={s.groupTitleBtn} onClick={() => setUngroupedOpen((v) => !v)}>
                                 <span className={s.groupName}>未分组</span>
@@ -491,29 +491,25 @@ export default function Sidebar({
 
             <div className={s.tools}>
                 <button className={s.toolItem} onClick={onOpenAiAgent}>
-                    <Bot size={15}/>
+                    <Bot size={15} />
                     <span>AI 智能体</span>
                 </button>
                 <button className={s.toolItem} onClick={onOpenDevTools}>
-                    <BarChart2 size={15}/>
+                    <BarChart2 size={15} />
                     <span>开发工具</span>
                 </button>
                 <button className={s.toolItem} onClick={onOpenApi}>
-                    <LinkIcon size={15}/>
+                    <LinkIcon size={15} />
                     <span>API 调试</span>
-                </button>
-                <button className={s.toolItem} onClick={onOpenSettings}>
-                    <Settings size={15}/>
-                    <span>设置</span>
                 </button>
             </div>
 
-            <ContextMenu state={menu} onClose={() => setMenu(closedMenu)}/>
+            <ContextMenu state={menu} onClose={() => setMenu(closedMenu)} />
 
             {moveMenu && (
                 <div
                     className={s.movePopover}
-                    style={{left: moveMenu.x, top: moveMenu.y}}
+                    style={{ left: moveMenu.x, top: moveMenu.y }}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
                     <div className={s.movePopTitle}>移动到分组</div>
@@ -541,7 +537,7 @@ export default function Sidebar({
                     {groups.length === 0 && <div className={s.moveEmpty}>暂无分组</div>}
                 </div>
             )}
-            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
         </aside>
     )
 }
