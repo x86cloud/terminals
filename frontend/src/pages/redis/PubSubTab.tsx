@@ -1,7 +1,7 @@
 import React from 'react'
-import {RedisPubsubMessage} from '../../types'
-import g from '../../styles/global.module.less'
-import ps from './PubSubTab.module.less'
+import {RedisPubsubMessage} from '@/types'
+import g from '@/styles/global.module.less'
+import ps from '@/pages/redis/PubSubTab.module.less'
 
 export default function PubSubTab({
     psChannel,

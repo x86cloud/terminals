@@ -1,12 +1,12 @@
 import React, {useEffect, useState} from 'react'
-import {Modal} from './Modal'
-import {API} from '../api'
-import {emptyServer, ServerConfig, ServerGroup, ConnType} from '../types'
-import {errorMessage} from '../utils'
+import {Modal} from '@/components/Modal'
+import {API} from '@/api'
+import {emptyServer, ServerConfig, ServerGroup, ConnType} from '@/types'
+import {errorMessage} from '@/utils'
 import { ChevronDown, ChevronRight } from 'lucide-react'
-import ClientIcon from './ClientIcon'
-import g from '../styles/global.module.less'
-import sd from './ServerDialog.module.less'
+import ClientIcon from '@/components/ClientIcon'
+import g from '@/styles/global.module.less'
+import sd from '@/components/ServerDialog.module.less'
 
 interface Props {
     open: boolean

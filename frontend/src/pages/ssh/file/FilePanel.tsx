@@ -1,13 +1,13 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload } from 'lucide-react'
-import ContextMenu, {closedMenu, MenuItem, MenuState} from '../../../components/ContextMenu'
-import {ConfirmModal, ConfirmState, PromptModal, PromptState} from '../../../components/Modal'
-import FileEditorModal from './FileEditorModal'
-import {API, subscribe} from '../../../api'
-import {FileItem} from '../../../types'
-import {bytesToBase64, errorMessage, formatSize, formatTime, parentRemote} from '../../../utils'
-import g from '../../../styles/global.module.less'
-import fp from './FilePanel.module.less'
+import ContextMenu, {closedMenu, MenuItem, MenuState} from '@/components/ContextMenu'
+import {ConfirmModal, ConfirmState, PromptModal, PromptState} from '@/components/Modal'
+import FileEditorModal from '@/pages/ssh/file/FileEditorModal'
+import {API, subscribe} from '@/api'
+import {FileItem} from '@/types'
+import {bytesToBase64, errorMessage, formatSize, formatTime, parentRemote} from '@/utils'
+import g from '@/styles/global.module.less'
+import fp from '@/pages/ssh/file/FilePanel.module.less'
 
 interface Props {
     sessionId: string

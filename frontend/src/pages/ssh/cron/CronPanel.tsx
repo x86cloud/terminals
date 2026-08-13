@@ -1,12 +1,12 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import { Plus, Search, X, RotateCw } from 'lucide-react'
-import {ConfirmModal, ConfirmState} from '../../../components/Modal'
-import CronModal, {explainCron} from './CronModal'
-import {API} from '../../../api'
-import {SSHCronItem} from '../../../types'
-import {errorMessage} from '../../../utils'
-import g from '../../../styles/global.module.less'
-import c from './CronPanel.module.less'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import CronModal, {explainCron} from '@/pages/ssh/cron/CronModal'
+import {API} from '@/api'
+import {SSHCronItem} from '@/types'
+import {errorMessage} from '@/utils'
+import g from '@/styles/global.module.less'
+import c from '@/pages/ssh/cron/CronPanel.module.less'
 
 interface Props {
     sessionId: string

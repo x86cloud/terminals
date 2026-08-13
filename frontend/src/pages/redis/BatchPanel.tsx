@@ -1,8 +1,8 @@
 import React from 'react'
-import CodeEditor from '../../components/CodeEditor'
-import {RedisPipelineResult, RedisTransactionResult} from '../../types'
-import g from '../../styles/global.module.less'
-import b from './BatchPanel.module.less'
+import CodeEditor from '@/components/CodeEditor'
+import {RedisPipelineResult, RedisTransactionResult} from '@/types'
+import g from '@/styles/global.module.less'
+import b from '@/pages/redis/BatchPanel.module.less'
 
 export default function BatchPanel({
     title,

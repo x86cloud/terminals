@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Plus, RotateCw, X, Trash2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react'
-import ResizableTable, { ColDef } from '../../components/ResizableTable'
-import g from '../../styles/global.module.less'
-import my from './DataTab.module.less'
-import sh from './mysqlShared.module.less'
-import db from './dbTable.module.less'
-import { MysqlQueryResult } from '../../types'
-import { Grid } from './mysqlTypes'
-import { RowDrafts, NewRow } from './mysqlTypes'
-import CellEditorInline from './CellEditorInline'
+import ResizableTable, { ColDef } from '@/components/ResizableTable'
+import g from '@/styles/global.module.less'
+import my from '@/pages/mysql/DataTab.module.less'
+import sh from '@/pages/mysql/mysqlShared.module.less'
+import db from '@/pages/mysql/dbTable.module.less'
+import { MysqlQueryResult } from '@/types'
+import { Grid, RowDrafts, NewRow } from '@/pages/mysql/mysqlTypes'
+import CellEditorInline from '@/pages/mysql/CellEditorInline'
 
 const ROW_NUM_W = 40
 const ROW_ACT_W = 50

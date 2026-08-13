@@ -1,7 +1,7 @@
 import React from 'react'
-import {RedisMonitorInfo} from '../../types'
-import g from '../../styles/global.module.less'
-import m from './MonitorTab.module.less'
+import {RedisMonitorInfo} from '@/types'
+import g from '@/styles/global.module.less'
+import m from '@/pages/redis/MonitorTab.module.less'
 
 function Metric({label, value}: { label: string; value: any }) {
     return (

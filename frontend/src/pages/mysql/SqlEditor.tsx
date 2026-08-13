@@ -1,12 +1,12 @@
 import React from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { X, Plus } from 'lucide-react'
-import {lightEditorTheme} from '../../components/editorTheme'
-import g from '../../styles/global.module.less'
-import my from './SqlEditor.module.less'
-import sh from './mysqlShared.module.less'
-import dbStyle from './dbTable.module.less'
-import {SqlTab, sqlExtension} from './mysqlTypes'
+import {lightEditorTheme} from '@/components/editorTheme'
+import g from '@/styles/global.module.less'
+import my from '@/pages/mysql/SqlEditor.module.less'
+import sh from '@/pages/mysql/mysqlShared.module.less'
+import dbStyle from '@/pages/mysql/dbTable.module.less'
+import {SqlTab, sqlExtension} from '@/pages/mysql/mysqlTypes'
 
 export default function SqlEditor({
     sqlTabs,

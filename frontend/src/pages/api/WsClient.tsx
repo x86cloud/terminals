@@ -1,8 +1,8 @@
 import React from 'react'
-import g from '../../styles/global.module.less'
-import a from './WsClient.module.less'
-import sh from './apiShared.module.less'
-import type {ApiState} from './useApi'
+import g from '@/styles/global.module.less'
+import a from '@/pages/api/WsClient.module.less'
+import sh from '@/pages/api/apiShared.module.less'
+import type {ApiState} from '@/pages/api/useApi'
 
 export default function WsClient({state}: { state: ApiState }) {
     const {configTab, wsStatus, wsMessages, wsClear, url, wsInput, setWsInput, wsSendMsg} = state

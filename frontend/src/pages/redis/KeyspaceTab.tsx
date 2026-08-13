@@ -1,7 +1,7 @@
 import React from 'react'
-import {RedisKeyspaceMessage, RedisSlowLogEntry} from '../../types'
-import g from '../../styles/global.module.less'
-import ks from './KeyspaceTab.module.less'
+import {RedisKeyspaceMessage, RedisSlowLogEntry} from '@/types'
+import g from '@/styles/global.module.less'
+import ks from '@/pages/redis/KeyspaceTab.module.less'
 
 export default function KeyspaceTab({
     ksDb,

@@ -1,6 +1,6 @@
 import {useCallback, useEffect, useMemo, useState} from 'react'
-import {API, subscribe} from '../../api'
-import {errorMessage} from '../../utils'
+import {API, subscribe} from '@/api'
+import {errorMessage} from '@/utils'
 import {
     ApiAuth,
     ApiHeader,

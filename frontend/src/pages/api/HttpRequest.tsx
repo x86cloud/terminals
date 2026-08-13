@@ -1,11 +1,11 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import { Send, X, Copy, PanelLeft } from 'lucide-react'
-import CodeEditor from '../../components/CodeEditor'
-import g from '../../styles/global.module.less'
-import a from './HttpRequest.module.less'
-import sh from './apiShared.module.less'
-import {statusClass} from './apiTypes'
-import type {ApiState} from './useApi'
+import CodeEditor from '@/components/CodeEditor'
+import g from '@/styles/global.module.less'
+import a from '@/pages/api/HttpRequest.module.less'
+import sh from '@/pages/api/apiShared.module.less'
+import {statusClass} from '@/pages/api/apiTypes'
+import type {ApiState} from '@/pages/api/useApi'
 
 export default function HttpRequest({state, onClose}: { state: ApiState; onClose: () => void }) {
     const {

@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { Settings, X, Palette, Bot, Info } from 'lucide-react'
-import { AppSettings } from '../../types'
-import { applyThemeMode, applyGlobalFont } from '../../utils/theme'
-import AppearanceTab from './AppearanceTab'
-import AiAgentTab from './AiAgentTab'
-import AboutTab from './AboutTab'
-import g from '../../styles/global.module.less'
-import s from './SettingsModal.module.less'
+import { AppSettings } from '@/types'
+import { applyThemeMode, applyGlobalFont } from '@/utils/theme'
+import AppearanceTab from '@/pages/setting/AppearanceTab'
+import AiAgentTab from '@/pages/setting/AiAgentTab'
+import AboutTab from '@/pages/setting/AboutTab'
+import g from '@/styles/global.module.less'
+import s from '@/pages/setting/SettingsModal.module.less'
 
 interface Props {
     open: boolean

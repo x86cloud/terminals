@@ -1,11 +1,11 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import { Box, Layers, Search, Download, RotateCw, X, Power, Play, FileText, Trash2 } from 'lucide-react'
-import {ConfirmModal, ConfirmState} from '../../../components/Modal'
-import {API} from '../../../api'
-import {SSHDockerContainer, SSHDockerImage} from '../../../types'
-import {errorMessage} from '../../../utils'
-import g from '../../../styles/global.module.less'
-import d from './DockerPanel.module.less'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import {API} from '@/api'
+import {SSHDockerContainer, SSHDockerImage} from '@/types'
+import {errorMessage} from '@/utils'
+import g from '@/styles/global.module.less'
+import d from '@/pages/ssh/docker/DockerPanel.module.less'
 
 interface Props {
     sessionId: string

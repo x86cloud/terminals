@@ -1,8 +1,8 @@
 import React from 'react'
 import {sql, SQLDialect} from '@codemirror/lang-sql'
-import {MysqlQueryResult} from '../../types'
-import my from './mysqlShared.module.less'
-import db from './dbTable.module.less'
+import {MysqlQueryResult} from '@/types'
+import my from '@/pages/mysql/mysqlShared.module.less'
+import db from '@/pages/mysql/dbTable.module.less'
 
 // ---- 共享类型 ----
 export type TabKey = 'data' | 'sql' | 'structure' | 'users' | 'status' | 'er'

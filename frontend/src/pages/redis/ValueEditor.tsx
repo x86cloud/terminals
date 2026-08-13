@@ -1,8 +1,8 @@
 import React, {useState} from 'react'
-import {API} from '../../api'
-import {RedisSessionInfo, RedisValue} from '../../types'
-import g from '../../styles/global.module.less'
-import v from './ValueEditor.module.less'
+import {API} from '@/api'
+import {RedisSessionInfo, RedisValue} from '@/types'
+import g from '@/styles/global.module.less'
+import v from '@/pages/redis/ValueEditor.module.less'
 
 export default function ValueEditor({
     session,

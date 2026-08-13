@@ -1,8 +1,8 @@
 import React, {useEffect, useState} from 'react'
 import { X } from 'lucide-react'
-import {SSHCronItem} from '../../../types'
-import g from '../../../styles/global.module.less'
-import m from './CronModal.module.less'
+import {SSHCronItem} from '@/types'
+import g from '@/styles/global.module.less'
+import m from '@/pages/ssh/cron/CronModal.module.less'
 
 interface Props {
     open: boolean

@@ -14,12 +14,12 @@ import {
     Link as LinkIcon,
     Settings,
 } from 'lucide-react'
-import ClientIcon from './ClientIcon'
-import ContextMenu, {closedMenu, MenuState, MenuItem} from './ContextMenu'
-import {ConfirmModal, ConfirmState} from './Modal'
-import {ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from '../types'
-import g from '../styles/global.module.less'
-import s from './Sidebar.module.less'
+import ClientIcon from '@/components/ClientIcon'
+import ContextMenu, {closedMenu, MenuState, MenuItem} from '@/components/ContextMenu'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import {ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType} from '@/types'
+import g from '@/styles/global.module.less'
+import s from '@/components/Sidebar.module.less'
 
 interface Props {
     servers: ServerConfig[]

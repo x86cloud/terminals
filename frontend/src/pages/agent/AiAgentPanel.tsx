@@ -13,11 +13,11 @@ import {
     Folder,
     Square,
 } from 'lucide-react'
-import MarkdownViewer from '../../components/common/MarkdownViewer'
-import { API, consumePendingAsk, subscribe } from '../../api'
-import { AiMessage, AppSettings, ProcessStep } from '../../types'
-import g from '../../styles/global.module.less'
-import s from './AiAgentPanel.module.less'
+import MarkdownViewer from '@/components/common/MarkdownViewer'
+import { API, consumePendingAsk, subscribe } from '@/api'
+import { AiMessage, AppSettings, ProcessStep } from '@/types'
+import g from '@/styles/global.module.less'
+import s from '@/pages/agent/AiAgentPanel.module.less'
 
 interface Props {
     settings: AppSettings

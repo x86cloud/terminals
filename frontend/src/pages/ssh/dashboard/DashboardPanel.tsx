@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useState} from 'react'
 import { RotateCw, Server, Terminal, Database, Plug } from 'lucide-react'
-import {API} from '../../../api'
-import {SSHDashboardInfo} from '../../../types'
-import {errorMessage} from '../../../utils'
-import g from '../../../styles/global.module.less'
-import d from './DashboardPanel.module.less'
+import {API} from '@/api'
+import {SSHDashboardInfo} from '@/types'
+import {errorMessage} from '@/utils'
+import g from '@/styles/global.module.less'
+import d from '@/pages/ssh/dashboard/DashboardPanel.module.less'
 
 interface Props {
     sessionId: string

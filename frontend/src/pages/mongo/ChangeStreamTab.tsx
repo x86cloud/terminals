@@ -1,11 +1,11 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {Play, X} from 'lucide-react'
-import {API, subscribe} from '../../api'
-import {errorMessage} from '../../utils'
-import {MongoSessionInfo, MongoChangeEvent} from '../../types'
-import CodeEditor from '../../components/CodeEditor'
-import sh from './mongoShared.module.less'
-import g from '../../styles/global.module.less'
+import {API, subscribe} from '@/api'
+import {errorMessage} from '@/utils'
+import {MongoSessionInfo, MongoChangeEvent} from '@/types'
+import CodeEditor from '@/components/CodeEditor'
+import sh from '@/pages/mongo/mongoShared.module.less'
+import g from '@/styles/global.module.less'
 
 interface Props {
     session: MongoSessionInfo

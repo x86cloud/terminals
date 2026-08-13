@@ -1,8 +1,8 @@
 import React from 'react'
-import g from '../../styles/global.module.less'
-import my from './StatusPanel.module.less'
-import {Grid} from './mysqlTypes'
-import StatusCard from './StatusCard'
+import g from '@/styles/global.module.less'
+import my from '@/pages/mysql/StatusPanel.module.less'
+import {Grid} from '@/pages/mysql/mysqlTypes'
+import StatusCard from '@/pages/mysql/StatusCard'
 
 export default function StatusPanel({
     status,

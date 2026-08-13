@@ -1,9 +1,9 @@
 import React, {useState} from 'react'
 import { Upload, Download, X } from 'lucide-react'
-import {Transfer} from '../types'
-import {formatSize} from '../utils'
-import g from '../styles/global.module.less'
-import tb from './TransferBar.module.less'
+import {Transfer} from '@/types'
+import {formatSize} from '@/utils'
+import g from '@/styles/global.module.less'
+import tb from '@/components/TransferBar.module.less'
 
 interface Props {
     transfers: Transfer[]

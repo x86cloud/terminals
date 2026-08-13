@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useState} from 'react'
 import { FileText, Edit } from 'lucide-react'
-import CodeEditor, {LangKey} from '../../../components/CodeEditor'
-import {API} from '../../../api'
-import {errorMessage} from '../../../utils'
-import g from '../../../styles/global.module.less'
-import m from './FileEditorModal.module.less'
+import CodeEditor, {LangKey} from '@/components/CodeEditor'
+import {API} from '@/api'
+import {errorMessage} from '@/utils'
+import g from '@/styles/global.module.less'
+import m from '@/pages/ssh/file/FileEditorModal.module.less'
 
 interface Props {
     open: boolean

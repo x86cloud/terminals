@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Copy } from 'lucide-react'
-import { md5 } from '../utils/md5'
-import CodeEditor from './CodeEditor'
-import g from '../styles/global.module.less'
-import dt from './DevTools.module.less'
+import { md5 } from '@/utils/md5'
+import CodeEditor from '@/components/CodeEditor'
+import g from '@/styles/global.module.less'
+import dt from '@/components/DevTools.module.less'
 
 type ToolKey = 'md5' | 'timestamp' | 'base64' | 'json'
 

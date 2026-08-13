@@ -1,8 +1,8 @@
 import React from 'react'
-import {RedisQueueItem} from '../../types'
-import {fmtFields} from './redisTypes'
-import g from '../../styles/global.module.less'
-import q from './QueueTab.module.less'
+import {RedisQueueItem} from '@/types'
+import {fmtFields} from '@/pages/redis/redisTypes'
+import g from '@/styles/global.module.less'
+import q from '@/pages/redis/QueueTab.module.less'
 
 export default function QueueTab({
     qName,

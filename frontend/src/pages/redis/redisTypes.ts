@@ -1,4 +1,4 @@
-import {RedisValue, RedisValueType} from '../../types'
+import {RedisValue, RedisValueType} from '@/types'
 
 export interface KeyTreeNode {
     key: string

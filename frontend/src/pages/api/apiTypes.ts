@@ -1,4 +1,4 @@
-import {ApiHeader, ApiMethod, ApiAuth, ApiRequest, ApiResponse, ApiMode, WsStatus, WsMessage, ApiHistoryItem} from '../../types'
+import {ApiHeader, ApiMethod, ApiAuth, ApiRequest, ApiResponse, ApiMode, WsStatus, WsMessage, ApiHistoryItem} from '@/types'
 
 export type {
     ApiHeader,

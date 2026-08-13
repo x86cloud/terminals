@@ -1,11 +1,11 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import { Search, X, RotateCw, Power } from 'lucide-react'
-import {API} from '../../../api'
-import {SSHProcessInfo} from '../../../types'
-import {errorMessage} from '../../../utils'
-import {ConfirmModal, ConfirmState} from '../../../components/Modal'
-import g from '../../../styles/global.module.less'
-import p from './ProcessPanel.module.less'
+import {API} from '@/api'
+import {SSHProcessInfo} from '@/types'
+import {errorMessage} from '@/utils'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import g from '@/styles/global.module.less'
+import p from '@/pages/ssh/process/ProcessPanel.module.less'
 
 interface Props {
     sessionId: string

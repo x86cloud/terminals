@@ -1,12 +1,12 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { Trash2, X } from 'lucide-react'
-import {API, subscribe} from '../../api'
-import CodeEditor from '../../components/CodeEditor'
-import {errorMessage} from '../../utils'
-import {MqttMessage, MqttSessionInfo, MqttSubscription} from '../../types'
-import g from '../../styles/global.module.less'
-import m from './MqttClient.module.less'
+import {API, subscribe} from '@/api'
+import CodeEditor from '@/components/CodeEditor'
+import {errorMessage} from '@/utils'
+import {MqttMessage, MqttSessionInfo, MqttSubscription} from '@/types'
+import g from '@/styles/global.module.less'
+import m from '@/pages/mqtt/MqttClient.module.less'
 
 interface Props {
     session: MqttSessionInfo

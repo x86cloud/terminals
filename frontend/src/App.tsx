@@ -1,13 +1,13 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
-import Sidebar from './components/Sidebar'
-import TitleBar from './components/TitleBar'
-import ServerDialog from './components/ServerDialog'
-import SettingsModal from './pages/setting/SettingsModal'
-import {ConfirmModal, ConfirmState} from './components/Modal'
-import SessionTabs from './components/app/SessionTabs'
-import Stage from './components/app/Stage'
-import TransferBar from './components/TransferBar'
-import {API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop} from './api'
+import Sidebar from '@/components/Sidebar'
+import TitleBar from '@/components/TitleBar'
+import ServerDialog from '@/components/ServerDialog'
+import SettingsModal from '@/pages/setting/SettingsModal'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import SessionTabs from '@/components/app/SessionTabs'
+import Stage from '@/components/app/Stage'
+import TransferBar from '@/components/TransferBar'
+import {API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop} from '@/api'
 import {
     ServerConfig,
     ServerGroup,
@@ -20,11 +20,11 @@ import {
     SqliteSessionInfo,
     ConnType,
     AppSettings,
-} from './types'
-import {errorMessage} from './utils'
-import {applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings} from './utils/theme'
-import g from './styles/global.module.less'
-import a from './components/App.module.less'
+} from '@/types'
+import {errorMessage} from '@/utils'
+import {applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings} from '@/utils/theme'
+import g from '@/styles/global.module.less'
+import a from '@/components/App.module.less'
 
 interface Toast {
     id: number

@@ -1,12 +1,12 @@
 import React, {useEffect, useMemo, useState} from 'react'
 import { Folder, Table } from 'lucide-react'
-import CodeEditor from '../../components/CodeEditor'
-import {RedisKeysResult, RedisSessionInfo, RedisValue} from '../../types'
-import {KeyTreeNode, TYPE_LABEL} from './redisTypes'
-import KeyItemTree from './KeyItemTree'
-import ValueEditor from './ValueEditor'
-import g from '../../styles/global.module.less'
-import k from './KeysTab.module.less'
+import CodeEditor from '@/components/CodeEditor'
+import {RedisKeysResult, RedisSessionInfo, RedisValue} from '@/types'
+import {KeyTreeNode, TYPE_LABEL} from '@/pages/redis/redisTypes'
+import KeyItemTree from '@/pages/redis/KeyItemTree'
+import ValueEditor from '@/pages/redis/ValueEditor'
+import g from '@/styles/global.module.less'
+import k from '@/pages/redis/KeysTab.module.less'
 
 interface KeysTabProps {
     session: RedisSessionInfo

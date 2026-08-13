@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import {API, subscribe} from '../../api'
+import {API, subscribe} from '@/api'
 import type {
     RedisKeysResult,
     RedisSessionInfo,
@@ -11,8 +11,8 @@ import type {
     RedisMonitorInfo,
     RedisSlowLogEntry,
     RedisQueueItem,
-} from '../../types'
-import {ConfirmModal, ConfirmState} from '../../components/Modal'
+} from '@/types'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
 import {
     KeyTreeNode,
     Tab,
@@ -21,15 +21,15 @@ import {
     buildKeyTree,
     collectLeafKeys,
     formatValue,
-} from './redisTypes'
-import KeysTab from './KeysTab'
-import BatchPanel from './BatchPanel'
-import PubSubTab from './PubSubTab'
-import KeyspaceTab from './KeyspaceTab'
-import QueueTab from './QueueTab'
-import MonitorTab from './MonitorTab'
-import g from '../../styles/global.module.less'
-import r from './RedisClient.module.less'
+} from '@/pages/redis/redisTypes'
+import KeysTab from '@/pages/redis/KeysTab'
+import BatchPanel from '@/pages/redis/BatchPanel'
+import PubSubTab from '@/pages/redis/PubSubTab'
+import KeyspaceTab from '@/pages/redis/KeyspaceTab'
+import QueueTab from '@/pages/redis/QueueTab'
+import MonitorTab from '@/pages/redis/MonitorTab'
+import g from '@/styles/global.module.less'
+import r from '@/pages/redis/RedisClient.module.less'
 
 interface Props {
     session: RedisSessionInfo

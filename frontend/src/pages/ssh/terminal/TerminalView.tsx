@@ -4,10 +4,10 @@ import { FitAddon } from 'xterm-addon-fit'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import { SearchAddon } from 'xterm-addon-search'
 import 'xterm/css/xterm.css'
-import { API, emitEvent, subscribe } from '../../../api'
-import { base64ToBytes } from '../../../utils'
-import ContextMenu, { closedMenu, MenuState } from '../../../components/ContextMenu'
-import t from './Terminal.module.less'
+import { API, emitEvent, subscribe } from '@/api'
+import { base64ToBytes } from '@/utils'
+import ContextMenu, { closedMenu, MenuState } from '@/components/ContextMenu'
+import t from '@/pages/ssh/terminal/Terminal.module.less'
 
 interface Props {
     sessionId: string

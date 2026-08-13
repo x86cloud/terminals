@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useState} from 'react'
 import { RotateCw } from 'lucide-react'
-import {API} from '../../api'
-import {errorMessage} from '../../utils'
-import {MongoSessionInfo, MongoHealthInfo, MongoServerStatus} from '../../types'
-import sh from './mongoShared.module.less'
-import g from '../../styles/global.module.less'
+import {API} from '@/api'
+import {errorMessage} from '@/utils'
+import {MongoSessionInfo, MongoHealthInfo, MongoServerStatus} from '@/types'
+import sh from '@/pages/mongo/mongoShared.module.less'
+import g from '@/styles/global.module.less'
 
 interface Props {
     session: MongoSessionInfo

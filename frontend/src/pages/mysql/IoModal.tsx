@@ -1,7 +1,7 @@
 import React, {useState} from 'react'
 import { X } from 'lucide-react'
-import g from '../../styles/global.module.less'
-import my from './IoModal.module.less'
+import g from '@/styles/global.module.less'
+import my from '@/pages/mysql/IoModal.module.less'
 
 export interface ExportOptions {
     mode: 'sql' | 'csv' | 'json'

@@ -1,10 +1,10 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
 import { Search, X, RotateCw } from 'lucide-react'
-import {API} from '../../../api'
-import {SSHServiceInfo} from '../../../types'
-import {errorMessage} from '../../../utils'
-import g from '../../../styles/global.module.less'
-import s from './ServicePanel.module.less'
+import {API} from '@/api'
+import {SSHServiceInfo} from '@/types'
+import {errorMessage} from '@/utils'
+import g from '@/styles/global.module.less'
+import s from '@/pages/ssh/service/ServicePanel.module.less'
 
 interface Props {
     sessionId: string

@@ -1,4 +1,4 @@
-import { AppSettings } from '../types'
+import { AppSettings } from '@/types'
 
 export const DEFAULT_SETTINGS: AppSettings = {
     themeMode: 'light',

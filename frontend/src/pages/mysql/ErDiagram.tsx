@@ -1,9 +1,9 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import { Maximize2, Minimize2, PanelLeft } from 'lucide-react'
-import g from '../../styles/global.module.less'
-import my from './ErDiagram.module.less'
-import sh from './mysqlShared.module.less'
-import {Schema} from './mysqlTypes'
+import g from '@/styles/global.module.less'
+import my from '@/pages/mysql/ErDiagram.module.less'
+import sh from '@/pages/mysql/mysqlShared.module.less'
+import {Schema} from '@/pages/mysql/mysqlTypes'
 
 export default function ErDiagram({
     schema,

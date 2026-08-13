@@ -1,8 +1,8 @@
 import React from 'react'
 import { X } from 'lucide-react'
-import CodeEditor from '../../components/CodeEditor'
-import g from '../../styles/global.module.less'
-import my from './ObjModal.module.less'
+import CodeEditor from '@/components/CodeEditor'
+import g from '@/styles/global.module.less'
+import my from '@/pages/mysql/ObjModal.module.less'
 
 export type ObjModalKind = 'createdb' | 'createtable' | 'dropdb' | 'droptable' | 'truncate' | 'createindex' | 'dropindex'
 

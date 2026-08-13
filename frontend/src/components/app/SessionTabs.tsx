@@ -1,9 +1,9 @@
 import React from 'react'
 import { X, Bot, BarChart2, Link as LinkIcon } from 'lucide-react'
-import ClientIcon from '../ClientIcon'
-import g from '../../styles/global.module.less'
-import a from './SessionTabs.module.less'
-import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo} from '../../types'
+import ClientIcon from '@/components/ClientIcon'
+import g from '@/styles/global.module.less'
+import a from '@/components/app/SessionTabs.module.less'
+import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo} from '@/types'
 
 export interface SessionTabsProps {
     sessions: SessionInfo[]

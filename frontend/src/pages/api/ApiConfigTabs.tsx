@@ -1,9 +1,9 @@
 import React from 'react'
 import { Trash2, Plus } from 'lucide-react'
-import CodeEditor from '../../components/CodeEditor'
-import g from '../../styles/global.module.less'
-import a from './ApiConfigTabs.module.less'
-import type {ApiState} from './useApi'
+import CodeEditor from '@/components/CodeEditor'
+import g from '@/styles/global.module.less'
+import a from '@/pages/api/ApiConfigTabs.module.less'
+import type {ApiState} from '@/pages/api/useApi'
 
 export default function ApiConfigTabs({state}: { state: ApiState }) {
     const {

@@ -1,5 +1,5 @@
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
-import g from '../styles/global.module.less'
+import g from '@/styles/global.module.less'
 
 export interface MenuItem {
     key: string

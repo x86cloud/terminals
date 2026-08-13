@@ -1,11 +1,11 @@
 import React, {useCallback, useEffect, useState} from 'react'
 import {RotateCw} from 'lucide-react'
-import {API} from '../../api'
-import {errorMessage} from '../../utils'
-import {MongoSessionInfo, MongoFieldInfo, MongoValidatorInfo, MongoValidationResult} from '../../types'
-import CodeEditor from '../../components/CodeEditor'
-import sh from './mongoShared.module.less'
-import g from '../../styles/global.module.less'
+import {API} from '@/api'
+import {errorMessage} from '@/utils'
+import {MongoSessionInfo, MongoFieldInfo, MongoValidatorInfo, MongoValidationResult} from '@/types'
+import CodeEditor from '@/components/CodeEditor'
+import sh from '@/pages/mongo/mongoShared.module.less'
+import g from '@/styles/global.module.less'
 
 interface Props {
     session: MongoSessionInfo

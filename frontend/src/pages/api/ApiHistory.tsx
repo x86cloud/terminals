@@ -1,10 +1,10 @@
 import React, {useState} from 'react'
 import { Trash2, X } from 'lucide-react'
-import {ConfirmModal, ConfirmState} from '../../components/Modal'
-import g from '../../styles/global.module.less'
-import a from './ApiHistory.module.less'
-import sh from './apiShared.module.less'
-import type {ApiState} from './useApi'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import g from '@/styles/global.module.less'
+import a from '@/pages/api/ApiHistory.module.less'
+import sh from '@/pages/api/apiShared.module.less'
+import type {ApiState} from '@/pages/api/useApi'
 
 export default function ApiHistory({state}: { state: ApiState }) {
     const {history, showHistory, setShowHistory, clearHistory, loadHistory, deleteHistory} = state

@@ -1,12 +1,12 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import { Search, Plus, ChevronDown, ChevronRight, Edit, Copy, Trash2, X } from 'lucide-react'
-import {API} from '../../api'
-import {errorMessage} from '../../utils'
-import {MongoSessionInfo, MongoQuerySpec, MongoFindResult} from '../../types'
-import CodeEditor from '../../components/CodeEditor'
-import {ConfirmModal, ConfirmState} from '../../components/Modal'
-import sh from './mongoShared.module.less'
-import g from '../../styles/global.module.less'
+import {API} from '@/api'
+import {errorMessage} from '@/utils'
+import {MongoSessionInfo, MongoQuerySpec, MongoFindResult} from '@/types'
+import CodeEditor from '@/components/CodeEditor'
+import {ConfirmModal, ConfirmState} from '@/components/Modal'
+import sh from '@/pages/mongo/mongoShared.module.less'
+import g from '@/styles/global.module.less'
 
 interface Props {
     session: MongoSessionInfo
