@@ -1,9 +1,9 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Maximize2, Minimize2, PanelLeft } from 'lucide-react'
 import g from '@/styles/global.module.less'
 import my from '@/pages/mysql/ErDiagram.module.less'
 import sh from '@/pages/mysql/mysqlShared.module.less'
-import {Schema} from '@/pages/mysql/mysqlTypes'
+import { Schema } from '@/pages/mysql/mysqlTypes'
 
 export default function ErDiagram({
     schema,
@@ -14,13 +14,13 @@ export default function ErDiagram({
 }) {
     const canvasRef = useRef<HTMLDivElement>(null)
     const [scale, setScale] = useState(1)
-    const [pan, setPan] = useState<{x: number; y: number}>({x: 0, y: 0})
+    const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
     const [hoveredTable, setHoveredTable] = useState<string | null>(null)
     const [isFullscreen, setIsFullscreen] = useState(false)
 
-    const dragStartRef = useRef<{x: number; y: number}>({x: 0, y: 0})
-    const panStartRef = useRef<{x: number; y: number}>({x: 0, y: 0})
+    const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
+    const panStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
 
     const ER = useMemo(() => {
         const colH = 20
@@ -29,7 +29,7 @@ export default function ErDiagram({
         const charW = 7.5
         const padW = 24
         const n = schema.tables.length
-        if (n === 0) return {positions: {}, svgW: 0, svgH: 0, tblW: 160}
+        if (n === 0) return { positions: {}, svgW: 0, svgH: 0, tblW: 160 }
 
         let maxLineLen = 0
         schema.tables.forEach((t) => {
@@ -48,7 +48,7 @@ export default function ErDiagram({
         else if (n <= 16) cols = 4
         else cols = 5
 
-        const positions: Record<string, {x: number; y: number; h: number}> = {}
+        const positions: Record<string, { x: number; y: number; h: number }> = {}
         let x = 0
         let y = 0
         let rowBottom = 0
@@ -57,7 +57,7 @@ export default function ErDiagram({
 
         schema.tables.forEach((t, i) => {
             const h = 22 + 14 + t.columns.length * colH + 10
-            positions[t.name] = {x, y, h}
+            positions[t.name] = { x, y, h }
             rowBottom = Math.max(rowBottom, y + h)
             contentRight = Math.max(contentRight, x + tblW)
             contentBottom = Math.max(contentBottom, y + h)
@@ -71,7 +71,7 @@ export default function ErDiagram({
 
         const svgW = contentRight
         const svgH = contentBottom
-        return {positions, svgW, svgH, tblW}
+        return { positions, svgW, svgH, tblW }
     }, [schema])
 
     // 智能计算合适比例并居中展示 ER 图
@@ -94,7 +94,7 @@ export default function ErDiagram({
         const fitY = (rect.height - ER.svgH * finalScale) / 2
 
         setScale(finalScale)
-        setPan({x: fitX, y: fitY})
+        setPan({ x: fitX, y: fitY })
     }, [ER.svgW, ER.svgH])
 
     useEffect(() => {
@@ -133,8 +133,8 @@ export default function ErDiagram({
     const handleMouseDown = (e: React.MouseEvent) => {
         if (e.button !== 0) return
         setIsDragging(true)
-        dragStartRef.current = {x: e.clientX, y: e.clientY}
-        panStartRef.current = {...pan}
+        dragStartRef.current = { x: e.clientX, y: e.clientY }
+        panStartRef.current = { ...pan }
     }
 
     const handleMouseMove = (e: React.MouseEvent) => {
@@ -190,7 +190,7 @@ export default function ErDiagram({
             <div className={my.erToolBar}>
                 <button
                     className={`${g.btn} ${g.xs}`}
-                    style={{width: 24, padding: 0}}
+                    style={{ width: 24, padding: 0 }}
                     title="缩小"
                     onClick={() => setScale((s) => Math.max(0.05, +(s - 0.1).toFixed(2)))}
                 >
@@ -199,7 +199,7 @@ export default function ErDiagram({
                 <span className={my.erZoomVal}>{Math.round(scale * 100)}%</span>
                 <button
                     className={`${g.btn} ${g.xs}`}
-                    style={{width: 24, padding: 0}}
+                    style={{ width: 24, padding: 0 }}
                     title="放大"
                     onClick={() => setScale((s) => Math.min(3, +(s + 0.1).toFixed(2)))}
                 >
@@ -269,9 +269,8 @@ export default function ErDiagram({
                                 <path
                                     key={i}
                                     d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
-                                    className={`${my.fkPath} ${isHighlighted ? my.highlighted : ''} ${
-                                        isDimmed ? my.dimmed : ''
-                                    }`}
+                                    className={`${my.fkPath} ${isHighlighted ? my.highlighted : ''} ${isDimmed ? my.dimmed : ''
+                                        }`}
                                 />
                             )
                         })}
@@ -284,9 +283,8 @@ export default function ErDiagram({
                                 <g
                                     key={t.name}
                                     transform={`translate(${pos.x}, ${pos.y})`}
-                                    className={`${my.erTableGroup} ${isHighlighted ? my.highlighted : ''} ${
-                                        isDimmed ? my.dimmed : ''
-                                    }`}
+                                    className={`${my.erTableGroup} ${isHighlighted ? my.highlighted : ''} ${isDimmed ? my.dimmed : ''
+                                        }`}
                                     onMouseEnter={() => setHoveredTable(t.name)}
                                     onMouseLeave={() => setHoveredTable(null)}
                                 >

@@ -135,12 +135,13 @@ export default function TerminalView({ sessionId, active }: Props) {
 
         const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
         const term = new Terminal({
-            fontFamily: '"Cascadia Mono", "JetBrains Mono", Consolas, "Courier New", monospace',
+            fontFamily: 'Consolas, "Courier New", monospace, "Cascadia Mono", "JetBrains Mono"',
             fontSize: 13.5,
             lineHeight: 1.2,
             cursorBlink: true,
             scrollback: 20000,
             allowProposedApi: true,
+            fontWeight: "normal",
             theme: isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME,
         })
         const fit = new FitAddon()

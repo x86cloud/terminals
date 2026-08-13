@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Database, RotateCw, Plus, Table, Trash2, X, Download, Upload, Copy } from 'lucide-react'
+import { RotateCw, Plus, Table, Trash2, X, Download, Upload, Copy } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import { MysqlSessionInfo } from '@/types'
@@ -639,7 +639,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         <div className={my.mysqlPane}>
             <div className={my.mysqlSide}>
                 <div className={my.mysqlDbHead}>
-                    <Database size={13} />
                     <select
                         className={my.mysqlDbSelect}
                         value={db}
