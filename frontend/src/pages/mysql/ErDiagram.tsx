@@ -32,21 +32,27 @@ export default function ErDiagram({
         if (n === 0) return { positions: {}, svgW: 0, svgH: 0, tblW: 160 }
 
         let maxLineLen = 0
+        let totalH = 0
         schema.tables.forEach((t) => {
             maxLineLen = Math.max(maxLineLen, String(t.name).length)
+            const h = 22 + 14 + t.columns.length * colH + 10
+            totalH += h
             t.columns.forEach((c: any) => {
                 const label = `${c.key === 'PRI' ? '🔑 ' : ''}${c.name} ${c.type}`
                 maxLineLen = Math.max(maxLineLen, label.length)
             })
         })
-        const tblW = Math.max(170, maxLineLen * charW + padW)
 
-        // 动态计算合理的网格列数
-        let cols = 4
+        // 限制单个表卡片的最大宽度在 180px ~ 280px 之间，防止超长字段/类型无限制拉宽整个画布
+        const tblW = Math.min(280, Math.max(180, maxLineLen * charW + padW))
+        const avgH = totalH / n
+
+        // 根据 16:9 / 16:10 显示器比例（~1.6），结合平均表高度智能推导最优质的网格矩阵列数
+        // 使得生成的全图宽高比趋近视口比例，防止多表时高度被压缩、宽度被拉得过宽
+        const targetRatio = 1.6
+        let cols = Math.max(2, Math.round(Math.sqrt((n * avgH * targetRatio) / tblW)))
         if (n <= 2) cols = 2
-        else if (n <= 6) cols = 3
-        else if (n <= 16) cols = 4
-        else cols = 5
+        else if (n <= 4) cols = 3
 
         const positions: Record<string, { x: number; y: number; h: number }> = {}
         let x = 0
@@ -279,6 +285,8 @@ export default function ErDiagram({
                             if (!pos) return null
                             const isHighlighted = activeTables ? activeTables.has(t.name) : false
                             const isDimmed = activeTables ? !activeTables.has(t.name) : false
+                            const maxChars = Math.max(12, Math.floor((ER.tblW - 20) / 7.5))
+                            const tableNameDisplay = t.name.length > maxChars ? `${t.name.slice(0, maxChars - 1)}…` : t.name
                             return (
                                 <g
                                     key={t.name}
@@ -292,15 +300,22 @@ export default function ErDiagram({
                                     <rect width={ER.tblW} height={22} rx={5} className={my.erTableHead} />
                                     <text x={8} y={15} className={my.erTableName}>
                                         <title>{t.name}</title>
-                                        {t.name}
+                                        {tableNameDisplay}
                                     </text>
-                                    {t.columns.map((c: any, ci: number) => (
-                                        <text key={ci} x={8} y={22 + 14 + ci * 18} className={my.erCol}>
-                                            <title>{`${c.key === 'PRI' ? '🔑 ' : ''}${c.name} ${c.type}`}</title>
-                                            {c.key === 'PRI' ? '🔑 ' : ''}
-                                            {c.name} <tspan className={my.erType}>{c.type}</tspan>
-                                        </text>
-                                    ))}
+                                    {t.columns.map((c: any, ci: number) => {
+                                        const isPri = c.key === 'PRI'
+                                        const priIcon = isPri ? '🔑 ' : ''
+                                        const fullLabel = `${c.name} ${c.type}`
+                                        const availChars = maxChars - (isPri ? 2 : 0)
+                                        const colDisplay = fullLabel.length > availChars ? `${fullLabel.slice(0, availChars - 1)}…` : fullLabel
+                                        return (
+                                            <text key={ci} x={8} y={22 + 14 + ci * 18} className={my.erCol}>
+                                                <title>{`${priIcon}${fullLabel}`}</title>
+                                                {priIcon}
+                                                {colDisplay}
+                                            </text>
+                                        )
+                                    })}
                                 </g>
                             )
                         })}
