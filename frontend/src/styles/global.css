@@ -4,7 +4,8 @@
  * 组件样式已全部迁移到各自的 .module.less（CSS Modules）
  * ============================================================ */
 
-:root, [data-theme='light'] {
+:root,
+[data-theme='light'] {
     --bg: #eef1f6;
     --bg-1: #ffffff;
     --bg-2: #f3f6fa;
@@ -56,16 +57,20 @@ body {
     box-sizing: border-box;
 }
 
-.cm-editor, .cm-theme {
+.cm-editor,
+.cm-theme {
     border: none !important;
     outline: none !important;
 }
+
 .cm-editor.cm-focused {
     border: none !important;
     outline: none !important;
 }
 
-html, body, #root {
+html,
+body,
+#root {
     height: 100%;
     margin: 0;
     padding: 0;
@@ -88,7 +93,7 @@ button {
     vertical-align: middle;
 }
 
-button > svg {
+button>svg {
     flex-shrink: 0;
 }
 

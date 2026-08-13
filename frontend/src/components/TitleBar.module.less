@@ -1,0 +1,146 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+.titleBar {
+    height: 36px;
+    min-height: 36px;
+    background: transparent;
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0 0 12px;
+    user-select: none;
+    -webkit-app-region: drag;
+    --wails-draggable: drag;
+    z-index: 1000;
+    transition: background @transition, border-color @transition;
+}
+
+.left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    -webkit-app-region: no-drag;
+    --wails-draggable: no-drag;
+}
+
+.logo {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: @accent;
+}
+
+.title {
+    font-size: 13px;
+    font-weight: 600;
+    color: @text;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+}
+
+.badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: @radius-pill;
+    background: @accent-soft;
+    color: @accent;
+    font-weight: 500;
+}
+
+.center {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+}
+
+.centerText {
+    font-size: 11.5px;
+    color: @text-dim;
+    opacity: 0.8;
+}
+
+.right {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    -webkit-app-region: no-drag;
+    --wails-draggable: no-drag;
+}
+
+.quickActions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    padding-right: 8px;
+    border-right: 1px solid @border;
+    margin-right: 4px;
+}
+
+.actionBtn {
+    width: 28px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: @radius-sm;
+    color: @text-dim;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all @transition-fast;
+
+    &:hover {
+        background: @bg-2;
+        color: @text;
+    }
+
+    &.active {
+        color: @accent;
+        background: @accent-soft;
+    }
+}
+
+.controls {
+    display: flex;
+    align-items: center;
+    height: 100%;
+}
+
+.controlBtn {
+    width: 44px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: none;
+    color: @text-dim;
+    cursor: pointer;
+    transition: background @transition-fast, color @transition-fast;
+
+    &:hover {
+        background: @bg-2;
+        color: @text;
+    }
+
+    &:active {
+        background: @bg-3;
+    }
+
+    &.close:hover {
+        background: #e81123;
+        color: #ffffff;
+    }
+
+    &.close:active {
+        background: #f1707a;
+        color: #ffffff;
+    }
+}

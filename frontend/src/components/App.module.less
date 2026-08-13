@@ -3,7 +3,19 @@
 
 .app {
     display: flex;
-    height: 100%;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background: @bg;
+}
+
+.body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
 }
 
 .main {
@@ -11,5 +23,6 @@
     .fill();
     display: flex;
     flex-direction: column;
-    background: @bg-1;
+    background: transparent;
+    min-width: 0;
 }

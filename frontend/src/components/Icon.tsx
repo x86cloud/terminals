@@ -44,8 +44,27 @@ export type IconName =
     | 'shield'
     | 'stop'
     | 'square'
+    | 'pin'
+    | 'window-minimize'
+    | 'window-maximize'
+    | 'window-restore'
 
 const PATHS: Record<IconName, React.ReactNode> = {
+    pin: (
+        <path d="M12 17v5M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z" />
+    ),
+    'window-minimize': (
+        <line x1="4" y1="12" x2="20" y2="12" />
+    ),
+    'window-maximize': (
+        <rect x="4" y="4" width="16" height="16" rx="2" />
+    ),
+    'window-restore': (
+        <>
+            <path d="M8 4h10a2 2 0 0 1 2 2v10" />
+            <rect x="4" y="8" width="12" height="12" rx="2" />
+        </>
+    ),
     stop: (
         <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="currentColor" />
     ),

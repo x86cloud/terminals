@@ -1,5 +1,6 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import Sidebar from './components/Sidebar'
+import TitleBar from './components/TitleBar'
 import ServerDialog from './components/ServerDialog'
 import SettingsModal from './pages/setting/SettingsModal'
 import {ConfirmModal, ConfirmState} from './components/Modal'
@@ -597,7 +598,10 @@ export default function App() {
 
     return (
         <div className={a.app}>
-            <Sidebar
+            <TitleBar onOpenSettings={() => setSettingsOpen(true)} />
+
+            <div className={a.body}>
+                <Sidebar
                 servers={servers}
                 groups={groups}
                 sessions={sessions}
@@ -716,6 +720,7 @@ export default function App() {
                     }}
                 />
             </main>
+            </div>
 
             <ServerDialog
                 open={dialog.open}

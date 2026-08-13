@@ -22,6 +22,7 @@ func main() {
 		Height:    860,
 		MinWidth:  960,
 		MinHeight: 600,
+		Frameless: true,
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId: "xclient-single-instance-key",
 			OnSecondInstanceLaunch: func(secondInstanceData options.SecondInstanceData) {
