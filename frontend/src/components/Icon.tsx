@@ -1,4 +1,51 @@
 import React from 'react'
+import {
+    Server,
+    Plus,
+    Edit,
+    Trash2,
+    X,
+    RotateCw,
+    ChevronUp,
+    Home,
+    Folder,
+    FileText,
+    Link as LinkIcon,
+    Upload,
+    Download,
+    Terminal,
+    Plug,
+    Search,
+    FolderPlus,
+    Copy,
+    Check,
+    PanelLeft,
+    Database,
+    Table,
+    ChevronDown,
+    ChevronRight,
+    ChevronLeft,
+    ChevronsLeft,
+    ChevronsRight,
+    Play,
+    BarChart2,
+    Power,
+    Clock,
+    Settings,
+    Box,
+    Layers,
+    Maximize2,
+    Minimize2,
+    Bot,
+    User,
+    Info,
+    Paperclip,
+    Shield,
+    Square,
+    Pin,
+    Minus,
+    LucideProps,
+} from 'lucide-react'
 
 export type IconName =
     | 'server'
@@ -49,213 +96,54 @@ export type IconName =
     | 'window-maximize'
     | 'window-restore'
 
-const PATHS: Record<IconName, React.ReactNode> = {
-    pin: (
-        <path d="M12 17v5M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z" />
-    ),
-    'window-minimize': (
-        <line x1="4" y1="12" x2="20" y2="12" />
-    ),
-    'window-maximize': (
-        <rect x="4" y="4" width="16" height="16" rx="2" />
-    ),
-    'window-restore': (
-        <>
-            <path d="M8 4h10a2 2 0 0 1 2 2v10" />
-            <rect x="4" y="8" width="12" height="12" rx="2" />
-        </>
-    ),
-    stop: (
-        <rect x="4" y="4" width="16" height="16" rx="2" ry="2" fill="currentColor" />
-    ),
-    square: (
-        <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-    ),
-    shield: (
-        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    ),
-    bot: (
-        <>
-            <rect x="3" y="11" width="18" height="10" rx="2"/>
-            <circle cx="12" cy="5" r="2"/>
-            <path d="M12 7v4M8 15h.01M16 15h.01"/>
-        </>
-    ),
-    user: (
-        <>
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
-        </>
-    ),
-    info: (
-        <>
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="16" x2="12" y2="12"/>
-            <line x1="12" y1="8" x2="12.01" y2="8"/>
-        </>
-    ),
-    paperclip: (
-        <>
-            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-        </>
-    ),
-    maximize: (
-        <>
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-        </>
-    ),
-    minimize: (
-        <>
-            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-        </>
-    ),
-    layers: (
-        <>
-            <polygon points="12 2 2 7 12 12 22 7 12 2"/>
-            <polyline points="2 17 12 22 22 17"/>
-            <polyline points="2 12 12 17 22 12"/>
-        </>
-    ),
-    box: (
-        <>
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
-            <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
-            <line x1="12" y1="22.08" x2="12" y2="12"/>
-        </>
-    ),
-    settings: (
-        <>
-            <circle cx="12" cy="12" r="3"/>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-        </>
-    ),
-    clock: (
-        <>
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-        </>
-    ),
-    power: (
-        <>
-            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
-            <line x1="12" y1="2" x2="12" y2="12"/>
-        </>
-    ),
-    server: (
-        <>
-            <rect x="3" y="4" width="18" height="7" rx="2"/>
-            <rect x="3" y="13" width="18" height="7" rx="2"/>
-            <path d="M7 7.5h.01M7 16.5h.01"/>
-        </>
-    ),
-    plus: <path d="M12 5v14M5 12h14"/>,
-    edit: <path d="M4 20h4l10-10a2.8 2.8 0 0 0-4-4L4 16v4z"/>,
-    trash: (
-        <>
-            <path d="M4 7h16"/>
-            <path d="M10 11v6M14 11v6"/>
-            <path d="M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12"/>
-            <path d="M9 7V4h6v3"/>
-        </>
-    ),
-    close: <path d="M6 6l12 12M18 6L6 18"/>,
-    refresh: (
-        <>
-            <path d="M20 11a8 8 0 1 0-2.3 6.1"/>
-            <path d="M20 5v6h-6"/>
-        </>
-    ),
-    up: <path d="M12 19V5M5 12l7-7 7 7"/>,
-    home: <path d="M4 11l8-7 8 7v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8z"/>,
-    folder: <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>,
-    file: (
-        <>
-            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z"/>
-            <path d="M14 3v5h5"/>
-        </>
-    ),
-    link: (
-        <>
-            <path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/>
-            <path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/>
-        </>
-    ),
-    upload: (
-        <>
-            <path d="M12 16V4"/>
-            <path d="M7 9l5-5 5 5"/>
-            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-        </>
-    ),
-    download: (
-        <>
-            <path d="M12 4v12"/>
-            <path d="M7 11l5 5 5-5"/>
-            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
-        </>
-    ),
-    terminal: (
-        <>
-            <rect x="3" y="4" width="18" height="16" rx="2"/>
-            <path d="M7 9l3 3-3 3M13 15h4"/>
-        </>
-    ),
-    plug: (
-        <>
-            <path d="M9 3v6M15 3v6"/>
-            <path d="M6 9h12v3a6 6 0 0 1-12 0V9z"/>
-            <path d="M12 18v3"/>
-        </>
-    ),
-    search: (
-        <>
-            <circle cx="11" cy="11" r="6"/>
-            <path d="M20 20l-3.5-3.5"/>
-        </>
-    ),
-    newFolder: (
-        <>
-            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>
-            <path d="M12 11v5M9.5 13.5h5"/>
-        </>
-    ),
-    copy: (
-        <>
-            <rect x="9" y="9" width="11" height="11" rx="2"/>
-            <path d="M5 15V5a2 2 0 0 1 2-2h8"/>
-        </>
-    ),
-    panel: (
-        <>
-            <rect x="3" y="4" width="18" height="16" rx="2"/>
-            <path d="M14 4v16"/>
-        </>
-    ),
-    database: (
-        <>
-            <ellipse cx="12" cy="5" rx="8" ry="3"/>
-            <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/>
-            <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>
-        </>
-    ),
-    table: (
-        <>
-            <rect x="3" y="4" width="18" height="16" rx="2"/>
-            <path d="M3 9h18M3 14h18M9 4v16M15 4v16"/>
-        </>
-    ),
-    'chevron-down': <path d="M6 9l6 6 6-6"/>,
-    'chevron-right': <path d="M9 6l6 6-6 6"/>,
-    'chevron-left': <path d="M15 6l-6 6 6 6"/>,
-    'chevrons-left': <path d="M11 6l-6 6 6 6M18 6l-6 6 6 6"/>,
-    'chevrons-right': <path d="M6 6l6 6-6 6M13 6l6 6-6 6"/>,
-    play: <path d="M7 4l13 8-13 8V4z"/>,
-    chart: (
-        <>
-            <path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>
-        </>
-    ),
-    check: <path d="M20 6L9 17l-5-5"/>,
+const ICON_MAP: Record<IconName, React.ComponentType<LucideProps>> = {
+    server: Server,
+    plus: Plus,
+    edit: Edit,
+    trash: Trash2,
+    close: X,
+    refresh: RotateCw,
+    up: ChevronUp,
+    home: Home,
+    folder: Folder,
+    file: FileText,
+    link: LinkIcon,
+    upload: Upload,
+    download: Download,
+    terminal: Terminal,
+    plug: Plug,
+    search: Search,
+    newFolder: FolderPlus,
+    copy: Copy,
+    check: Check,
+    panel: PanelLeft,
+    database: Database,
+    table: Table,
+    'chevron-down': ChevronDown,
+    'chevron-right': ChevronRight,
+    'chevron-left': ChevronLeft,
+    'chevrons-left': ChevronsLeft,
+    'chevrons-right': ChevronsRight,
+    play: Play,
+    chart: BarChart2,
+    power: Power,
+    clock: Clock,
+    settings: Settings,
+    box: Box,
+    layers: Layers,
+    maximize: Maximize2,
+    minimize: Minimize2,
+    bot: Bot,
+    user: User,
+    info: Info,
+    paperclip: Paperclip,
+    shield: Shield,
+    stop: Square,
+    square: Square,
+    pin: Pin,
+    'window-minimize': Minus,
+    'window-maximize': Square,
+    'window-restore': Copy,
 }
 
 interface Props {
@@ -264,22 +152,18 @@ interface Props {
     className?: string
 }
 
-export default function Icon({name, size = 16, className}: Props) {
+export default function Icon({ name, size = 16, className }: Props) {
+    const Component = ICON_MAP[name]
+    if (!Component) {
+        return null
+    }
+
     return (
-        <svg
+        <Component
+            size={size}
             className={className}
-            width={size}
-            height={size}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
             strokeWidth={1.8}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-            style={{display: 'inline-block', verticalAlign: 'middle', flexShrink: 0}}
-        >
-            {PATHS[name]}
-        </svg>
+            style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
+        />
     )
 }
