@@ -8,6 +8,7 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url)),
+            'dompurify': 'dompurify/dist/purify.js',
         },
     },
     css: {
