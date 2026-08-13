@@ -1,25 +1,27 @@
+import React from 'react'
 import a from './ApiClient.module.less'
 import sh from './apiShared.module.less'
-import {useApi} from './useApi'
+import { useApi } from './useApi'
 import ApiHistory from './ApiHistory'
-import ApiConfigTabs, {ConfigBody} from './ApiConfigTabs'
+import ApiConfigTabs, { ConfigBody } from './ApiConfigTabs'
 import HttpRequest from './HttpRequest'
 import WsClient from './WsClient'
 
-export default function ApiClient({onClose}: { onClose: () => void }) {
+
+export default function ApiClient({ onClose }: { onClose: () => void }) {
     const state = useApi()
-    const {error, mode, configTab, setConfigTab} = state
+    const { error, mode, configTab, setConfigTab } = state
 
     return (
         <div className={a.apiPane}>
-            <ApiHistory state={state}/>
+            <ApiHistory state={state} />
             <div className={a.apiMain}>
-                <HttpRequest state={state} onClose={onClose}/>
+                <HttpRequest state={state} onClose={onClose} />
 
-                <ApiConfigTabs state={state}/>
-                <ConfigBody state={state}/>
+                <ApiConfigTabs state={state} />
+                <ConfigBody state={state} />
 
-                {mode === 'ws' && configTab === 'messages' && <WsClient state={state}/>}
+                {mode === 'ws' && configTab === 'messages' && <WsClient state={state} />}
 
                 {error && <div className={sh.errorBar}>{error}</div>}
             </div>
