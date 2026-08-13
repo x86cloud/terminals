@@ -35,8 +35,6 @@ func (m *SqliteManager) SetContext(ctx context.Context) {
 	m.ctx = ctx
 }
 
-var SqliteMgr = NewSqliteManager()
-
 // Open 打开（或重建）一个 SQLite 数据库文件连接。
 func (m *SqliteManager) Open(id string, path string) error {
 	path = strings.TrimSpace(path)
@@ -121,18 +119,6 @@ func sqliteAsString(v any) string {
 		return string(b)
 	}
 	return fmt.Sprint(v)
-}
-
-// firstColumn 提取每行第一列的值。
-func sqliteFirstColumn(rows []map[string]any) []string {
-	out := make([]string, 0, len(rows))
-	for _, r := range rows {
-		for _, v := range r {
-			out = append(out, sqliteAsString(v))
-			break
-		}
-	}
-	return out
 }
 
 // querySqlite 执行查询并返回列名与行数据。

@@ -1,12 +1,9 @@
 package redis
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
-
-	"github.com/redis/go-redis/v9"
 )
 
 // ===================== 辅助 =====================
@@ -17,16 +14,6 @@ func toInterfaces(parts []string) []interface{} {
 		out[i] = p
 	}
 	return out
-}
-
-func errToString(err error) string {
-	if err == nil {
-		return ""
-	}
-	if errors.Is(err, redis.Nil) {
-		return "nil"
-	}
-	return err.Error()
 }
 
 func formatRedisResult(v any) string {
@@ -62,10 +49,6 @@ func formatRedisResult(v any) string {
 	default:
 		return fmt.Sprintf("%v", val)
 	}
-}
-
-func formatCmds(args []string) string {
-	return strings.Join(args, " ")
 }
 
 // ---- 文本解析辅助（与前端格式互转） ----

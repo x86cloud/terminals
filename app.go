@@ -26,6 +26,7 @@ type App struct {
 	mongoMgr  *mongo.MongoManager
 	wsMgr     *proto.WsManager
 	mysqlMgr  *db.MysqlManagerEx
+	sqliteMgr *db.SqliteManager
 }
 
 func NewApp() *App {
@@ -42,6 +43,7 @@ func NewApp() *App {
 		mongoMgr:  mongo.NewMongoManager(),
 		wsMgr:     proto.NewWsManager(),
 		mysqlMgr:  db.NewMysqlManagerEx(),
+		sqliteMgr: db.NewSqliteManager(),
 	}
 }
 
@@ -70,7 +72,7 @@ func (a *App) startup(ctx context.Context) {
 	a.mqttMgr.SetContext(ctx)
 	a.wsMgr.SetContext(ctx)
 	a.mongoMgr.SetContext(ctx)
-	db.SqliteMgr.SetContext(ctx)
+	a.sqliteMgr.SetContext(ctx)
 	a.mysqlMgr.SetContext(ctx)
 	agent.DefaultManager.SetContext(ctx)
 
@@ -86,7 +88,7 @@ func (a *App) shutdown(ctx context.Context) {
 	a.mysqlMgr.CloseAll()
 	a.mqttMgr.CloseAll()
 	a.mongoMgr.CloseAll()
-	db.SqliteMgr.CloseAll()
+	a.sqliteMgr.CloseAll()
 	a.wsMgr.CloseAll()
 }
 

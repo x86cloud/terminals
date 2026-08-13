@@ -327,22 +327,6 @@ export interface RedisQueueItem {
     empty?: boolean
 }
 
-export function emptyRedis(): RedisSessionInfo {
-    return {
-        id: '',
-        serverId: '',
-        title: '',
-        host: '',
-        port: 6379,
-        connected: false,
-        db: 0,
-        dbSize: 0,
-        mode: 'single',
-        breaker: 'closed',
-        serialization: 'none',
-    }
-}
-
 /* ---------------- MySQL ---------------- */
 
 export interface MysqlSessionInfo {
@@ -355,18 +339,6 @@ export interface MysqlSessionInfo {
     database: string
 }
 
-export function emptyMysql(): MysqlSessionInfo {
-    return {
-        id: '',
-        serverId: '',
-        title: '',
-        host: '',
-        port: 3306,
-        connected: false,
-        database: '',
-    }
-}
-
 export interface MqttSessionInfo {
     id: string
     serverId: string
@@ -375,10 +347,6 @@ export interface MqttSessionInfo {
     username: string
     clientId: string
     connected: boolean
-}
-
-export function emptyMqtt(): MqttSessionInfo {
-    return {id: '', serverId: '', host: '', port: 0, username: '', clientId: '', connected: false}
 }
 
 export interface MqttMessage {
@@ -515,20 +483,6 @@ export interface MongoSessionInfo {
     database: string
     topology: string
     version: string
-}
-
-export function emptyMongo(): MongoSessionInfo {
-    return {
-        id: '',
-        serverId: '',
-        title: '',
-        host: '',
-        port: 27017,
-        connected: false,
-        database: '',
-        topology: '',
-        version: '',
-    }
 }
 
 // 连接字符串解析结果
@@ -715,17 +669,6 @@ export interface SqliteSessionInfo {
     path: string
     connected: boolean
     size: number
-}
-
-export function emptySqlite(): SqliteSessionInfo {
-    return {
-        id: '',
-        serverId: '',
-        title: '',
-        path: '',
-        connected: false,
-        size: 0,
-    }
 }
 
 // 表/视图条目

@@ -1,8 +1,6 @@
 package main
 
 import (
-	"terminal/db"
-
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -16,44 +14,44 @@ func (a *App) SqliteOpenFile() (string, error) {
 
 func (a *App) SqliteConnect(id string, filePath string) (bool, error) {
 	if a.ctx != nil {
-		db.SqliteMgr.SetContext(a.ctx)
+		a.sqliteMgr.SetContext(a.ctx)
 	}
-	return db.SqliteMgr.SqliteConnect(id, filePath)
+	return a.sqliteMgr.SqliteConnect(id, filePath)
 }
 
 func (a *App) SqliteClose(id string) error {
-	db.SqliteMgr.SqliteClose(id)
+	a.sqliteMgr.SqliteClose(id)
 	return nil
 }
 
 func (a *App) SqliteInfo(id string) (map[string]any, error) {
-	return db.SqliteMgr.SqliteInfo(id)
+	return a.sqliteMgr.SqliteInfo(id)
 }
 
 func (a *App) SqliteTables(id string) ([]map[string]any, error) {
-	return db.SqliteMgr.SqliteTables(id)
+	return a.sqliteMgr.SqliteTables(id)
 }
 
 func (a *App) SqliteDescribe(id string, table string) ([]map[string]any, error) {
-	return db.SqliteMgr.SqliteDescribe(id, table)
+	return a.sqliteMgr.SqliteDescribe(id, table)
 }
 
 func (a *App) SqliteSelect(id string, table string, limit int, offset int) (map[string]any, error) {
-	return db.SqliteMgr.SqliteSelect(id, table, limit, offset)
+	return a.sqliteMgr.SqliteSelect(id, table, limit, offset)
 }
 
 func (a *App) SqliteCount(id string, table string) (int64, error) {
-	return db.SqliteMgr.SqliteCount(id, table)
+	return a.sqliteMgr.SqliteCount(id, table)
 }
 
 func (a *App) SqliteIndexes(id string, table string) ([]map[string]any, error) {
-	return db.SqliteMgr.SqliteIndexes(id, table)
+	return a.sqliteMgr.SqliteIndexes(id, table)
 }
 
 func (a *App) SqliteRun(id string, sqlText string) (map[string]any, error) {
-	return db.SqliteMgr.SqliteRun(id, sqlText)
+	return a.sqliteMgr.SqliteRun(id, sqlText)
 }
 
 func (a *App) SqliteSchema(id string) (map[string]any, error) {
-	return db.SqliteMgr.SqliteSchema(id)
+	return a.sqliteMgr.SqliteSchema(id)
 }
