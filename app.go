@@ -22,10 +22,10 @@ type App struct {
 	sessions  *ssh.SessionManager
 	transfers *ssh.TransferManager
 	redisMgr  *redis.RedisManager
-	mysqlMgr  *db.MysqlManager
 	mqttMgr   *proto.MqttManager
 	mongoMgr  *mongo.MongoManager
 	wsMgr     *proto.WsManager
+	mysqlMgr  *db.MysqlManagerEx
 }
 
 func NewApp() *App {
@@ -38,10 +38,10 @@ func NewApp() *App {
 		sessions:  ssh.NewSessionManager(),
 		transfers: ssh.NewTransferManager(),
 		redisMgr:  redis.NewRedisManager(),
-		mysqlMgr:  db.NewMysqlManager(),
 		mqttMgr:   proto.NewMqttManager(),
 		mongoMgr:  mongo.NewMongoManager(),
 		wsMgr:     proto.NewWsManager(),
+		mysqlMgr:  db.NewMysqlManagerEx(),
 	}
 }
 
@@ -71,7 +71,7 @@ func (a *App) startup(ctx context.Context) {
 	a.wsMgr.SetContext(ctx)
 	a.mongoMgr.SetContext(ctx)
 	db.SqliteMgr.SetContext(ctx)
-	db.MysqlExMgr.SetContext(ctx)
+	a.mysqlMgr.SetContext(ctx)
 	agent.DefaultManager.SetContext(ctx)
 
 	if a.store != nil {
@@ -83,7 +83,7 @@ func (a *App) startup(ctx context.Context) {
 func (a *App) shutdown(ctx context.Context) {
 	a.sessions.CloseAll()
 	a.redisMgr.CloseAll()
-	db.MysqlExMgr.CloseAll()
+	a.mysqlMgr.CloseAll()
 	a.mqttMgr.CloseAll()
 	a.mongoMgr.CloseAll()
 	db.SqliteMgr.CloseAll()

@@ -210,8 +210,6 @@ func (m *MysqlManagerEx) SetContext(ctx context.Context) {
 	m.ctx = ctx
 }
 
-var MysqlExMgr = NewMysqlManagerEx()
-
 func (m *MysqlManagerEx) Open(id string, cfg core.ServerConfig) error {
 	m.mu.Lock()
 	if old, ok := m.conns[id]; ok {
