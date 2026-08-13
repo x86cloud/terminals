@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import { FileText, Folder, Trash2 } from 'lucide-react'
 import {KeyTreeNode} from './redisTypes'
 import t from './KeyItemTree.module.less'
 
@@ -54,7 +54,7 @@ export default function KeyItemTree({
                                 <span style={{width: 14}} />
                             )}
                             <span className={t.treeIcon}>
-                                <Icon name={node.isLeaf ? 'file' : isExpanded ? 'folder' : 'folder'} size={13} />
+                                {node.isLeaf ? <FileText size={13} /> : <Folder size={13} />}
                             </span>
                             <span className={t.treeLabel} title={node.fullKey || node.name}>
                                 {node.name}
@@ -69,7 +69,7 @@ export default function KeyItemTree({
                                         onDeleteFolder(node)
                                     }}
                                 >
-                                    <Icon name="trash" size={12} />
+                                    <Trash2 size={12} />
                                 </button>
                             ) : (
                                 <button
@@ -80,7 +80,7 @@ export default function KeyItemTree({
                                         if (node.fullKey) onDeleteKey(node.fullKey)
                                     }}
                                 >
-                                    <Icon name="trash" size={12} />
+                                    <Trash2 size={12} />
                                 </button>
                             )}
                         </div>

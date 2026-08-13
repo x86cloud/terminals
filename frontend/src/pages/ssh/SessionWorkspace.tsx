@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { PanelLeft, Folder, BarChart2, Play, Plug, Clock, Box, Maximize2, Minimize2, X } from 'lucide-react'
 import TerminalView from './terminal/TerminalView'
 import FilePanel from './file/FilePanel'
 import DashboardPanel from './dashboard/DashboardPanel'
@@ -6,28 +7,31 @@ import ProcessPanel from './process/ProcessPanel'
 import ServicePanel from './service/ServicePanel'
 import CronPanel from './cron/CronPanel'
 import DockerPanel from './docker/DockerPanel'
-import Icon from '../../components/Icon'
 import { SessionInfo } from '../../types'
 import g from '../../styles/global.module.less'
 import w from './SessionWorkspace.module.less'
 
-interface Props {
+export interface SessionWorkspaceProps {
     session: SessionInfo
     active: boolean
     nativeDrop: boolean
-    onPathChange: (sessionId: string, path: string) => void
-    onNotify: (message: string, kind?: 'info' | 'error') => void
+    onPathChange: (sessionId: string, p: string) => void
+    onNotify: (msg: string, kind?: 'info' | 'error') => void
 }
 
-const MIN_PANEL = 320
-type PanelTab = 'files' | 'dashboard' | 'process' | 'service' | 'cron' | 'docker'
+export default function SessionWorkspace({
+    session,
+    active,
+    nativeDrop,
+    onPathChange,
+    onNotify,
+}: SessionWorkspaceProps) {
+    const rootRef = useRef<HTMLDivElement | null>(null)
+    const [panelWidth, setPanelWidth] = useState<number>(380)
+    const [showPanel, setShowPanel] = useState<boolean>(true)
+    const [isMaximized, setIsMaximized] = useState<boolean>(false)
+    const [activeTab, setActiveTab] = useState<'files' | 'process' | 'service' | 'cron' | 'docker' | 'dashboard'>('files')
 
-export default function SessionWorkspace({ session, active, nativeDrop, onPathChange, onNotify }: Props) {
-    const [panelWidth, setPanelWidth] = useState(440)
-    const [showPanel, setShowPanel] = useState(true)
-    const [isMaximized, setIsMaximized] = useState(false)
-    const [activeTab, setActiveTab] = useState<PanelTab>('files')
-    const rootRef = useRef<HTMLDivElement>(null)
     const draggingRef = useRef(false)
 
     const handlePath = useCallback(
@@ -36,35 +40,36 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
     )
 
     useEffect(() => {
-        const onMove = (e: MouseEvent) => {
+        const onMouseMove = (e: MouseEvent) => {
             if (!draggingRef.current || !rootRef.current) return
             const rect = rootRef.current.getBoundingClientRect()
-            const next = rect.right - e.clientX
-            setPanelWidth(Math.min(Math.max(next, MIN_PANEL), rect.width - 320))
+            const rawWidth = rect.right - e.clientX
+            const clamped = Math.min(800, Math.max(260, rawWidth))
+            setPanelWidth(clamped)
         }
-        const onUp = () => {
-            draggingRef.current = false
-            document.body.classList.remove('resizing')
+
+        const onMouseUp = () => {
+            if (draggingRef.current) {
+                draggingRef.current = false
+                document.body.classList.remove('resizing')
+            }
         }
-        window.addEventListener('mousemove', onMove)
-        window.addEventListener('mouseup', onUp)
+
+        window.addEventListener('mousemove', onMouseMove)
+        window.addEventListener('mouseup', onMouseUp)
         return () => {
-            window.removeEventListener('mousemove', onMove)
-            window.removeEventListener('mouseup', onUp)
+            window.removeEventListener('mousemove', onMouseMove)
+            window.removeEventListener('mouseup', onMouseUp)
         }
     }, [])
 
-    const toggleMaximized = () => {
-        setIsMaximized((v) => !v)
-        if (!showPanel) setShowPanel(true)
-    }
+    const toggleShowPanel = useCallback(() => {
+        setShowPanel((prev) => !prev)
+    }, [])
 
-    const toggleShowPanel = () => {
-        setShowPanel((v) => {
-            if (v && isMaximized) setIsMaximized(false)
-            return !v
-        })
-    }
+    const toggleMaximized = useCallback(() => {
+        setIsMaximized((prev) => !prev)
+    }, [])
 
     return (
         <div ref={rootRef} className={w.workspace} style={{ display: active ? 'flex' : 'none' }}>
@@ -75,7 +80,7 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
                     title={showPanel ? '隐藏侧栏面板' : '显示侧栏面板'}
                     onClick={toggleShowPanel}
                 >
-                    <Icon name="panel" size={15} />
+                    <PanelLeft size={15} />
                 </button>
             </div>
 
@@ -97,37 +102,37 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
                                     className={`${w.panelTab}${activeTab === 'files' ? ' ' + w.active : ''}`}
                                     onClick={() => setActiveTab('files')}
                                 >
-                                    <Icon name="folder" size={13} /> 文件
+                                    <Folder size={13} /> 文件
                                 </button>
                                 <button
                                     className={`${w.panelTab}${activeTab === 'dashboard' ? ' ' + w.active : ''}`}
                                     onClick={() => setActiveTab('dashboard')}
                                 >
-                                    <Icon name="chart" size={13} /> 仪表盘
+                                    <BarChart2 size={13} /> 仪表盘
                                 </button>
                                 <button
                                     className={`${w.panelTab}${activeTab === 'process' ? ' ' + w.active : ''}`}
                                     onClick={() => setActiveTab('process')}
                                 >
-                                    <Icon name="play" size={13} /> 进程
+                                    <Play size={13} /> 进程
                                 </button>
                                 <button
                                     className={`${w.panelTab}${activeTab === 'service' ? ' ' + w.active : ''}`}
                                     onClick={() => setActiveTab('service')}
                                 >
-                                    <Icon name="plug" size={13} /> 服务
+                                    <Plug size={13} /> 服务
                                 </button>
                                 <button
                                     className={`${w.panelTab}${activeTab === 'cron' ? ' ' + w.active : ''}`}
                                     onClick={() => setActiveTab('cron')}
                                 >
-                                    <Icon name="clock" size={13} /> 定时任务
+                                    <Clock size={13} /> 定时任务
                                 </button>
                                 <button
                                     className={`${w.panelTab}${activeTab === 'docker' ? ' ' + w.active : ''}`}
                                     onClick={() => setActiveTab('docker')}
                                 >
-                                    <Icon name="box" size={13} /> Docker
+                                    <Box size={13} /> Docker
                                 </button>
                             </div>
                             <div className={w.panelHeaderActions}>
@@ -136,14 +141,14 @@ export default function SessionWorkspace({ session, active, nativeDrop, onPathCh
                                     title={isMaximized ? '还原侧栏面板' : '侧栏面板占满'}
                                     onClick={toggleMaximized}
                                 >
-                                    <Icon name={isMaximized ? 'minimize' : 'maximize'} size={13} />
+                                    {isMaximized ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
                                 </button>
                                 <button
                                     className={g.iconBtn}
                                     title="隐藏侧栏面板"
                                     onClick={toggleShowPanel}
                                 >
-                                    <Icon name="close" size={13} />
+                                    <X size={13} />
                                 </button>
                             </div>
                         </div>

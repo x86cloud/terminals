@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import Icon from '../../../components/Icon'
+import { Box, Layers, Search, Download, RotateCw, X, Power, Play, FileText, Trash2 } from 'lucide-react'
 import {ConfirmModal, ConfirmState} from '../../../components/Modal'
 import {API} from '../../../api'
 import {SSHDockerContainer, SSHDockerImage} from '../../../types'
@@ -211,18 +211,16 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                     className={`${d.subTab}${subTab === 'containers' ? ' ' + d.active : ''}`}
                     onClick={() => setSubTab('containers')}
                 >
-                    <Icon name="box" size={13} />
-                    容器列表
-                    <span className={`${d.badge} ${d.running}`}>{containers.length}</span>
+                    <Box size={13} />
+                    <span>容器 ({containers.length})</span>
                 </button>
 
                 <button
                     className={`${d.subTab}${subTab === 'images' ? ' ' + d.active : ''}`}
                     onClick={() => setSubTab('images')}
                 >
-                    <Icon name="layers" size={13} />
-                    镜像列表
-                    <span className={d.badge}>{images.length}</span>
+                    <Layers size={13} />
+                    <span>镜像 ({images.length})</span>
                 </button>
             </div>
 
@@ -230,7 +228,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
             <div className={d.toolbar}>
                 <div className={d.leftActions}>
                     <div className={d.searchWrap}>
-                        <Icon name="search" size={12} />
+                        <Search size={12} />
                         <input
                             type="text"
                             placeholder={subTab === 'containers' ? '搜索容器名/镜像/ID...' : '搜索镜像/标签/ID...'}
@@ -249,7 +247,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                             disabled={busy}
                             onClick={() => setPullOpen(true)}
                         >
-                            <Icon name="download" size={12} /> 拉取镜像
+                            <Download size={12} /> 拉取镜像
                         </button>
                     )}
                 </div>
@@ -262,7 +260,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                         disabled={busy}
                         onClick={() => void fetchDockerData()}
                     >
-                        <Icon name="refresh" size={13} />
+                        <RotateCw size={13} />
                     </button>
                 </div>
             </div>
@@ -271,7 +269,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
             {error && (
                 <div className={d.errorBox}>
                     <div className={d.errorTitle}>
-                        <Icon name="close" size={14} /> Docker 环境异常或未安装
+                        <X size={14} /> Docker 环境异常或未安装
                     </div>
                     <div className={d.errorDesc}>
                         {error}
@@ -321,7 +319,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                                                 disabled={busy}
                                                                 onClick={() => void handleContainerAction(c, 'stop')}
                                                             >
-                                                                <Icon name="power" size={13} />
+                                                                <Power size={13} />
                                                             </button>
                                                             <button
                                                                 className={g.iconBtn}
@@ -329,7 +327,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                                                 disabled={busy}
                                                                 onClick={() => void handleContainerAction(c, 'restart')}
                                                             >
-                                                                <Icon name="refresh" size={13} />
+                                                                <RotateCw size={13} />
                                                             </button>
                                                         </>
                                                     ) : (
@@ -339,7 +337,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                                             disabled={busy}
                                                             onClick={() => void handleContainerAction(c, 'start')}
                                                         >
-                                                            <Icon name="play" size={13} />
+                                                            <Play size={13} />
                                                         </button>
                                                     )}
                                                     <button
@@ -347,7 +345,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                                         title="查看日志"
                                                         onClick={() => void handleViewLogs(c)}
                                                     >
-                                                        <Icon name="file" size={13} />
+                                                        <FileText size={13} />
                                                     </button>
                                                     <button
                                                         className={`${g.iconBtn} ${g.danger}`}
@@ -355,7 +353,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                                         disabled={busy}
                                                         onClick={() => void handleContainerAction(c, 'rm')}
                                                     >
-                                                        <Icon name="trash" size={13} />
+                                                        <Trash2 size={13} />
                                                     </button>
                                                 </div>
                                             </td>
@@ -365,7 +363,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                         <tr>
                                             <td colSpan={6}>
                                                 <div className={d.emptyState}>
-                                                    <Icon name="box" size={32} />
+                                                    <Box size={32} />
                                                     <span>{keyword ? '未找到匹配的容器' : '暂无容器'}</span>
                                                 </div>
                                             </td>
@@ -404,7 +402,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                                     disabled={busy}
                                                     onClick={() => handleRemoveImage(img)}
                                                 >
-                                                    <Icon name="trash" size={13} />
+                                                    <Trash2 size={13} />
                                                 </button>
                                             </td>
                                         </tr>
@@ -413,7 +411,7 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                                         <tr>
                                             <td colSpan={6}>
                                                 <div className={d.emptyState}>
-                                                    <Icon name="layers" size={32} />
+                                                    <Layers size={32} />
                                                     <span>{keyword ? '未找到匹配的镜像' : '暂无本地镜像'}</span>
                                                 </div>
                                             </td>
@@ -433,11 +431,11 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                     <div className={d.logModal} onClick={(e) => e.stopPropagation()}>
                         <div className={d.modalHeader}>
                             <div className={d.modalTitle}>
-                                <Icon name="file" size={15} />
+                                <FileText size={15} />
                                 <span>{logTitle}</span>
                             </div>
                             <button className={g.iconBtn} onClick={() => setLogOpen(false)} title="关闭">
-                                <Icon name="close" size={14} />
+                                <X size={14} />
                             </button>
                         </div>
                         <pre className={d.logBody}>
@@ -458,11 +456,11 @@ export default function DockerPanel({sessionId, active, onNotify}: Props) {
                     <div className={d.pullModal} onClick={(e) => e.stopPropagation()}>
                         <div className={d.modalHeader}>
                             <div className={d.modalTitle}>
-                                <Icon name="download" size={15} />
+                                <Download size={15} />
                                 <span>拉取 Docker 镜像</span>
                             </div>
                             <button className={g.iconBtn} onClick={() => setPullOpen(false)} title="关闭">
-                                <Icon name="close" size={14} />
+                                <X size={14} />
                             </button>
                         </div>
                         <div className={d.pullForm}>

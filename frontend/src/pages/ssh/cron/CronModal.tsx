@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react'
-import Icon from '../../../components/Icon'
+import { X } from 'lucide-react'
 import {SSHCronItem} from '../../../types'
 import g from '../../../styles/global.module.less'
 import m from './CronModal.module.less'
@@ -73,7 +73,7 @@ export default function CronModal({open, item, onSave, onClose}: Props) {
                 <div className={m.header}>
                     <span>{item ? '编辑定时任务' : '新建定时任务'}</span>
                     <button className={g.iconBtn} onClick={onClose}>
-                        <Icon name="close" size={14}/>
+                        <X size={14}/>
                     </button>
                 </div>
 

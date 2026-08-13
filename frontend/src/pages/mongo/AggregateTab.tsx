@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react'
-import Icon from '../../components/Icon'
+import {Play} from 'lucide-react'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoAggregateResult} from '../../types'
@@ -74,7 +74,7 @@ export default function AggregateTab({session, db, collection}: Props) {
         <div>
             <div className={sh.mongoToolbar}>
                 <button className={`${g.btn} ${g.primary}`} disabled={busy} onClick={run}>
-                    <Icon name="play" size={13}/> 运行聚合
+                    <Play size={13}/> 运行聚合
                 </button>
                 <button className={g.btn} disabled={busy} onClick={explainPipeline}>执行计划</button>
                 <label className={sh.mongoRow} style={{gap: 4, fontSize: 12, color: sh.mongoDim}}>

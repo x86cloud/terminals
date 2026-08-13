@@ -7,7 +7,6 @@ import 'xterm/css/xterm.css'
 import { API, emitEvent, subscribe } from '../../../api'
 import { base64ToBytes } from '../../../utils'
 import ContextMenu, { closedMenu, MenuState } from '../../../components/ContextMenu'
-import Icon from '../../../components/Icon'
 import t from './Terminal.module.less'
 
 interface Props {

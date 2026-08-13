@@ -1,6 +1,6 @@
 import React from 'react'
 import CodeMirror from '@uiw/react-codemirror'
-import Icon from '../../components/Icon'
+import { X, Plus } from 'lucide-react'
 import {lightEditorTheme} from '../../components/editorTheme'
 import g from '../../styles/global.module.less'
 import my from './SqlEditor.module.less'
@@ -43,13 +43,13 @@ export default function SqlEditor({
                         <span>{t.title}</span>
                         {sqlTabs.length > 1 && (
                             <button className={my.sqlTabClose} onClick={(e) => { e.stopPropagation(); onCloseTab(t.id) }}>
-                                <Icon name="close" size={11}/>
+                                <X size={11}/>
                             </button>
                         )}
                     </div>
                 ))}
                 <button className={my.sqlTabAdd} onClick={onAddTab} title="新建查询标签">
-                    <Icon name="plus" size={12}/>
+                    <Plus size={12}/>
                 </button>
             </div>
             <CodeMirror

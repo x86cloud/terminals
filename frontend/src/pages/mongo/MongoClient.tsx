@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useState} from 'react'
-import Icon from '../../components/Icon'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
+import { Database, RotateCw, Plus, Table, BarChart2, Edit, X } from 'lucide-react'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoDatabaseInfo, MongoCollectionInfo, MongoCollectionStats} from '../../types'
@@ -217,7 +217,7 @@ export default function MongoClient({session, onClose, onChange}: Props) {
         <div className={m.mongoPane}>
             <div className={m.mongoSide}>
                 <div className={m.mongoDbHead}>
-                    <Icon name="database" size={13}/>
+                    <Database size={13}/>
                     <select className={m.mongoDbSelect} value={db} disabled={databases.length === 0}
                             onChange={(e) => switchDb(e.target.value)}>
                         {databases.length === 0 && <option value="">（无数据库）</option>}
@@ -226,12 +226,12 @@ export default function MongoClient({session, onClose, onChange}: Props) {
                         ))}
                     </select>
                     <button className={g.iconBtn} title="刷新" disabled={busy} onClick={() => void loadDatabases()}>
-                        <Icon name="refresh" size={13}/>
+                        <RotateCw size={13}/>
                     </button>
                 </div>
                 <div className={m.mongoDbActions}>
-                    <button className={`${g.btn} ${g.xs}`} onClick={createDb}><Icon name="plus" size={12}/> 建库</button>
-                    <button className={`${g.btn} ${g.xs}`} disabled={!db} onClick={createColl}><Icon name="table" size={12}/> 建集合</button>
+                    <button className={`${g.btn} ${g.xs}`} onClick={createDb}><Plus size={12}/> 建库</button>
+                    <button className={`${g.btn} ${g.xs}`} disabled={!db} onClick={createColl}><Table size={12}/> 建集合</button>
                 </div>
                 <div className={m.mongoTree}>
                     {databases.length === 0 && !busy && (
@@ -245,19 +245,19 @@ export default function MongoClient({session, onClose, onChange}: Props) {
                             {collections.map((c) => (
                                 <div key={c.name} className={`${m.mongoCollRow}${selected === c.name ? ' ' + m.active : ''}`}>
                                     <button className={m.mongoCollRow} style={{flex: 1}} onClick={() => setSelected(c.name)}>
-                                        <Icon name="table" size={12}/>
+                                        <Table size={12}/>
                                         <span>{c.name}</span>
                                         {c.hasValidator && <span className={sh.mongoBadge} style={{marginLeft: 4}}>校验</span>}
                                     </button>
                                     <div className={m.mongoCollMenu}>
                                         <button className={g.iconBtn} title="统计" onClick={() => void viewStats(c.name)}>
-                                            <Icon name="chart" size={12}/>
+                                            <BarChart2 size={12}/>
                                         </button>
                                         <button className={g.iconBtn} title="重命名" onClick={() => void renameColl(c.name)}>
-                                            <Icon name="edit" size={12}/>
+                                            <Edit size={12}/>
                                         </button>
                                         <button className={g.iconBtn} title="删除" onClick={() => void dropColl(c.name)}>
-                                            <Icon name="close" size={12}/>
+                                            <X size={12}/>
                                         </button>
                                     </div>
                                 </div>
@@ -279,7 +279,7 @@ export default function MongoClient({session, onClose, onChange}: Props) {
                     {error && <span className={m.mongoError}>{error}</span>}
                     {db && <span className={sh.mongoBadge}>{db}{selected ? ' · ' + selected : ''}</span>}
                     <button className={g.iconBtn} title="关闭" onClick={onClose}>
-                        <Icon name="close" size={15}/>
+                        <X size={15}/>
                     </button>
                 </div>
 
@@ -318,7 +318,7 @@ export default function MongoClient({session, onClose, onChange}: Props) {
                 <div className={sh.mongoField} style={{position: 'absolute', right: 20, bottom: 20, width: 300, background: '#ffffff', border: '1px solid #d4dbe6', padding: 12, borderRadius: 8, boxShadow: '0 12px 32px rgba(0,0,0,0.25)'}}>
                     <div className={sh.mongoRow} style={{justifyContent: 'space-between'}}>
                         <strong>{statsName} 统计</strong>
-                        <button className={g.iconBtn} onClick={() => setStats(null)}><Icon name="close" size={14}/></button>
+                        <button className={g.iconBtn} onClick={() => setStats(null)}><X size={14}/></button>
                     </div>
                     {statsBusy ? <div className={sh.mongoEmpty}>加载中…</div> : (
                         <table className={sh.mongoKV}>

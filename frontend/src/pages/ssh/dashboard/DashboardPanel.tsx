@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react'
-import Icon from '../../../components/Icon'
+import { RotateCw, Server, Terminal, Database, Plug } from 'lucide-react'
 import {API} from '../../../api'
 import {SSHDashboardInfo} from '../../../types'
 import {errorMessage} from '../../../utils'
@@ -96,7 +96,7 @@ export default function DashboardPanel({sessionId, active, onNotify}: Props) {
                         disabled={busy}
                         title="刷新系统数据"
                     >
-                        <Icon name="refresh" size={12}/> {busy ? '刷新中…' : '刷新'}
+                        <RotateCw size={12}/> {busy ? '刷新中…' : '刷新'}
                     </button>
                 </div>
             </div>
@@ -114,17 +114,17 @@ export default function DashboardPanel({sessionId, active, onNotify}: Props) {
                         {/* 系统摘要卡片 */}
                         <div className={d.summaryCard}>
                             <div className={d.summaryItem}>
-                                <span className={d.icon}><Icon name="server" size={14}/></span>
+                                <span className={d.icon}><Server size={14}/></span>
                                 <span className={d.label}>主机名:</span>
                                 <span className={d.value}>{data.hostname || '-'}</span>
                             </div>
                             <div className={d.summaryItem}>
-                                <span className={d.icon}><Icon name="terminal" size={14}/></span>
+                                <span className={d.icon}><Terminal size={14}/></span>
                                 <span className={d.label}>系统/内核:</span>
                                 <span className={d.value}>{data.os || '-'}</span>
                             </div>
                             <div className={d.summaryItem}>
-                                <span className={d.icon}><Icon name="refresh" size={14}/></span>
+                                <span className={d.icon}><RotateCw size={14}/></span>
                                 <span className={d.label}>运行时间:</span>
                                 <span className={d.value}>{cleanUptime(data.uptime)}</span>
                             </div>
@@ -189,7 +189,7 @@ export default function DashboardPanel({sessionId, active, onNotify}: Props) {
                         <div className={d.diskCard}>
                             <div className={d.diskHeader}>
                                 <div className={d.title}>
-                                    <Icon name="database" size={14}/>
+                                    <Database size={14}/>
                                     <span>磁盘分区 ({disksToDisplay.length})</span>
                                 </div>
                                 <label className={d.filterToggle}>
@@ -261,7 +261,7 @@ export default function DashboardPanel({sessionId, active, onNotify}: Props) {
                         <div className={d.diskCard}>
                             <div className={d.diskHeader}>
                                 <div className={d.title}>
-                                    <Icon name="plug" size={14}/>
+                                    <Plug size={14}/>
                                     <span>网络网卡 ({netsToDisplay.length})</span>
                                 </div>
                                 <label className={d.filterToggle}>

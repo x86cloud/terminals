@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import Icon from '../../../components/Icon'
+import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload } from 'lucide-react'
 import ContextMenu, {closedMenu, MenuItem, MenuState} from '../../../components/ContextMenu'
 import {ConfirmModal, ConfirmState, PromptModal, PromptState} from '../../../components/Modal'
 import FileEditorModal from './FileEditorModal'
@@ -289,13 +289,13 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
         >
             <div className={fp.fileToolbar}>
                 <button className={g.iconBtn} title="上级目录" onClick={() => load(parentRemote(path))}>
-                    <Icon name="up"/>
+                    <ChevronUp size={16}/>
                 </button>
                 <button className={g.iconBtn} title="主目录" onClick={() => load(homeDir || '/')}>
-                    <Icon name="home"/>
+                    <Home size={16}/>
                 </button>
                 <button className={g.iconBtn} title="刷新" onClick={() => load(path)}>
-                    <Icon name="refresh"/>
+                    <RotateCw size={16}/>
                 </button>
                 <input
                     className={fp.pathInput}
@@ -382,7 +382,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                         >
                             <span className={fp.colName}>
                                 <span className={`${fp.fileIcon}${item.isDir ? ' ' + fp.dir : ''}`}>
-                                    <Icon name={item.isLink ? 'link' : item.isDir ? 'folder' : 'file'}/>
+                                    {item.isLink ? <LinkIcon size={16}/> : item.isDir ? <Folder size={16}/> : <FileText size={16}/>}
                                 </span>
                                 <span className={fp.fileName} title={item.path}>{item.name}</span>
                             </span>
@@ -401,7 +401,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
             </div>
 
             <div className={fp.dropHint}>
-                <Icon name="upload" size={28}/>
+                <Upload size={28}/>
                 <span>释放以上传到 {path}</span>
             </div>
 

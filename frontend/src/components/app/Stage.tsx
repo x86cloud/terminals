@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../Icon'
+import { Terminal } from 'lucide-react'
 import ErrorBoundary from '../ErrorBoundary'
 import SessionWorkspace from '../../pages/ssh/SessionWorkspace'
 import RedisClient from '../../pages/redis/RedisClient'
@@ -161,7 +161,7 @@ export default function Stage(props: StageProps) {
 
             {empty && (
                 <div className={g.emptyStage}>
-                    <Icon name="terminal" size={44} />
+                    <Terminal size={44} />
                     <h2>多协议开发运维客户端</h2>
                     <p>
                         xClient 是一款跨平台桌面客户端，集成了 SSH 终端、SFTP、Redis、MySQL、SQLite、

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import Icon from '../../../components/Icon'
+import { Search, X, RotateCw } from 'lucide-react'
 import {API} from '../../../api'
 import {SSHServiceInfo} from '../../../types'
 import {errorMessage} from '../../../utils'
@@ -146,7 +146,7 @@ export default function ServicePanel({sessionId, active, onNotify}: Props) {
                 </div>
 
                 <div className={s.searchWrap}>
-                    <Icon name="search" size={13}/>
+                    <Search size={13}/>
                     <input
                         value={keyword}
                         placeholder="搜索服务名 / 描述..."
@@ -154,7 +154,7 @@ export default function ServicePanel({sessionId, active, onNotify}: Props) {
                     />
                     {keyword && (
                         <button className={g.iconBtn} onClick={() => setKeyword('')} title="清空搜索">
-                            <Icon name="close" size={12}/>
+                            <X size={12}/>
                         </button>
                     )}
                 </div>
@@ -167,7 +167,7 @@ export default function ServicePanel({sessionId, active, onNotify}: Props) {
                         disabled={busy}
                         title="刷新服务列表"
                     >
-                        <Icon name="refresh" size={12}/> {busy ? '刷新中…' : '刷新'}
+                        <RotateCw size={12}/> {busy ? '刷新中…' : '刷新'}
                     </button>
                 </div>
             </div>

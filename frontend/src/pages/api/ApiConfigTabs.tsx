@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import { Trash2, Plus } from 'lucide-react'
 import CodeEditor from '../../components/CodeEditor'
 import g from '../../styles/global.module.less'
 import a from './ApiConfigTabs.module.less'
@@ -107,12 +107,12 @@ export function ConfigBody({state}: { state: ApiState }) {
                                 title="删除"
                                 onClick={() => removeParam(i)}
                             >
-                                <Icon name="trash" size={13}/>
+                                <Trash2 size={13}/>
                             </button>
                         </div>
                     ))}
                     <button className={`${g.btn} ${g.sm}`} onClick={addParam}>
-                        <Icon name="plus" size={13}/> 添加 Query 参数
+                        <Plus size={13}/> 添加 Query 参数
                     </button>
                 </div>
             )}
@@ -149,12 +149,12 @@ export function ConfigBody({state}: { state: ApiState }) {
                                 title="删除"
                                 onClick={() => removeHeader(i)}
                             >
-                                <Icon name="trash" size={13}/>
+                                <Trash2 size={13}/>
                             </button>
                         </div>
                     ))}
                     <button className={`${g.btn} ${g.sm}`} onClick={addHeader}>
-                        <Icon name="plus" size={13}/> 添加请求头
+                        <Plus size={13}/> 添加请求头
                     </button>
                 </div>
             )}

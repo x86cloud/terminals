@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
-import Icon from '../../components/Icon'
+import { Search, Plus, ChevronDown, ChevronRight, Edit, Copy, Trash2, X } from 'lucide-react'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoQuerySpec, MongoFindResult} from '../../types'
@@ -191,13 +191,13 @@ export default function DocumentsTab({session, db, collection, onNotify}: Props)
         <div>
             <div className={sh.mongoToolbar}>
                 <button className={`${g.btn} ${g.primary}`} disabled={busy} onClick={() => runQuery(1)}>
-                    <Icon name="search" size={13}/> 查询
+                    <Search size={13}/> 查询
                 </button>
                 <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={openInsert}>
-                    <Icon name="plus" size={12}/> 插入文档
+                    <Plus size={12}/> 插入文档
                 </button>
                 <button className={`${g.btn} ${g.sm}`} onClick={() => setShowBuilder(v => !v)}>
-                    <Icon name={showBuilder ? 'chevron-down' : 'chevron-right'} size={12}/> 查询构建器
+                    {showBuilder ? <ChevronDown size={12}/> : <ChevronRight size={12}/>} 查询构建器
                 </button>
                 <span className={g.spacer}/>
                 {error && <span className={sh.mongoError ?? g.formError}>{error}</span>}
@@ -267,13 +267,13 @@ export default function DocumentsTab({session, db, collection, onNotify}: Props)
                                     <td>
                                         <div className={sh.mongoRow}>
                                             <button className={sh.mongoInlineBtn} title="编辑" onClick={(e) => { e.stopPropagation(); openUpdate(raw) }}>
-                                                <Icon name="edit" size={12}/>
+                                                <Edit size={12}/>
                                             </button>
                                             <button className={sh.mongoInlineBtn} title="替换整文档" onClick={(e) => { e.stopPropagation(); openReplace(raw) }}>
-                                                <Icon name="copy" size={12}/>
+                                                <Copy size={12}/>
                                             </button>
                                             <button className={sh.mongoInlineBtn} title="删除" onClick={(e) => { e.stopPropagation(); deleteDoc(raw) }}>
-                                                <Icon name="trash" size={12}/>
+                                                <Trash2 size={12}/>
                                             </button>
                                         </div>
                                     </td>
@@ -295,7 +295,7 @@ export default function DocumentsTab({session, db, collection, onNotify}: Props)
                 <div className={sh.mongoField} style={{marginTop: 12, border: '1px solid ' + g.border, padding: 10, borderRadius: 6}}>
                     <div className={sh.mongoRow} style={{justifyContent: 'space-between'}}>
                         <strong>{editOpen.mode === 'insert' ? '插入文档' : editOpen.mode === 'replace' ? '替换文档' : '更新文档（支持 $set 等操作符）'}</strong>
-                        <button className={g.iconBtn} onClick={() => setEditOpen(null)}><Icon name="close" size={14}/></button>
+                        <button className={g.iconBtn} onClick={() => setEditOpen(null)}><X size={14}/></button>
                     </div>
                     <div style={{marginTop: 6}}>
                         <CodeEditor lang="json" height="260px" value={editorText} onChange={setEditorText}/>

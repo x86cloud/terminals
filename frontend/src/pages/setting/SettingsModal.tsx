@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import Icon from '../../components/Icon'
+import { Settings, X, Palette, Bot, Info } from 'lucide-react'
 import { AppSettings } from '../../types'
 import { applyThemeMode, applyGlobalFont } from '../../utils/theme'
 import AppearanceTab from './AppearanceTab'
@@ -104,11 +104,11 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             <div className={s.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={s.header}>
                     <div className={s.title}>
-                        <Icon name="settings" size={16} />
-                        <span>设置</span>
+                        <Settings size={16} />
+                        <span>系统设置</span>
                     </div>
-                    <button className={g.iconBtn} onClick={handleCancel} title="关闭">
-                        <Icon name="close" size={14} />
+                    <button className={g.iconBtn} title="关闭" onClick={onClose}>
+                        <X size={14} />
                     </button>
                 </div>
 
@@ -119,19 +119,19 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                             className={`${s.navItem}${activeTab === 'appearance' ? ' ' + s.active : ''}`}
                             onClick={() => setActiveTab('appearance')}
                         >
-                            <Icon name="chart" size={14} /> 外观主题
+                            <Palette size={14} /> 外观主题
                         </button>
                         <button
-                            className={`${s.navItem}${activeTab === 'aiAgent' ? ' ' + s.active : ''}`}
+                            className={`${s.navItem} ${activeTab === 'aiAgent' ? s.active : ''}`}
                             onClick={() => setActiveTab('aiAgent')}
                         >
-                            <Icon name="bot" size={14} /> AI 智能体
+                            <Bot size={14} /> AI 智能体
                         </button>
                         <button
-                            className={`${s.navItem}${activeTab === 'about' ? ' ' + s.active : ''}`}
+                            className={`${s.navItem} ${activeTab === 'about' ? s.active : ''}`}
                             onClick={() => setActiveTab('about')}
                         >
-                            <Icon name="home" size={14} /> 关于应用
+                            <Info size={14} /> 关于应用
                         </button>
                     </div>
 

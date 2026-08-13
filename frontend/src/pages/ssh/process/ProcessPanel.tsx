@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import Icon from '../../../components/Icon'
+import { Search, X, RotateCw, Power } from 'lucide-react'
 import {API} from '../../../api'
 import {SSHProcessInfo} from '../../../types'
 import {errorMessage} from '../../../utils'
@@ -121,7 +121,7 @@ export default function ProcessPanel({sessionId, active, onNotify}: Props) {
         <div className={p.processPanel}>
             <div className={p.toolbar}>
                 <div className={p.searchWrap}>
-                    <Icon name="search" size={13}/>
+                    <Search size={13}/>
                     <input
                         value={keyword}
                         placeholder="搜索 PID / 用户 / 命令..."
@@ -129,7 +129,7 @@ export default function ProcessPanel({sessionId, active, onNotify}: Props) {
                     />
                     {keyword && (
                         <button className={g.iconBtn} onClick={() => setKeyword('')} title="清空搜索">
-                            <Icon name="close" size={12}/>
+                            <X size={12}/>
                         </button>
                     )}
                 </div>
@@ -141,7 +141,7 @@ export default function ProcessPanel({sessionId, active, onNotify}: Props) {
                         disabled={busy}
                         title="刷新进程列表"
                     >
-                        <Icon name="refresh" size={12}/> {busy ? '刷新中…' : '刷新'}
+                        <RotateCw size={12}/> {busy ? '刷新中…' : '刷新'}
                     </button>
                 </div>
             </div>
@@ -197,7 +197,7 @@ export default function ProcessPanel({sessionId, active, onNotify}: Props) {
                                                 onClick={() => handleKill(proc)}
                                                 title={`结束进程 ${proc.command} (PID: ${proc.pid})`}
                                             >
-                                                <Icon name="power" size={13}/>
+                                                <Power size={13}/>
                                             </button>
                                         </td>
                                     </tr>

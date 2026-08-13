@@ -1,5 +1,5 @@
-import React from 'react'
-import Icon from '../../components/Icon'
+import React, {useCallback, useEffect, useMemo, useState} from 'react'
+import { Send, X, Copy, PanelLeft } from 'lucide-react'
 import CodeEditor from '../../components/CodeEditor'
 import g from '../../styles/global.module.less'
 import a from './HttpRequest.module.less'
@@ -24,7 +24,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                     title={showHistory ? '隐藏历史' : '显示历史'}
                     onClick={() => setShowHistory((v) => !v)}
                 >
-                    <Icon name="panel" size={15}/>
+                    <PanelLeft size={15}/>
                 </button>
                 <div className={a.modeToggle}>
                     <button
@@ -93,7 +93,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                     title="关闭"
                     onClick={onClose}
                 >
-                    <Icon name="close" size={15}/>
+                    <X size={15}/>
                 </button>
             </div>
 
@@ -153,7 +153,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                                         className={`${g.btn} ${g.sm}`}
                                         onClick={() => copy(prettyBody)}
                                     >
-                                        <Icon name="copy" size={13}/> 复制
+                                        <Copy size={13}/> 复制
                                     </button>
                                 </div>
                                 <div className={a.respCodeWrap}>
@@ -179,7 +179,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                                             title="复制"
                                             onClick={() => copy(`${k}: ${v}`)}
                                         >
-                                            <Icon name="copy" size={12}/>
+                                            <Copy size={12}/>
                                         </button>
                                     </div>
                                 ))}

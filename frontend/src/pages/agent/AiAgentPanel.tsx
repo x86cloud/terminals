@@ -1,5 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import Icon from '../../components/Icon'
+import {
+    RotateCw,
+    ChevronDown,
+    ChevronRight,
+    Bot,
+    Trash2,
+    User,
+    Shield,
+    Check,
+    X,
+    Paperclip,
+    Folder,
+    Square,
+} from 'lucide-react'
 import MarkdownViewer from '../../components/common/MarkdownViewer'
 import { API, consumePendingAsk, subscribe } from '../../api'
 import { AiMessage, AppSettings, ProcessStep } from '../../types'
@@ -438,7 +451,7 @@ export default function AiAgentPanel({ settings }: Props) {
                 <div className={s.pipelineMasterHeader} onClick={() => setMasterExpanded(!masterExpanded)}>
                     <div className={s.pipelineMasterLeft}>
                         {isStreaming ? (
-                            <Icon name="refresh" size={12} className={s.spinIcon} />
+                            <RotateCw size={12} className={s.spinIcon} />
                         ) : (
                             <span className={s.pipelineBrainIcon}>💭</span>
                         )}
@@ -446,7 +459,7 @@ export default function AiAgentPanel({ settings }: Props) {
                             {isStreaming ? '推演中…' : `Thought process (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`}
                         </span>
                     </div>
-                    <Icon name={masterExpanded ? 'chevron-down' : 'chevron-right'} size={12} className={s.expandIcon} />
+                    {masterExpanded ? <ChevronDown size={12} className={s.expandIcon} /> : <ChevronRight size={12} className={s.expandIcon} />}
                 </div>
 
                 {masterExpanded && (
@@ -464,11 +477,11 @@ export default function AiAgentPanel({ settings }: Props) {
                                                 {formatSummary(step)}
                                             </span>
                                         </div>
-                                        <Icon
-                                            name={isStepExpanded ? 'chevron-down' : 'chevron-right'}
-                                            size={11}
-                                            className={s.expandIcon}
-                                        />
+                                        {isStepExpanded ? (
+                                            <ChevronDown size={11} className={s.expandIcon} />
+                                        ) : (
+                                            <ChevronRight size={11} className={s.expandIcon} />
+                                        )}
                                     </div>
 
                                     {isStepExpanded && (
@@ -497,7 +510,7 @@ export default function AiAgentPanel({ settings }: Props) {
             {/* Header */}
             <div className={s.headerBar}>
                 <div className={s.titleSection}>
-                    <Icon name="bot" size={16} />
+                    <Bot size={16} />
                     <span>智能体</span>
                     <span className={s.modelTag}>{settings.aiModel || 'deepseek-v4-flash'}</span>
                     {settings.aiEnableMultimodal && (
@@ -511,7 +524,7 @@ export default function AiAgentPanel({ settings }: Props) {
                         disabled={isGenerating || messages.length === 0}
                         onClick={handleClear}
                     >
-                        <Icon name="trash" size={13} />
+                        <Trash2 size={13} />
                     </button>
                 </div>
             </div>
@@ -520,7 +533,7 @@ export default function AiAgentPanel({ settings }: Props) {
             <div className={s.chatList} ref={chatListRef}>
                 {messages.length === 0 && !isGenerating && (
                     <div className={s.emptyState}>
-                        <Icon name="bot" size={48} className={s.emptyIcon} />
+                        <Bot size={48} className={s.emptyIcon} />
                         <div className={s.emptyTitle}>欢迎使用 AI 智能体</div>
                         <div className={s.emptySub}>
                             支持多轮对话、智能上下文压缩、打字机流式推演与多模态识别。
@@ -548,7 +561,7 @@ export default function AiAgentPanel({ settings }: Props) {
                         <div key={idx} className={`${s.messageRow} ${s[msg.role]}`}>
                             {msg.role !== 'system' && (
                                 <div className={s.avatar}>
-                                    <Icon name={msg.role === 'user' ? 'user' : 'bot'} size={16} />
+                                    {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
                                 </div>
                             )}
                             <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
@@ -578,7 +591,7 @@ export default function AiAgentPanel({ settings }: Props) {
                 {isGenerating && (
                     <div className={`${s.messageRow} ${s.assistant}`}>
                         <div className={s.avatar}>
-                            <Icon name="bot" size={16} />
+                            <Bot size={16} />
                         </div>
                         <div className={s.bubble}>
                             {activeSteps.length > 0 && (
@@ -586,7 +599,7 @@ export default function AiAgentPanel({ settings }: Props) {
                             )}
                             {activeToolCall && (
                                 <div className={s.toolCallPill}>
-                                    <Icon name="refresh" size={13} className={s.spinIcon} />
+                                    <RotateCw size={13} className={s.spinIcon} />
                                     <span>{activeToolCall}</span>
                                 </div>
                             )}
@@ -609,7 +622,7 @@ export default function AiAgentPanel({ settings }: Props) {
                 {pendingConfirm && (
                     <div className={s.confirmBox}>
                         <div className={s.confirmHeader}>
-                            <Icon name="shield" size={15} />
+                            <Shield size={15} />
                             <span>安全审批：Agent 请求执行 <strong>{pendingConfirm.path || '高风险指令'}</strong></span>
                         </div>
                         {pendingConfirm.description && (
@@ -619,10 +632,10 @@ export default function AiAgentPanel({ settings }: Props) {
                         )}
                         <div className={s.confirmFooter}>
                             <button className={s.btnApprove} onClick={() => handleConfirmTool(true)}>
-                                <Icon name="check" size={12} /> 同意执行
+                                <Check size={12} /> 同意执行
                             </button>
                             <button className={s.btnReject} onClick={() => handleConfirmTool(false)}>
-                                <Icon name="close" size={12} /> 拒绝
+                                <X size={12} /> 拒绝
                             </button>
                         </div>
                     </div>
@@ -661,7 +674,7 @@ export default function AiAgentPanel({ settings }: Props) {
                                 disabled={isGenerating}
                                 onClick={() => fileInputRef.current?.click()}
                             >
-                                <Icon name="paperclip" size={14} />
+                                <Paperclip size={14} />
                             </button>
                         </>
                     )}
@@ -685,7 +698,7 @@ export default function AiAgentPanel({ settings }: Props) {
                     {/* Left: Workspace Selector */}
                     <div className={s.workspaceInline}>
                         <div className={s.wsPath}>
-                            <Icon name="folder" size={13} />
+                            <Folder size={13} />
                             <span>工作目录:</span>
                             {workspaceDir ? (
                                 <span className={s.pathText} title={workspaceDir}>{workspaceDir}</span>
@@ -774,7 +787,7 @@ export default function AiAgentPanel({ settings }: Props) {
                                 title="停止 AI 智能体推导"
                                 onClick={handleStop}
                             >
-                                <Icon name="stop" size={13} />
+                                <Square size={13} />
                                 <span>停止</span>
                             </button>
                         ) : (

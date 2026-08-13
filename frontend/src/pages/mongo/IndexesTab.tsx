@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react'
-import Icon from '../../components/Icon'
+import { RotateCw, Plus, Trash2 } from 'lucide-react'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoIndexInfo} from '../../types'
@@ -119,11 +119,11 @@ export default function IndexesTab({session, db, collection, onNotify}: Props) {
     return (
         <div>
             <div className={sh.mongoToolbar}>
-                <button className={`${g.btn} ${g.primary}`} disabled={busy} onClick={load}>
-                    <Icon name="refresh" size={13}/> 刷新
+                <button className={g.btn} disabled={busy} onClick={load}>
+                    <RotateCw size={13}/> 刷新
                 </button>
-                <button className={g.btn} disabled={busy} onClick={() => { setCreateMsg(''); setShowCreate(v => !v) }}>
-                    <Icon name="plus" size={12}/> 新建索引
+                <button className={`${g.btn} ${g.primary}`} disabled={busy} onClick={() => { setCreateMsg(''); setShowCreate(v => !v) }}>
+                    <Plus size={12}/> 新建索引
                 </button>
                 <span className={g.spacer}/>
                 {error && <span className={g.formError}>{error}</span>}
@@ -177,7 +177,7 @@ export default function IndexesTab({session, db, collection, onNotify}: Props) {
                             <td>{ix.expireAfterSeconds ?? ''}</td>
                             <td>
                                 <button className={sh.mongoInlineBtn} title="删除" onClick={() => drop(ix.name)}>
-                                    <Icon name="trash" size={12}/>
+                                    <Trash2 size={12}/>
                                 </button>
                             </td>
                         </tr>

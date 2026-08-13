@@ -1,5 +1,5 @@
-import React from 'react'
-import Icon from '../../components/Icon'
+import React, {useEffect, useMemo, useState} from 'react'
+import { Folder, Table } from 'lucide-react'
 import CodeEditor from '../../components/CodeEditor'
 import {RedisKeysResult, RedisSessionInfo, RedisValue} from '../../types'
 import {KeyTreeNode, TYPE_LABEL} from './redisTypes'
@@ -116,14 +116,14 @@ export default function KeysTab({
                             title="树状视图"
                             onClick={() => setViewMode('tree')}
                         >
-                            <Icon name="folder" size={12}/> 树状
+                            <Folder size={12}/> 树状
                         </button>
                         <button
                             className={viewMode === 'flat' ? g.active : ''}
                             title="平铺列表"
                             onClick={() => setViewMode('flat')}
                         >
-                            <Icon name="table" size={12}/> 平铺
+                            <Table size={12}/> 平铺
                         </button>
                     </div>
                     <span className={g.spacer}/>

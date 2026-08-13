@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import { Bot, Server, Shield, Edit } from 'lucide-react'
 import s from './AiAgentTab.module.less'
 
 interface Props {
@@ -83,7 +83,7 @@ export default function AiAgentTab({
             {/* 卡片 1：核心 API 与模型配置 */}
             <div className={s.headerSection}>
                 <div className={s.sectionTitle}>
-                    <Icon name="bot" size={18} />
+                    <Bot size={18} />
                     <span>AI 智能体设置</span>
                 </div>
                 <div className={s.sectionDesc}>
@@ -94,7 +94,7 @@ export default function AiAgentTab({
             {/* 卡片 1：模型服务与鉴权 */}
             <div className={s.card}>
                 <div className={s.cardTitle}>
-                    <Icon name="server" size={14} />
+                    <Server size={14} />
                     <span>模型服务与鉴权配置</span>
                 </div>
 
@@ -223,7 +223,7 @@ export default function AiAgentTab({
             {/* 卡片 3：权限与安全审查 (Permission Guard) */}
             <div className={s.card}>
                 <div className={s.cardTitle}>
-                    <Icon name="shield" size={14} />
+                    <Shield size={14} />
                     <span>权限与安全审查 (Permission Guard)</span>
                 </div>
 
@@ -261,7 +261,7 @@ export default function AiAgentTab({
             {/* 卡片 4：系统提示词 */}
             <div className={s.card}>
                 <div className={s.cardTitle}>
-                    <Icon name="edit" size={14} />
+                    <Edit size={14} />
                     <span>系统提示词 (System Prompt)</span>
                 </div>
 

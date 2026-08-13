@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import Icon from '../../../components/Icon'
+import { Plus, Search, X, RotateCw } from 'lucide-react'
 import {ConfirmModal, ConfirmState} from '../../../components/Modal'
 import CronModal, {explainCron} from './CronModal'
 import {API} from '../../../api'
@@ -165,20 +165,20 @@ export default function CronPanel({sessionId, active, onNotify}: Props) {
                         className={`${g.btn} ${g.xs} ${g.primary}`}
                         onClick={handleOpenCreate}
                     >
-                        <Icon name="plus" size={12}/> 新建任务
+                        <Plus size={12}/> 新建任务
                     </button>
 
                     <div className={c.searchWrap}>
-                        <Icon name="search" size={13}/>
-                        <input
-                            value={keyword}
-                            placeholder="搜索周期 / 命令 / 备注..."
-                            onChange={(e) => setKeyword(e.target.value)}
-                        />
-                        {keyword && (
-                            <button className={g.iconBtn} onClick={() => setKeyword('')} title="清空搜索">
-                                <Icon name="close" size={12}/>
-                            </button>
+                        <Search size={13}/>
+                    <input
+                        value={keyword}
+                        placeholder="搜索 命令 / 说明 / 表达式..."
+                        onChange={(e) => setKeyword(e.target.value)}
+                    />
+                    {keyword && (
+                        <button className={g.iconBtn} onClick={() => setKeyword('')} title="清空搜索">
+                            <X size={12}/>
+                        </button>
                         )}
                     </div>
                 </div>
@@ -191,7 +191,7 @@ export default function CronPanel({sessionId, active, onNotify}: Props) {
                         disabled={busy}
                         title="刷新 Crontab 任务"
                     >
-                        <Icon name="refresh" size={12}/> {busy ? '刷新中…' : '刷新'}
+                        <RotateCw size={12}/> {busy ? '刷新中…' : '刷新'}
                     </button>
                 </div>
             </div>

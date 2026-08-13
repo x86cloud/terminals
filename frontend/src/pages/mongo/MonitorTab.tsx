@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useState} from 'react'
-import Icon from '../../components/Icon'
+import { RotateCw } from 'lucide-react'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoHealthInfo, MongoServerStatus} from '../../types'
@@ -81,7 +81,7 @@ export default function MonitorTab({session, onNotify}: Props) {
         <div>
             <div className={sh.mongoToolbar}>
                 <button className={`${g.btn} ${g.primary}`} disabled={busy} onClick={load}>
-                    <Icon name="refresh" size={13}/> 刷新监控
+                    <RotateCw size={13}/> 刷新监控
                 </button>
                 <span className={g.spacer}/>
                 {error && <span className={g.formError}>{error}</span>}

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import Icon from '../../components/Icon'
+import { Database, Plus, Folder, FileText, PanelLeft, Table, RotateCw, Trash2, X } from 'lucide-react'
 import ResizableTable, {ColDef} from '../../components/ResizableTable'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
@@ -487,18 +487,18 @@ export default function SqliteClient({session, onClose}: Props) {
 
             <div className={sq.sqliteSide}>
                 <div className={sq.sqliteHead}>
-                    <Icon name="database" size={13}/>
+                    <Database size={13}/>
                     <span className={sq.sqliteTitle}>SQLite</span>
                     <span className={g.spacer}/>
                     <button className={`${g.btn} ${g.xs}`} onClick={handleOpenCreateModal} disabled={busy} title="新建表">
-                        <Icon name="plus" size={12}/> 新建表
+                        <Plus size={12}/> 新建表
                     </button>
                     <button className={`${g.btn} ${g.xs}`} onClick={switchFile} disabled={busy} title="选择其他数据库文件">
-                        <Icon name="folder" size={12}/> 切换
+                        <Folder size={12}/> 切换
                     </button>
                 </div>
                 <div className={sq.sqlitePath} title={info.path}>
-                    <Icon name="file" size={12}/>
+                    <FileText size={12}/>
                     <span>{info.path ? info.path.split(/[\\/]/).pop() : '未选择文件'}</span>
                 </div>
                 <div className={sq.sqliteStatus}>
@@ -516,16 +516,16 @@ export default function SqliteClient({session, onClose}: Props) {
                                 className={`${sq.sqliteTableItem}${selected === t.name ? ' ' + sq.active : ''}`}
                                 onClick={() => openTable(t.name)}
                             >
-                                <Icon name={t.type === 'view' ? 'panel' : 'table'} size={13}/>
+                                {t.type === 'view' ? <PanelLeft size={13}/> : <Table size={13}/>}
                                 <span>{t.name}</span>
                                 {t.type === 'view' && <span className={sh.mongoBadge} style={{marginLeft: 4}}>视图</span>}
                             </button>
                             <div className={sq.sqliteTableMenu}>
                                 <button className={g.iconBtn} title="清空表数据" onClick={(e) => { e.stopPropagation(); confirmTruncateTable(t.name); }}>
-                                    <Icon name="refresh" size={12}/>
+                                    <RotateCw size={12}/>
                                 </button>
                                 <button className={g.iconBtn} title="删除表 (Drop)" onClick={(e) => { e.stopPropagation(); confirmDropTable(t.name); }}>
-                                    <Icon name="trash" size={12}/>
+                                    <Trash2 size={12}/>
                                 </button>
                             </div>
                         </div>
@@ -541,7 +541,7 @@ export default function SqliteClient({session, onClose}: Props) {
                     <span className={g.spacer}/>
                     {error && <span className={sq.sqliteError}>{error}</span>}
                     <button className={g.iconBtn} title="关闭" onClick={onClose}>
-                        <Icon name="close" size={15}/>
+                        <X size={15}/>
                     </button>
                 </div>
 
@@ -564,13 +564,13 @@ export default function SqliteClient({session, onClose}: Props) {
                     {selected && dataView === 'data' && (
                         <span style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center', paddingBottom: 4 }}>
                             <button className={`${g.btn} ${g.sm}`} disabled={busy || saving} onClick={handleAddRow} title="新建一行草稿数据">
-                                <Icon name="plus" size={12}/> 新建行
+                                <Plus size={12}/> 新建行
                             </button>
                             <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || saving || dirtyCount === 0} onClick={handleSaveAll} title="保存当前表所有修改">
                                 {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
                             </button>
                             <button className={g.iconBtn} title="刷新表格数据" disabled={busy || saving} onClick={() => openTable(selected, page)}>
-                                <Icon name="refresh" size={12}/>
+                                <RotateCw size={12}/>
                             </button>
                         </span>
                     )}
@@ -611,7 +611,7 @@ export default function SqliteClient({session, onClose}: Props) {
                                                 ))}
                                                 <td style={{textAlign: 'center'}}>
                                                     <button className={g.iconBtn} title="移除此新增行" onClick={() => removeNewRow(idx)}>
-                                                        <Icon name="trash" size={12}/>
+                                                        <Trash2 size={12}/>
                                                     </button>
                                                 </td>
                                             </tr>
@@ -647,7 +647,7 @@ export default function SqliteClient({session, onClose}: Props) {
                                                 })}
                                                 <td style={{textAlign: 'center'}}>
                                                     <button className={g.iconBtn} title="删除整行数据" onClick={() => confirmDeleteRow(i)}>
-                                                        <Icon name="trash" size={12}/>
+                                                        <Trash2 size={12}/>
                                                     </button>
                                                 </td>
                                             </tr>

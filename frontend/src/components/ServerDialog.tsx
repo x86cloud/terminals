@@ -3,7 +3,7 @@ import {Modal} from './Modal'
 import {API} from '../api'
 import {emptyServer, ServerConfig, ServerGroup, ConnType} from '../types'
 import {errorMessage} from '../utils'
-import Icon from './Icon'
+import { ChevronDown, ChevronRight } from 'lucide-react'
 import ClientIcon from './ClientIcon'
 import g from '../styles/global.module.less'
 import sd from './ServerDialog.module.less'
@@ -310,7 +310,7 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
                         </label>
                         <div className={g.field}>
                             <button type="button" className={g.advToggle} onClick={() => setShowAdv(v => !v)}>
-                                <Icon name={showAdv ? 'chevron-down' : 'chevron-right'} size={14}/>
+                                {showAdv ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
                                 高级参数（SSL / SSH 隧道 / 连接池）
                             </button>
                         </div>
@@ -604,7 +604,7 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
 
                         <div className={g.field}>
                             <button type="button" className={g.advToggle} onClick={() => setShowAdv(v => !v)}>
-                                <Icon name={showAdv ? 'chevron-down' : 'chevron-right'} size={14}/>
+                                {showAdv ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
                                 高级参数
                             </button>
                         </div>
@@ -804,7 +804,7 @@ export default function ServerDialog({open, initial, groups, onClose, onSaved, o
 
                         <div className={g.field}>
                             <button type="button" className={g.advToggle} onClick={() => setShowAdv(v => !v)}>
-                                <Icon name={showAdv ? 'chevron-down' : 'chevron-right'} size={14}/>
+                                {showAdv ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
                                 高级参数（TLS / 连接池 / 超时 / 压缩）
                             </button>
                         </div>

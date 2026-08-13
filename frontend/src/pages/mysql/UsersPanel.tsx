@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import { Server } from 'lucide-react'
 import my from './UsersPanel.module.less'
 import sh from './mysqlShared.module.less'
 
@@ -26,7 +26,7 @@ export default function UsersPanel({
                             className={`${my.userItem}${selUser?.user === u.User && selUser?.host === u.Host ? ' ' + my.active : ''}`}
                             onClick={() => onSelect(u.User, u.Host)}
                         >
-                            <Icon name="server" size={13}/>
+                            <Server size={13}/>
                             <span>{u.User}</span>
                             <span className={my.userHost}>@{u.Host}</span>
                             {u.locked === 'Y' && <span className={my.lockBadge}>锁</span>}

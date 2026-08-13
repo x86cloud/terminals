@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import Icon from './Icon'
+import { Copy } from 'lucide-react'
 import { md5 } from '../utils/md5'
 import CodeEditor from './CodeEditor'
 import g from '../styles/global.module.less'
@@ -28,7 +28,7 @@ function CopyButton({ value }: { value: string }) {
     }
     return (
         <button className={`${g.btn} ${g.small}`} onClick={onClick} disabled={!value} title="复制">
-            <Icon name="copy" size={13} />
+            <Copy size={13} />
             {copied ? '已复制' : '复制'}
         </button>
     )

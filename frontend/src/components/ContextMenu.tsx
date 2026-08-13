@@ -1,11 +1,10 @@
 import React, {useEffect, useLayoutEffect, useRef, useState} from 'react'
-import Icon, {IconName} from './Icon'
 import g from '../styles/global.module.less'
 
 export interface MenuItem {
     key: string
     label: string
-    icon?: IconName
+    icon?: React.ReactNode
     danger?: boolean
     disabled?: boolean
     divider?: boolean
@@ -77,7 +76,7 @@ export default function ContextMenu({state, onClose}: { state: MenuState; onClos
                             item.onClick?.()
                         }}
                     >
-                        <span className={g.menuIcon}>{item.icon && <Icon name={item.icon} size={15}/>}</span>
+                        <span className={g.menuIcon}>{item.icon}</span>
                         {item.label}
                     </button>
                 )

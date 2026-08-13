@@ -1,5 +1,5 @@
 import React, {useState} from 'react'
-import Icon from '../../components/Icon'
+import { Trash2, X } from 'lucide-react'
 import {ConfirmModal, ConfirmState} from '../../components/Modal'
 import g from '../../styles/global.module.less'
 import a from './ApiHistory.module.less'
@@ -33,10 +33,10 @@ export default function ApiHistory({state}: { state: ApiState }) {
                         })
                     }}
                 >
-                    <Icon name="trash" size={14}/>
+                    <Trash2 size={14}/>
                 </button>
                 <button className={g.iconBtn} title="关闭历史" onClick={() => setShowHistory(false)}>
-                    <Icon name="close" size={14}/>
+                    <X size={14}/>
                 </button>
             </div>
             <div className={a.historyList}>
@@ -58,7 +58,7 @@ export default function ApiHistory({state}: { state: ApiState }) {
                                     deleteHistory(i)
                                 }}
                             >
-                                <Icon name="close" size={12}/>
+                                <X size={12}/>
                             </button>
                         </div>
                         <span className={a.historyUrl}>{h.url}</span>

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
-import Icon from '../../components/Icon'
+import {Play, X} from 'lucide-react'
 import {API, subscribe} from '../../api'
 import {errorMessage} from '../../utils'
 import {MongoSessionInfo, MongoChangeEvent} from '../../types'
@@ -87,11 +87,11 @@ export default function ChangeStreamTab({session, db, collection, onNotify}: Pro
             <div className={sh.mongoToolbar}>
                 {!watching ? (
                     <button className={`${g.btn} ${g.primary}`} disabled={busy || (scope !== 'deployment' && !db)} onClick={start}>
-                        <Icon name="play" size={13}/> 开始监听
+                        <Play size={13}/> 开始监听
                     </button>
                 ) : (
-                    <button className={g.btn} disabled={busy} onClick={stop}>
-                        <Icon name="close" size={13}/> 停止监听
+                    <button className={`${g.btn} ${g.danger}`} disabled={busy} onClick={stop}>
+                        <X size={13}/> 停止监听
                     </button>
                 )}
                 <label className={sh.mongoRow} style={{gap: 4, fontSize: 12, color: sh.mongoDim}}>

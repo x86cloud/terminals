@@ -1,11 +1,11 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import { Terminal } from 'lucide-react'
 import ab from './AboutTab.module.less'
 
 export default function AboutTab() {
     return (
         <div className={ab.aboutBox}>
-            <Icon name="terminal" size={42}/>
+            <Terminal size={42}/>
             <div className={ab.appName}>xClient Terminal</div>
             <div className={ab.appVer}>v1.0.0 (Wails 2.13)</div>
             <div className={ab.appDesc}>

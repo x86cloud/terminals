@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import Icon from '../../components/Icon'
+import { Maximize2, Minimize2, PanelLeft } from 'lucide-react'
 import g from '../../styles/global.module.less'
 import my from './ErDiagram.module.less'
 import sh from './mysqlShared.module.less'
@@ -208,14 +208,14 @@ export default function ErDiagram({
                     title="适应视口居中展示"
                     onClick={autoFit}
                 >
-                    <Icon name="panel" size={12} /> 适应画布
+                    <PanelLeft size={12} /> 适应画布
                 </button>
                 <button
                     className={`${g.btn} ${g.xs} ${isFullscreen ? g.danger : ''}`}
                     title={isFullscreen ? '退出全屏 (Esc)' : '全屏沉浸展示'}
                     onClick={() => setIsFullscreen((v) => !v)}
                 >
-                    <Icon name={isFullscreen ? 'close' : 'panel'} size={12} /> {isFullscreen ? '退出全屏' : '全屏'}
+                    {isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />} {isFullscreen ? '退出全屏' : '全屏'}
                 </button>
                 <span className={g.spacer} />
                 <span className={my.erHint}>

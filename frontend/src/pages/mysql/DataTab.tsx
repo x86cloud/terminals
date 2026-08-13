@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import Icon from '../../components/Icon'
+import React, { useState, useEffect, useMemo } from 'react'
+import { Plus, RotateCw, X, Trash2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react'
 import ResizableTable, { ColDef } from '../../components/ResizableTable'
 import g from '../../styles/global.module.less'
 import my from './DataTab.module.less'
@@ -106,22 +106,22 @@ export default function DataTab(props: {
                 {dataView === 'data' && (
                     <span className={my.mysqlCrudActions}>
                         <button className={`${g.btn} ${g.sm}`} disabled={busy || saving} onClick={onAddRow} title="新增一行">
-                            <Icon name="plus" size={13} /> 新建行
+                            <Plus size={13} /> 新建行
                         </button>
                         <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || saving || !dirtyCount} onClick={onSaveAll} title="保存所有修改">
                             {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
                         </button>
                         <button className={g.iconBtn} title="刷新数据" disabled={busy || saving} onClick={() => onOpenTable(selected, page)}>
-                            <Icon name="refresh" size={13} />
+                            <RotateCw size={13} />
                         </button>
                     </span>
                 )}
                 {dataView === 'index' && (
                     <span className={my.mysqlCrudActions}>
-                        <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onAddIndex}><Icon name="plus" size={13} /> 新建索引</button>
+                        <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onAddIndex}><Plus size={13} /> 新建索引</button>
                     </span>
                 )}
-                <button className={g.iconBtn} title="关闭表" onClick={onCloseTable}><Icon name="close" size={13} /></button>
+                <button className={g.iconBtn} title="关闭表" onClick={onCloseTable}><X size={13} /></button>
             </div>
 
             {dataView === 'data' && (
@@ -149,7 +149,7 @@ export default function DataTab(props: {
                                     })}
                                     <td className={my.mysqlRowact}>
                                         <button className={`${g.iconBtn} ${g.danger}`} title="移除该行" disabled={busy || saving} onClick={() => onDeleteNewRow(idx)}>
-                                            <Icon name="trash" size={13} />
+                                            <Trash2 size={13} />
                                         </button>
                                     </td>
                                 </tr>
@@ -178,7 +178,7 @@ export default function DataTab(props: {
                                     })}
                                     <td className={my.mysqlRowact}>
                                         <button className={`${g.iconBtn} ${g.danger}`} title="删除该行" disabled={busy || saving} onClick={() => onDeleteRow(i)}>
-                                            <Icon name="trash" size={13} />
+                                            <Trash2 size={13} />
                                         </button>
                                     </td>
                                 </tr>
@@ -193,16 +193,16 @@ export default function DataTab(props: {
                             共 {totalRows} 行 · 第 {(page - 1) * pageSize + (rows.length ? 1 : 0)}-{(page - 1) * pageSize + rows.length} 行
                         </span>
                         <span className={g.spacer} />
-                        <button className={g.iconBtn} title="首页" disabled={busy || page <= 1} onClick={() => onGoPage(1)}><Icon name="chevrons-left" size={13} /></button>
-                        <button className={g.iconBtn} title="上一页" disabled={busy || page <= 1} onClick={() => onGoPage(page - 1)}><Icon name="chevron-left" size={13} /></button>
+                        <button className={g.iconBtn} title="首页" disabled={busy || page <= 1} onClick={() => onGoPage(1)}><ChevronsLeft size={13} /></button>
+                        <button className={g.iconBtn} title="上一页" disabled={busy || page <= 1} onClick={() => onGoPage(page - 1)}><ChevronLeft size={13} /></button>
                         <span className={my.mysqlPageJump}>
                             <input key={page} type="number" min={1} max={totalPages} defaultValue={page} disabled={busy}
                                 onKeyDown={(e) => { if (e.key === 'Enter') { const v = Number((e.target as HTMLInputElement).value); if (v) onGoPage(v) } }}
                                 onBlur={(e) => { const v = Number(e.target.value); if (v && v !== page) onGoPage(v) }} />
                             <span className={my.mysqlPageTotal}>/ {totalPages} 页</span>
                         </span>
-                        <button className={g.iconBtn} title="下一页" disabled={busy || page >= totalPages} onClick={() => onGoPage(page + 1)}><Icon name="chevron-right" size={13} /></button>
-                        <button className={g.iconBtn} title="末页" disabled={busy || page >= totalPages} onClick={() => onGoPage(totalPages)}><Icon name="chevrons-right" size={13} /></button>
+                        <button className={g.iconBtn} title="下一页" disabled={busy || page >= totalPages} onClick={() => onGoPage(page + 1)}><ChevronRight size={13} /></button>
+                        <button className={g.iconBtn} title="末页" disabled={busy || page >= totalPages} onClick={() => onGoPage(totalPages)}><ChevronsRight size={13} /></button>
                         <select className={my.mysqlPageSize} value={pageSize} disabled={busy} onChange={(e) => onChangePageSize(Number(e.target.value))}>
                             <option value={20}>20 行/页</option>
                             <option value={50}>50 行/页</option>
@@ -234,7 +234,7 @@ export default function DataTab(props: {
                                     <td>{ix['Index_type']}</td>
                                     <td>
                                         {ix['Key_name'] !== 'PRIMARY' && (
-                                            <button className={g.iconBtn} title="删除索引" onClick={() => onDropIndex(ix['Key_name'])}><Icon name="trash" size={13} /></button>
+                                            <button className={g.iconBtn} title="删除索引" onClick={() => onDropIndex(ix['Key_name'])}><Trash2 size={13} /></button>
                                         )}
                                     </td>
                                 </tr>

@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../../components/Icon'
+import { X } from 'lucide-react'
 import CodeEditor from '../../components/CodeEditor'
 import g from '../../styles/global.module.less'
 import my from './ObjModal.module.less'
@@ -36,7 +36,7 @@ export default function ObjModal(props: {
             <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
                 <div className={g.modalHead}>
                     <span>{titleMap[kind] || '数据库操作'}</span>
-                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><Icon name="close" size={14} /></button>
+                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><X size={14} /></button>
                 </div>
                 <div className={g.modalBody}>
                     {msg && <div className={`${g.ioMsg} ${msg.startsWith('失败') ? g.err : g.ok}`}>{msg}</div>}

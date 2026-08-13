@@ -1,5 +1,5 @@
 import React from 'react'
-import Icon from '../Icon'
+import { X, Bot, BarChart2, Link as LinkIcon } from 'lucide-react'
 import ClientIcon from '../ClientIcon'
 import g from '../../styles/global.module.less'
 import a from './SessionTabs.module.less'
@@ -60,7 +60,7 @@ function Tab({
             {dotOn !== undefined && <span className={`${g.dot} ${dotOn ? ' ' + g.on : ''}`}/>}
             <span className={a.tabTitle}>{title}</span>
             <button className={a.tabClose} title="关闭" onClick={(e) => { e.stopPropagation(); onClose && onClose() }}>
-                <Icon name="close" size={13}/>
+                <X size={13}/>
             </button>
         </div>
     )
@@ -147,7 +147,7 @@ export default function SessionTabs(props: SessionTabsProps) {
                     active={aiAgentActive}
                     onClick={onActivateAiAgent}
                     onClose={onCloseAiAgent}
-                    icon={<Icon name="bot" size={12}/>}
+                    icon={<Bot size={12}/>}
                     title="AI 智能体"
                 />
             )}
@@ -157,7 +157,7 @@ export default function SessionTabs(props: SessionTabsProps) {
                     active={devToolsActive}
                     onClick={onActivateDevTools}
                     onClose={onCloseDevTools}
-                    icon={<Icon name="chart" size={12}/>}
+                    icon={<BarChart2 size={12}/>}
                     title="开发工具"
                 />
             )}
@@ -167,7 +167,7 @@ export default function SessionTabs(props: SessionTabsProps) {
                     active={apiActive}
                     onClick={onActivateApi}
                     onClose={onCloseApi}
-                    icon={<Icon name="link" size={12}/>}
+                    icon={<LinkIcon size={12}/>}
                     title="API 调试"
                 />
             )}

@@ -1,5 +1,5 @@
 import React, {useState} from 'react'
-import Icon from '../../components/Icon'
+import { X } from 'lucide-react'
 import g from '../../styles/global.module.less'
 import my from './IoModal.module.less'
 
@@ -40,7 +40,7 @@ export default function IoModal(props: {
             <div className={`${g.modal} ${g.ioModal}`} onClick={(e) => e.stopPropagation()}>
                 <div className={g.modalHead}>
                     <span>{kind === 'export' ? '导出数据' : '导入数据'}</span>
-                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><Icon name="close" size={14}/></button>
+                    <button className={g.iconBtn} disabled={busy} onClick={onClose}><X size={14}/></button>
                 </div>
                 <div className={g.modalBody}>
                     <div className={g.field}>

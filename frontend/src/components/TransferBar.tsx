@@ -1,5 +1,5 @@
 import React, {useState} from 'react'
-import Icon from './Icon'
+import { Upload, Download, X } from 'lucide-react'
 import {Transfer} from '../types'
 import {formatSize} from '../utils'
 import g from '../styles/global.module.less'
@@ -27,7 +27,7 @@ export default function TransferBar({transfers, onCancel, onClear}: Props) {
     return (
         <div className={`${tb.transferBar}${open ? ' ' + tb.open : ''}`}>
             <div className={tb.transferHead} onClick={() => setOpen((v) => !v)}>
-                <Icon name={running.length ? 'upload' : 'download'} size={15}/>
+                {running.length ? <Upload size={15}/> : <Download size={15}/>}
                 <span>传输任务</span>
                 <span className={tb.badge}>{running.length ? `${running.length} 进行中` : `${transfers.length} 条`}</span>
                 <span className={g.spacer}/>
@@ -50,7 +50,7 @@ export default function TransferBar({transfers, onCancel, onClear}: Props) {
                         return (
                             <div key={t.id} className={`${tb.transferItem} ${t.status}`}>
                                 <span className={tb.tKind}>
-                                    <Icon name={t.kind === 'upload' ? 'upload' : 'download'} size={14}/>
+                                    {t.kind === 'upload' ? <Upload size={14}/> : <Download size={14}/>}
                                 </span>
                                 <span className={tb.tName} title={t.kind === 'upload' ? t.remotePath : t.localPath}>
                                     {t.name}
@@ -67,7 +67,7 @@ export default function TransferBar({transfers, onCancel, onClear}: Props) {
                                 <span className={tb.tAction}>
                                     {t.status === 'running' && (
                                         <button className={g.iconBtn} title="取消" onClick={() => onCancel(t.id)}>
-                                            <Icon name="close" size={14}/>
+                                            <X size={14}/>
                                         </button>
                                     )}
                                 </span>

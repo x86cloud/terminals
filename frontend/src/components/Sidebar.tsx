@@ -1,5 +1,19 @@
 import React, {useEffect, useMemo, useState} from 'react'
-import Icon from './Icon'
+import {
+    Plug,
+    Search,
+    X,
+    Plus,
+    Folder,
+    ChevronRight,
+    ChevronDown,
+    Edit,
+    Trash2,
+    Bot,
+    BarChart2,
+    Link as LinkIcon,
+    Settings,
+} from 'lucide-react'
 import ClientIcon from './ClientIcon'
 import ContextMenu, {closedMenu, MenuState, MenuItem} from './ContextMenu'
 import {ConfirmModal, ConfirmState} from './Modal'
@@ -278,7 +292,7 @@ export default function Sidebar({
                                     onConnect(server)
                                 }}
                             >
-                                <Icon name="plug" size={15}/>
+                                <Plug size={15}/>
                             </button>
                         )}
                     </span>
@@ -316,7 +330,7 @@ export default function Sidebar({
         <aside className={s.sidebar}>
             <div className={s.sidebarHead}>
                 <div className={s.sidebarSearch}>
-                    <Icon name="search" size={14}/>
+                    <Search size={14}/>
                     <input
                         value={keyword}
                         placeholder="搜索服务器 / Redis / MQTT"
@@ -324,7 +338,7 @@ export default function Sidebar({
                     />
                     {keyword && (
                         <button className={s.clearBtn} title="清空搜索" onClick={() => setKeyword('')}>
-                            <Icon name="close" size={12}/>
+                            <X size={12}/>
                         </button>
                     )}
                 </div>
@@ -333,14 +347,14 @@ export default function Sidebar({
                     title="新建服务器"
                     onClick={() => onNew()}
                 >
-                    <Icon name="plus"/>
+                    <Plus size={16}/>
                 </button>
                 <button
                     className={g.iconBtn}
                     title="新建分组"
                     onClick={startCreateGroup}
                 >
-                    <Icon name="folder"/>
+                    <Folder size={16}/>
                 </button>
             </div>
 
@@ -381,7 +395,7 @@ export default function Sidebar({
                                     onClick={() => toggleGroup(grp.id)}
                                 >
                                     <span className={`${s.groupChevron}${isOpen ? ' ' + s.open : ''}`}>
-                                        <Icon name="chevron-right" size={14}/>
+                                        <ChevronRight size={14}/>
                                     </span>
                                 </button>
                                 {isEditing ? (
@@ -408,7 +422,7 @@ export default function Sidebar({
                                         title="重命名分组"
                                         onClick={() => setEditingGroup({id: grp.id, name: grp.name})}
                                     >
-                                        <Icon name="edit" size={13}/>
+                                        <Edit size={13}/>
                                     </button>
                                     <button
                                         className={`${g.iconBtn} ${g.danger}`}
@@ -426,7 +440,7 @@ export default function Sidebar({
                                             })
                                         }}
                                     >
-                                        <Icon name="trash" size={13}/>
+                                        <Trash2 size={13}/>
                                     </button>
                                 </span>
                             </div>
@@ -463,7 +477,7 @@ export default function Sidebar({
                                 title={ungroupedOpen ? '折叠' : '展开'}
                                 onClick={() => setUngroupedOpen((v) => !v)}
                             >
-                                <Icon name={ungroupedOpen ? 'chevron-down' : 'chevron-right'} size={14}/>
+                                {ungroupedOpen ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
                             </button>
                             <button className={s.groupTitleBtn} onClick={() => setUngroupedOpen((v) => !v)}>
                                 <span className={s.groupName}>未分组</span>
@@ -477,19 +491,19 @@ export default function Sidebar({
 
             <div className={s.tools}>
                 <button className={s.toolItem} onClick={onOpenAiAgent}>
-                    <Icon name="bot" size={15}/>
+                    <Bot size={15}/>
                     <span>AI 智能体</span>
                 </button>
                 <button className={s.toolItem} onClick={onOpenDevTools}>
-                    <Icon name="chart" size={15}/>
+                    <BarChart2 size={15}/>
                     <span>开发工具</span>
                 </button>
                 <button className={s.toolItem} onClick={onOpenApi}>
-                    <Icon name="link" size={15}/>
+                    <LinkIcon size={15}/>
                     <span>API 调试</span>
                 </button>
                 <button className={s.toolItem} onClick={onOpenSettings}>
-                    <Icon name="settings" size={15}/>
+                    <Settings size={15}/>
                     <span>设置</span>
                 </button>
             </div>

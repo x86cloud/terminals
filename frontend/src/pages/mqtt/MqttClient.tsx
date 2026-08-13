@@ -1,6 +1,7 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
+import CodeMirror from '@uiw/react-codemirror'
+import { Trash2, X } from 'lucide-react'
 import {API, subscribe} from '../../api'
-import Icon from '../../components/Icon'
 import CodeEditor from '../../components/CodeEditor'
 import {errorMessage} from '../../utils'
 import {MqttMessage, MqttSessionInfo, MqttSubscription} from '../../types'
@@ -158,7 +159,7 @@ export default function MqttClient({session, onClose}: Props) {
                                     disabled={busy}
                                     onClick={() => doUnsubscribe(s.topic)}
                                 >
-                                    <Icon name="trash" size={13}/>
+                                    <Trash2 size={13}/>
                                 </button>
                             </div>
                         </div>
@@ -181,7 +182,7 @@ export default function MqttClient({session, onClose}: Props) {
                         清空消息
                     </button>
                     <button className={g.iconBtn} title="关闭" onClick={onClose}>
-                        <Icon name="close" size={15}/>
+                        <X size={15}/>
                     </button>
                 </div>
 

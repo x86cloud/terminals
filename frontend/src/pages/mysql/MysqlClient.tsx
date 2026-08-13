@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import Icon from '../../components/Icon'
+import { Database, RotateCw, Plus, Table, Trash2, X, Download, Upload, Copy } from 'lucide-react'
 import {API} from '../../api'
 import {errorMessage} from '../../utils'
 import {MysqlSessionInfo} from '../../types'
@@ -639,7 +639,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
         <div className={my.mysqlPane}>
             <div className={my.mysqlSide}>
                 <div className={my.mysqlDbHead}>
-                    <Icon name="database" size={13}/>
+                    <Database size={13}/>
                     <select
                         className={my.mysqlDbSelect}
                         value={db}
@@ -652,15 +652,15 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                         ))}
                     </select>
                     <button className={g.iconBtn} title="刷新" disabled={busy} onClick={() => loadDatabases()}>
-                        <Icon name="refresh" size={13}/>
+                        <RotateCw size={13}/>
                     </button>
                 </div>
                 <div className={my.mysqlDbActions}>
                     <button className={`${g.btn} ${g.xs}`} onClick={() => { setObjName(''); setObjExtra(''); setObjMsg(''); setObjModal('createdb') }}>
-                        <Icon name="plus" size={12}/> 建库
+                        <Plus size={12}/> 建库
                     </button>
                     <button className={`${g.btn} ${g.xs}`} onClick={() => { setObjName(''); setObjExtra('`id` INT PRIMARY KEY AUTO_INCREMENT, `name` VARCHAR(64)'); setObjMsg(''); setObjModal('createtable') }}>
-                        <Icon name="table" size={12}/> 建表
+                        <Table size={12}/> 建表
                     </button>
                 </div>
                 <div className={my.mysqlTables}>
@@ -673,15 +673,15 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                 className={`${my.mysqlTableItem}${selected === t ? ' ' + my.active : ''}`}
                                 onClick={() => openTable(t)}
                             >
-                                <Icon name="table" size={13}/>
+                                <Table size={13}/>
                                 <span>{t}</span>
                             </button>
                             <div className={my.mysqlTableMenu}>
                                 <button className={g.iconBtn} title="清空" onClick={() => { setObjName(t); setObjModal('truncate') }}>
-                                    <Icon name="trash" size={12}/>
+                                    <Trash2 size={12}/>
                                 </button>
                                 <button className={g.iconBtn} title="删除表" onClick={() => { setObjName(t); setObjModal('droptable') }}>
-                                    <Icon name="close" size={12}/>
+                                    <X size={12}/>
                                 </button>
                             </div>
                         </div>
@@ -695,10 +695,10 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     <span className={g.spacer}/>
                     {error && <span className={my.mysqlError}>{error}</span>}
                     <button className={`${g.btn} ${g.sm}`} title="导入 SQL/CSV/JSON" disabled={busy} onClick={() => { setIoMsg(''); setIoModal('import') }}>
-                        <Icon name="download" size={13}/> 导入
+                        <Download size={13}/> 导入
                     </button>
                     <button className={`${g.btn} ${g.sm}`} title="导出 SQL/CSV/JSON" disabled={busy || !selected} onClick={() => { setIoMsg(''); setIoModal('export') }}>
-                        <Icon name="upload" size={13}/> 导出
+                        <Upload size={13}/> 导出
                     </button>
                     <button className={`${g.btn} ${g.sm}`} title="整库备份（SQL）" disabled={busy || !db} onClick={async () => {
                         try {
@@ -708,10 +708,10 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             if (path) notify(`已成功备份数据库到：${path}`)
                         } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
                     }}>
-                        <Icon name="copy" size={13}/> 备份
+                        <Copy size={13}/> 备份
                     </button>
                     <button className={g.iconBtn} title="关闭" onClick={onClose}>
-                        <Icon name="close" size={15}/>
+                        <X size={15}/>
                     </button>
                 </div>
 

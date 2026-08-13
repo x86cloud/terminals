@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react'
 import {
+    Terminal,
+    Pin,
+    Settings,
+    Minus,
+    Square,
+    Copy,
+    X,
+} from 'lucide-react'
+import {
     WindowMinimise,
     WindowToggleMaximise,
     Quit,
     WindowIsMaximised,
     WindowSetAlwaysOnTop,
 } from '../../wailsjs/runtime/runtime'
-import Icon from './Icon'
 import s from './TitleBar.module.less'
 
 interface TitleBarProps {
@@ -83,7 +91,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings, activeTitle 
         <header className={s.titleBar} onDoubleClick={handleToggleMaximise}>
             <div className={s.left}>
                 <div className={s.logo}>
-                    <Icon name="terminal" size={16} />
+                    <Terminal size={16} strokeWidth={2} />
                 </div>
                 <span className={s.title}>xClient</span>
             </div>
@@ -100,7 +108,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings, activeTitle 
                         title={isAlwaysOnTop ? '取消窗口置顶' : '窗口置顶'}
                         onClick={handleToggleAlwaysOnTop}
                     >
-                        <Icon name="pin" size={13} />
+                        <Pin size={13} strokeWidth={1.8} />
                     </button>
 
                     {onOpenSettings && (
@@ -110,7 +118,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings, activeTitle 
                             title="系统设置"
                             onClick={onOpenSettings}
                         >
-                            <Icon name="settings" size={13} />
+                            <Settings size={13} strokeWidth={1.8} />
                         </button>
                     )}
                 </div>
@@ -122,7 +130,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings, activeTitle 
                         title="最小化"
                         onClick={handleMinimise}
                     >
-                        <Icon name="window-minimize" size={12} />
+                        <Minus size={12} strokeWidth={1.8} />
                     </button>
 
                     <button
@@ -131,7 +139,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings, activeTitle 
                         title={isMaximised ? '还原窗口' : '最大化'}
                         onClick={handleToggleMaximise}
                     >
-                        <Icon name={isMaximised ? 'window-restore' : 'window-maximize'} size={12} />
+                        {isMaximised ? <Copy size={12} strokeWidth={1.8} /> : <Square size={12} strokeWidth={1.8} />}
                     </button>
 
                     <button
@@ -140,7 +148,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings, activeTitle 
                         title="关闭"
                         onClick={handleClose}
                     >
-                        <Icon name="close" size={14} />
+                        <X size={14} strokeWidth={1.8} />
                     </button>
                 </div>
             </div>

@@ -1,6 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react'
+import { FileText, Edit } from 'lucide-react'
 import CodeEditor, {LangKey} from '../../../components/CodeEditor'
-import Icon from '../../../components/Icon'
 import {API} from '../../../api'
 import {errorMessage} from '../../../utils'
 import g from '../../../styles/global.module.less'
@@ -61,7 +61,7 @@ export default function FileEditorModal({open, sessionId, filePath, onClose, onN
             <div className={m.modal} onClick={(e) => e.stopPropagation()}>
                 <div className={m.header}>
                     <div className={m.titleArea}>
-                        <Icon name="file" size={14}/>
+                        <FileText size={14}/>
                         <span className={m.fileName}>{fileName}</span>
                         <span className={m.filePath}>({filePath})</span>
                         {isModified && <span className={m.modifiedBadge}>已修改</span>}
@@ -73,7 +73,7 @@ export default function FileEditorModal({open, sessionId, filePath, onClose, onN
                             disabled={saving || !isModified}
                             title="保存修改 (Ctrl+S)"
                         >
-                            <Icon name="edit" size={12}/> {saving ? '保存中…' : '保存'}
+                            <Edit size={12}/> {saving ? '保存中…' : '保存'}
                         </button>
                         <button className={`${g.btn} ${g.sm}`} onClick={onClose}>
                             关闭
