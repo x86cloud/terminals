@@ -1,13 +1,13 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import { Send, X, Copy, PanelLeft } from 'lucide-react'
+import React from 'react'
+import { X, Copy, PanelLeft } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import g from '@/styles/global.module.less'
 import a from '@/pages/api/HttpRequest.module.less'
 import sh from '@/pages/api/apiShared.module.less'
-import {statusClass} from '@/pages/api/apiTypes'
-import type {ApiState} from '@/pages/api/useApi'
+import { statusClass } from '@/pages/api/apiTypes'
+import type { ApiState } from '@/pages/api/useApi'
 
-export default function HttpRequest({state, onClose}: { state: ApiState; onClose: () => void }) {
+export default function HttpRequest({ state, onClose }: { state: ApiState; onClose: () => void }) {
     const {
         mode, wsStatus, wsConnect, wsDisconnect, wsConnecting, wsSendMsg,
         method, setMethod, methods, url, setUrl, updateUrl, doSend, sending, showHistory, setShowHistory,
@@ -24,7 +24,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                     title={showHistory ? '隐藏历史' : '显示历史'}
                     onClick={() => setShowHistory((v) => !v)}
                 >
-                    <PanelLeft size={15}/>
+                    <PanelLeft size={15} />
                 </button>
                 <div className={a.modeToggle}>
                     <button
@@ -93,7 +93,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                     title="关闭"
                     onClick={onClose}
                 >
-                    <X size={15}/>
+                    <X size={15} />
                 </button>
             </div>
 
@@ -119,7 +119,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                         ) : (
                             <span className={a.respPlaceholder}>尚未发送请求</span>
                         )}
-                        <span className={g.spacer}/>
+                        <span className={g.spacer} />
                         {response && (
                             <div className={`${g.segmented} ${g.sm}`}>
                                 <button
@@ -153,13 +153,13 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                                         className={`${g.btn} ${g.sm}`}
                                         onClick={() => copy(prettyBody)}
                                     >
-                                        <Copy size={13}/> 复制
+                                        <Copy size={13} /> 复制
                                     </button>
                                 </div>
                                 <div className={a.respCodeWrap}>
                                     <CodeEditor
                                         value={prettyBody || '(空响应体)'}
-                                        onChange={() => {}}
+                                        onChange={() => { }}
                                         lang={respLang}
                                         height="100%"
                                         readOnly
@@ -179,7 +179,7 @@ export default function HttpRequest({state, onClose}: { state: ApiState; onClose
                                             title="复制"
                                             onClick={() => copy(`${k}: ${v}`)}
                                         >
-                                            <Copy size={12}/>
+                                            <Copy size={12} />
                                         </button>
                                     </div>
                                 ))}

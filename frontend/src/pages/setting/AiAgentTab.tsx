@@ -38,8 +38,6 @@ export default function AiAgentTab({
     aiApiKey,
     aiModel,
     aiTemperature,
-    aiMaxContextTokens,
-    aiCompressionStrategy,
     aiEnableMultimodal,
     aiEnableWebSearch = false,
     aiEnablePermissionGuard = true,

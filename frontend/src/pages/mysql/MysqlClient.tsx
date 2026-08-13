@@ -1,19 +1,19 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Database, RotateCw, Plus, Table, Trash2, X, Download, Upload, Copy } from 'lucide-react'
-import {API} from '@/api'
-import {errorMessage} from '@/utils'
-import {MysqlSessionInfo} from '@/types'
+import { API } from '@/api'
+import { errorMessage } from '@/utils'
+import { MysqlSessionInfo } from '@/types'
 import g from '@/styles/global.module.less'
 import my from '@/pages/mysql/MysqlClient.module.less'
 import sh from '@/pages/mysql/mysqlShared.module.less'
-import {SqlTab, RowDrafts, NewRow, Schema, TabKey} from '@/pages/mysql/mysqlTypes'
+import { SqlTab, RowDrafts, NewRow, Schema, TabKey } from '@/pages/mysql/mysqlTypes'
 import DataTab from '@/pages/mysql/DataTab'
 import SqlEditor from '@/pages/mysql/SqlEditor'
 import UsersPanel from '@/pages/mysql/UsersPanel'
 import StatusPanel from '@/pages/mysql/StatusPanel'
 import ErDiagram from '@/pages/mysql/ErDiagram'
-import {ConfirmModal, ConfirmState, PromptModal, PromptState} from '@/components/Modal'
-import ObjModal, {ObjModalKind} from '@/pages/mysql/ObjModal'
+import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import ObjModal, { ObjModalKind } from '@/pages/mysql/ObjModal'
 import IoModal from '@/pages/mysql/IoModal'
 
 interface Props {
@@ -37,7 +37,7 @@ function notify(msg: string) {
     else console.log(msg)
 }
 
-export default function MysqlClient({session, onClose, onChange}: Props) {
+export default function MysqlClient({ session, onClose, onChange }: Props) {
     const [databases, setDatabases] = useState<string[]>([])
     const [db, setDb] = useState<string>(session.database || '')
     const [tables, setTables] = useState<string[]>([])
@@ -49,7 +49,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const [saving, setSaving] = useState(false)
-    const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+    const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
 
     // 数据库对象管理弹窗
@@ -96,7 +96,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     const [ioMsg, setIoMsg] = useState<string>('')
 
     // ER 图
-    const [schema, setSchema] = useState<Schema>({tables: [], foreignKeys: []})
+    const [schema, setSchema] = useState<Schema>({ tables: [], foreignKeys: [] })
     const [erZoom, setErZoom] = useState(1)
 
     const columns = tableData?.columns ?? []
@@ -216,26 +216,26 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     /* ----------------- SQL 编辑器（多标签 + 历史） ----------------- */
 
     const updateActiveTab = (patch: Partial<SqlTab>) => {
-        setSqlTabs((prev) => prev.map((t) => (t.id === activeSqlTab ? {...t, ...patch} : t)))
+        setSqlTabs((prev) => prev.map((t) => (t.id === activeSqlTab ? { ...t, ...patch } : t)))
     }
 
     const runSqlTab = async () => {
         const stmt = activeTabObj.content.trim()
         if (!stmt) {
-            updateActiveTab({error: '请输入要执行的 SQL'})
+            updateActiveTab({ error: '请输入要执行的 SQL' })
             return
         }
         setBusy(true)
         setError('')
         try {
             const res = await API.mysqlRun(session.id, db, stmt)
-            updateActiveTab({result: res, error: ''})
+            updateActiveTab({ result: res, error: '' })
             // 若切换了数据库（USE xxx）则刷新左侧列表
             if (/^\s*use\s+/i.test(stmt)) {
                 await loadDatabases()
             }
         } catch (e) {
-            updateActiveTab({error: errorMessage(e), result: null})
+            updateActiveTab({ error: errorMessage(e), result: null })
             setError(errorMessage(e))
         } finally {
             setBusy(false)
@@ -260,10 +260,10 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
 
     const cellDisplay = (row: number, col: string): { text: string; isNull: boolean } => {
         const d = drafts[row]?.[col]
-        if (d) return {text: d.isNull ? 'NULL' : d.value, isNull: d.isNull}
+        if (d) return { text: d.isNull ? 'NULL' : d.value, isNull: d.isNull }
         const orig = rows[row]?.[col]
         const isn = orig === null || orig === undefined
-        return {text: isn ? 'NULL' : String(orig), isNull: isn}
+        return { text: isn ? 'NULL' : String(orig), isNull: isn }
     }
 
     const commitEdit = (row: number, col: string, value: string, isNull: boolean) => {
@@ -303,13 +303,13 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
 
     const addRow = () => {
         const blank: NewRow = {}
-        for (const c of columns) blank[c] = {value: '', isNull: false}
+        for (const c of columns) blank[c] = { value: '', isNull: false }
         setNewRows((prev) => [...prev, blank])
     }
 
     const updateNewCell = (idx: number, col: string, value: string, isNull: boolean) => {
         setNewRows((prev) =>
-            prev.map((r, i) => (i === idx ? {...r, [col]: {value, isNull}} : r))
+            prev.map((r, i) => (i === idx ? { ...r, [col]: { value, isNull } } : r))
         )
     }
 
@@ -523,7 +523,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     }, [tab, loadUsers])
 
     const viewGrants = async (user: string, host: string) => {
-        setSelUser({user, host})
+        setSelUser({ user, host })
         try {
             const gr = await API.mysqlGrants(session.id, user, host)
             setGrants(gr)
@@ -628,18 +628,18 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
     }, [session.id, db, selected, onChange, loadTables, openTable])
 
     const tabs: { key: TabKey; label: string }[] = [
-        {key: 'data', label: '数据 / 结构'},
-        {key: 'sql', label: 'SQL 编辑器'},
-        {key: 'users', label: '用户权限'},
-        {key: 'status', label: '状态监控'},
-        {key: 'er', label: 'ER 图'},
+        { key: 'data', label: '数据 / 结构' },
+        { key: 'sql', label: 'SQL 编辑器' },
+        { key: 'users', label: '用户权限' },
+        { key: 'status', label: '状态监控' },
+        { key: 'er', label: 'ER 图' },
     ]
 
     return (
         <div className={my.mysqlPane}>
             <div className={my.mysqlSide}>
                 <div className={my.mysqlDbHead}>
-                    <Database size={13}/>
+                    <Database size={13} />
                     <select
                         className={my.mysqlDbSelect}
                         value={db}
@@ -652,15 +652,15 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                         ))}
                     </select>
                     <button className={g.iconBtn} title="刷新" disabled={busy} onClick={() => loadDatabases()}>
-                        <RotateCw size={13}/>
+                        <RotateCw size={13} />
                     </button>
                 </div>
                 <div className={my.mysqlDbActions}>
                     <button className={`${g.btn} ${g.xs}`} onClick={() => { setObjName(''); setObjExtra(''); setObjMsg(''); setObjModal('createdb') }}>
-                        <Plus size={12}/> 建库
+                        <Plus size={12} /> 建库
                     </button>
                     <button className={`${g.btn} ${g.xs}`} onClick={() => { setObjName(''); setObjExtra('`id` INT PRIMARY KEY AUTO_INCREMENT, `name` VARCHAR(64)'); setObjMsg(''); setObjModal('createtable') }}>
-                        <Table size={12}/> 建表
+                        <Table size={12} /> 建表
                     </button>
                 </div>
                 <div className={my.mysqlTables}>
@@ -673,15 +673,15 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                                 className={`${my.mysqlTableItem}${selected === t ? ' ' + my.active : ''}`}
                                 onClick={() => openTable(t)}
                             >
-                                <Table size={13}/>
+                                <Table size={13} />
                                 <span>{t}</span>
                             </button>
                             <div className={my.mysqlTableMenu}>
                                 <button className={g.iconBtn} title="清空" onClick={() => { setObjName(t); setObjModal('truncate') }}>
-                                    <Trash2 size={12}/>
+                                    <Trash2 size={12} />
                                 </button>
                                 <button className={g.iconBtn} title="删除表" onClick={() => { setObjName(t); setObjModal('droptable') }}>
-                                    <X size={12}/>
+                                    <X size={12} />
                                 </button>
                             </div>
                         </div>
@@ -692,13 +692,13 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
             <div className={my.mysqlMain}>
                 <div className={my.mysqlToolbar}>
                     <span className={my.mysqlConnTitle}>MySQL · {session.host}:{session.port}</span>
-                    <span className={g.spacer}/>
+                    <span className={g.spacer} />
                     {error && <span className={my.mysqlError}>{error}</span>}
                     <button className={`${g.btn} ${g.sm}`} title="导入 SQL/CSV/JSON" disabled={busy} onClick={() => { setIoMsg(''); setIoModal('import') }}>
-                        <Download size={13}/> 导入
+                        <Download size={13} /> 导入
                     </button>
                     <button className={`${g.btn} ${g.sm}`} title="导出 SQL/CSV/JSON" disabled={busy || !selected} onClick={() => { setIoMsg(''); setIoModal('export') }}>
-                        <Upload size={13}/> 导出
+                        <Upload size={13} /> 导出
                     </button>
                     <button className={`${g.btn} ${g.sm}`} title="整库备份（SQL）" disabled={busy || !db} onClick={async () => {
                         try {
@@ -708,10 +708,10 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             if (path) notify(`已成功备份数据库到：${path}`)
                         } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
                     }}>
-                        <Copy size={13}/> 备份
+                        <Copy size={13} /> 备份
                     </button>
                     <button className={g.iconBtn} title="关闭" onClick={onClose}>
-                        <X size={15}/>
+                        <X size={15} />
                     </button>
                 </div>
 
@@ -776,13 +776,13 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                             onSelectTab={setActiveSqlTab}
                             onAddTab={addSqlTab}
                             onCloseTab={closeSqlTab}
-                            onContentChange={(val) => updateActiveTab({content: val})}
+                            onContentChange={(val) => updateActiveTab({ content: val })}
                             onRun={runSqlTab}
                         />
                     )}
 
                     {tab === 'users' && (
-                        <UsersPanel users={users} selUser={selUser} grants={grants} onSelect={viewGrants}/>
+                        <UsersPanel users={users} selUser={selUser} grants={grants} onSelect={viewGrants} />
                     )}
 
                     {tab === 'status' && (
@@ -797,7 +797,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     )}
 
                     {tab === 'er' && (
-                        <ErDiagram schema={schema} busy={busy}/>
+                        <ErDiagram schema={schema} busy={busy} />
                     )}
                 </div>
             </div>
@@ -831,7 +831,7 @@ export default function MysqlClient({session, onClose, onChange}: Props) {
                     onImport={doImport}
                 />
             )}
-            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
         </div>
     )
 }

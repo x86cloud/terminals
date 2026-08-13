@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Plus, RotateCw, X, Trash2, ChevronsLeft, ChevronLeft, ChevronRight, ChevronsRight } from 'lucide-react'
 import ResizableTable, { ColDef } from '@/components/ResizableTable'
 import g from '@/styles/global.module.less'
@@ -9,7 +9,6 @@ import { MysqlQueryResult } from '@/types'
 import { Grid, RowDrafts, NewRow } from '@/pages/mysql/mysqlTypes'
 import CellEditorInline from '@/pages/mysql/CellEditorInline'
 
-const ROW_NUM_W = 40
 const ROW_ACT_W = 50
 const DEFAULT_COL_W = 120
 

@@ -1,8 +1,8 @@
-import React, {useEffect, useMemo, useState} from 'react'
+import React from 'react'
 import { Folder, Table } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
-import {RedisKeysResult, RedisSessionInfo, RedisValue} from '@/types'
-import {KeyTreeNode, TYPE_LABEL} from '@/pages/redis/redisTypes'
+import { RedisKeysResult, RedisSessionInfo, RedisValue } from '@/types'
+import { KeyTreeNode, TYPE_LABEL } from '@/pages/redis/redisTypes'
 import KeyItemTree from '@/pages/redis/KeyItemTree'
 import ValueEditor from '@/pages/redis/ValueEditor'
 import g from '@/styles/global.module.less'
@@ -116,19 +116,19 @@ export default function KeysTab({
                             title="树状视图"
                             onClick={() => setViewMode('tree')}
                         >
-                            <Folder size={12}/> 树状
+                            <Folder size={12} /> 树状
                         </button>
                         <button
                             className={viewMode === 'flat' ? g.active : ''}
                             title="平铺列表"
                             onClick={() => setViewMode('flat')}
                         >
-                            <Table size={12}/> 平铺
+                            <Table size={12} /> 平铺
                         </button>
                     </div>
-                    <span className={g.spacer}/>
+                    <span className={g.spacer} />
                     {viewMode === 'tree' && (
-                        <span style={{fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0}}>
+                        <span style={{ fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap', flexShrink: 0 }}>
                             分隔符
                             <input
                                 className={k.delimiterInput}
@@ -208,7 +208,7 @@ export default function KeysTab({
                             <button className={`${g.btn} ${g.primary} ${g.sm}`} onClick={saveValue}>保存</button>
                             <button className={`${g.btn} ${g.danger} ${g.sm}`} onClick={() => delKey()}>删除</button>
                         </div>
-                        <ValueEditor session={session} value={value} selected={selected} flash={flash}/>
+                        <ValueEditor session={session} value={value} selected={selected} flash={flash} />
                     </>
                 ) : (
                     <div className={k.redisEmpty}>从左侧选择一个键查看 / 编辑</div>
