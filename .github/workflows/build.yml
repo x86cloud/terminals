@@ -47,7 +47,7 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
 
       - name: Install WiX Toolset
-        run: dotnet tool install --global wix
+        run: dotnet tool install --global wix --version 4.0.6
 
       - name: Install frontend dependencies
         working-directory: frontend

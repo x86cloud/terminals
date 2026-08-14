@@ -33,8 +33,8 @@ if ($BuildApp -or !(Test-Path $ExePath)) {
 Write-Host "[2/3] 检查 WiX Toolset..." -ForegroundColor Yellow
 $WixCmd = Get-Command wix -ErrorAction SilentlyContinue
 if (!$WixCmd) {
-    Write-Host "未找到 wix 命令，尝试通过 dotnet tool 安装 WiX..." -ForegroundColor Yellow
-    dotnet tool install --global wix
+    Write-Host "未找到 wix 命令，尝试通过 dotnet tool 安装 WiX v4 (4.0.6)..." -ForegroundColor Yellow
+    dotnet tool install --global wix --version 4.0.6
     $env:PATH += ";$HOME\.dotnet\tools"
 }
 
