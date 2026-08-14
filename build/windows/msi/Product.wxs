@@ -14,12 +14,7 @@
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
 
     <!-- 安装向导 UI 配置 (WixUI_InstallDir) -->
-    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
-
-    <!-- 简化向导流程：从 Welcome 对话框直接进入 InstallDir 目录选择对话框 -->
-    <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2" />
-    <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" />
 
     <!-- 安装目录结构 -->
     <StandardDirectory Id="ProgramFiles6432Folder">
