@@ -38,6 +38,13 @@ if (!$WixCmd) {
     $env:PATH += ";$HOME\.dotnet\tools"
 }
 
+# 确保安装了 UI 扩展
+try {
+    wix extension add --global WixToolset.UI.wixext/4.0.6 2>$null
+} catch {
+    # 忽略已安装提示
+}
+
 # 3. 编译 MSI
 $MsiOutput = Join-Path $RootDir "build\bin\xClient-windows-amd64-installer.msi"
 $WxsFile = Join-Path $RootDir "build\windows\msi\Product.wxs"
@@ -45,6 +52,7 @@ $WxsFile = Join-Path $RootDir "build\windows\msi\Product.wxs"
 Write-Host "[3/3] 正在编译 MSI 安装包 (版本: $Version)..." -ForegroundColor Yellow
 
 wix build "$WxsFile" `
+    -ext WixToolset.UI.wixext/4.0.6 `
     -d "Version=$Version" `
     -d "SourceDir=$RootDir" `
     -o "$MsiOutput"

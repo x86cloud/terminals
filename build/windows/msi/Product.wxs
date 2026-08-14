@@ -1,4 +1,5 @@
-<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs">
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
   <Package Name="xClient"
            Manufacturer="zShiyang"
            Version="$(var.Version)"
@@ -8,9 +9,19 @@
     <MajorUpgrade DowngradeErrorMessage="A newer version of xClient is already installed." />
     <MediaTemplate EmbedCab="yes" />
 
+    <!-- 图标定义 -->
     <Icon Id="AppIcon" SourceFile="$(var.SourceDir)\build\windows\icon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon" />
 
+    <!-- 安装向导 UI 配置 (WixUI_InstallDir) -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+
+    <!-- 简化向导流程：从 Welcome 对话框直接进入 InstallDir 目录选择对话框 -->
+    <Publish Dialog="WelcomeDlg" Control="Next" Event="NewDialog" Value="InstallDirDlg" Order="2" />
+    <Publish Dialog="InstallDirDlg" Control="Back" Event="NewDialog" Value="WelcomeDlg" Order="2" />
+
+    <!-- 安装目录结构 -->
     <StandardDirectory Id="ProgramFiles6432Folder">
       <Directory Id="INSTALLFOLDER" Name="xClient" />
     </StandardDirectory>
@@ -21,23 +32,38 @@
 
     <StandardDirectory Id="DesktopFolder" />
 
-    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
-      <Component Id="MainExecutable" Guid="a1b2c3d4-e5f6-7890-1234-56789abcdef0">
-        <File Id="xClientExe" Source="$(var.SourceDir)\build\bin\xClient.exe" KeyPath="yes">
-          <Shortcut Id="DesktopShortcut"
-                    Directory="DesktopFolder"
-                    Name="xClient"
-                    WorkingDirectory="INSTALLFOLDER"
-                    Icon="AppIcon"
-                    Advertise="yes" />
-          <Shortcut Id="StartMenuShortcut"
-                    Directory="ApplicationProgramsFolder"
-                    Name="xClient"
-                    WorkingDirectory="INSTALLFOLDER"
-                    Icon="AppIcon"
-                    Advertise="yes" />
-        </File>
+    <!-- 安装组件定义 -->
+    <ComponentGroup Id="ProductComponents">
+      <!-- 主程序文件 -->
+      <Component Id="MainExecutable" Directory="INSTALLFOLDER" Guid="a1b2c3d4-e5f6-7890-1234-56789abcdef0">
+        <File Id="xClientExe" Source="$(var.SourceDir)\build\bin\xClient.exe" KeyPath="yes" />
+      </Component>
+
+      <!-- 开始菜单快捷方式 (标准非广播快捷方式，保证图标 100% 提取) -->
+      <Component Id="StartMenuShortcutComponent" Directory="ApplicationProgramsFolder" Guid="c3d4e5f6-a7b8-9012-3456-789abcdef012">
+        <Shortcut Id="StartMenuShortcut"
+                  Name="xClient"
+                  Description="xClient Terminal &amp; Database Manager"
+                  Target="[!xClientExe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon"
+                  IconIndex="0"
+                  Advertise="no" />
         <RemoveFolder Id="CleanUpStartMenu" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\zShiyang\xClient" Name="StartMenuShortcut" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+
+      <!-- 桌面快捷方式 (标准非广播快捷方式，保证图标 100% 提取) -->
+      <Component Id="DesktopShortcutComponent" Directory="DesktopFolder" Guid="b2c3d4e5-f6a7-8901-2345-6789abcdef01">
+        <Shortcut Id="DesktopShortcut"
+                  Name="xClient"
+                  Description="xClient Terminal &amp; Database Manager"
+                  Target="[!xClientExe]"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon"
+                  IconIndex="0"
+                  Advertise="no" />
+        <RegistryValue Root="HKCU" Key="Software\zShiyang\xClient" Name="DesktopShortcut" Type="integer" Value="1" KeyPath="yes" />
       </Component>
     </ComponentGroup>
 

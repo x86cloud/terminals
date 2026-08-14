@@ -47,7 +47,9 @@ jobs:
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
 
       - name: Install WiX Toolset
-        run: dotnet tool install --global wix --version 4.0.6
+        run: |
+          dotnet tool install --global wix --version 4.0.6
+          wix extension add --global WixToolset.UI.wixext/4.0.6
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -62,7 +64,7 @@ jobs:
           $ver = "${{ github.ref_name }}".TrimStart('v')
           if (-not $ver -or $ver -like "*/*") { $ver = "1.0.0" }
           if ($ver -match '^(\d+\.\d+\.\d+)') { $ver = $matches[1] } else { $ver = "1.0.0" }
-          wix build build/windows/msi/Product.wxs -d "Version=$ver" -d "SourceDir=${{ github.workspace }}" -o build/bin/xClient-windows-amd64-installer.msi
+          wix build build/windows/msi/Product.wxs -ext WixToolset.UI.wixext/4.0.6 -d "Version=$ver" -d "SourceDir=${{ github.workspace }}" -o build/bin/xClient-windows-amd64-installer.msi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
