@@ -299,14 +299,13 @@
     align-items: center;
     justify-content: center;
     z-index: 1000;
-    backdrop-filter: blur(2px);
 }
 
 .logModal {
     width: 680px;
     max-width: 90vw;
     max-height: 80vh;
-    background: @bg-1;
+    background: @bg-1-solid;
     border: 1px solid @border;
     border-radius: @radius-lg;
     display: flex;
@@ -321,7 +320,7 @@
     justify-content: space-between;
     padding: 10px 16px;
     border-bottom: 1px solid @border;
-    background: @bg-elev;
+    background: @bg-elev-solid;
 
     .modalTitle {
         font-weight: 600;
@@ -348,7 +347,7 @@
 
 .pullModal {
     width: 440px;
-    background: @bg-1;
+    background: @bg-1-solid;
     border: 1px solid @border;
     border-radius: @radius-lg;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
@@ -387,6 +386,6 @@
     justify-content: flex-end;
     gap: 8px;
     padding: 10px 16px;
-    background: @bg-elev;
+    background: @bg-elev-solid;
     border-top: 1px solid @border;
 }

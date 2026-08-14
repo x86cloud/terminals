@@ -7,7 +7,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: @bg;
+    background: @bg-solid;
     z-index: 500;
     display: flex;
     padding: 4px 8px 8px 8px;
@@ -36,7 +36,7 @@
     padding: 8px 10px;
     border-radius: @radius-md;
     border: 1px solid @border;
-    background: @bg-1;
+    background: @bg-1-solid;
     color: @text;
     font-size: 13px;
     font-weight: 500;
@@ -112,7 +112,7 @@
     }
 
     &.active {
-        background: @bg-1;
+        background: @bg-1-solid;
         border-color: @border;
         color: @accent;
         font-weight: 600;
@@ -128,9 +128,7 @@
 .contentPanel {
     flex: 1;
     min-width: 0;
-    background: @bg-1;
-    backdrop-filter: blur(16px) saturate(1.8);
-    -webkit-backdrop-filter: blur(16px) saturate(1.8);
+    background: @bg-1-solid;
     border: 1px solid @border;
     border-radius: @radius-lg;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
