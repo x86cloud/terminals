@@ -9,6 +9,10 @@ interface MarkdownViewerProps {
     className?: string
 }
 
+// 模块级常量：避免每次渲染新建对象引用，导致 XMarkdown 重复初始化流式状态引起闪烁
+const STREAMING_ACTIVE = { hasNextChunk: true, enableAnimation: false }
+const STREAMING_IDLE = { hasNextChunk: false, enableAnimation: false }
+
 // const CodeBlock: React.FC<{ code: string; lang?: string }> = ({ code, lang }) => {
 //     const [copied, setCopied] = useState(false)
 
@@ -63,10 +67,7 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
             <XMarkdown
                 content={content}
                 openLinksInNewTab={true}
-                streaming={{
-                    hasNextChunk: streaming,
-                    enableAnimation: false,
-                }}
+                streaming={streaming ? STREAMING_ACTIVE : STREAMING_IDLE}
             // components={{
             //     code: CustomCode,
             // }}

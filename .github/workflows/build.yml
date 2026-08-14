@@ -38,8 +38,16 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
+      - name: Setup .NET for WiX
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
+
+      - name: Install WiX Toolset
+        run: dotnet tool install --global wix
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -48,11 +56,21 @@ jobs:
       - name: Build Windows app
         run: wails build -clean -webview2 download
 
+      - name: Build Windows MSI installer
+        shell: pwsh
+        run: |
+          $ver = "${{ github.ref_name }}".TrimStart('v')
+          if (-not $ver -or $ver -like "*/*") { $ver = "1.0.0" }
+          if ($ver -match '^(\d+\.\d+\.\d+)') { $ver = $matches[1] } else { $ver = "1.0.0" }
+          wix build build/windows/msi/Product.wxs -d "Version=$ver" -d "SourceDir=${{ github.workspace }}" -o build/bin/xClient-windows-amd64-installer.msi
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: xClient-windows-amd64
-          path: build/bin/xClient.exe
+          path: |
+            build/bin/xClient.exe
+            build/bin/xClient-windows-amd64-installer.msi
           if-no-files-found: error
 
   # -------------------- macOS --------------------
@@ -84,6 +102,9 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
 
+      - name: Install create-dmg
+        run: brew install create-dmg
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: pnpm install --frozen-lockfile
@@ -94,11 +115,28 @@ jobs:
       - name: Zip .app bundle
         run: ditto -c -k --keepParent build/bin/xClient.app build/bin/xClient-macos-universal.zip
 
+      - name: Build macOS DMG installer (universal)
+        run: |
+          create-dmg \
+            --volname "xClient" \
+            --volicon "build/appicon.png" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "xClient.app" 140 180 \
+            --hide-extension "xClient.app" \
+            --app-drop-link 440 180 \
+            --no-internet-enable \
+            build/bin/xClient-macos-universal.dmg \
+            build/bin/xClient.app || true
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: xClient-macos-universal
-          path: build/bin/xClient-macos-universal.zip
+          path: |
+            build/bin/xClient-macos-universal.zip
+            build/bin/xClient-macos-universal.dmg
           if-no-files-found: error
 
   # -------------------- macOS (arm64) --------------------
@@ -130,6 +168,9 @@ jobs:
       - name: Install Wails CLI
         run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.14.0
 
+      - name: Install create-dmg
+        run: brew install create-dmg
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: pnpm install --frozen-lockfile
@@ -140,11 +181,28 @@ jobs:
       - name: Zip .app bundle
         run: ditto -c -k --keepParent build/bin/xClient.app build/bin/xClient-macos-arm64.zip
 
+      - name: Build macOS DMG installer (arm64)
+        run: |
+          create-dmg \
+            --volname "xClient" \
+            --volicon "build/appicon.png" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "xClient.app" 140 180 \
+            --hide-extension "xClient.app" \
+            --app-drop-link 440 180 \
+            --no-internet-enable \
+            build/bin/xClient-macos-arm64.dmg \
+            build/bin/xClient.app || true
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: xClient-macos-arm64
-          path: build/bin/xClient-macos-arm64.zip
+          path: |
+            build/bin/xClient-macos-arm64.zip
+            build/bin/xClient-macos-arm64.dmg
           if-no-files-found: error
 
   # -------------------- Release --------------------
@@ -164,8 +222,11 @@ jobs:
         with:
           files: |
             artifacts/xClient-windows-amd64/xClient.exe
+            artifacts/xClient-windows-amd64/xClient-windows-amd64-installer.msi
             artifacts/xClient-macos-universal/xClient-macos-universal.zip
+            artifacts/xClient-macos-universal/xClient-macos-universal.dmg
             artifacts/xClient-macos-arm64/xClient-macos-arm64.zip
+            artifacts/xClient-macos-arm64/xClient-macos-arm64.dmg
           draft: false
           prerelease: false
           generate_release_notes: true

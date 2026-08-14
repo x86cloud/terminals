@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     RotateCw,
     ChevronDown,
@@ -24,6 +24,121 @@ interface Props {
 }
 
 const SESSION_ID = 'ai_agent_default'
+
+// 从消息中提取步骤信息（优先历史 process_steps，否则由 reasoning/tool_calls 组装）
+const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
+    if (msg.process_steps && msg.process_steps.length > 0) {
+        return msg.process_steps
+    }
+    const steps: ProcessStep[] = []
+    if (msg.reasoning_content) {
+        steps.push({
+            id: `think_${msg.timestamp || Date.now()}`,
+            type: 'think',
+            title: '思考过程',
+            content: msg.reasoning_content,
+            status: 'completed',
+            timestamp: msg.timestamp || Date.now(),
+        })
+    }
+    if (msg.tool_calls && msg.tool_calls.length > 0) {
+        msg.tool_calls.forEach((tc) => {
+            steps.push({
+                id: tc.id || `tool_${Date.now()}`,
+                type: 'tool',
+                title: tc.name,
+                summary: tc.args,
+                content: '',
+                status: 'completed',
+                timestamp: msg.timestamp || Date.now(),
+            })
+        })
+    }
+    return steps
+}
+
+// 定义在模块级：避免父组件流式重渲染时组件标识变化导致整棵子树被卸载重建（闪烁主因）
+const ProcessStepsList = ({
+    steps,
+    isStreaming = false,
+}: {
+    steps: ProcessStep[]
+    isStreaming?: boolean
+}) => {
+    const [masterExpanded, setMasterExpanded] = useState(isStreaming)
+    const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({})
+
+    if (!steps || steps.length === 0) return null
+
+    const thinkCount = steps.filter((s) => s.type === 'think').length
+    const toolCount = steps.filter((s) => s.type === 'tool').length
+
+    const toggleStep = (stepId: string, e: React.MouseEvent) => {
+        e.stopPropagation()
+        setExpandedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
+    }
+
+    const formatSummary = (step: ProcessStep) => {
+        if (step.type === 'think') return 'Thought process'
+        if (step.summary) return `${step.title} ${step.summary}`
+        return step.title
+    }
+
+    return (
+        <div className={s.pipelineMinimalContainer}>
+            <div className={s.pipelineMasterHeader} onClick={() => setMasterExpanded(!masterExpanded)}>
+                <div className={s.pipelineMasterLeft}>
+                    {isStreaming ? (
+                        <RotateCw size={12} className={s.spinIcon} />
+                    ) : (
+                        <span className={s.pipelineBrainIcon}>💭</span>
+                    )}
+                    <span className={s.pipelineMasterTitle}>
+                        {isStreaming ? '推演中…' : `Thought process (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`}
+                    </span>
+                </div>
+                {masterExpanded ? <ChevronDown size={12} className={s.expandIcon} /> : <ChevronRight size={12} className={s.expandIcon} />}
+            </div>
+
+            {masterExpanded && (
+                <div className={s.stepsListContainer}>
+                    {steps.map((step) => {
+                        const isStepExpanded = expandedSteps[step.id] ?? (isStreaming && step.status === 'running')
+                        return (
+                            <div key={step.id} className={s.stepBlockRow}>
+                                <div className={s.stepBlockHeader} onClick={(e) => toggleStep(step.id, e)}>
+                                    <div className={s.stepBlockHeaderLeft}>
+                                        <span className={s.stepIconText}>
+                                            {step.type === 'tool' ? '🛠️' : '💭'}
+                                        </span>
+                                        <span className={s.stepTitleText}>
+                                            {formatSummary(step)}
+                                        </span>
+                                    </div>
+                                    {isStepExpanded ? (
+                                        <ChevronDown size={11} className={s.expandIcon} />
+                                    ) : (
+                                        <ChevronRight size={11} className={s.expandIcon} />
+                                    )}
+                                </div>
+
+                                {isStepExpanded && (
+                                    <div className={s.stepBlockBody}>
+                                        {step.type === 'think' ? (
+                                            <MarkdownViewer content={step.content} streaming={isStreaming && step.status === 'running'} />
+                                        ) : (
+                                            <pre className={s.toolCodeMinimal}>{step.content}</pre>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        )
+                    })}
+                </div>
+            )}
+        </div>
+    )
+}
 
 export default function AiAgentPanel({ settings }: Props) {
     const [messages, setMessages] = useState<AiMessage[]>([])
@@ -389,121 +504,50 @@ export default function AiAgentPanel({ settings }: Props) {
         return '#1890ff'
     }
 
-    const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
-        if (msg.process_steps && msg.process_steps.length > 0) {
-            return msg.process_steps
-        }
-        const steps: ProcessStep[] = []
-        if (msg.reasoning_content) {
-            steps.push({
-                id: `think_${msg.timestamp || Date.now()}`,
-                type: 'think',
-                title: '思考过程',
-                content: msg.reasoning_content,
-                status: 'completed',
-                timestamp: msg.timestamp || Date.now(),
-            })
-        }
-        if (msg.tool_calls && msg.tool_calls.length > 0) {
-            msg.tool_calls.forEach((tc) => {
-                steps.push({
-                    id: tc.id || `tool_${Date.now()}`,
-                    type: 'tool',
-                    title: tc.name,
-                    summary: tc.args,
-                    content: '',
-                    status: 'completed',
-                    timestamp: msg.timestamp || Date.now(),
-                })
-            })
-        }
-        return steps
-    }
-
-    const ProcessStepsList = ({
-        steps,
-        isStreaming = false,
-    }: {
-        steps: ProcessStep[]
-        isStreaming?: boolean
-    }) => {
-        const [masterExpanded, setMasterExpanded] = useState(isStreaming)
-        const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({})
-
-        if (!steps || steps.length === 0) return null
-
-        const thinkCount = steps.filter((s) => s.type === 'think').length
-        const toolCount = steps.filter((s) => s.type === 'tool').length
-
-        const toggleStep = (stepId: string, e: React.MouseEvent) => {
-            e.stopPropagation()
-            setExpandedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
-        }
-
-        const formatSummary = (s: ProcessStep) => {
-            if (s.type === 'think') return 'Thought process'
-            if (s.summary) return `${s.title} ${s.summary}`
-            return s.title
-        }
-
-        return (
-            <div className={s.pipelineMinimalContainer}>
-                <div className={s.pipelineMasterHeader} onClick={() => setMasterExpanded(!masterExpanded)}>
-                    <div className={s.pipelineMasterLeft}>
-                        {isStreaming ? (
-                            <RotateCw size={12} className={s.spinIcon} />
-                        ) : (
-                            <span className={s.pipelineBrainIcon}>💭</span>
-                        )}
-                        <span className={s.pipelineMasterTitle}>
-                            {isStreaming ? '推演中…' : `Thought process (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`}
-                        </span>
-                    </div>
-                    {masterExpanded ? <ChevronDown size={12} className={s.expandIcon} /> : <ChevronRight size={12} className={s.expandIcon} />}
-                </div>
-
-                {masterExpanded && (
-                    <div className={s.stepsListContainer}>
-                        {steps.map((step) => {
-                            const isStepExpanded = expandedSteps[step.id] ?? (isStreaming && step.status === 'running')
-                            return (
-                                <div key={step.id} className={s.stepBlockRow}>
-                                    <div className={s.stepBlockHeader} onClick={(e) => toggleStep(step.id, e)}>
-                                        <div className={s.stepBlockHeaderLeft}>
-                                            <span className={s.stepIconText}>
-                                                {step.type === 'tool' ? '🛠️' : '💭'}
-                                            </span>
-                                            <span className={s.stepTitleText}>
-                                                {formatSummary(step)}
-                                            </span>
-                                        </div>
-                                        {isStepExpanded ? (
-                                            <ChevronDown size={11} className={s.expandIcon} />
-                                        ) : (
-                                            <ChevronRight size={11} className={s.expandIcon} />
-                                        )}
-                                    </div>
-
-                                    {isStepExpanded && (
-                                        <div className={s.stepBlockBody}>
-                                            {step.type === 'think' ? (
-                                                <MarkdownViewer content={step.content} streaming={isStreaming && step.status === 'running'} />
-                                            ) : (
-                                                <pre className={s.toolCodeMinimal}>{step.content}</pre>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            )
-                        })}
-                    </div>
-                )}
-            </div>
-        )
-    }
-
     const circumference = 43.98 // 2 * Math.PI * 7
     const strokeDashoffset = circumference - (circumference * (percent / 100))
+
+    // 缓存历史消息节点：流式 chunk 高频重渲染时避免全部历史气泡重复重建引起抖动
+    const messageNodes = useMemo(() => messages.map((msg, idx) => {
+        if (msg.role === 'tool') {
+            return null
+        }
+
+        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content && (!msg.process_steps || msg.process_steps.length === 0)) {
+            return null
+        }
+
+        const steps = getStepsForMessage(msg)
+
+        return (
+            <div key={idx} className={`${s.messageRow} ${s[msg.role]}`}>
+                {msg.role !== 'system' && (
+                    <div className={s.avatar}>
+                        {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                    </div>
+                )}
+                <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
+                    {msg.role === 'assistant' && steps.length > 0 && (
+                        <ProcessStepsList steps={steps} isStreaming={false} />
+                    )}
+                    {msg.images && msg.images.length > 0 && (
+                        <div className={s.imageGrid}>
+                            {msg.images.map((img, i) => (
+                                <img key={i} src={img} alt="attached" className={s.imgThumb} />
+                            ))}
+                        </div>
+                    )}
+                    <div className={s.markdownBody}>
+                        {msg.role === 'assistant' ? (
+                            <MarkdownViewer content={msg.content} />
+                        ) : (
+                            msg.content.split('\n').map((line, i) => <p key={i}>{line}</p>)
+                        )}
+                    </div>
+                </div>
+            </div>
+        )
+    }), [messages])
 
     return (
         <div className={s.agentContainer}>
@@ -546,46 +590,7 @@ export default function AiAgentPanel({ settings }: Props) {
                     </div>
                 )}
 
-                {messages.map((msg, idx) => {
-                    if (msg.role === 'tool') {
-                        return null
-                    }
-
-                    if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content && (!msg.process_steps || msg.process_steps.length === 0)) {
-                        return null
-                    }
-
-                    const steps = getStepsForMessage(msg)
-
-                    return (
-                        <div key={idx} className={`${s.messageRow} ${s[msg.role]}`}>
-                            {msg.role !== 'system' && (
-                                <div className={s.avatar}>
-                                    {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-                                </div>
-                            )}
-                            <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
-                                {msg.role === 'assistant' && steps.length > 0 && (
-                                    <ProcessStepsList steps={steps} isStreaming={false} />
-                                )}
-                                {msg.images && msg.images.length > 0 && (
-                                    <div className={s.imageGrid}>
-                                        {msg.images.map((img, i) => (
-                                            <img key={i} src={img} alt="attached" className={s.imgThumb} />
-                                        ))}
-                                    </div>
-                                )}
-                                <div className={s.markdownBody}>
-                                    {msg.role === 'assistant' ? (
-                                        <MarkdownViewer content={msg.content} />
-                                    ) : (
-                                        msg.content.split('\n').map((line, i) => <p key={i}>{line}</p>)
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    )
-                })}
+                {messageNodes}
 
                 {/* Streaming Response Bubble */}
                 {isGenerating && (
@@ -657,148 +662,153 @@ export default function AiAgentPanel({ settings }: Props) {
                     </div>
                 )}
 
-                <div className={s.inputBoxRow}>
-                    {settings.aiEnableMultimodal && (
-                        <>
-                            <input
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                ref={fileInputRef}
-                                style={{ display: 'none' }}
-                                onChange={handleFileSelect}
-                            />
-                            <button
-                                className={`${g.btn} ${g.sm}`}
-                                title="添加图片附件"
-                                disabled={isGenerating}
-                                onClick={() => fileInputRef.current?.click()}
-                            >
-                                <Paperclip size={14} />
-                            </button>
-                        </>
-                    )}
+                <div className={s.composerBox}>
+                    <div className={s.composerInputRow}>
+                        {settings.aiEnableMultimodal && (
+                            <>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    ref={fileInputRef}
+                                    style={{ display: 'none' }}
+                                    onChange={handleFileSelect}
+                                />
+                                <button
+                                    className={`${g.btn} ${g.sm}`}
+                                    title="添加图片附件"
+                                    disabled={isGenerating}
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    <Paperclip size={14} />
+                                </button>
+                            </>
+                        )}
 
-                    <textarea
-                        className={s.textarea}
-                        placeholder="有问题就会有答案 (Shift + Enter 换行)"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        onPaste={handlePaste}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' && !e.shiftKey) {
-                                e.preventDefault()
-                                handleSend()
-                            }
-                        }}
-                    />
-                </div>
+                        <textarea
+                            className={s.textarea}
+                            placeholder="有问题就会有答案 (Shift + Enter 换行)"
+                            value={input}
+                            onChange={(e) => setInput(e.target.value)}
+                            onPaste={handlePaste}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault()
+                                    handleSend()
+                                }
+                            }}
+                        />
+                    </div>
 
-                <div className={s.toolbarRow}>
-                    {/* Left: Workspace Selector */}
-                    <div className={s.workspaceInline}>
-                        <div className={s.wsPath}>
-                            <Folder size={13} />
-                            <span>工作目录:</span>
-                            {workspaceDir ? (
-                                <span className={s.pathText} title={workspaceDir}>{workspaceDir}</span>
-                            ) : (
-                                <span className={s.unsetText}>未选择</span>
-                            )}
-                        </div>
-                        <div className={s.wsActions}>
-                            <button
-                                className={`${g.btn} ${g.xs}`}
-                                disabled={isGenerating}
+                    <div className={s.composerFooter}>
+                        {/* Left: Workspace Selector */}
+                        <div className={s.footerLeft}>
+                            <div
+                                className={s.wsPath}
+                                title={workspaceDir ? `当前工作目录: ${workspaceDir}（点击更换）` : '点击选择工作目录'}
                                 onClick={handleSelectWorkspace}
                             >
-                                {workspaceDir ? '更换' : '选择'}
-                            </button>
-                            {workspaceDir && (
+                                <Folder size={13} />
+                                <span>工作目录:</span>
+                                {workspaceDir ? (
+                                    <span className={s.pathText}>{workspaceDir}</span>
+                                ) : (
+                                    <span className={s.unsetText}>未选择</span>
+                                )}
+                            </div>
+                            <div className={s.wsActions}>
                                 <button
                                     className={`${g.btn} ${g.xs}`}
-                                    title="清除工作目录关联"
                                     disabled={isGenerating}
-                                    onClick={handleClearWorkspace}
+                                    onClick={handleSelectWorkspace}
                                 >
-                                    清除
+                                    {workspaceDir ? '更换' : '选择'}
+                                </button>
+                                {workspaceDir && (
+                                    <button
+                                        className={`${g.btn} ${g.xs}`}
+                                        title="清除工作目录关联"
+                                        disabled={isGenerating}
+                                        onClick={handleClearWorkspace}
+                                    >
+                                        清除
+                                    </button>
+                                )}
+                            </div>
+
+                            {settings.aiEnableWebSearch && (
+                                <span className={s.statusBadge} title="联网搜索功能已开启">🌐 联网</span>
+                            )}
+                            {settings.aiEnableThinking && (
+                                <span className={s.statusBadge} title={`深度思考模式已开启 (${settings.aiReasoningEffort || 'default'})`}>
+                                    💭 思考{settings.aiReasoningEffort && settings.aiReasoningEffort !== 'none' ? ` (${settings.aiReasoningEffort})` : ''}
+                                </span>
+                            )}
+                        </div>
+
+                        {/* Right: Context Length | Divider | Send Button */}
+                        <div className={s.footerRight}>
+                            <div
+                                className={s.contextRingWrapper}
+                                onMouseEnter={() => setIsRingHovered(true)}
+                                onMouseLeave={() => setIsRingHovered(false)}
+                            >
+                                <span className={s.tokenText}>{formatTokenK(usedTokens)} / {formatTokenK(maxTokens)}</span>
+                                <button className={s.ringBtn} aria-label="上下文 Token 使用情况">
+                                    <svg width="18" height="18" viewBox="0 0 18 18">
+                                        <circle
+                                            cx="9"
+                                            cy="9"
+                                            r="7"
+                                            fill="none"
+                                            stroke="rgba(127, 127, 127, 0.25)"
+                                            strokeWidth="2"
+                                        />
+                                        <circle
+                                            cx="9"
+                                            cy="9"
+                                            r="7"
+                                            fill="none"
+                                            stroke={getRingColor(percent)}
+                                            strokeWidth="2"
+                                            strokeDasharray="43.98"
+                                            strokeDashoffset={strokeDashoffset}
+                                            strokeLinecap="round"
+                                        />
+                                    </svg>
+                                </button>
+
+                                {isRingHovered && (
+                                    <div className={s.tooltipCard}>
+                                        <div>{percent.toFixed(1)}% · {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)} 输入上下文已使用</div>
+                                        {compressedText && (
+                                            <div style={{ marginTop: 4, color: '#faad14', fontSize: 11, fontWeight: 500 }}>
+                                                ℹ️ {compressedText}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {isGenerating ? (
+                                <button
+                                    className={`${g.btn} ${s.stopBtn}`}
+                                    title="停止 AI 智能体推导"
+                                    onClick={handleStop}
+                                >
+                                    <Square size={13} />
+                                    <span>停止</span>
+                                </button>
+                            ) : (
+                                <button
+                                    className={`${g.btn} ${g.primary} ${s.sendBtn}`}
+                                    disabled={!input.trim() && images.length === 0}
+                                    onClick={handleSend}
+                                >
+                                    发送
                                 </button>
                             )}
                         </div>
-
-                        {settings.aiEnableWebSearch && (
-                            <span className={s.statusBadge} title="联网搜索功能已开启">🌐 联网</span>
-                        )}
-                        {settings.aiEnableThinking && (
-                            <span className={s.statusBadge} title={`深度思考模式已开启 (${settings.aiReasoningEffort || 'default'})`}>
-                                💭 思考{settings.aiReasoningEffort && settings.aiReasoningEffort !== 'none' ? ` (${settings.aiReasoningEffort})` : ''}
-                            </span>
-                        )}
-                    </div>
-
-                    {/* Right: Circular Context Progress Ring | Divider | Send Button */}
-                    <div className={s.toolbarRight}>
-                        <div
-                            className={s.contextRingWrapper}
-                            onMouseEnter={() => setIsRingHovered(true)}
-                            onMouseLeave={() => setIsRingHovered(false)}
-                        >
-                            <button className={s.ringBtn} aria-label="上下文 Token 使用情况">
-                                <svg width="18" height="18" viewBox="0 0 18 18">
-                                    <circle
-                                        cx="9"
-                                        cy="9"
-                                        r="7"
-                                        fill="none"
-                                        stroke="rgba(127, 127, 127, 0.25)"
-                                        strokeWidth="2"
-                                    />
-                                    <circle
-                                        cx="9"
-                                        cy="9"
-                                        r="7"
-                                        fill="none"
-                                        stroke={getRingColor(percent)}
-                                        strokeWidth="2"
-                                        strokeDasharray="43.98"
-                                        strokeDashoffset={strokeDashoffset}
-                                        strokeLinecap="round"
-                                    />
-                                </svg>
-                            </button>
-
-                            {isRingHovered && (
-                                <div className={s.tooltipCard}>
-                                    <div>{percent.toFixed(1)}% · {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)} 输入上下文已使用</div>
-                                    {compressedText && (
-                                        <div style={{ marginTop: 4, color: '#faad14', fontSize: 11, fontWeight: 500 }}>
-                                            ℹ️ {compressedText}
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={s.divider} />
-
-                        {isGenerating ? (
-                            <button
-                                className={`${g.btn} ${s.stopBtn}`}
-                                title="停止 AI 智能体推导"
-                                onClick={handleStop}
-                            >
-                                <Square size={13} />
-                                <span>停止</span>
-                            </button>
-                        ) : (
-                            <button
-                                className={`${g.btn} ${g.primary} ${s.sendBtn}`}
-                                disabled={!input.trim() && images.length === 0}
-                                onClick={handleSend}
-                            >
-                                发送
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>

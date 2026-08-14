@@ -9,51 +9,81 @@
     overflow: auto;
     border: 1px solid @border;
     border-radius: 0;
-    background: @bg-1;
+    background: @bg-1-solid;
+    position: relative;
+
+    &.isResizing {
+        cursor: col-resize;
+        user-select: none;
+
+        /* 拖拽中禁用平滑过渡，确保 60fps 极速跟手 */
+        * {
+            transition: none !important;
+        }
+    }
 }
 
 .table {
     table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 13px;
-    /* width driven by colgroup, not 100% */
+    font-size: 12.5px;
     min-width: 100%;
 
-    th, td {
+    th,
+    td {
         border-right: 1px solid @border;
         border-bottom: 1px solid @border;
-        padding: 6px 10px;
+        padding: 7px 10px;
         text-align: left;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
         box-sizing: border-box;
-        /* width is controlled by colgroup col */
+        vertical-align: middle;
     }
 
     th {
-        background: @bg-1;
+        background: @bg-1-solid;
         color: @text-dim;
+        font-weight: 600;
+        font-size: 12px;
         position: sticky !important;
         top: 0;
         z-index: 5;
-        /* needed for resize handle positioning */
         overflow: visible;
         box-shadow: 0 1px 0 @border;
+        user-select: none;
+        border-bottom: none;
+
+        &.thResizing {
+            background: @bg-2-solid;
+            color: @accent;
+        }
+    }
+
+    .thFiller {
+        // padding: 0 !important;
+        // border-right: none !important;
+        // background: @bg-1-solid !important;
+        position: sticky !important;
+        top: 0;
+        z-index: 5;
+        box-shadow: 0 1px 0 @border;
+        pointer-events: none;
     }
 
     th:first-child,
     td:first-child {
-        border-left: 1px solid @border;
+        border-left: none;
     }
 
     tbody tr:nth-child(even) {
-        background: @bg-1;
+        background: @bg-1-solid;
     }
 
     tbody tr:hover {
-        background: @bg-2;
+        background: @bg-2-solid;
     }
 }
 
@@ -64,30 +94,67 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     gap: 4px;
+    line-height: 1.4;
 }
 
 .resizeHandle {
     position: absolute;
-    right: -3px;
+    right: -4px;
     top: 0;
-    width: 6px;
+    width: 9px;
     height: 100%;
     cursor: col-resize;
     z-index: 10;
     user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     &::after {
         content: '';
         display: block;
         width: 2px;
         height: 100%;
-        margin: 0 auto;
         background: transparent;
-        transition: background 0.15s;
+        transition: background 0.15s ease;
     }
 
-    &:hover::after,
-    &.dragging::after {
+    &:hover::after {
+        background: @accent-dim;
+    }
+
+    &.activeHandle::after {
         background: @accent;
+        width: 2px;
+        box-shadow: 0 0 6px @accent;
+    }
+}
+
+.widthTooltip {
+    position: absolute;
+    top: -24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: @text;
+    color: @bg-1-solid;
+    font-size: 10.5px;
+    font-weight: 600;
+    font-family: @font-mono;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    z-index: 20;
+
+    &::after {
+        content: '';
+        position: absolute;
+        bottom: -3px;
+        left: 50%;
+        transform: translateX(-50%);
+        border-left: 3px solid transparent;
+        border-right: 3px solid transparent;
+        border-top: 3px solid @text;
     }
 }

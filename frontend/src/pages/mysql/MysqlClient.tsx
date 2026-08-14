@@ -676,10 +676,10 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                 <span>{t}</span>
                             </button>
                             <div className={my.mysqlTableMenu}>
-                                <button className={g.iconBtn} title="清空" onClick={() => { setObjName(t); setObjModal('truncate') }}>
+                                <button className={g.iconBtn} title="清空" onClick={() => { setObjName(t); setObjMsg(''); setObjModal('truncate') }}>
                                     <Trash2 size={12} />
                                 </button>
-                                <button className={g.iconBtn} title="删除表" onClick={() => { setObjName(t); setObjModal('droptable') }}>
+                                <button className={g.iconBtn} title="删除表" onClick={() => { setObjName(t); setObjMsg(''); setObjModal('droptable') }}>
                                     <X size={12} />
                                 </button>
                             </div>
@@ -761,7 +761,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             onGoPage={goPage}
                             onChangePageSize={changePageSize}
                             onAddIndex={() => { setObjName(''); setObjExtra(''); setObjUnique(false); setObjMsg(''); setObjModal('createindex') }}
-                            onDropIndex={(name: string) => { setObjName(name); setObjModal('dropindex') }}
+                            onDropIndex={(name: string) => { setObjName(name); setObjMsg(''); setObjModal('dropindex') }}
                         />
                     )}
 
@@ -786,12 +786,14 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
                     {tab === 'status' && (
                         <StatusPanel
+                            sessionId={session.id}
                             status={status}
                             variables={variables}
                             processList={processList}
                             slowLog={slowLog}
                             busy={busy}
                             onRefresh={loadStatus}
+                            onNotify={notify}
                         />
                     )}
 

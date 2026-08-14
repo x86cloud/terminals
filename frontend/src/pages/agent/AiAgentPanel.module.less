@@ -68,6 +68,7 @@
 .chatList {
     flex: 1;
     overflow-y: auto;
+    overflow-anchor: none; // 禁用浏览器滚动锚定，避免流式追加内容时与手动滚底叠加造成滚动位置跳动
     padding: 16px;
     display: flex;
     flex-direction: column;
@@ -173,6 +174,7 @@
 
 .bubble {
     max-width: 80%;
+    min-width: 0; // 避免 flex 子项内容撑破引起宽度回跳
     padding: 10px 14px;
     font-size: 13px;
     line-height: 1.6;
@@ -236,8 +238,6 @@
     position: relative;
     z-index: 10;
     padding: 12px 16px;
-    background: @bg-elev;
-    border-top: 1px solid @border;
     flex-shrink: 0;
 }
 
@@ -278,156 +278,49 @@
     }
 }
 
-.inputBoxRow {
+.composerBox {
+    border: 1px solid @border;
+    border-radius: 10px;
+    background: transparent;
+}
+
+.composerInputRow {
     display: flex;
     gap: 8px;
     align-items: flex-end;
+    padding: 8px 10px 4px;
 
     .textarea {
         flex: 1;
-        background: @bg-1;
-        border: 1px solid @border;
-        border-radius: 8px;
-        padding: 8px 12px;
+        background: transparent;
+        border: none;
+        padding: 4px 2px;
         color: @text;
         font-family: inherit;
         font-size: 13px;
         line-height: 1.5;
         resize: none;
         outline: none;
-        min-height: 40px;
+        min-height: 32px;
         max-height: 120px;
     }
 }
 
-.toolbarRow {
+.composerFooter {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-top: 8px;
+    gap: 10px;
+    padding: 6px 10px 8px;
     font-size: 12px;
     color: @text-dim;
 
-    .workspaceInline {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        max-width: 60%;
-
-        .wsPath {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: @text;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-
-            .pathText {
-                font-family: Consolas, monospace;
-                color: @accent;
-                font-weight: 500;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                max-width: 220px;
-            }
-
-            .unsetText {
-                color: @text-dim;
-            }
-        }
-
-        .wsActions {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-    }
-
-    .toolbarRight {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-
-        .sendBtn {
-            height: 26px;
-            padding: 0 14px;
-            font-size: 12px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .divider {
-            width: 1px;
-            height: 14px;
-            background: rgba(127, 127, 127, 0.3);
-        }
-    }
-
-    .contextRingWrapper {
-        position: relative;
-        display: flex;
-        align-items: center;
-        cursor: pointer;
-        z-index: 100;
-
-        .ringBtn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background: transparent;
-            border: none;
-            cursor: pointer;
-            padding: 0;
-            transition: background 0.2s ease;
-
-            &:hover {
-                background: rgba(127, 127, 127, 0.15);
-            }
-
-            svg {
-                transform: rotate(-90deg);
-            }
-        }
-
-        .tooltipCard {
-            position: absolute;
-            bottom: calc(100% + 10px);
-            right: -6px;
-            background: #ffffff;
-            color: #1f1f1f;
-            border: 1px solid rgba(0, 0, 0, 0.15);
-            border-radius: 6px;
-            padding: 6px 12px;
-            font-size: 12px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            white-space: nowrap;
-            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
-            z-index: 999;
-            pointer-events: none;
-
-            &::after {
-                content: '';
-                position: absolute;
-                top: 100%;
-                right: 14px;
-                border-width: 5px;
-                border-style: solid;
-                border-color: #ffffff transparent transparent transparent;
-            }
-        }
-    }
-
-    .workspaceInline {
+    .footerLeft {
         display: flex;
         align-items: center;
         gap: 8px;
         max-width: 65%;
+        overflow: hidden;
 
         .wsPath {
             display: flex;
@@ -437,6 +330,11 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            cursor: pointer;
+
+            &:hover {
+                color: @accent;
+            }
 
             .pathText {
                 font-family: Consolas, monospace;
@@ -472,6 +370,85 @@
             font-weight: 500;
             white-space: nowrap;
             flex-shrink: 0;
+        }
+    }
+
+    .footerRight {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-shrink: 0;
+
+        .sendBtn {
+            height: 26px;
+            padding: 0 14px;
+            font-size: 12px;
+            border-radius: 4px;
+            font-weight: 500;
+        }
+
+        .contextRingWrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            z-index: 100;
+
+            .tokenText {
+                font-family: Consolas, Monaco, monospace;
+                color: @text-dim;
+                white-space: nowrap;
+            }
+
+            .ringBtn {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 22px;
+                height: 22px;
+                border-radius: 50%;
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                padding: 0;
+                transition: background 0.2s ease;
+
+                &:hover {
+                    background: rgba(127, 127, 127, 0.15);
+                }
+
+                svg {
+                    transform: rotate(-90deg);
+                }
+            }
+
+            .tooltipCard {
+                position: absolute;
+                bottom: calc(100% + 10px);
+                right: -6px;
+                background: #ffffff;
+                color: #1f1f1f;
+                border: 1px solid rgba(0, 0, 0, 0.15);
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-size: 12px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                white-space: nowrap;
+                box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
+                z-index: 999;
+                pointer-events: none;
+
+                &::after {
+                    content: '';
+                    position: absolute;
+                    top: 100%;
+                    right: 14px;
+                    border-width: 5px;
+                    border-style: solid;
+                    border-color: #ffffff transparent transparent transparent;
+                }
+            }
         }
     }
 }

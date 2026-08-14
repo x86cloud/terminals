@@ -93,7 +93,6 @@ export const TitleBar: React.FC<TitleBarProps> = ({ onOpenSettings, activeTitle 
                 <div className={s.logo}>
                     <Terminal size={16} strokeWidth={2} />
                 </div>
-                <span className={s.title}>xClient</span>
             </div>
 
             <div className={s.center}>

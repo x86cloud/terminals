@@ -5,19 +5,102 @@
     background: @bg-1;
     border: 1px solid @border;
     border-radius: @radius-md;
-    padding: 12px;
-    text-align: center;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+        border-color: @accent-dim;
+    }
+
+    &.warning {
+        .statusCardVal {
+            color: @warn-text;
+        }
+        .statusCardIcon {
+            color: @warn;
+        }
+    }
+
+    &.danger {
+        .statusCardVal {
+            color: @danger-text;
+        }
+        .statusCardIcon {
+            color: @danger;
+        }
+    }
+
+    &.success {
+        .statusCardVal {
+            color: @ok-text;
+        }
+        .statusCardIcon {
+            color: @ok;
+        }
+    }
+
+    &.accent {
+        .statusCardVal {
+            color: @accent;
+        }
+        .statusCardIcon {
+            color: @accent;
+        }
+    }
 }
 
-.statusCardVal {
-    font-size: 22px;
-    font-weight: 700;
-    color: @accent;
-    font-variant-numeric: tabular-nums;
+.statusCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
 }
 
 .statusCardTitle {
     font-size: 12px;
+    font-weight: 500;
     color: @text-dim;
-    margin-top: 4px;
+}
+
+.statusCardIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: @accent;
+    opacity: 0.85;
+}
+
+.statusCardVal {
+    font-size: 20px;
+    font-weight: 700;
+    color: @text;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    margin: 2px 0;
+}
+
+.statusCardSub {
+    font-size: 11px;
+    color: @text-dim;
+    .ellipsis();
+}
+
+.progressBar {
+    height: 3px;
+    background: @bg-3;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 4px 0 2px;
+}
+
+.progressFill {
+    height: 100%;
+    background: @accent;
+    border-radius: 2px;
+    transition: width 0.3s ease;
 }

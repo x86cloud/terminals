@@ -4,9 +4,13 @@
 // ============================================================
 
 // ---- 主题色 ----
-@bg: var(--bg, #eef1f6);                 // 页面最底层背景
+@bg: var(--bg, linear-gradient(135deg, #f0f4f9 0%, #e6edf6 50%, #dbe5f0 100%));                 // 页面最底层背景（渐变）
+@bj: var(--bj, @bg);                      // 背景别名
+@bg-solid: var(--bg-solid, #f0f4f9);      // 页面纯色实体背景（不含渐变透明）
 @bg-1: var(--bg-1, #ffffff);              // 卡片 / 浮层 / 侧栏背景
+@bg-1-solid: var(--bg-1-solid, #ffffff);  // 卡片 / 浮层纯色实体背景（不透明）
 @bg-2: var(--bg-2, #f3f6fa);              // 次级背景（悬浮、表头等）
+@bg-2-solid: var(--bg-2-solid, #f3f6fa);  // 表头纯色实体背景（用于 sticky 表头防透底）
 @bg-3: var(--bg-3, #e3e9f1);              // 按钮 / 边框底纹 / 凹陷背景
 @border: var(--border, #d4dbe6);            // 主边框色
 @text: var(--text, #1f2733);              // 主文字
@@ -20,13 +24,15 @@
 @ok: var(--ok, #2f9e44);                // 成功
 @warn: var(--warn, #c97a1a);              // 警告
 @bg-elev: var(--bg-elev, #f5f7fa);           // 抬升背景（输入框 / 列表项）
+@bg-elev-solid: var(--bg-elev-solid, #f5f7fa); // 抬升纯色实体背景（不透明）
 
 // ---- 透明度辅助色 ----
-@danger-bg: rgba(239, 68, 68, 0.12);
-@danger-text: #f87171;
-@ok-bg: rgba(34, 197, 94, 0.12);
-@ok-text: #4ade80;
-@warn-bg: rgba(240, 180, 40, 0.12);
+@danger-bg: var(--danger-bg, rgba(214, 69, 63, 0.10));
+@danger-text: var(--danger-text, #a82420);
+@ok-bg: var(--ok-bg, rgba(47, 158, 68, 0.12));
+@ok-text: var(--ok-text, #1b662d);
+@warn-bg: var(--warn-bg, rgba(201, 122, 26, 0.12));
+@warn-text: var(--warn-text, #8c4c06);
 @select-bg: rgba(51, 112, 255, 0.14);
 @drop-bg: rgba(76, 194, 255, 0.1);
 

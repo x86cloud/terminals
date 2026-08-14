@@ -28,7 +28,7 @@ export default function ObjModal(props: {
     const needName = !['truncate', 'dropindex'].includes(kind)
     const needDef = kind === 'createtable'
     const needCols = kind === 'createindex'
-    const needConfirm = ['dropdb', 'droptable', 'truncate'].includes(kind)
+    const needConfirm = ['dropdb', 'droptable', 'truncate', 'dropindex'].includes(kind)
 
     return (
         <div className={g.modalMask} onClick={() => !busy && onClose()}>
@@ -39,6 +39,30 @@ export default function ObjModal(props: {
                 </div>
                 <div className={g.modalBody}>
                     {msg && <div className={`${g.ioMsg} ${msg.startsWith('失败') ? g.err : g.ok}`}>{msg}</div>}
+                    {needConfirm && (
+                        <div style={{ margin: '8px 0' }}>
+                            {kind === 'dropindex' && (
+                                <p className={g.confirmText}>
+                                    确定要删除索引 <strong>{name}</strong> 吗？此操作不可撤销。
+                                </p>
+                            )}
+                            {kind === 'dropdb' && (
+                                <p className={g.confirmText}>
+                                    确定要删除数据库 <strong>{name}</strong> 吗？库中所有数据将被永久删除。
+                                </p>
+                            )}
+                            {kind === 'droptable' && (
+                                <p className={g.confirmText}>
+                                    确定要删除表 <strong>{name}</strong> 吗？表中所有数据将被永久删除。
+                                </p>
+                            )}
+                            {kind === 'truncate' && (
+                                <p className={g.confirmText}>
+                                    确定要清空表 <strong>{name}</strong> 的全部数据吗？此操作不可撤销。
+                                </p>
+                            )}
+                        </div>
+                    )}
                     {needName && (
                         <div className={g.field}>
                             <label>{kind === 'createindex' ? '索引名称' : kind === 'createdb' ? '数据库名' : '表名'}</label>
@@ -76,11 +100,14 @@ export default function ObjModal(props: {
                             </label>
                         </>
                     )}
-                    {needConfirm && <p className={g.ioHint}>该操作不可恢复，请确认。</p>}
                 </div>
                 <div className={g.modalFoot}>
                     <button className={`${g.btn} ${g.sm}`} disabled={busy} onClick={onClose}>取消</button>
-                    <button className={`${g.btn} ${g.sm} ${g.primary}`} disabled={busy || ((needName || needDef || needCols) && !name && !extra)} onClick={onConfirm}>
+                    <button
+                        className={`${g.btn} ${g.sm} ${needConfirm ? g.danger : g.primary}`}
+                        disabled={busy || (!needConfirm && (needName || needDef || needCols) && !name && !extra)}
+                        onClick={onConfirm}
+                    >
                         {busy ? '处理中…' : '确定'}
                     </button>
                 </div>

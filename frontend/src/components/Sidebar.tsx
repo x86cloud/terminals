@@ -6,13 +6,11 @@ import {
     Plus,
     Folder,
     ChevronRight,
-    ChevronDown,
     Edit,
     Trash2,
     Bot,
     BarChart2,
     Link as LinkIcon,
-    Settings,
 } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import ContextMenu, { closedMenu, MenuState, MenuItem } from '@/components/ContextMenu'
@@ -86,7 +84,6 @@ export default function Sidebar({
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     // 默认所有分组为折叠状态（未显式展开即为折叠）
     const [expanded, setExpanded] = useState<Record<string, boolean>>({})
-    const [ungroupedOpen, setUngroupedOpen] = useState(true)
     const [dragId, setDragId] = useState<string | null>(null)
     const [dropGroup, setDropGroup] = useState<string | null>(null)
     const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
@@ -343,14 +340,14 @@ export default function Sidebar({
                     )}
                 </div>
                 <button
-                    className={g.iconBtn}
+                    className={`${g.iconBtn} ${s.headBtn}`}
                     title="新建服务器"
                     onClick={() => onNew()}
                 >
                     <Plus size={16} />
                 </button>
                 <button
-                    className={g.iconBtn}
+                    className={`${g.iconBtn} ${s.headBtn}`}
                     title="新建分组"
                     onClick={startCreateGroup}
                 >
@@ -358,7 +355,25 @@ export default function Sidebar({
                 </button>
             </div>
 
-            <div className={s.serverList}>
+            <div
+                className={`${s.serverList}${dropGroup === '__none__' ? ' ' + s.dropActive : ''}`}
+                onDragOver={(e) => {
+                    if (!dragId) return
+                    e.preventDefault()
+                    setDropGroup((prev) => (prev === '__none__' ? prev : '__none__'))
+                }}
+                onDragLeave={(e) => {
+                    if (e.currentTarget && e.relatedTarget && (e.currentTarget as Node).contains(e.relatedTarget as Node)) return
+                    setDropGroup((p) => (p === '__none__' ? null : p))
+                }}
+                onDrop={(e) => {
+                    e.preventDefault()
+                    const id = dragId || e.dataTransfer.getData('text/plain')
+                    if (id) onMoveServer(id, '')
+                    setDragId(null)
+                    setDropGroup(null)
+                }}
+            >
                 {filtered.length === 0 && (
                     <div className={s.sidebarEmpty}>
                         还没有服务器
@@ -377,11 +392,16 @@ export default function Sidebar({
                             onDragOver={(e) => {
                                 if (!dragId) return
                                 e.preventDefault()
-                                setDropGroup(grp.id)
+                                e.stopPropagation()
+                                setDropGroup((prev) => (prev === grp.id ? prev : grp.id))
                             }}
-                            onDragLeave={() => setDropGroup((p) => (p === grp.id ? null : p))}
+                            onDragLeave={(e) => {
+                                if (e.currentTarget && e.relatedTarget && (e.currentTarget as Node).contains(e.relatedTarget as Node)) return
+                                setDropGroup((p) => (p === grp.id ? null : p))
+                            }}
                             onDrop={(e) => {
                                 e.preventDefault()
+                                e.stopPropagation()
                                 const id = dragId || e.dataTransfer.getData('text/plain')
                                 if (id) onMoveServer(id, grp.id)
                                 setDragId(null)
@@ -454,39 +474,7 @@ export default function Sidebar({
                     )
                 })}
 
-                {ungrouped.length > 0 && (
-                    <div
-                        className={`${s.groupBlock}${dropGroup === '__none__' ? ' ' + s.dropActive : ''}`}
-                        onDragOver={(e) => {
-                            if (!dragId) return
-                            e.preventDefault()
-                            setDropGroup('__none__')
-                        }}
-                        onDragLeave={() => setDropGroup((p) => (p === '__none__' ? null : p))}
-                        onDrop={(e) => {
-                            e.preventDefault()
-                            const id = dragId || e.dataTransfer.getData('text/plain')
-                            if (id) onMoveServer(id, '')
-                            setDragId(null)
-                            setDropGroup(null)
-                        }}
-                    >
-                        <div className={s.groupHeader}>
-                            <button
-                                className={g.iconBtn}
-                                title={ungroupedOpen ? '折叠' : '展开'}
-                                onClick={() => setUngroupedOpen((v) => !v)}
-                            >
-                                {ungroupedOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-                            </button>
-                            <button className={s.groupTitleBtn} onClick={() => setUngroupedOpen((v) => !v)}>
-                                <span className={s.groupName}>未分组</span>
-                                <span className={s.groupCount}>{ungrouped.length}</span>
-                            </button>
-                        </div>
-                        {ungroupedOpen && ungrouped.map((server) => renderServer(server))}
-                    </div>
-                )}
+                {ungrouped.map((server) => renderServer(server))}
             </div>
 
             <div className={s.tools}>
@@ -520,7 +508,7 @@ export default function Sidebar({
                             setMoveMenu(null)
                         }}
                     >
-                        未分组
+                        无分组 (根目录)
                     </button>
                     {groups.map((grp) => (
                         <button

@@ -5,7 +5,7 @@
     display: flex;
     flex: 1;
     .fill();
-    background: @bg;
+    background: @bg-1;
 }
 
 .mqttSide {
@@ -14,7 +14,7 @@
     display: flex;
     flex-direction: column;
     .fill();
-    background: @bg-elev;
+    background: @bg-1;
 }
 
 .mqttSubHead {
@@ -25,6 +25,7 @@
     border-bottom: 1px solid @border;
     font-weight: 600;
     font-size: 13px;
+    background: @bg-1;
 }
 
 .mqttSubList {
@@ -42,7 +43,7 @@
     border-radius: @radius-md;
     border: 1px solid @border;
     margin-bottom: 6px;
-    background: @bg;
+    background: @bg-2;
 }
 
 .mqttSubTopic {
@@ -73,6 +74,7 @@
     flex-direction: column;
     min-width: 0;
     .fill();
+    background: @bg-1;
 }
 
 .mqttToolbar {
@@ -81,7 +83,7 @@
     gap: 10px;
     padding: 6px 12px;
     border-bottom: 1px solid @border;
-    background: @bg-elev;
+    background: @bg-1;
 }
 
 .mqttConnTitle {
@@ -120,6 +122,7 @@
     display: flex;
     flex-direction: column;
     gap: @space-md;
+    background: @bg-1;
 }
 
 .mqttFieldRow {
@@ -157,7 +160,7 @@
     height: 80px;
     resize: vertical;
     font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
-    background: @bg;
+    background: @bg-1;
     color: @text;
     border: 1px solid @border;
     border-radius: @radius-md;
@@ -174,7 +177,7 @@
     gap: @space-md;
     padding: 10px 12px;
     border-bottom: 1px solid @border;
-    background: @bg-elev;
+    background: @bg-1;
 }
 
 .mqttLog {
@@ -182,13 +185,14 @@
     overflow: auto;
     padding: 8px 12px;
     .fill();
+    background: @bg-1;
 }
 
 .mqttMsg {
     border: 1px solid @border;
     border-radius: @radius-md;
     margin-bottom: 10px;
-    background: @bg-elev;
+    background: @bg-1;
     overflow: hidden;
 
     &:global(.in) {
@@ -269,7 +273,7 @@
     padding: 8px 10px;
     font: 13px/1.6 @font-mono;
     color: @text;
-    background: @bg-1;
+    background: @bg-2;
     white-space: pre-wrap;
     word-break: break-all;
     max-height: 260px;

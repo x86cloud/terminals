@@ -336,6 +336,16 @@ func (m *AgentManager) StopChat(sessionID string) {
 	}
 }
 
+// normalizeChunkDelta 兼容部分模型接口的“累计全量推送”风格：
+// 若本次 chunk 以之前累计的全部内容作为前缀，视为累计推送，仅返回新增后缀；
+// 否则视为增量推送，原样返回。
+func normalizeChunkDelta(accumulated, chunk string) string {
+	if len(accumulated) > 0 && len(chunk) > len(accumulated) && strings.HasPrefix(chunk, accumulated) {
+		return chunk[len(accumulated):]
+	}
+	return chunk
+}
+
 func (m *AgentManager) StreamChat(
 	ctx context.Context,
 	sessionID string,
@@ -393,6 +403,9 @@ func (m *AgentManager) StreamChat(
 
 			if mv.IsStreaming && mv.MessageStream != nil {
 				defer mv.MessageStream.Close()
+				// 当前流内已推送的内容累计，用于识别“累计全量推送”并去重
+				streamReasoningAcc := ""
+				streamContentAcc := ""
 				for {
 					if errors.Is(chatCtx.Err(), context.Canceled) {
 						return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
@@ -416,13 +429,21 @@ func (m *AgentManager) StreamChat(
 							}
 						}
 						if reasoningText != "" {
-							reasoningResp.WriteString(reasoningText)
-							if onReasoningChunk != nil {
-								onReasoningChunk(reasoningText)
+							delta := normalizeChunkDelta(streamReasoningAcc, reasoningText)
+							streamReasoningAcc += delta
+							if delta != "" {
+								reasoningResp.WriteString(delta)
+								if onReasoningChunk != nil {
+									onReasoningChunk(delta)
+								}
 							}
 						}
 
 						text := chunk.Content
+						if text != "" {
+							text = normalizeChunkDelta(streamContentAcc, text)
+							streamContentAcc += text
+						}
 						if text != "" {
 							if strings.Contains(text, "<think>") {
 								parts := strings.SplitN(text, "<think>", 2)
@@ -439,6 +460,7 @@ func (m *AgentManager) StreamChat(
 									parts := strings.SplitN(text, "</think>", 2)
 									if parts[0] != "" {
 										reasoningResp.WriteString(parts[0])
+										streamReasoningAcc += parts[0]
 										if onReasoningChunk != nil {
 											onReasoningChunk(parts[0])
 										}
@@ -450,6 +472,7 @@ func (m *AgentManager) StreamChat(
 									}
 								} else {
 									reasoningResp.WriteString(text)
+									streamReasoningAcc += text
 									if onReasoningChunk != nil {
 										onReasoningChunk(text)
 									}

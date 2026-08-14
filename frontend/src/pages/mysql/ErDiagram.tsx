@@ -16,7 +16,6 @@ export default function ErDiagram({
     const [scale, setScale] = useState(1)
     const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
     const [isDragging, setIsDragging] = useState(false)
-    const [hoveredTable, setHoveredTable] = useState<string | null>(null)
     const [isFullscreen, setIsFullscreen] = useState(false)
 
     const dragStartRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -105,11 +104,17 @@ export default function ErDiagram({
 
     useEffect(() => {
         autoFit()
+        const timer1 = setTimeout(autoFit, 50)
+        const timer2 = setTimeout(autoFit, 150)
+        return () => {
+            clearTimeout(timer1)
+            clearTimeout(timer2)
+        }
     }, [autoFit])
 
     // 切换全屏或容器 Resizing 时触发重新适应
     useEffect(() => {
-        const timer = setTimeout(() => autoFit(), 50)
+        const timer = setTimeout(() => autoFit(), 60)
         return () => clearTimeout(timer)
     }, [isFullscreen, autoFit])
 
@@ -129,8 +134,12 @@ export default function ErDiagram({
     useEffect(() => {
         const el = canvasRef.current
         if (!el || typeof ResizeObserver === 'undefined') return
-        const ro = new ResizeObserver(() => {
-            autoFit()
+        const ro = new ResizeObserver((entries) => {
+            for (const entry of entries) {
+                if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+                    autoFit()
+                }
+            }
         })
         ro.observe(el)
         return () => ro.disconnect()
@@ -181,16 +190,6 @@ export default function ErDiagram({
         return () => elem.removeEventListener('wheel', onWheel)
     }, [])
 
-    const activeTables = useMemo(() => {
-        if (!hoveredTable) return null
-        const set = new Set<string>([hoveredTable])
-        schema.foreignKeys.forEach((fk) => {
-            if (fk.fromTable === hoveredTable) set.add(fk.toTable)
-            if (fk.toTable === hoveredTable) set.add(fk.fromTable)
-        })
-        return set
-    }, [hoveredTable, schema.foreignKeys])
-
     return (
         <div className={`${my.erWrap} ${isFullscreen ? my.fullscreen : ''}`}>
             <div className={my.erToolBar}>
@@ -236,7 +235,7 @@ export default function ErDiagram({
                 <span className={my.erHint}>
                     {isFullscreen
                         ? '按 Esc 键或点击按钮退出全屏'
-                        : '提示：按住鼠标左键可拖拽平移，滚轮/按钮控制缩放，悬停数据表高亮关系链'}
+                        : '提示：按住鼠标左键可拖拽平移，鼠标滚轮或上方按钮控制缩放画布'}
                 </span>
             </div>
 
@@ -268,33 +267,24 @@ export default function ErDiagram({
                             const y1 = from.y + from.h / 2
                             const x2 = to.x
                             const y2 = to.y + to.h / 2
-                            const isHighlighted =
-                                hoveredTable && (fk.fromTable === hoveredTable || fk.toTable === hoveredTable)
-                            const isDimmed = hoveredTable && !isHighlighted
                             return (
                                 <path
                                     key={i}
                                     d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
-                                    className={`${my.fkPath} ${isHighlighted ? my.highlighted : ''} ${isDimmed ? my.dimmed : ''
-                                        }`}
+                                    className={my.fkPath}
                                 />
                             )
                         })}
                         {schema.tables.map((t) => {
                             const pos = ER.positions[t.name]
                             if (!pos) return null
-                            const isHighlighted = activeTables ? activeTables.has(t.name) : false
-                            const isDimmed = activeTables ? !activeTables.has(t.name) : false
                             const maxChars = Math.max(12, Math.floor((ER.tblW - 20) / 7.5))
                             const tableNameDisplay = t.name.length > maxChars ? `${t.name.slice(0, maxChars - 1)}…` : t.name
                             return (
                                 <g
                                     key={t.name}
                                     transform={`translate(${pos.x}, ${pos.y})`}
-                                    className={`${my.erTableGroup} ${isHighlighted ? my.highlighted : ''} ${isDimmed ? my.dimmed : ''
-                                        }`}
-                                    onMouseEnter={() => setHoveredTable(t.name)}
-                                    onMouseLeave={() => setHoveredTable(null)}
+                                    className={my.erTableGroup}
                                 >
                                     <rect width={ER.tblW} height={pos.h} rx={5} className={my.erTable} />
                                     <rect width={ER.tblW} height={22} rx={5} className={my.erTableHead} />

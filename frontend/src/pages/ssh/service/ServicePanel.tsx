@@ -123,25 +123,31 @@ export default function ServicePanel({sessionId, active, onNotify}: Props) {
                         className={`${s.filterBtn}${filterTab === 'all' ? ' ' + s.active : ''}`}
                         onClick={() => setFilterTab('all')}
                     >
-                        全部 ({counts.all})
+                        <span>全部</span>
+                        <span className={s.countBadge}>({counts.all})</span>
                     </button>
                     <button
                         className={`${s.filterBtn}${filterTab === 'active' ? ' ' + s.active : ''}`}
                         onClick={() => setFilterTab('active')}
                     >
-                        运行中 ({counts.active})
+                        <span>运行中</span>
+                        <span className={s.countBadge}>({counts.active})</span>
                     </button>
                     <button
                         className={`${s.filterBtn}${filterTab === 'inactive' ? ' ' + s.active : ''}`}
                         onClick={() => setFilterTab('inactive')}
                     >
-                        已停止 ({counts.inactive})
+                        <span>已停止</span>
+                        <span className={s.countBadge}>({counts.inactive})</span>
                     </button>
                     <button
                         className={`${s.filterBtn}${filterTab === 'failed' ? ' ' + s.active : ''}`}
                         onClick={() => setFilterTab('failed')}
                     >
-                        失败 ({counts.failed})
+                        <span>失败</span>
+                        <span className={`${s.countBadge}${counts.failed > 0 ? ' ' + s.dangerCount : ''}`}>
+                            ({counts.failed})
+                        </span>
                     </button>
                 </div>
 
@@ -160,14 +166,14 @@ export default function ServicePanel({sessionId, active, onNotify}: Props) {
                 </div>
 
                 <div className={s.toolbarActions}>
-                    {lastUpdate && <span className={s.lastUpdate}>更新于 {lastUpdate}</span>}
+                    {lastUpdate && <span className={s.lastUpdate} title={`更新于 ${lastUpdate}`}>更新于 {lastUpdate}</span>}
                     <button
                         className={`${g.btn} ${g.xs}`}
                         onClick={fetchServices}
                         disabled={busy}
                         title="刷新服务列表"
                     >
-                        <RotateCw size={12}/> {busy ? '刷新中…' : '刷新'}
+                        <RotateCw size={12} className={busy ? s.spin : ''}/> {busy ? '刷新中…' : '刷新'}
                     </button>
                 </div>
             </div>

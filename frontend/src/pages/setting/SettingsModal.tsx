@@ -1,11 +1,10 @@
-import React, { useEffect, useState } from 'react'
-import { Settings, X, Palette, Bot, Info } from 'lucide-react'
+import React, { useEffect, useState, useCallback } from 'react'
+import { ArrowLeft, Palette, Bot, Info } from 'lucide-react'
 import { AppSettings } from '@/types'
 import { applyThemeMode, applyGlobalFont } from '@/utils/theme'
 import AppearanceTab from '@/pages/setting/AppearanceTab'
 import AiAgentTab from '@/pages/setting/AiAgentTab'
 import AboutTab from '@/pages/setting/AboutTab'
-import g from '@/styles/global.module.less'
 import s from '@/pages/setting/SettingsModal.module.less'
 
 interface Props {
@@ -58,25 +57,19 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         }
     }, [open, settings])
 
-    if (!open) return null
+    // 按 Esc 键平滑返回主界面
+    useEffect(() => {
+        if (!open) return
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                onClose()
+            }
+        }
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [open, onClose])
 
-    const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
-        setThemeMode(mode)
-        applyThemeMode(mode)
-    }
-
-    const handleGlobalFontChange = (fontKey: string) => {
-        setGlobalFontFamily(fontKey)
-        applyGlobalFont(fontKey)
-    }
-
-    const handleCancel = () => {
-        applyThemeMode(settings.themeMode || 'light')
-        applyGlobalFont(settings.globalFontFamily || 'system')
-        onClose()
-    }
-
-    const handleSave = () => {
+    const persistSettings = useCallback((partial: Partial<AppSettings>) => {
         onSave({
             ...settings,
             themeMode,
@@ -95,104 +88,113 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiReasoningEffort,
             aiSystemPrompt,
             aiWorkspaceDir,
+            ...partial,
         })
-        onClose()
+    }, [settings, themeMode, globalFontFamily, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiSystemPrompt, aiWorkspaceDir, onSave])
+
+    if (!open) return null
+
+    const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
+        setThemeMode(mode)
+        applyThemeMode(mode)
+        persistSettings({ themeMode: mode })
+    }
+
+    const handleGlobalFontChange = (fontKey: string) => {
+        setGlobalFontFamily(fontKey)
+        applyGlobalFont(fontKey)
+        persistSettings({ globalFontFamily: fontKey })
+    }
+
+    const handleAiAgentChange = (fields: Partial<AppSettings>) => {
+        if (fields.aiBaseUrl !== undefined) setAiBaseUrl(fields.aiBaseUrl)
+        if (fields.aiApiKey !== undefined) setAiApiKey(fields.aiApiKey)
+        if (fields.aiModel !== undefined) setAiModel(fields.aiModel)
+        if (fields.aiTemperature !== undefined) setAiTemperature(fields.aiTemperature)
+        if (fields.aiMaxContextTokens !== undefined) setAiMaxContextTokens(fields.aiMaxContextTokens)
+        if (fields.aiCompressionStrategy !== undefined) setAiCompressionStrategy(fields.aiCompressionStrategy)
+        if (fields.aiEnableMultimodal !== undefined) setAiEnableMultimodal(fields.aiEnableMultimodal)
+        if (fields.aiEnableWebSearch !== undefined) setAiEnableWebSearch(fields.aiEnableWebSearch)
+        if (fields.aiEnablePermissionGuard !== undefined) setAiEnablePermissionGuard(fields.aiEnablePermissionGuard)
+        if (fields.aiBlockHighRiskCommands !== undefined) setAiBlockHighRiskCommands(fields.aiBlockHighRiskCommands)
+        if (fields.aiEnableThinking !== undefined) setAiEnableThinking(fields.aiEnableThinking)
+        if (fields.aiReasoningEffort !== undefined) setAiReasoningEffort(fields.aiReasoningEffort)
+        if (fields.aiSystemPrompt !== undefined) setAiSystemPrompt(fields.aiSystemPrompt)
+
+        persistSettings(fields)
     }
 
     return (
-        <div className={s.overlay} onClick={handleCancel}>
-            <div className={s.modal} onClick={(e) => e.stopPropagation()}>
-                <div className={s.header}>
-                    <div className={s.title}>
-                        <Settings size={16} />
-                        <span>系统设置</span>
-                    </div>
-                    <button className={g.iconBtn} title="关闭" onClick={onClose}>
-                        <X size={14} />
-                    </button>
+        <div className={s.fullPane}>
+            {/* 左侧 Sidebar 导航区 */}
+            <div className={s.navSidebar}>
+                <button className={s.backBtn} onClick={onClose} title="返回主界面 (Esc)">
+                    <ArrowLeft size={16} />
+                    <span>返回主界面</span>
+                </button>
+
+                <div className={s.sidebarHeader}>
+                    <span className={s.sidebarTitle}>系统设置</span>
                 </div>
 
-                <div className={s.body}>
-                    {/* 左侧分类导航 */}
-                    <div className={s.navSidebar}>
-                        <button
-                            className={`${s.navItem}${activeTab === 'appearance' ? ' ' + s.active : ''}`}
-                            onClick={() => setActiveTab('appearance')}
-                        >
-                            <Palette size={14} /> 外观主题
-                        </button>
-                        <button
-                            className={`${s.navItem} ${activeTab === 'aiAgent' ? s.active : ''}`}
-                            onClick={() => setActiveTab('aiAgent')}
-                        >
-                            <Bot size={14} /> AI 智能体
-                        </button>
-                        <button
-                            className={`${s.navItem} ${activeTab === 'about' ? s.active : ''}`}
-                            onClick={() => setActiveTab('about')}
-                        >
-                            <Info size={14} /> 关于应用
-                        </button>
-                    </div>
-
-                    {/* 右侧配置面板 */}
-                    <div className={s.contentPanel}>
-                        {activeTab === 'appearance' && (
-                            <AppearanceTab
-                                themeMode={themeMode}
-                                globalFontFamily={globalFontFamily}
-                                onThemeChange={handleThemeChange}
-                                onGlobalFontChange={handleGlobalFontChange}
-                            />
-                        )}
-
-                        {activeTab === 'aiAgent' && (
-                            <AiAgentTab
-                                aiBaseUrl={aiBaseUrl}
-                                aiApiKey={aiApiKey}
-                                aiModel={aiModel}
-                                aiTemperature={aiTemperature}
-                                aiMaxContextTokens={aiMaxContextTokens}
-                                aiCompressionStrategy={aiCompressionStrategy}
-                                aiEnableMultimodal={aiEnableMultimodal}
-                                aiEnableWebSearch={aiEnableWebSearch}
-                                aiEnablePermissionGuard={aiEnablePermissionGuard}
-                                aiBlockHighRiskCommands={aiBlockHighRiskCommands}
-                                aiEnableThinking={aiEnableThinking}
-                                aiReasoningEffort={aiReasoningEffort}
-                                aiSystemPrompt={aiSystemPrompt}
-                                onChange={(fields) => {
-                                    if (fields.aiBaseUrl !== undefined) setAiBaseUrl(fields.aiBaseUrl)
-                                    if (fields.aiApiKey !== undefined) setAiApiKey(fields.aiApiKey)
-                                    if (fields.aiModel !== undefined) setAiModel(fields.aiModel)
-                                    if (fields.aiTemperature !== undefined) setAiTemperature(fields.aiTemperature)
-                                    if (fields.aiMaxContextTokens !== undefined) setAiMaxContextTokens(fields.aiMaxContextTokens)
-                                    if (fields.aiCompressionStrategy !== undefined) setAiCompressionStrategy(fields.aiCompressionStrategy)
-                                    if (fields.aiEnableMultimodal !== undefined) setAiEnableMultimodal(fields.aiEnableMultimodal)
-                                    if (fields.aiEnableWebSearch !== undefined) setAiEnableWebSearch(fields.aiEnableWebSearch)
-                                    if (fields.aiEnablePermissionGuard !== undefined) setAiEnablePermissionGuard(fields.aiEnablePermissionGuard)
-                                    if (fields.aiBlockHighRiskCommands !== undefined) setAiBlockHighRiskCommands(fields.aiBlockHighRiskCommands)
-                                    if (fields.aiEnableThinking !== undefined) setAiEnableThinking(fields.aiEnableThinking)
-                                    if (fields.aiReasoningEffort !== undefined) setAiReasoningEffort(fields.aiReasoningEffort)
-                                    if (fields.aiSystemPrompt !== undefined) setAiSystemPrompt(fields.aiSystemPrompt)
-                                }}
-                            />
-                        )}
-
-                        {activeTab === 'about' && (
-                            <AboutTab />
-                        )}
-                    </div>
-                </div>
-
-                <div className={s.footer}>
-                    <button className={`${g.btn} ${g.xs}`} onClick={handleCancel}>
-                        取消
+                <div className={s.navList}>
+                    <button
+                        className={`${s.navItem}${activeTab === 'appearance' ? ' ' + s.active : ''}`}
+                        onClick={() => setActiveTab('appearance')}
+                    >
+                        <Palette size={15} />
+                        <span>外观主题</span>
                     </button>
-                    <button className={`${g.btn} ${g.xs} ${g.primary}`} onClick={handleSave}>
-                        保存设置
+                    <button
+                        className={`${s.navItem}${activeTab === 'aiAgent' ? ' ' + s.active : ''}`}
+                        onClick={() => setActiveTab('aiAgent')}
+                    >
+                        <Bot size={15} />
+                        <span>AI 智能体</span>
+                    </button>
+                    <button
+                        className={`${s.navItem}${activeTab === 'about' ? ' ' + s.active : ''}`}
+                        onClick={() => setActiveTab('about')}
+                    >
+                        <Info size={15} />
+                        <span>关于应用</span>
                     </button>
                 </div>
+            </div>
+
+            {/* 右侧 Content 内容区 */}
+            <div className={s.contentPanel}>
+                {activeTab === 'appearance' && (
+                    <AppearanceTab
+                        themeMode={themeMode}
+                        globalFontFamily={globalFontFamily}
+                        onThemeChange={handleThemeChange}
+                        onGlobalFontChange={handleGlobalFontChange}
+                    />
+                )}
+
+                {activeTab === 'aiAgent' && (
+                    <AiAgentTab
+                        aiBaseUrl={aiBaseUrl}
+                        aiApiKey={aiApiKey}
+                        aiModel={aiModel}
+                        aiTemperature={aiTemperature}
+                        aiMaxContextTokens={aiMaxContextTokens}
+                        aiCompressionStrategy={aiCompressionStrategy}
+                        aiEnableMultimodal={aiEnableMultimodal}
+                        aiEnableWebSearch={aiEnableWebSearch}
+                        aiEnablePermissionGuard={aiEnablePermissionGuard}
+                        aiBlockHighRiskCommands={aiBlockHighRiskCommands}
+                        aiEnableThinking={aiEnableThinking}
+                        aiReasoningEffort={aiReasoningEffort}
+                        aiSystemPrompt={aiSystemPrompt}
+                        onChange={handleAiAgentChange}
+                    />
+                )}
+
+                {activeTab === 'about' && (
+                    <AboutTab />
+                )}
             </div>
         </div>
     )

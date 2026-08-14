@@ -365,19 +365,23 @@
 
 .ioMsg {
     margin-top: 12px;
-    padding: 8px 10px;
+    padding: 8px 12px;
     border-radius: @radius-md;
     font-size: 13px;
+    font-weight: 500;
+    line-height: 1.5;
     word-break: break-all;
 
     &.ok {
         background: @ok-bg;
         color: @ok-text;
+        border: 1px solid rgba(47, 158, 68, 0.25);
     }
 
     &.err {
         background: @danger-bg;
         color: @danger-text;
+        border: 1px solid rgba(214, 69, 63, 0.25);
     }
 }
 
@@ -411,9 +415,10 @@
 .contextMenu {
     position: fixed;
     z-index: @z-context-menu;
-    min-width: 180px;
+    min-width: 160px;
     padding: @space-xs;
-    background: @bg-3;
+    background: @bg-1;
+    backdrop-filter: blur(16px);
     border: 1px solid @border;
     border-radius: @radius-lg;
     box-shadow: @shadow-menu;
@@ -424,18 +429,24 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 6px 9px;
+    padding: 6px 10px;
     background: transparent;
     border: none;
     border-radius: @radius;
     text-align: left;
     color: @text;
     cursor: pointer;
+    font-size: 12.5px;
     line-height: 1.4;
+    transition: background @transition-fast, color @transition-fast;
 
     &:hover:not(:disabled) {
-        background: @accent-dim;
+        background: @accent;
         color: #fff;
+
+        .menuIcon {
+            color: #fff;
+        }
     }
 
     &:disabled {
@@ -446,9 +457,17 @@
     &.danger {
         color: @danger;
 
-        &:hover {
+        .menuIcon {
+            color: @danger;
+        }
+
+        &:hover:not(:disabled) {
             background: @danger;
             color: #fff;
+
+            .menuIcon {
+                color: #fff;
+            }
         }
     }
 }
@@ -460,7 +479,12 @@
     width: 16px;
     height: 16px;
     flex: none;
-    color: inherit;
+    color: @text-dim;
+
+    svg {
+        width: 14px;
+        height: 14px;
+    }
 }
 
 .menuDivider {
