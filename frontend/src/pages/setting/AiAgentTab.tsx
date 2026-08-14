@@ -174,7 +174,7 @@ export default function AiAgentTab({
 
                 <div className={s.toggleRow}>
                     <div className={s.toggleInfo}>
-                        <span className={s.toggleTitle}>开启联网搜索 (Web Search)</span>
+                        <span className={s.toggleTitle}>开启联网搜索</span>
                         <span className={s.toggleSub}>启用后 AI Agent 可自动调用搜索引擎获取实时网页信息与最新技术文档</span>
                     </div>
                     <label className={s.switch}>
@@ -190,7 +190,7 @@ export default function AiAgentTab({
                 <div className={s.toggleRow}>
                     <div className={s.toggleInfo}>
                         <span className={s.toggleTitle}>开启深度思考模式 (Thinking / Reasoning)</span>
-                        <span className={s.toggleSub}>启用后在 ExtraFields 中透传 {`{"thinking": {"type": "enabled"}}`}（适用于 Claude / DeepSeek R1 / 硅基流动等）</span>
+                        <span className={s.toggleSub}>控制思考模式与非思考模式的转换</span>
                     </div>
                     <label className={s.switch}>
                         <input
@@ -202,19 +202,21 @@ export default function AiAgentTab({
                     </label>
                 </div>
 
-                <div className={s.formGroup} style={{ marginTop: 2 }}>
-                    <label className={s.label}>思考深度等级 (reasoning_effort)</label>
+                <div className={s.toggleRow}>
+                    <div className={s.toggleInfo}>
+                        <span className={s.toggleTitle}>思考深度等级</span>
+                        <span className={s.toggleSub}>控制模型的推理强度</span>
+                    </div>
                     <select
                         className={s.select}
                         value={aiReasoningEffort}
                         onChange={(e) => onChange({ aiReasoningEffort: e.target.value as 'none' | 'low' | 'medium' | 'high' })}
                     >
                         <option value="none">未指定 / 关闭 (none)</option>
-                        <option value="low">低 (low) - 速度最快，消耗 Token 较少</option>
-                        <option value="medium">中 (medium) - 平衡思考深度与推理速度</option>
-                        <option value="high">高 (high) - 极深逻辑推演，适合复杂运维决策</option>
+                        <option value="low">低 (low)</option>
+                        <option value="medium">中 (medium)</option>
+                        <option value="high">高 (high)</option>
                     </select>
-                    <div className={s.helpText}>向 API 独立发送 reasoning_effort 参数（适用于 OpenAI o1/o3-mini / DeepSeek 等）</div>
                 </div>
             </div>
 

@@ -1,12 +1,14 @@
 # xClient — 多协议开发运维桌面客户端
 
 基于 [Wails v2](https://wails.io) + React + TypeScript + xterm.js 的跨平台桌面客户端。
-集成了 SSH 终端、SFTP 文件管理、Redis、MySQL、MQTT 与 HTTP 接口调试等常用运维工具，
-所有连接在同一窗口内以标签 / 侧栏形式管理，互不干扰。
+集成了 SSH 终端、SFTP 文件管理、Redis、MySQL、MongoDB、SQLite、MQTT、HTTP/WebSocket 接口调试与 AI 智能运维助手，
+所有连接与工具在同一窗口内以标签 / 侧栏形式统一管理，互不干扰。
 
 ![xClient 主界面](docs/image.png)
 
 ![xClient SSH 终端](docs/image-ssh.png)
+
+![xClient MySQL 数据库客户端](docs/image-mysql.png)
 
 ## 功能清单
 
@@ -37,6 +39,10 @@
 | | 请求与响应美化 | 协议头自动补全 (`http://`)、Header / Body (JSON/Text/XML) 编辑、Basic/Bearer 鉴权，JSON 响应美化与状态码高亮 |
 | | WebSocket 调试 | 支持 WebSocket 客户端连接测试、发送文本/JSON 消息与双向实时消息日志 |
 | | 历史记录持久化 | 自动保存最近 30 条请求历史，支持单条删除与本地持久化 |
+| **AI 智能运维助手** | 智能对话与多模态感知 | 兼容 OpenAI / DeepSeek / 通义千问 / Ollama 等主流模型接口；支持图像多模态输入与实时联网搜索 |
+| | 深度思考与推理控制 | 支持深度思考模式 (Thinking / Reasoning) 开关与推理深度等级 (reasoning_effort) 灵活调节 |
+| | 工具调用与安全审计 | 自动化 Tool 分发调度（SSH 远程诊断、命令执行等）；内置全局 Tool 权限审查引擎与高危 Shell 命令动态拦截 |
+| | 会话管理与系统预设 | 支持多轮对话历史本地存储、快速重试与清除；支持自定义系统提示词 (System Prompt) 与温度参数调节 |
 | **常用开发工具集** | 快捷实用工具 | **MD5 哈希**（实时 32 位计算与一键复制）、**时间戳转换**（毫秒级刷新与日期双向转换）、**Base64 编解码**（文本编码解码） |
 | **连接与安全配置** | 敏感加密持久化 | 服务器配置与凭据本地加密存储，密码/私钥/Passphrase 采用 **AES-GCM** 高强度加密 |
 | | 配置存储路径 | Windows: `%APPDATA%/xClient`；Linux/macOS: `~/.config/xClient` |
@@ -49,6 +55,7 @@
 terminal/
 ├── main.go               // Wails 应用主入口，初始化窗口参数与系统级文件拖放
 ├── app.go                // App 核心生命周期、服务器/分组/设置配置管理
+├── app_agent.go          // 暴露给前端的 AI Agent 智能助手与会话交互接口
 ├── app_ssh.go            // 暴露给前端的 SSH 终端会话、系统运维 (Dashboard/进程/服务/Cron) 与 Docker 接口
 ├── app_sftp.go           // 暴露给前端的 SFTP 文件管理、传输队列控制与本地文件对话框
 ├── app_mysql.go          // 暴露给前端的 MySQL 核心及扩展管理接口
@@ -60,6 +67,13 @@ terminal/
 ├── core/                 // 核心基础设施与通用配置
 │   ├── config.go         // 服务器连接配置管理、读写与敏感字段 AES-GCM 加密存储
 │   └── sftp.go           // SFTP 目录/文件读写、上传下载任务队列与传输进度广播
+├── agent/                // AI 智能运维助手引擎
+│   ├── agent.go          // AI Agent 核心会话调度、模型流式通信与上下文管理
+│   ├── permission.go     // 全局 Tool 权限审查引擎与高危 Shell 命令动态拦截
+│   ├── storage.go        // 会话历史记录本地存储
+│   ├── tools.go          // 工具注册、分发与调度总线
+│   ├── tools_ssh.go      // SSH 远程运维与命令执行工具实现
+│   └── tools_websearch.go// 实时联网搜索工具实现
 ├── ssh/                  // SSH 协议与 Linux 系统运维工具
 │   ├── ssh.go            // SSH 连接建立、PTY 交互终端 Shell 与实时输出推流
 │   ├── ssh_cron.go       // Crontab 定时任务查询、解析与编辑
@@ -110,6 +124,9 @@ frontend/src/
 │       ├── SessionTabs.tsx// 已连接多协议会话顶栏标签页
 │       └── Stage.tsx      // 主内容舞台组件，根据当前 Tab 路由激活客户端
 └── pages/                // 按业务域和功能拆分的页面模块
+    ├── agent/            // AI 智能运维助手页面
+    │   ├── AiAgentPanel.tsx    // AI 对话交互、工具调用与上下文管理面板
+    │   └── AiAgentPanel.module.less// AI 面板样式
     ├── api/              // HTTP / WebSocket API 接口调试页面
     │   ├── ApiClient.tsx       // HTTP API 调试主框架
     │   ├── ApiConfigTabs.tsx   // 请求参数 / Params / Headers / Body / Auth 配置面板
@@ -160,6 +177,7 @@ frontend/src/
     ├── setting/          // 全局应用设置页面
     │   ├── SettingsModal.tsx   // 设置弹窗主框架与导航侧栏
     │   ├── AppearanceTab.tsx   // 外观与主题设置（浅/暗模式、全局界面字体）
+    │   ├── AiAgentTab.tsx      // AI 智能体设置（模型服务、思考模式、权限审查、系统提示词）
     │   └── AboutTab.tsx        // 关于应用展示（版本标识、环境信息、描述）
     ├── sqlite/           // SQLite 本地数据库管理页面
     │   └── SqliteClient.tsx    // SQLite 客户端（表/视图数据预览、结构与索引查看）
