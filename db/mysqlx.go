@@ -264,6 +264,48 @@ func (m *MysqlManagerEx) Get(id string) (*mysqlConnEx, bool) {
 	return c, ok
 }
 
+func (m *MysqlManagerEx) ListConnections() []map[string]any {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	list := make([]map[string]any, 0, len(m.conns))
+	for id, mc := range m.conns {
+		list = append(list, map[string]any{
+			"id":       id,
+			"name":     mc.cfg.Name,
+			"host":     mc.cfg.Host,
+			"port":     mc.cfg.Port,
+			"database": mc.curDb,
+			"user":     mc.cfg.Username,
+		})
+	}
+	return list
+}
+
+func (m *MysqlManagerEx) ResolveID(idOrName string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	trimmed := strings.TrimSpace(idOrName)
+	if trimmed != "" {
+		if _, ok := m.conns[trimmed]; ok {
+			return trimmed, nil
+		}
+		for id, mc := range m.conns {
+			if strings.EqualFold(mc.cfg.Name, trimmed) || strings.EqualFold(mc.cfg.Host, trimmed) || strings.EqualFold(id, trimmed) {
+				return id, nil
+			}
+		}
+	}
+	if len(m.conns) == 1 {
+		for id := range m.conns {
+			return id, nil
+		}
+	}
+	if len(m.conns) == 0 {
+		return "", errors.New("当前暂无已连通的 MySQL 数据库连接，请先在 MySQL 界面中连接数据库")
+	}
+	return "", fmt.Errorf("存在多个活跃的 MySQL 连接，请指定明确的 server_id (当前活跃连接数: %d)", len(m.conns))
+}
+
 func (m *MysqlManagerEx) Close(id string) {
 	m.mu.Lock()
 	c, ok := m.conns[id]
@@ -304,7 +346,10 @@ func (m *MysqlManagerEx) queryEx(id, dbName, sqlText string) (columns []string, 
 		}
 		mc.curDb = dbName
 	}
-	res, e := mc.db.Query(sqlText)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	res, e := mc.db.QueryContext(ctx, sqlText)
 	if e != nil {
 		return nil, nil, e
 	}
@@ -313,8 +358,12 @@ func (m *MysqlManagerEx) queryEx(id, dbName, sqlText string) (columns []string, 
 	if e != nil {
 		return nil, nil, e
 	}
-	out := make([]map[string]any, 0)
+	const maxRows = 100
+	out := make([]map[string]any, 0, maxRows)
 	for res.Next() {
+		if len(out) >= maxRows {
+			break
+		}
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
 		for i := range vals {

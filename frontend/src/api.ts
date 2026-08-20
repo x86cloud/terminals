@@ -56,6 +56,16 @@ import type {
     SSHDockerImage,
     AppSettings,
     AiMessage,
+    AgentSessionItem,
+    AgentJobItem,
+    AgentJobOutputItem,
+    AgentSubagentItem,
+    AgentAuditLogItem,
+    AgentSkillItem,
+    AgentPlan,
+    AgentPlanStep,
+    AgentApprovalRequest,
+    AgentAskRequest,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -347,18 +357,7 @@ export const API = {
     readLocalFile: (filePath: string): Promise<string> => app().ReadLocalFile(filePath),
     writeLocalFile: (filePath: string, content: string): Promise<void> => app().WriteLocalFile(filePath, content),
 
-    // AI Agent
-    agentSend: (sessionId: string, messages: AiMessage[]): Promise<string> =>
-        app().AgentSend(sessionId, messages),
-    agentStopSend: (sessionId: string): Promise<boolean> => app().AgentStopSend(sessionId),
-    agentGetHistory: (): Promise<AiMessage[]> => app().AgentGetHistory(),
-    agentSaveHistory: (messages: AiMessage[]): Promise<void> => app().AgentSaveHistory(messages),
-    agentClearHistory: (): Promise<void> => app().AgentClearHistory(),
-    agentSelectWorkspaceDir: (): Promise<string> => app().AgentSelectWorkspaceDir(),
-    agentSetWorkspaceDir: (dir: string): Promise<string> => app().AgentSetWorkspaceDir(dir),
-    agentGetWorkspaceDir: (): Promise<string> => app().AgentGetWorkspaceDir(),
-    agentConfirmTool: (confirmId: string, approved: boolean): Promise<boolean> =>
-        app().AgentConfirmTool(confirmId, approved),
+    // MQTT
     mqttConnect: (id: string): Promise<MqttSessionInfo> => app().MqttConnect(id),
     mqttClose: (id: string): Promise<void> => app().MqttClose(id),
     mqttPublish: (
@@ -493,6 +492,45 @@ export const API = {
     sqliteIndexes: (id: string, table: string): Promise<SqliteIndexInfo[]> => app().SqliteIndexes(id, table),
     sqliteRun: (id: string, sqlText: string): Promise<SqliteQueryResult> => app().SqliteRun(id, sqlText),
     sqliteSchema: (id: string): Promise<SqliteSchema> => app().SqliteSchema(id),
+
+    // AI Agent 2.0
+    agentSend: (sessionId: string, messages: AiMessage[]): Promise<string> => app().AgentSend(sessionId, messages),
+    agentStopSend: (sessionId: string): Promise<boolean> => app().AgentStopSend(sessionId),
+    agentProposePlan: (sessionId: string, objective: string): Promise<AgentPlan> => app().AgentProposePlan(sessionId, objective),
+    agentApprovePlan: (planId: string): Promise<boolean> => app().AgentApprovePlan(planId),
+    agentCancelPlan: (planId: string): Promise<boolean> => app().AgentCancelPlan ? app().AgentCancelPlan(planId) : Promise.resolve(false),
+    agentRetryPlanStep: (planId: string, stepId: string): Promise<AgentPlanStep> =>
+        app().AgentRetryPlanStep ? app().AgentRetryPlanStep(planId, stepId) : Promise.reject(new Error('API not available')),
+    agentSelectWorkspaceDir: (): Promise<string> => app().AgentSelectWorkspaceDir(),
+    agentSetWorkspaceDir: (dir: string): Promise<string> => app().AgentSetWorkspaceDir(dir),
+    agentGetWorkspaceDir: (): Promise<string> => app().AgentGetWorkspaceDir(),
+    agentConfirmTool: (confirmId: string, approved: boolean): Promise<boolean> => app().AgentConfirmTool(confirmId, approved),
+    agentDecideApproval: (confirmId: string, approved: boolean, remember: boolean, reason?: string): Promise<boolean> =>
+        app().AgentDecideApproval(confirmId, approved, remember, reason || ''),
+    agentGetPendingApprovals: (): Promise<AgentApprovalRequest[]> => app().AgentGetPendingApprovals(),
+    agentAnswerAsk: (askId: string, answer: string): Promise<boolean> => app().AgentAnswerAsk(askId, answer),
+    agentGetPendingAsks: (): Promise<AgentAskRequest[]> => app().AgentGetPendingAsks(),
+    agentListSessions: (): Promise<AgentSessionItem[]> => app().AgentListSessions(),
+    agentCreateSession: (title: string): Promise<AgentSessionItem> => app().AgentCreateSession(title),
+    agentDeleteSession: (sessionId: string): Promise<boolean> => app().AgentDeleteSession(sessionId),
+    agentGetSessionMessages: (sessionId: string): Promise<AiMessage[]> => app().AgentGetSessionMessages(sessionId),
+    agentSaveSessionMessages: (sessionId: string, messages: AiMessage[]): Promise<void> => app().AgentSaveSessionMessages(sessionId, messages),
+    agentListJobs: (sessionId: string): Promise<AgentJobItem[]> => app().AgentListJobs(sessionId),
+    agentGetJob: (jobId: string): Promise<AgentJobItem> => app().AgentGetJob(jobId),
+    agentGetJobOutput: (jobId: string, fromSeq: number): Promise<AgentJobOutputItem[]> => app().AgentGetJobOutput(jobId, fromSeq),
+    agentKillJob: (jobId: string): Promise<boolean> => app().AgentKillJob(jobId),
+    agentListSubagents: (sessionId: string): Promise<AgentSubagentItem[]> => app().AgentListSubagents(sessionId),
+    agentSendSubagent: (subId: string, message: string): Promise<string> => app().AgentSendSubagent(subId, message),
+    agentInterruptSubagent: (subId: string): Promise<boolean> => app().AgentInterruptSubagent(subId),
+    agentGetAuditLogs: (sessionId: string, limit: number): Promise<AgentAuditLogItem[]> => app().AgentGetAuditLogs(sessionId, limit),
+    agentListSkills: (): Promise<AgentSkillItem[]> => app().AgentListSkills(),
+    agentGetSkillsDir: (): Promise<string> => app().AgentGetSkillsDir(),
+    agentOpenSkillsDir: (): Promise<string> => app().AgentOpenSkillsDir(),
+    agentRecallMemories: (query: string, limit: number): Promise<string[]> => app().AgentRecallMemories(query, limit),
+    agentSaveMemory: (kind: string, content: string, tags: string, source: string): Promise<void> => app().AgentSaveMemory(kind, content, tags, source),
+    agentGetHistory: (): Promise<AiMessage[]> => app().AgentGetHistory(),
+    agentSaveHistory: (messages: AiMessage[]): Promise<void> => app().AgentSaveHistory(messages),
+    agentClearHistory: (): Promise<void> => app().AgentClearHistory(),
 }
 
 /* ------------------------------------------------------------------ */

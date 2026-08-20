@@ -9,6 +9,8 @@
     border-bottom: none;
     overflow-x: auto;
     padding-left: 4px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .tab {
@@ -17,10 +19,11 @@
     gap: @space-md;
     padding: 0 12px;
     margin-right: 3px;
-    border-radius: @radius-md @radius-md 0 0;
     color: @text-dim;
     cursor: pointer;
     max-width: 220px;
+    user-select: none;
+    -webkit-user-select: none;
     transition: background @transition-fast, color @transition-fast;
     .ellipsis();
 
@@ -39,6 +42,8 @@
 .tabTitle {
     overflow: hidden;
     text-overflow: ellipsis;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .tabClose {

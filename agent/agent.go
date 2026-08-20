@@ -5,16 +5,20 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 	"strings"
 	"sync"
+	"time"
+
+	"encoding/json"
+	"terminal/agent/events"
+	"terminal/agent/router"
+	"terminal/agent/store"
 	"terminal/core"
 	"terminal/ssh"
-	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
 	"github.com/cloudwego/eino/adk"
-	"github.com/cloudwego/eino/components/tool"
-	"github.com/cloudwego/eino/compose"
 	"github.com/cloudwego/eino/schema"
 )
 
@@ -46,6 +50,70 @@ type FrontendMessage struct {
 	Timestamp        int64          `json:"timestamp,omitempty"`
 }
 
+type Storage struct{}
+
+func NewStorage() *Storage {
+	return &Storage{}
+}
+
+func (s *Storage) LoadHistory() ([]FrontendMessage, error) {
+	if DefaultRuntime.Store == nil {
+		return []FrontendMessage{}, nil
+	}
+	dbMsgs, err := DefaultRuntime.Store.ListMessages("ai_agent_default")
+	if err != nil {
+		return []FrontendMessage{}, nil
+	}
+	var out []FrontendMessage
+	for _, m := range dbMsgs {
+		var tc []ToolCallItem
+		if m.ToolCalls != "" {
+			_ = json.Unmarshal([]byte(m.ToolCalls), &tc)
+		}
+		var ps []ProcessStep
+		if m.ProcessSteps != "" {
+			_ = json.Unmarshal([]byte(m.ProcessSteps), &ps)
+		}
+		out = append(out, FrontendMessage{
+			Role:             m.Role,
+			Content:          m.Content,
+			ReasoningContent: m.Reasoning,
+			ToolCalls:        tc,
+			ProcessSteps:     ps,
+			Timestamp:        m.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
+func (s *Storage) SaveHistory(messages []FrontendMessage) error {
+	if DefaultRuntime.Store == nil {
+		return nil
+	}
+	var dbMsgs []store.MessageItem
+	for _, m := range messages {
+		tcBytes, _ := json.Marshal(m.ToolCalls)
+		psBytes, _ := json.Marshal(m.ProcessSteps)
+		dbMsgs = append(dbMsgs, store.MessageItem{
+			SessionID:    "ai_agent_default",
+			Role:         m.Role,
+			Content:      m.Content,
+			Reasoning:    m.ReasoningContent,
+			ToolCalls:    string(tcBytes),
+			ProcessSteps: string(psBytes),
+			CreatedAt:    m.Timestamp,
+		})
+	}
+	return DefaultRuntime.Store.ReplaceMessages("ai_agent_default", dbMsgs)
+}
+
+func (s *Storage) ClearHistory() error {
+	if DefaultRuntime.Store != nil {
+		return DefaultRuntime.Store.ClearSessionMessages("ai_agent_default")
+	}
+	return nil
+}
+
 type AgentManager struct {
 	mu        sync.RWMutex
 	ctx       context.Context
@@ -58,6 +126,7 @@ type AgentManager struct {
 }
 
 var DefaultManager = NewAgentManager()
+var DefaultWorkspaceMgr = DefaultRuntime.WorkspaceMgr
 
 func NewAgentManager() *AgentManager {
 	return &AgentManager{
@@ -67,6 +136,7 @@ func NewAgentManager() *AgentManager {
 
 func (m *AgentManager) SetContext(ctx context.Context) {
 	m.ctx = ctx
+	DefaultRuntime.SetContext(ctx)
 }
 
 func (m *AgentManager) SetSSHManager(sm *ssh.SessionManager) {
@@ -84,39 +154,12 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 	defer m.mu.Unlock()
 
 	m.cfg = cfg
+	_ = DefaultRuntime.InitOrUpdate(cfg)
+
 	if strings.TrimSpace(cfg.AiAPIKey) == "" {
 		m.runner = nil
 		m.cm = nil
 		return nil
-	}
-
-	temp := float32(cfg.AiTemperature)
-	if temp <= 0 {
-		temp = 0.7
-	}
-
-	baseURL := strings.TrimSpace(cfg.AiBaseURL)
-	if baseURL == "" {
-		baseURL = "https://api.deepseek.com"
-	}
-
-	modelConfig := &openai.ChatModelConfig{
-		BaseURL:     baseURL,
-		APIKey:      strings.TrimSpace(cfg.AiAPIKey),
-		Model:       strings.TrimSpace(cfg.AiModel),
-		Temperature: &temp,
-	}
-
-	if cfg.AiEnableThinking {
-		modelConfig.ExtraFields = map[string]any{
-			"thinking": map[string]any{
-				"type": "enabled",
-			},
-		}
-	}
-	effort := strings.TrimSpace(cfg.AiReasoningEffort)
-	if effort != "" && effort != "none" {
-		modelConfig.ReasoningEffort = openai.ReasoningEffortLevel(effort)
 	}
 
 	ctx := m.ctx
@@ -124,73 +167,32 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 		ctx = context.Background()
 	}
 
-	cm, err := openai.NewChatModel(ctx, modelConfig)
+	resolved, err := DefaultRuntime.Router.Resolve(ctx, router.RoleDefault)
 	if err != nil {
-		return fmt.Errorf("创建 Eino OpenAI ChatModel 失败: %w", err)
+		return fmt.Errorf("创建模型失败: %w", err)
 	}
+	m.cm = resolved.Model
 
-	if cfg.AiWorkspaceDir != "" && DefaultWorkspaceMgr.GetDir() == "" {
-		DefaultWorkspaceMgr.SetDir(cfg.AiWorkspaceDir)
+	// Build default session runner
+	sess := DefaultRuntime.GetOrCreateSession("ai_agent_default")
+	if err := sess.BuildRunner(ctx, DefaultRuntime.Router, DefaultRuntime.ToolBus); err != nil {
+		return fmt.Errorf("创建 ADK Runner 失败: %w", err)
 	}
+	m.runner = sess.GetRunner()
 
-	guard := NewPermissionGuard(cfg.AiEnablePermissionGuard, cfg.AiBlockHighRiskCommands, DefaultWorkspaceMgr)
-
-	var rawTools []tool.BaseTool
-	workspaceTools, _ := BuildWorkspaceTools(DefaultWorkspaceMgr)
-	rawTools = append(rawTools, workspaceTools...)
-
-	if cfg.AiEnableWebSearch {
-		if webSearchTool, err := BuildWebSearchTool(DefaultWorkspaceMgr); err == nil {
-			rawTools = append(rawTools, webSearchTool)
-		}
-	}
-
-	if m.sshMgr != nil {
-		if sshTools, err := BuildSSHTools(m.sshMgr, DefaultWorkspaceMgr); err == nil {
-			rawTools = append(rawTools, sshTools...)
-		}
-	}
-
-	var wrappedTools []tool.BaseTool
-	for _, t := range rawTools {
-		wrappedTools = append(wrappedTools, WrapToolWithPermissionGuard(t, guard))
-	}
-
-	adkAgent, err := adk.NewChatModelAgent(ctx, &adk.ChatModelAgentConfig{
-		Name:        "xclient_agent",
-		Description: "xClient AI Terminal Assistant",
-		Instruction: cfg.AiSystemPrompt,
-		Model:       cm,
-		ToolsConfig: adk.ToolsConfig{
-			ToolsNodeConfig: compose.ToolsNodeConfig{
-				Tools: wrappedTools,
-			},
-		},
-		MaxIterations: 100,
-	})
-	if err != nil {
-		return fmt.Errorf("创建 Eino ADK ChatModelAgent 失败: %w", err)
-	}
-
-	runner := adk.NewRunner(ctx, adk.RunnerConfig{
-		Agent:           adkAgent,
-		EnableStreaming: true,
-	})
-
-	m.cm = cm
-	m.runner = runner
 	return nil
 }
 
 func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt string) []*schema.Message {
 	var out []*schema.Message
-	// 加入当前系统时间
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
-	sysPrompt = fmt.Sprintf("%s\n当前系统时间为: [%s]。", sysPrompt, currentTime)
-	wsDir := DefaultWorkspaceMgr.GetDir()
+	sysPrompt = fmt.Sprintf("%s\n系统: %s, 当前时间为: [%s]。", runtime.GOOS, sysPrompt, currentTime)
+	wsDir := DefaultRuntime.WorkspaceMgr.GetDir()
 	if wsDir != "" {
 		sysPrompt = fmt.Sprintf("%s\n当前绑定的工作目录为: [%s]。", sysPrompt, wsDir)
 	}
+	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 当面对用户需求模糊、缺少关键上下文参数（如目标数据库类型、具体主机会话、文件路径等）或需要二选一确认时，必须主动调用 `ask_user` 工具向用户发起提问获取澄清与确认，禁止盲目猜测假设。", sysPrompt)
+	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 合理规划工具使用，避免频繁向用户提问。", sysPrompt)
 
 	if m.sshMgr != nil {
 		sessions := m.sshMgr.List()
@@ -295,7 +297,6 @@ func (m *AgentManager) applyContextCompression(ctx context.Context, messages []F
 		return messages[cutIdx:], "已触发滑动窗口截断，保留最新对话"
 	}
 
-	// Strategy == "summary"
 	cutIdx := alignCutToUserMessage(messages, len(messages)-3)
 	if cutIdx <= 0 {
 		return messages, ""
@@ -334,11 +335,10 @@ func (m *AgentManager) StopChat(sessionID string) {
 			cancel()
 		}
 	}
+	sess := DefaultRuntime.GetOrCreateSession(sessionID)
+	sess.Stop()
 }
 
-// normalizeChunkDelta 兼容部分模型接口的“累计全量推送”风格：
-// 若本次 chunk 以之前累计的全部内容作为前缀，视为累计推送，仅返回新增后缀；
-// 否则视为增量推送，原样返回。
 func normalizeChunkDelta(accumulated, chunk string) string {
 	if len(accumulated) > 0 && len(chunk) > len(accumulated) && strings.HasPrefix(chunk, accumulated) {
 		return chunk[len(accumulated):]
@@ -353,8 +353,17 @@ func (m *AgentManager) StreamChat(
 	onChunk func(chunk string),
 	onReasoningChunk func(chunk string),
 ) (string, string, string, error) {
+	if sessionID == "" {
+		sessionID = "ai_agent_default"
+	}
+
+	sess := DefaultRuntime.GetOrCreateSession(sessionID)
+	if err := sess.BuildRunner(ctx, DefaultRuntime.Router, DefaultRuntime.ToolBus); err != nil {
+		return "", "", "", fmt.Errorf("构建会话 Runner 失败: %w", err)
+	}
+	runner := sess.GetRunner()
+
 	m.mu.RLock()
-	runner := m.runner
 	cfg := m.cfg
 	m.mu.RUnlock()
 
@@ -365,10 +374,9 @@ func (m *AgentManager) StreamChat(
 	chatCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if sessionID != "" {
-		m.cancelMap.Store(sessionID, cancel)
-		defer m.cancelMap.Delete(sessionID)
-	}
+	sess.SetCancel(cancel)
+	m.cancelMap.Store(sessionID, cancel)
+	defer m.cancelMap.Delete(sessionID)
 
 	compressedMsgs, notice := m.applyContextCompression(chatCtx, messages)
 	schemaMsgs := m.buildSchemaMessages(compressedMsgs, cfg.AiSystemPrompt)
@@ -402,88 +410,122 @@ func (m *AgentManager) StreamChat(
 			}
 
 			if mv.IsStreaming && mv.MessageStream != nil {
-				defer mv.MessageStream.Close()
-				// 当前流内已推送的内容累计，用于识别“累计全量推送”并去重
-				streamReasoningAcc := ""
-				streamContentAcc := ""
-				for {
-					if errors.Is(chatCtx.Err(), context.Canceled) {
-						return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
-					}
-					chunk, err := mv.MessageStream.Recv()
-					if errors.Is(err, io.EOF) {
-						break
-					}
-					if err != nil {
-						break
-					}
-					if chunk != nil {
-						reasoningText := chunk.ReasoningContent
-						if reasoningText == "" && chunk.Extra != nil {
-							if r, ok := chunk.Extra["reasoning-content"].(string); ok && r != "" {
-								reasoningText = r
-							} else if r, ok := chunk.Extra["reasoning_content"].(string); ok && r != "" {
-								reasoningText = r
-							} else if r, ok := chunk.Extra["thinking"].(string); ok && r != "" {
-								reasoningText = r
-							}
+				func() {
+					defer mv.MessageStream.Close()
+					streamReasoningAcc := ""
+					streamContentAcc := ""
+					for {
+						if errors.Is(chatCtx.Err(), context.Canceled) {
+							return
 						}
-						if reasoningText != "" {
-							delta := normalizeChunkDelta(streamReasoningAcc, reasoningText)
-							streamReasoningAcc += delta
-							if delta != "" {
-								reasoningResp.WriteString(delta)
-								if onReasoningChunk != nil {
-									onReasoningChunk(delta)
+						chunk, err := mv.MessageStream.Recv()
+						if errors.Is(err, io.EOF) || err != nil {
+							break
+						}
+						if chunk != nil {
+							reasoningText := chunk.ReasoningContent
+							if reasoningText == "" && chunk.Extra != nil {
+								if r, ok := chunk.Extra["reasoning-content"].(string); ok && r != "" {
+									reasoningText = r
+								} else if r, ok := chunk.Extra["reasoning_content"].(string); ok && r != "" {
+									reasoningText = r
+								} else if r, ok := chunk.Extra["thinking"].(string); ok && r != "" {
+									reasoningText = r
 								}
 							}
-						}
-
-						text := chunk.Content
-						if text != "" {
-							text = normalizeChunkDelta(streamContentAcc, text)
-							streamContentAcc += text
-						}
-						if text != "" {
-							if strings.Contains(text, "<think>") {
-								parts := strings.SplitN(text, "<think>", 2)
-								if parts[0] != "" {
-									fullResp.WriteString(parts[0])
-									onChunk(parts[0])
-								}
-								inThinkTag = true
-								text = parts[1]
-							}
-
-							if inThinkTag {
-								if strings.Contains(text, "</think>") {
-									parts := strings.SplitN(text, "</think>", 2)
-									if parts[0] != "" {
-										reasoningResp.WriteString(parts[0])
-										streamReasoningAcc += parts[0]
-										if onReasoningChunk != nil {
-											onReasoningChunk(parts[0])
-										}
+							if reasoningText != "" {
+								delta := normalizeChunkDelta(streamReasoningAcc, reasoningText)
+								streamReasoningAcc += delta
+								if delta != "" {
+									reasoningResp.WriteString(delta)
+									if onReasoningChunk != nil {
+										onReasoningChunk(delta)
 									}
-									inThinkTag = false
-									if parts[1] != "" {
-										fullResp.WriteString(parts[1])
-										onChunk(parts[1])
+									DefaultRuntime.EventBus.Emit(events.Event{
+										Type:      events.EventReasoningChunk,
+										SessionID: sessionID,
+										Payload:   events.ReasoningChunkPayload{Chunk: delta},
+									})
+								}
+							}
+
+							text := chunk.Content
+							if text != "" {
+								text = normalizeChunkDelta(streamContentAcc, text)
+								streamContentAcc += text
+							}
+							if text != "" {
+								if strings.Contains(text, "<think>") {
+									parts := strings.SplitN(text, "<think>", 2)
+									if parts[0] != "" {
+										fullResp.WriteString(parts[0])
+										if onChunk != nil {
+											onChunk(parts[0])
+										}
+										DefaultRuntime.EventBus.Emit(events.Event{
+											Type:      events.EventChatChunk,
+											SessionID: sessionID,
+											Payload:   events.ChatChunkPayload{Chunk: parts[0]},
+										})
+									}
+									inThinkTag = true
+									text = parts[1]
+								}
+
+								if inThinkTag {
+									if strings.Contains(text, "</think>") {
+										parts := strings.SplitN(text, "</think>", 2)
+										if parts[0] != "" {
+											reasoningResp.WriteString(parts[0])
+											streamReasoningAcc += parts[0]
+											if onReasoningChunk != nil {
+												onReasoningChunk(parts[0])
+											}
+											DefaultRuntime.EventBus.Emit(events.Event{
+												Type:      events.EventReasoningChunk,
+												SessionID: sessionID,
+												Payload:   events.ReasoningChunkPayload{Chunk: parts[0]},
+											})
+										}
+										inThinkTag = false
+										if parts[1] != "" {
+											fullResp.WriteString(parts[1])
+											if onChunk != nil {
+												onChunk(parts[1])
+											}
+											DefaultRuntime.EventBus.Emit(events.Event{
+												Type:      events.EventChatChunk,
+												SessionID: sessionID,
+												Payload:   events.ChatChunkPayload{Chunk: parts[1]},
+											})
+										}
+									} else {
+										reasoningResp.WriteString(text)
+										streamReasoningAcc += text
+										if onReasoningChunk != nil {
+											onReasoningChunk(text)
+										}
+										DefaultRuntime.EventBus.Emit(events.Event{
+											Type:      events.EventReasoningChunk,
+											SessionID: sessionID,
+											Payload:   events.ReasoningChunkPayload{Chunk: text},
+										})
 									}
 								} else {
-									reasoningResp.WriteString(text)
-									streamReasoningAcc += text
-									if onReasoningChunk != nil {
-										onReasoningChunk(text)
+									fullResp.WriteString(text)
+									if onChunk != nil {
+										onChunk(text)
 									}
+									DefaultRuntime.EventBus.Emit(events.Event{
+										Type:      events.EventChatChunk,
+										SessionID: sessionID,
+										Payload:   events.ChatChunkPayload{Chunk: text},
+									})
 								}
-							} else {
-								fullResp.WriteString(text)
-								onChunk(text)
 							}
 						}
 					}
-				}
+				}()
 			} else if mv.Message != nil {
 				if mv.Role == schema.Assistant || mv.Role == "" {
 					if mv.Message.ReasoningContent != "" {
@@ -491,15 +533,32 @@ func (m *AgentManager) StreamChat(
 						if onReasoningChunk != nil {
 							onReasoningChunk(mv.Message.ReasoningContent)
 						}
+						DefaultRuntime.EventBus.Emit(events.Event{
+							Type:      events.EventReasoningChunk,
+							SessionID: sessionID,
+							Payload:   events.ReasoningChunkPayload{Chunk: mv.Message.ReasoningContent},
+						})
 					}
 					if mv.Message.Content != "" {
 						fullResp.WriteString(mv.Message.Content)
-						onChunk(mv.Message.Content)
+						if onChunk != nil {
+							onChunk(mv.Message.Content)
+						}
+						DefaultRuntime.EventBus.Emit(events.Event{
+							Type:      events.EventChatChunk,
+							SessionID: sessionID,
+							Payload:   events.ChatChunkPayload{Chunk: mv.Message.Content},
+						})
 					}
 				}
 			}
 		}
 	}
 
-	return fullResp.String(), reasoningResp.String(), notice, nil
+	finalContent := fullResp.String()
+	if strings.TrimSpace(finalContent) == "" && reasoningResp.Len() > 0 {
+		finalContent = "已完成任务推演与相关操作。"
+	}
+
+	return finalContent, reasoningResp.String(), notice, nil
 }

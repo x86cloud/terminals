@@ -272,7 +272,6 @@ export default function App() {
             setCachedSettings(saved)
             applyThemeMode(saved.themeMode)
             applyGlobalFont(saved.globalFontFamily)
-            notify('设置已保存并全域应用', 'info')
         } catch (err) {
             notify(errorMessage(err), 'error')
         }
@@ -740,7 +739,6 @@ export default function App() {
                 onClose={() => setSettingsOpen(false)}
                 onSave={(newSettings) => {
                     void handleSaveSettings(newSettings)
-                    setSettingsOpen(false)
                 }}
             />
 

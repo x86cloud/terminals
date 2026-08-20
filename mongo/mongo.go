@@ -438,6 +438,46 @@ func (m *MongoManager) SetContext(ctx context.Context) {
 	m.ctx = ctx
 }
 
+func (m *MongoManager) ListConnections() []map[string]any {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	list := make([]map[string]any, 0, len(m.clients))
+	for id, mc := range m.clients {
+		list = append(list, map[string]any{
+			"id":   id,
+			"name": mc.cfg.Name,
+			"host": mc.cfg.Host,
+			"port": mc.cfg.Port,
+		})
+	}
+	return list
+}
+
+func (m *MongoManager) ResolveID(idOrName string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	trimmed := strings.TrimSpace(idOrName)
+	if trimmed != "" {
+		if _, ok := m.clients[trimmed]; ok {
+			return trimmed, nil
+		}
+		for id, mc := range m.clients {
+			if strings.EqualFold(mc.cfg.Name, trimmed) || strings.EqualFold(mc.cfg.Host, trimmed) || strings.EqualFold(id, trimmed) {
+				return id, nil
+			}
+		}
+	}
+	if len(m.clients) == 1 {
+		for id := range m.clients {
+			return id, nil
+		}
+	}
+	if len(m.clients) == 0 {
+		return "", errors.New("当前暂无已连通的 MongoDB 连接，请先在 MongoDB 界面中连接服务器")
+	}
+	return "", fmt.Errorf("存在多个活跃的 MongoDB 连接，请指定明确的 server_id (当前活跃连接数: %d)", len(m.clients))
+}
+
 func (m *MongoManager) Open(id string, cfg core.ServerConfig) error {
 	opts, err := buildMongoOptions(cfg)
 	if err != nil {

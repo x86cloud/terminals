@@ -1,0 +1,152 @@
+@import (reference) '@/styles/variables.less';
+@import (reference) '@/styles/mixins.less';
+
+.chatList {
+    flex: 1;
+    overflow-y: auto;
+    overflow-anchor: none;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.loadMoreBanner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 5px 14px;
+    margin: 0 auto;
+    border-radius: 16px;
+    background: @bg-2;
+    border: 1px solid @border;
+    color: @text-dim;
+    font-size: 11.5px;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+
+    &:hover {
+        background: @bg-3;
+        color: @text;
+        border-color: @accent;
+    }
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: @text-dim;
+    gap: 12px;
+
+    .emptyIcon {
+        opacity: 0.5;
+    }
+
+    .emptyTitle {
+        font-size: 16px;
+        font-weight: 600;
+        color: @text;
+    }
+
+    .emptySub {
+        font-size: 13px;
+        max-width: 440px;
+        text-align: center;
+        line-height: 1.5;
+    }
+
+    .promptSuggestions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        margin-top: 16px;
+        max-width: 500px;
+        width: 100%;
+
+        .sugCard {
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: @bg-2;
+            border: 1px solid @border;
+            cursor: pointer;
+            font-size: 12px;
+            color: @text;
+            transition: all 0.2s;
+
+            &:hover {
+                border-color: @accent;
+                background: rgba(51, 112, 255, 0.08);
+            }
+        }
+    }
+}
+
+.messageRow {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+
+    &.userRow {
+        flex-direction: row-reverse;
+
+        .bubble {
+            background: rgba(51, 112, 255, 0.15);
+            border: 1px solid rgba(51, 112, 255, 0.3);
+            border-top-right-radius: 2px;
+        }
+    }
+
+    &.assistantRow {
+        flex-direction: row;
+
+        .bubble {
+            background: @bg-2;
+            border: 1px solid @border;
+            border-top-left-radius: 2px;
+        }
+    }
+
+    .avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: @bg-2;
+        border: 1px solid @border;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        color: @accent;
+    }
+
+    .bubble {
+        max-width: 85%;
+        padding: 12px 16px;
+        border-radius: 12px;
+        font-size: 13px;
+        line-height: 1.6;
+        word-break: break-word;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+
+        .imagesGrid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 8px;
+
+            img {
+                max-width: 160px;
+                max-height: 120px;
+                border-radius: 6px;
+                border: 1px solid @border;
+                object-fit: cover;
+            }
+        }
+    }
+}

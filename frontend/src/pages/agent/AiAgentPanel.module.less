@@ -1,14 +1,24 @@
-@import (reference) '../../styles/variables.less';
-@import (reference) '../../styles/mixins.less';
+@import (reference) '@/styles/variables.less';
+@import (reference) '@/styles/mixins.less';
 
-.agentContainer {
+.workbenchLayout {
     display: flex;
-    flex-direction: column;
     height: 100%;
     width: 100%;
     background: @bg-1;
     color: @text;
     overflow: hidden;
+    position: relative;
+}
+
+/* ===================== Center Main Pane ===================== */
+.centerPane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: @bg-1;
+    position: relative;
 }
 
 .headerBar {
@@ -36,13 +46,13 @@
             border: 1px solid @border;
         }
 
-        .badgeMultimodal {
+        .badgeThinking {
             font-size: 11px;
             padding: 2px 6px;
             border-radius: 4px;
-            background: rgba(72, 199, 116, 0.15);
-            color: #48c774;
-            border: 1px solid rgba(72, 199, 116, 0.3);
+            background: rgba(138, 43, 226, 0.15);
+            color: #a855f7;
+            border: 1px solid rgba(138, 43, 226, 0.3);
         }
     }
 
@@ -50,6 +60,24 @@
         display: flex;
         align-items: center;
         gap: 8px;
+
+        .inspectorToggle {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 1px solid @border;
+            background: @bg-2;
+            color: @text;
+
+            &.active {
+                border-color: @accent;
+                color: @accent;
+            }
+        }
     }
 }
 
@@ -58,742 +86,59 @@
     align-items: center;
     gap: 6px;
     padding: 6px 16px;
-    background: rgba(250, 173, 20, 0.12);
-    color: #faad14;
-    border-bottom: 1px solid rgba(250, 173, 20, 0.25);
+    background: rgba(201, 122, 26, 0.12);
+    color: @warn;
+    border-bottom: 1px solid rgba(201, 122, 26, 0.25);
     font-size: 12px;
     flex-shrink: 0;
 }
 
-.chatList {
-    flex: 1;
-    overflow-y: auto;
-    overflow-anchor: none; // 禁用浏览器滚动锚定，避免流式追加内容时与手动滚底叠加造成滚动位置跳动
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-.emptyState {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: @text-dim;
-    gap: 12px;
-
-    .emptyIcon {
-        opacity: 0.5;
-    }
-
-    .emptyTitle {
-        font-size: 16px;
-        font-weight: 600;
-        color: @text;
-    }
-
-    .emptySub {
-        font-size: 13px;
-        max-width: 400px;
-        text-align: center;
-        line-height: 1.5;
-    }
-}
-
-.messageRow {
-    display: flex;
-    gap: 12px;
-
-    &.user {
-        flex-direction: row-reverse;
-
-        .avatar {
-            background: @accent-dim;
-            color: #fff;
-        }
-
-        .bubble {
-            background: @accent-dim;
-            color: #fff;
-            border-radius: 12px 2px 12px 12px;
-
-            .markdownBody {
-                color: #fff;
-
-                p,
-                span,
-                code {
-                    color: #fff;
-                }
-            }
-        }
-    }
-
-    &.assistant {
-        flex-direction: row;
-
-        .avatar {
-            background: @bg-elev;
-            color: @accent;
-            border: 1px solid @border;
-        }
-
-        .bubble {
-            background: @bg-elev;
-            color: @text;
-            border: 1px solid @border;
-            border-radius: 2px 12px 12px 12px;
-        }
-    }
-
-    &.system {
-        justify-content: center;
-
-        .systemNotice {
-            font-size: 12px;
-            padding: 4px 12px;
-            border-radius: 12px;
-            background: @bg-2;
-            color: @text-dim;
-            border: 1px solid @border;
-        }
-    }
-}
-
-.avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.bubble {
-    max-width: 80%;
-    min-width: 0; // 避免 flex 子项内容撑破引起宽度回跳
-    padding: 10px 14px;
-    font-size: 13px;
-    line-height: 1.6;
-    word-break: break-word;
-}
-
-.imageGrid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 8px;
-
-    .imgThumb {
-        max-width: 200px;
-        max-height: 150px;
-        border-radius: 6px;
-        object-fit: cover;
-        border: 1px solid @border;
-    }
-}
-
-.markdownBody {
-    font-size: 13px;
-    line-height: 1.6;
-
-    p {
-        margin: 0 0 8px 0;
-
-        &:last-child {
-            margin-bottom: 0;
-        }
-    }
-
-    pre {
-        background: @bg-1;
-        border: 1px solid @border;
-        border-radius: 6px;
-        padding: 10px;
-        overflow-x: auto;
-        font-family: Consolas, monospace;
-        font-size: 12px;
-        margin: 8px 0;
-
-        code,
-        span {
-            background: transparent !important;
-            border-radius: 0 !important;
-        }
-    }
-
-    code {
-        font-family: Consolas, monospace;
-        background: rgba(0, 0, 0, 0.08);
-        padding: 2px;
-        border-radius: 3px;
-        font-size: 12px;
-    }
-}
-
-.inputArea {
-    position: relative;
-    z-index: 10;
+.composerWrapper {
     padding: 12px 16px;
     flex-shrink: 0;
 }
 
-.previewBar {
+/* ===================== Confirm Modal ===================== */
+.modalOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.45);
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-    overflow-x: auto;
-
-    .previewItem {
-        position: relative;
-
-        img {
-            width: 50px;
-            height: 50px;
-            object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid @border;
-        }
-
-        .removeBtn {
-            position: absolute;
-            top: -4px;
-            right: -4px;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: rgba(0, 0, 0, 0.6);
-            color: #fff;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 10px;
-        }
-    }
+    justify-content: center;
 }
 
-.composerBox {
+.confirmModal {
+    width: 320px;
+    background: @bg-1;
     border: 1px solid @border;
-    border-radius: 10px;
-    background: transparent;
-}
-
-.composerInputRow {
-    display: flex;
-    gap: 8px;
-    align-items: flex-end;
-    padding: 8px 10px 4px;
-
-    .textarea {
-        flex: 1;
-        background: transparent;
-        border: none;
-        padding: 4px 2px;
-        color: @text;
-        font-family: inherit;
-        font-size: 13px;
-        line-height: 1.5;
-        resize: none;
-        outline: none;
-        min-height: 32px;
-        max-height: 120px;
-    }
-}
-
-.composerFooter {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 6px 10px 8px;
-    font-size: 12px;
-    color: @text-dim;
-
-    .footerLeft {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        max-width: 65%;
-        overflow: hidden;
-
-        .wsPath {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: @text;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            cursor: pointer;
-
-            &:hover {
-                color: @accent;
-            }
-
-            .pathText {
-                font-family: Consolas, monospace;
-                color: @accent;
-                font-weight: 500;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-                max-width: 200px;
-            }
-
-            .unsetText {
-                color: @text-dim;
-            }
-        }
-
-        .wsActions {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            flex-shrink: 0;
-        }
-
-        .statusBadge {
-            display: inline-flex;
-            align-items: center;
-            padding: 2px 7px;
-            border-radius: 10px;
-            background: rgba(24, 144, 255, 0.1);
-            color: @accent;
-            border: 1px solid rgba(24, 144, 255, 0.25);
-            font-size: 11px;
-            font-weight: 500;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-    }
-
-    .footerRight {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        flex-shrink: 0;
-
-        .sendBtn {
-            height: 26px;
-            padding: 0 14px;
-            font-size: 12px;
-            border-radius: 4px;
-            font-weight: 500;
-        }
-
-        .contextRingWrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            z-index: 100;
-
-            .tokenText {
-                font-family: Consolas, Monaco, monospace;
-                color: @text-dim;
-                white-space: nowrap;
-            }
-
-            .ringBtn {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                width: 22px;
-                height: 22px;
-                border-radius: 50%;
-                background: transparent;
-                border: none;
-                cursor: pointer;
-                padding: 0;
-                transition: background 0.2s ease;
-
-                &:hover {
-                    background: rgba(127, 127, 127, 0.15);
-                }
-
-                svg {
-                    transform: rotate(-90deg);
-                }
-            }
-
-            .tooltipCard {
-                position: absolute;
-                bottom: calc(100% + 10px);
-                right: -6px;
-                background: #ffffff;
-                color: #1f1f1f;
-                border: 1px solid rgba(0, 0, 0, 0.15);
-                border-radius: 6px;
-                padding: 6px 12px;
-                font-size: 12px;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                white-space: nowrap;
-                box-shadow: 0 4px 18px rgba(0, 0, 0, 0.18);
-                z-index: 999;
-                pointer-events: none;
-
-                &::after {
-                    content: '';
-                    position: absolute;
-                    top: 100%;
-                    right: 14px;
-                    border-width: 5px;
-                    border-style: solid;
-                    border-color: #ffffff transparent transparent transparent;
-                }
-            }
-        }
-    }
-}
-
-.confirmBox {
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding: 12px 14px;
-    background: rgba(250, 173, 20, 0.1);
-    border: 1px solid rgba(250, 173, 20, 0.4);
-    border-radius: 8px;
-    color: @text;
-    font-size: 12.5px;
-    margin-bottom: 10px;
-    width: 100%;
-    box-sizing: border-box;
-    box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.08);
+    gap: 12px;
 
     .confirmHeader {
         display: flex;
         align-items: center;
         gap: 8px;
+        font-size: 14px;
         font-weight: 600;
-        color: #d48806;
-
-        strong {
-            color: #d48806;
-            word-break: break-all;
-        }
+        color: @text;
     }
 
     .confirmBody {
-        background: rgba(0, 0, 0, 0.05);
-        border: 1px solid @border;
-        border-radius: 6px;
-        padding: 8px 12px;
-        max-height: 220px;
-        overflow-y: auto;
-
-        .confirmCode {
-            margin: 0;
-            white-space: pre-wrap;
-            word-break: break-all;
-            font-family: Consolas, Monaco, monospace;
-            font-size: 12px;
-            color: @text;
-            line-height: 1.5;
-        }
+        font-size: 12.5px;
+        color: @text-dim;
+        line-height: 1.5;
     }
 
     .confirmFooter {
         display: flex;
-        align-items: center;
         justify-content: flex-end;
-        gap: 10px;
-
-        .btnApprove {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            background: #faad14;
-            color: #fff;
-            border: none;
-            padding: 5px 14px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: all 0.2s;
-
-            &:hover {
-                background: #d48806;
-            }
-        }
-
-        .btnReject {
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            background: @bg-2;
-            color: @text;
-            border: 1px solid @border;
-            padding: 5px 14px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: all 0.2s;
-
-            &:hover {
-                background: @bg-3;
-            }
-        }
-    }
-}
-
-.toolCallPill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background: rgba(24, 144, 255, 0.1);
-    border: 1px solid rgba(24, 144, 255, 0.25);
-    border-radius: 12px;
-    color: @accent;
-    font-size: 12px;
-    margin-bottom: 8px;
-    font-weight: 500;
-
-    .spinIcon {
-        animation: spin 1.2s linear infinite;
-    }
-}
-
-.stopBtn {
-    background: #ff4d4f;
-    color: #ffffff;
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
-    border-radius: 4px;
-    font-size: 12px;
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s;
-
-    &:hover {
-        background: #ff7875;
-    }
-}
-
-.pipelineMinimalContainer {
-    margin-bottom: 8px;
-    font-size: 12px;
-    color: @text-dim;
-
-    .pipelineMasterHeader {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        padding: 3px 0;
-        cursor: pointer;
-        user-select: none;
-        color: @text-dim;
-        transition: color 0.15s ease;
-
-        &:hover {
-            color: @text;
-        }
-
-        .pipelineMasterLeft {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-
-            .spinIcon {
-                animation: spin 1.2s linear infinite;
-                color: @accent;
-            }
-
-            .pipelineBrainIcon {
-                font-size: 12px;
-                opacity: 0.8;
-            }
-
-            .pipelineMasterTitle {
-                font-size: 12px;
-                font-weight: 500;
-            }
-        }
-
-        .expandIcon {
-            opacity: 0.7;
-        }
-    }
-}
-
-.stepsListContainer {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    margin-top: 4px;
-    margin-bottom: 8px;
-    margin-left: 4px;
-    padding-left: 8px;
-    border-left: 2px solid rgba(127, 127, 127, 0.15);
-
-    .stepBlockRow {
-        display: flex;
-        flex-direction: column;
-
-        .stepBlockHeader {
-            display: inline-flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 3px 0;
-            cursor: pointer;
-            user-select: none;
-            color: @text-dim;
-            transition: color 0.15s ease;
-
-            &:hover {
-                color: @text;
-            }
-
-            .stepBlockHeaderLeft {
-                display: flex;
-                align-items: center;
-                gap: 6px;
-                overflow: hidden;
-
-                .stepIconText {
-                    font-size: 12px;
-                    opacity: 0.8;
-                }
-
-                .stepTitleText {
-                    font-size: 12px;
-                    font-family: Consolas, Monaco, monospace;
-                    font-weight: 500;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
-                    max-width: 520px;
-                }
-            }
-
-            .expandIcon {
-                opacity: 0.6;
-            }
-        }
-
-        .stepBlockBody {
-            margin-top: 4px;
-            margin-bottom: 4px;
-            margin-left: 4px;
-            padding: 6px 10px;
-            background: rgba(0, 0, 0, 0.03);
-            border-left: 2px solid rgba(127, 127, 127, 0.2);
-            border-radius: 0 4px 4px 0;
-            font-size: 12px;
-            max-height: 320px;
-            overflow-y: auto;
-
-            .toolCodeMinimal {
-                margin: 0;
-                font-family: Consolas, Monaco, monospace;
-                font-size: 11.5px;
-                white-space: pre-wrap;
-                word-break: break-all;
-                color: @text;
-            }
-        }
-    }
-}
-
-@keyframes spin {
-    from {
-        transform: rotate(0deg);
-    }
-
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-.toolMsgRow {
-    margin: 8px 0;
-    display: flex;
-    justify-content: flex-start;
-
-    .toolMsgCard {
-        background: rgba(24, 144, 255, 0.04);
-        border: 1px solid rgba(24, 144, 255, 0.2);
-        border-radius: 6px;
-        width: 100%;
-        max-width: 680px;
-        overflow: hidden;
-
-        .toolHeader {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 12px;
-            background: rgba(24, 144, 255, 0.08);
-            cursor: pointer;
-            user-select: none;
-            transition: background 0.2s;
-
-            &:hover {
-                background: rgba(24, 144, 255, 0.14);
-            }
-
-            .toolHeaderLeft {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                font-size: 12.5px;
-                color: @text;
-
-                strong {
-                    color: @accent;
-                }
-
-                .toolStatusTag {
-                    font-size: 11px;
-                    padding: 1px 6px;
-                    border-radius: 4px;
-                    background: rgba(82, 196, 26, 0.15);
-                    color: #52c41a;
-                    border: 1px solid rgba(82, 196, 26, 0.3);
-                }
-            }
-
-            .expandIcon {
-                color: @text-dim;
-            }
-        }
-
-        .toolBody {
-            padding: 8px 12px;
-            border-top: 1px solid rgba(24, 144, 255, 0.15);
-
-            .toolSectionTitle {
-                font-size: 11.5px;
-                color: @text-dim;
-                margin-bottom: 4px;
-                font-weight: 500;
-            }
-
-            .toolCode {
-                margin: 0;
-                white-space: pre-wrap;
-                word-break: break-all;
-                font-family: Consolas, Monaco, monospace;
-                font-size: 11.5px;
-                color: @text;
-                background: rgba(0, 0, 0, 0.04);
-                padding: 6px 10px;
-                border-radius: 4px;
-                max-height: 240px;
-                overflow-y: auto;
-            }
-        }
+        gap: 8px;
+        margin-top: 4px;
     }
 }

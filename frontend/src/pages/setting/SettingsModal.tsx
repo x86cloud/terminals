@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { ArrowLeft, Palette, Bot, Info } from 'lucide-react'
 import { AppSettings } from '@/types'
 import { applyThemeMode, applyGlobalFont } from '@/utils/theme'
@@ -33,11 +33,14 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const [aiBlockHighRiskCommands, setAiBlockHighRiskCommands] = useState(true)
     const [aiEnableThinking, setAiEnableThinking] = useState(false)
     const [aiReasoningEffort, setAiReasoningEffort] = useState<'none' | 'low' | 'medium' | 'high'>('none')
+    const [aiEnableVerifier, setAiEnableVerifier] = useState(false)
+    const [aiMaxParallel, setAiMaxParallel] = useState(4)
     const [aiSystemPrompt, setAiSystemPrompt] = useState('你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
     const [aiWorkspaceDir, setAiWorkspaceDir] = useState('')
 
+    const prevOpenRef = useRef(false)
     useEffect(() => {
-        if (open && settings) {
+        if (open && !prevOpenRef.current && settings) {
             setThemeMode(settings.themeMode || 'light')
             setGlobalFontFamily(settings.globalFontFamily || 'system')
             setAiBaseUrl(settings.aiBaseUrl || 'https://api.deepseek.com')
@@ -52,9 +55,12 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             setAiBlockHighRiskCommands(settings.aiBlockHighRiskCommands ?? true)
             setAiEnableThinking(!!settings.aiEnableThinking)
             setAiReasoningEffort(settings.aiReasoningEffort || 'medium')
+            setAiEnableVerifier(!!settings.aiEnableVerifier)
+            setAiMaxParallel(settings.aiMaxParallel || 4)
             setAiSystemPrompt(settings.aiSystemPrompt || '你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
             setAiWorkspaceDir(settings.aiWorkspaceDir || '')
         }
+        prevOpenRef.current = open
     }, [open, settings])
 
     // 按 Esc 键平滑返回主界面
@@ -86,11 +92,13 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiBlockHighRiskCommands,
             aiEnableThinking,
             aiReasoningEffort,
+            aiEnableVerifier,
+            aiMaxParallel,
             aiSystemPrompt,
             aiWorkspaceDir,
             ...partial,
         })
-    }, [settings, themeMode, globalFontFamily, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiSystemPrompt, aiWorkspaceDir, onSave])
+    }, [settings, themeMode, globalFontFamily, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, onSave])
 
     if (!open) return null
 
@@ -119,6 +127,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         if (fields.aiBlockHighRiskCommands !== undefined) setAiBlockHighRiskCommands(fields.aiBlockHighRiskCommands)
         if (fields.aiEnableThinking !== undefined) setAiEnableThinking(fields.aiEnableThinking)
         if (fields.aiReasoningEffort !== undefined) setAiReasoningEffort(fields.aiReasoningEffort)
+        if (fields.aiEnableVerifier !== undefined) setAiEnableVerifier(fields.aiEnableVerifier)
+        if (fields.aiMaxParallel !== undefined) setAiMaxParallel(fields.aiMaxParallel)
         if (fields.aiSystemPrompt !== undefined) setAiSystemPrompt(fields.aiSystemPrompt)
 
         persistSettings(fields)
@@ -187,6 +197,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         aiBlockHighRiskCommands={aiBlockHighRiskCommands}
                         aiEnableThinking={aiEnableThinking}
                         aiReasoningEffort={aiReasoningEffort}
+                        aiEnableVerifier={aiEnableVerifier}
+                        aiMaxParallel={aiMaxParallel}
                         aiSystemPrompt={aiSystemPrompt}
                         onChange={handleAiAgentChange}
                     />

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"sync"
 
 	"terminal/agent"
 	"terminal/core"
@@ -17,16 +18,17 @@ import (
 
 // App 是绑定给前端的应用门面。
 type App struct {
-	ctx       context.Context
-	store     *core.Store
-	sessions  *ssh.SessionManager
-	transfers *ssh.TransferManager
-	redisMgr  *redis.RedisManager
-	mqttMgr   *proto.MqttManager
-	mongoMgr  *mongo.MongoManager
-	wsMgr     *proto.WsManager
-	mysqlMgr  *db.MysqlManagerEx
-	sqliteMgr *db.SqliteManager
+	ctx           context.Context
+	store         *core.Store
+	sessions      *ssh.SessionManager
+	transfers     *ssh.TransferManager
+	redisMgr      *redis.RedisManager
+	mqttMgr       *proto.MqttManager
+	mongoMgr      *mongo.MongoManager
+	wsMgr         *proto.WsManager
+	mysqlMgr      *db.MysqlManagerEx
+	sqliteMgr     *db.SqliteManager
+	planCancelMap sync.Map
 }
 
 func NewApp() *App {
@@ -75,9 +77,11 @@ func (a *App) startup(ctx context.Context) {
 	a.sqliteMgr.SetContext(ctx)
 	a.mysqlMgr.SetContext(ctx)
 	agent.DefaultManager.SetContext(ctx)
+	agent.DefaultRuntime.SetManagers(a.sessions, a.redisMgr, a.mysqlMgr, a.mongoMgr, a.sqliteMgr, a.mqttMgr)
 
 	if a.store != nil {
 		settings := a.store.GetSettings()
+		_ = agent.DefaultRuntime.InitOrUpdate(settings)
 		a.applyNativeWindowTheme(settings.ThemeMode)
 	}
 }

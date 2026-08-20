@@ -818,6 +818,8 @@ export interface AppSettings {
     aiBlockHighRiskCommands?: boolean
     aiEnableThinking?: boolean
     aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
+    aiEnableVerifier?: boolean
+    aiMaxParallel?: number
 }
 
 export interface ToolCallItem {
@@ -846,6 +848,8 @@ export interface AiMessage {
     tool_call_id?: string
     name?: string
     timestamp?: number
+    plan?: AgentPlan
+    plan_summary?: string
 }
 
 export interface SSHDockerContainer {
@@ -865,3 +869,138 @@ export interface SSHDockerImage {
     size: string
     createdAt: string
 }
+
+// ===================== xAgent 2.0 Workbench Types =====================
+
+export interface AgentSessionItem {
+    id: string
+    title: string
+    workspace?: string
+    createdAt?: number
+    created_at?: number
+    updatedAt?: number
+    updated_at?: number
+}
+
+export interface AgentJobItem {
+    id: string
+    sessionId?: string
+    session_id?: string
+    kind?: string
+    description?: string
+    state: 'pending' | 'running' | 'completed' | 'failed' | 'killed' | 'cancelled'
+    progress: number
+    progressMsg?: string
+    error?: string
+    summary?: string
+    result?: string
+    createdAt?: number
+    created_at?: number
+    startedAt?: number
+    started_at?: number
+    finishedAt?: number
+    finished_at?: number
+}
+
+export interface AgentJobOutputItem {
+    id?: number
+    jobId?: string
+    job_id?: string
+    seq: number
+    chunk?: string
+    outputChunk?: string
+    createdAt?: number
+    created_at?: number
+}
+
+export interface AgentSubagentItem {
+    id: string
+    parentId?: string
+    parent_id?: string
+    sessionId?: string
+    session_id?: string
+    prompt: string
+    state: 'running' | 'completed' | 'failed' | 'interrupted'
+    result?: string
+    depth: number
+    createdAt?: number
+    created_at?: number
+    finishedAt?: number
+    finished_at?: number
+}
+
+export interface AgentAuditLogItem {
+    id?: number
+    traceId?: string
+    trace_id?: string
+    sessionId?: string
+    session_id?: string
+    tool: string
+    input: string
+    decision: string
+    outputPreview?: string
+    output_head?: string
+    durationMs?: number
+    duration_ms?: number
+    createdAt?: number
+    created_at?: number
+}
+
+export interface AgentSkillItem {
+    name: string
+    description: string
+    instructions: string
+    tools?: string[]
+    context?: string
+    path?: string
+}
+
+export interface AgentPlanStep {
+    id: string
+    action: string
+    tool_name?: string
+    args?: any
+    description: string
+    depends_on?: string[]
+    expected_out?: string
+    exempted?: boolean
+    status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+    duration_ms?: number
+    error?: string
+    output?: any
+    verdict?: string
+}
+
+export interface AgentPlan {
+    id: string
+    session_id: string
+    objective: string
+    steps: AgentPlanStep[]
+    risk_level: 'low' | 'medium' | 'high'
+    need_confirm: boolean
+    executing?: boolean
+    summary?: string
+    reasoning_content?: string
+    created_at: number
+}
+
+export interface AgentApprovalRequest {
+    confirm_id: string
+    session_id: string
+    trace_id?: string
+    tool_name: string
+    action: string
+    description: string
+    arguments: string
+    risk_level: string
+}
+
+export interface AgentAskRequest {
+    ask_id: string
+    session_id: string
+    trace_id?: string
+    question: string
+    options?: string[]
+    created_at?: number
+}
+

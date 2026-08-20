@@ -21,6 +21,8 @@ type AppSettings struct {
 	AiBlockHighRiskCommands bool    `json:"aiBlockHighRiskCommands"`
 	AiEnableThinking        bool    `json:"aiEnableThinking"`
 	AiReasoningEffort       string  `json:"aiReasoningEffort"` // "low" | "medium" | "high"
+	AiEnableVerifier        bool    `json:"aiEnableVerifier"`
+	AiMaxParallel           int     `json:"aiMaxParallel"`
 }
 
 func DefaultAppSettings() AppSettings {
@@ -43,5 +45,7 @@ func DefaultAppSettings() AppSettings {
 		AiBlockHighRiskCommands: true,
 		AiEnableThinking:        false,
 		AiReasoningEffort:       "medium",
+		AiEnableVerifier:        false,
+		AiMaxParallel:           4,
 	}
 }

@@ -90,6 +90,33 @@ export namespace agent {
 
 }
 
+export namespace ask {
+	
+	export class AskRequest {
+	    ask_id: string;
+	    session_id: string;
+	    trace_id?: string;
+	    question: string;
+	    options?: string[];
+	    created_at: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AskRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.ask_id = source["ask_id"];
+	        this.session_id = source["session_id"];
+	        this.trace_id = source["trace_id"];
+	        this.question = source["question"];
+	        this.options = source["options"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+
+}
+
 export namespace core {
 	
 	export class AppSettings {
@@ -113,6 +140,8 @@ export namespace core {
 	    aiBlockHighRiskCommands: boolean;
 	    aiEnableThinking: boolean;
 	    aiReasoningEffort: string;
+	    aiEnableVerifier: boolean;
+	    aiMaxParallel: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -140,6 +169,8 @@ export namespace core {
 	        this.aiBlockHighRiskCommands = source["aiBlockHighRiskCommands"];
 	        this.aiEnableThinking = source["aiEnableThinking"];
 	        this.aiReasoningEffort = source["aiReasoningEffort"];
+	        this.aiEnableVerifier = source["aiEnableVerifier"];
+	        this.aiMaxParallel = source["aiMaxParallel"];
 	    }
 	}
 	export class ServerConfig {
@@ -362,6 +393,41 @@ export namespace db {
 
 }
 
+export namespace guard {
+	
+	export class ApprovalRequest {
+	    confirm_id: string;
+	    session_id: string;
+	    trace_id: string;
+	    tool_name: string;
+	    action: string;
+	    path: string;
+	    description: string;
+	    arguments: string;
+	    level: string;
+	    created_at: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ApprovalRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.confirm_id = source["confirm_id"];
+	        this.session_id = source["session_id"];
+	        this.trace_id = source["trace_id"];
+	        this.tool_name = source["tool_name"];
+	        this.action = source["action"];
+	        this.path = source["path"];
+	        this.description = source["description"];
+	        this.arguments = source["arguments"];
+	        this.level = source["level"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+
+}
+
 export namespace mongo {
 	
 	export class MongoBulkOp {
@@ -481,6 +547,91 @@ export namespace mongo {
 	        this.srv = source["srv"];
 	        this.options = source["options"];
 	    }
+	}
+
+}
+
+export namespace planner {
+	
+	export class PlanStep {
+	    id: string;
+	    action: string;
+	    tool_name?: string;
+	    args: number[];
+	    description: string;
+	    depends_on?: string[];
+	    expected_out?: string;
+	    exempted?: boolean;
+	    status: string;
+	    duration_ms?: number;
+	    error?: string;
+	    output?: any;
+	    verdict?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanStep(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.action = source["action"];
+	        this.tool_name = source["tool_name"];
+	        this.args = source["args"];
+	        this.description = source["description"];
+	        this.depends_on = source["depends_on"];
+	        this.expected_out = source["expected_out"];
+	        this.exempted = source["exempted"];
+	        this.status = source["status"];
+	        this.duration_ms = source["duration_ms"];
+	        this.error = source["error"];
+	        this.output = source["output"];
+	        this.verdict = source["verdict"];
+	    }
+	}
+	export class Plan {
+	    id: string;
+	    session_id: string;
+	    objective: string;
+	    steps: PlanStep[];
+	    risk_level: string;
+	    need_confirm: boolean;
+	    reasoning_content?: string;
+	    created_at: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Plan(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.session_id = source["session_id"];
+	        this.objective = source["objective"];
+	        this.steps = this.convertValues(source["steps"], PlanStep);
+	        this.risk_level = source["risk_level"];
+	        this.need_confirm = source["need_confirm"];
+	        this.reasoning_content = source["reasoning_content"];
+	        this.created_at = source["created_at"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
 	}
 
 }
@@ -877,6 +1028,33 @@ export namespace redis {
 
 }
 
+export namespace skills {
+	
+	export class Skill {
+	    name: string;
+	    description: string;
+	    instructions: string;
+	    tools?: string[];
+	    context?: string;
+	    path?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Skill(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.description = source["description"];
+	        this.instructions = source["instructions"];
+	        this.tools = source["tools"];
+	        this.context = source["context"];
+	        this.path = source["path"];
+	    }
+	}
+
+}
+
 export namespace ssh {
 	
 	export class FileItem {
@@ -1235,6 +1413,135 @@ export namespace ssh {
 	        this.error = source["error"];
 	        this.startedAt = source["startedAt"];
 	        this.updatedAt = source["updatedAt"];
+	    }
+	}
+
+}
+
+export namespace store {
+	
+	export class AuditLogItem {
+	    id: number;
+	    trace_id: string;
+	    session_id: string;
+	    tool: string;
+	    input: string;
+	    decision: string;
+	    output_head: string;
+	    duration_ms: number;
+	    created_at: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new AuditLogItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.trace_id = source["trace_id"];
+	        this.session_id = source["session_id"];
+	        this.tool = source["tool"];
+	        this.input = source["input"];
+	        this.decision = source["decision"];
+	        this.output_head = source["output_head"];
+	        this.duration_ms = source["duration_ms"];
+	        this.created_at = source["created_at"];
+	    }
+	}
+	export class JobItem {
+	    id: string;
+	    session_id: string;
+	    kind: string;
+	    state: string;
+	    progress: number;
+	    error?: string;
+	    summary?: string;
+	    created_at: number;
+	    started_at: number;
+	    finished_at: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new JobItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.session_id = source["session_id"];
+	        this.kind = source["kind"];
+	        this.state = source["state"];
+	        this.progress = source["progress"];
+	        this.error = source["error"];
+	        this.summary = source["summary"];
+	        this.created_at = source["created_at"];
+	        this.started_at = source["started_at"];
+	        this.finished_at = source["finished_at"];
+	    }
+	}
+	export class JobOutputItem {
+	    job_id: string;
+	    seq: number;
+	    chunk: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new JobOutputItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.job_id = source["job_id"];
+	        this.seq = source["seq"];
+	        this.chunk = source["chunk"];
+	    }
+	}
+	export class SessionItem {
+	    id: string;
+	    title: string;
+	    workspace: string;
+	    settings: string;
+	    created_at: number;
+	    updated_at: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SessionItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.title = source["title"];
+	        this.workspace = source["workspace"];
+	        this.settings = source["settings"];
+	        this.created_at = source["created_at"];
+	        this.updated_at = source["updated_at"];
+	    }
+	}
+	export class SubagentItem {
+	    id: string;
+	    parent_id?: string;
+	    session_id: string;
+	    prompt: string;
+	    state: string;
+	    result?: string;
+	    depth: number;
+	    created_at: number;
+	    finished_at: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new SubagentItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.parent_id = source["parent_id"];
+	        this.session_id = source["session_id"];
+	        this.prompt = source["prompt"];
+	        this.state = source["state"];
+	        this.result = source["result"];
+	        this.depth = source["depth"];
+	        this.created_at = source["created_at"];
+	        this.finished_at = source["finished_at"];
 	    }
 	}
 

@@ -263,6 +263,47 @@ func NewRedisManager() *RedisManager {
 	return &RedisManager{clients: make(map[string]*redisClient)}
 }
 
+func (m *RedisManager) ListConnections() []map[string]any {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	list := make([]map[string]any, 0, len(m.clients))
+	for id, rc := range m.clients {
+		list = append(list, map[string]any{
+			"id":   id,
+			"name": rc.cfg.Name,
+			"host": rc.cfg.Host,
+			"port": rc.cfg.Port,
+			"mode": string(rc.mode),
+		})
+	}
+	return list
+}
+
+func (m *RedisManager) ResolveID(idOrName string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	trimmed := strings.TrimSpace(idOrName)
+	if trimmed != "" {
+		if _, ok := m.clients[trimmed]; ok {
+			return trimmed, nil
+		}
+		for id, rc := range m.clients {
+			if strings.EqualFold(rc.cfg.Name, trimmed) || strings.EqualFold(rc.cfg.Host, trimmed) || strings.EqualFold(id, trimmed) {
+				return id, nil
+			}
+		}
+	}
+	if len(m.clients) == 1 {
+		for id := range m.clients {
+			return id, nil
+		}
+	}
+	if len(m.clients) == 0 {
+		return "", errors.New("当前暂无已连通的 Redis 连接，请先在 Redis 界面中连接服务器")
+	}
+	return "", fmt.Errorf("存在多个活跃的 Redis 连接，请指定明确的 server_id (当前活跃连接数: %d)", len(m.clients))
+}
+
 func (m *RedisManager) Open(id string, cfg core.ServerConfig) error {
 	m.mu.Lock()
 	if old, ok := m.clients[id]; ok {

@@ -15,6 +15,7 @@
     overflow: hidden;
     color: @text;
     user-select: none;
+    -webkit-user-select: none;
     animation: fadeIn 0.15s ease-out;
 }
 
@@ -134,6 +135,14 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     padding: 24px 36px;
     overflow-y: auto;
+    user-select: none;
+    -webkit-user-select: none;
+
+    input,
+    textarea {
+        user-select: text;
+        -webkit-user-select: text;
+    }
 }
 
 @keyframes fadeIn {

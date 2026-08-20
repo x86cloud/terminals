@@ -15,6 +15,8 @@ interface Props {
     aiBlockHighRiskCommands?: boolean
     aiEnableThinking?: boolean
     aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
+    aiEnableVerifier?: boolean
+    aiMaxParallel?: number
     aiSystemPrompt: string
     onChange: (fields: Partial<{
         aiBaseUrl: string
@@ -29,6 +31,8 @@ interface Props {
         aiBlockHighRiskCommands: boolean
         aiEnableThinking: boolean
         aiReasoningEffort: 'none' | 'low' | 'medium' | 'high'
+        aiEnableVerifier: boolean
+        aiMaxParallel: number
         aiSystemPrompt: string
     }>) => void
 }
@@ -44,6 +48,8 @@ export default function AiAgentTab({
     aiBlockHighRiskCommands = true,
     aiEnableThinking = false,
     aiReasoningEffort = 'none',
+    aiEnableVerifier = false,
+    aiMaxParallel = 4,
     aiSystemPrompt,
     onChange,
 }: Props) {
@@ -255,6 +261,38 @@ export default function AiAgentTab({
                         />
                         <span className={s.slider} />
                     </label>
+                </div>
+
+                <div className={s.toggleRow}>
+                    <div className={s.toggleInfo}>
+                        <span className={s.toggleTitle}>开启步骤执行语义验证器 (Verifier)</span>
+                        <span className={s.toggleSub}>执行完计划步骤后自动结合大模型进行预期结果比对校验，若未达到预期可自动换招修复</span>
+                    </div>
+                    <label className={s.switch}>
+                        <input
+                            type="checkbox"
+                            checked={aiEnableVerifier}
+                            onChange={(e) => onChange({ aiEnableVerifier: e.target.checked })}
+                        />
+                        <span className={s.slider} />
+                    </label>
+                </div>
+
+                <div className={s.toggleRow}>
+                    <div className={s.toggleInfo}>
+                        <span className={s.toggleTitle}>DAG 计划步骤最大并行执行度</span>
+                        <span className={s.toggleSub}>同层无依赖的任务并发执行通道数（默认 4）</span>
+                    </div>
+                    <select
+                        className={s.select}
+                        value={aiMaxParallel}
+                        onChange={(e) => onChange({ aiMaxParallel: parseInt(e.target.value, 10) || 4 })}
+                    >
+                        <option value={1}>1 (完全串行)</option>
+                        <option value={2}>2 并发</option>
+                        <option value={4}>4 并发 (推荐)</option>
+                        <option value={8}>8 并发</option>
+                    </select>
                 </div>
             </div>
 

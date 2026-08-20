@@ -1,21 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import {
-    RotateCw,
-    ChevronDown,
-    ChevronRight,
-    Bot,
-    Trash2,
-    User,
-    Shield,
-    Check,
-    X,
-    Paperclip,
-    Folder,
-    Square,
-} from 'lucide-react'
-import MarkdownViewer from '@/components/common/MarkdownViewer'
-import { API, consumePendingAsk, subscribe } from '@/api'
-import { AiMessage, AppSettings, ProcessStep } from '@/types'
+import React, { useState } from 'react'
+import { Bot, Activity, Trash2, AlertTriangle } from 'lucide-react'
+import { API } from '@/api'
+import { AppSettings, AgentSkillItem } from '@/types'
+import { useAgentSessions } from './hooks/useAgentSessions'
+import { useAgentInspector } from './hooks/useAgentInspector'
+import { useAgentEvents } from './hooks/useAgentEvents'
+import { useAgentComposer } from './hooks/useAgentComposer'
+import { AgentInspectorDrawer } from './views/AgentInspectorDrawer'
+import { ChatMessageList } from './components/ChatMessageList'
+import { ApprovalDock } from './components/ApprovalDock'
+import { AskUserDock } from './components/AskUserDock'
+import { Composer } from './components/Composer'
 import g from '@/styles/global.module.less'
 import s from '@/pages/agent/AiAgentPanel.module.less'
 
@@ -23,795 +18,317 @@ interface Props {
     settings: AppSettings
 }
 
-const SESSION_ID = 'ai_agent_default'
-
-// 从消息中提取步骤信息（优先历史 process_steps，否则由 reasoning/tool_calls 组装）
-const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
-    if (msg.process_steps && msg.process_steps.length > 0) {
-        return msg.process_steps
-    }
-    const steps: ProcessStep[] = []
-    if (msg.reasoning_content) {
-        steps.push({
-            id: `think_${msg.timestamp || Date.now()}`,
-            type: 'think',
-            title: '思考过程',
-            content: msg.reasoning_content,
-            status: 'completed',
-            timestamp: msg.timestamp || Date.now(),
-        })
-    }
-    if (msg.tool_calls && msg.tool_calls.length > 0) {
-        msg.tool_calls.forEach((tc) => {
-            steps.push({
-                id: tc.id || `tool_${Date.now()}`,
-                type: 'tool',
-                title: tc.name,
-                summary: tc.args,
-                content: '',
-                status: 'completed',
-                timestamp: msg.timestamp || Date.now(),
-            })
-        })
-    }
-    return steps
-}
-
-// 定义在模块级：避免父组件流式重渲染时组件标识变化导致整棵子树被卸载重建（闪烁主因）
-const ProcessStepsList = ({
-    steps,
-    isStreaming = false,
-}: {
-    steps: ProcessStep[]
-    isStreaming?: boolean
-}) => {
-    const [masterExpanded, setMasterExpanded] = useState(isStreaming)
-    const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({})
-
-    if (!steps || steps.length === 0) return null
-
-    const thinkCount = steps.filter((s) => s.type === 'think').length
-    const toolCount = steps.filter((s) => s.type === 'tool').length
-
-    const toggleStep = (stepId: string, e: React.MouseEvent) => {
-        e.stopPropagation()
-        setExpandedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
-    }
-
-    const formatSummary = (step: ProcessStep) => {
-        if (step.type === 'think') return 'Thought process'
-        if (step.summary) return `${step.title} ${step.summary}`
-        return step.title
-    }
-
-    return (
-        <div className={s.pipelineMinimalContainer}>
-            <div className={s.pipelineMasterHeader} onClick={() => setMasterExpanded(!masterExpanded)}>
-                <div className={s.pipelineMasterLeft}>
-                    {isStreaming ? (
-                        <RotateCw size={12} className={s.spinIcon} />
-                    ) : (
-                        <span className={s.pipelineBrainIcon}>💭</span>
-                    )}
-                    <span className={s.pipelineMasterTitle}>
-                        {isStreaming ? '推演中…' : `Thought process (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`}
-                    </span>
-                </div>
-                {masterExpanded ? <ChevronDown size={12} className={s.expandIcon} /> : <ChevronRight size={12} className={s.expandIcon} />}
-            </div>
-
-            {masterExpanded && (
-                <div className={s.stepsListContainer}>
-                    {steps.map((step) => {
-                        const isStepExpanded = expandedSteps[step.id] ?? (isStreaming && step.status === 'running')
-                        return (
-                            <div key={step.id} className={s.stepBlockRow}>
-                                <div className={s.stepBlockHeader} onClick={(e) => toggleStep(step.id, e)}>
-                                    <div className={s.stepBlockHeaderLeft}>
-                                        <span className={s.stepIconText}>
-                                            {step.type === 'tool' ? '🛠️' : '💭'}
-                                        </span>
-                                        <span className={s.stepTitleText}>
-                                            {formatSummary(step)}
-                                        </span>
-                                    </div>
-                                    {isStepExpanded ? (
-                                        <ChevronDown size={11} className={s.expandIcon} />
-                                    ) : (
-                                        <ChevronRight size={11} className={s.expandIcon} />
-                                    )}
-                                </div>
-
-                                {isStepExpanded && (
-                                    <div className={s.stepBlockBody}>
-                                        {step.type === 'think' ? (
-                                            <MarkdownViewer content={step.content} streaming={isStreaming && step.status === 'running'} />
-                                        ) : (
-                                            <pre className={s.toolCodeMinimal}>{step.content}</pre>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-                        )
-                    })}
-                </div>
-            )}
-        </div>
-    )
-}
-
 export default function AiAgentPanel({ settings }: Props) {
-    const [messages, setMessages] = useState<AiMessage[]>([])
-    const [input, setInput] = useState('')
-    const [images, setImages] = useState<string[]>([])
-    const [isGenerating, setIsGenerating] = useState(false)
-    const [streamingText, setStreamingText] = useState('')
-    const [streamingReasoningText, setStreamingReasoningText] = useState('')
-    const [activeSteps, setActiveSteps] = useState<ProcessStep[]>([])
-    const [noticeText, setNoticeText] = useState('')
-    const [workspaceDir, setWorkspaceDir] = useState<string>('')
-    const [activeToolCall, setActiveToolCall] = useState<string>('')
-    const [pendingConfirm, setPendingConfirm] = useState<{
-        confirmID: string
-        action: string
-        path: string
-        description: string
-    } | null>(null)
-    const [isRingHovered, setIsRingHovered] = useState(false)
-    const chatListRef = useRef<HTMLDivElement>(null)
-    const fileInputRef = useRef<HTMLInputElement>(null)
+    const [noticeText, setNoticeText] = useState<string>('')
+    const [pendingApproval, setPendingApproval] = useState<any>(null)
+    const [pendingAsk, setPendingAsk] = useState<any>(null)
+    const [pendingPlan, setPendingPlan] = useState<any>(null)
+    const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false)
 
-    // Load persistent history and workspace dir on mount
-    useEffect(() => {
-        API.agentGetHistory()
-            .then((history) => {
-                if (history && history.length > 0) {
-                    setMessages(history)
-                }
-            })
-            .catch(() => { })
+    // 1. Single Session Hook
+    const {
+        activeSessionId,
+        messages,
+        setMessages,
+        visibleMessages,
+        hasMore,
+        remainingRounds,
+        loadMoreHistory,
+        clearMessages,
+    } = useAgentSessions()
 
-        API.agentGetWorkspaceDir()
-            .then((dir) => {
-                if (dir) setWorkspaceDir(dir)
-            })
-            .catch(() => { })
-    }, [])
+    // 2. Inspector Hook
+    const {
+        jobs,
+        jobOutputs,
+        setJobOutputs,
+        subagents,
+        auditLogs,
+        skillsList,
+        subagentInputs,
+        setSubagentInputs,
+        expandedSkills,
+        expandedAudit,
+        inspectorTab,
+        setInspectorTab,
+        showInspector,
+        setShowInspector,
+        loadInspectorData,
+        handleKillJob,
+        handleSendSubagentMessage,
+        handleInterruptSubagent,
+        toggleSkillExpand,
+        toggleAuditExpand,
+    } = useAgentInspector(activeSessionId, setNoticeText)
 
-    // Save history when messages change
-    const saveHistory = useCallback((newMsgs: AiMessage[]) => {
-        setMessages(newMsgs)
-        API.agentSaveHistory(newMsgs).catch(() => { })
-    }, [])
-
-    // Scroll chat list to bottom
-    const scrollToBottom = () => {
-        if (chatListRef.current) {
-            chatListRef.current.scrollTop = chatListRef.current.scrollHeight
-        }
-    }
-
-    useEffect(() => {
-        scrollToBottom()
-    }, [messages, streamingText, pendingConfirm, activeToolCall, activeSteps])
-
-    // Subscribe to Wails event stream
-    const handleSendRef = useRef<(customText?: string) => Promise<void>>(async () => { })
-
-    // Send Message Handler
-    const handleSend = async (customText?: any) => {
-        const text = (typeof customText === 'string' ? customText : input).trim()
-        if ((!text && images.length === 0) || isGenerating) return
-
-        const userMsg: AiMessage = {
-            role: 'user',
-            content: text,
-            images: images.length > 0 && customText === undefined ? [...images] : undefined,
-            timestamp: Date.now(),
-        }
-
-        const newHistory = [...messages, userMsg]
-        saveHistory(newHistory)
-        setInput('')
-        setImages([])
-        setNoticeText('')
-        setIsGenerating(true)
-        setStreamingText('')
-        setStreamingReasoningText('')
-        setActiveSteps([])
-
-        try {
-            await API.agentSend(SESSION_ID, newHistory)
-        } catch (e: any) {
-            setIsGenerating(false)
-            setStreamingText('')
-            setStreamingReasoningText('')
-            setActiveSteps([])
-            saveHistory([
-                ...newHistory,
-                { role: 'assistant', content: `❌ 发送失败: ${e.message || String(e)}`, timestamp: Date.now() },
-            ])
-        }
-    }
-
-    const handleStop = async () => {
-        try {
-            await API.agentStopSend(SESSION_ID)
-        } catch { }
-        setIsGenerating(false)
-    }
-
-    useEffect(() => {
-        handleSendRef.current = handleSend
+    // 3. Composer Hook
+    const {
+        input,
+        setInput,
+        images,
+        setImages,
+        isGenerating,
+        setIsGenerating,
+        activeReasoning,
+        setActiveReasoning,
+        activeMode,
+        setActiveMode,
+        workspaceDir,
+        chatEndRef,
+        textareaRef,
+        handleSelectWorkspace,
+        handleClearWorkspace,
+        handleApprovePlan,
+        handleCancelPlan,
+        handleRetryPlanStep,
+        handleSend,
+        handleStop,
+        handleKeyDown,
+    } = useAgentComposer({
+        activeSessionId,
+        messages,
+        setMessages,
+        setNoticeText,
     })
 
-    useEffect(() => {
-        const unSubChunk = subscribe(`agent:chunk:${SESSION_ID}`, (chunk: string) => {
-            setStreamingText((prev) => prev + chunk)
-        })
+    // 4. Events Subscription Hook
+    useAgentEvents({
+        activeSessionId,
+        setMessages,
+        setIsGenerating,
+        setActiveReasoning,
+        setNoticeText,
+        setPendingApproval,
+        setPendingAsk,
+        setPendingPlan,
+        setJobOutputs,
+        loadInspectorData,
+    })
 
-        const unSubReasoning = subscribe(`agent:reasoning_chunk:${SESSION_ID}`, (chunk: string) => {
-            setStreamingReasoningText((prev) => prev + chunk)
-            setActiveSteps((steps) => {
-                const lastStep = steps.length > 0 ? steps[steps.length - 1] : null
-                if (lastStep && lastStep.type === 'think' && lastStep.status === 'running') {
-                    const updated = [...steps]
-                    updated[steps.length - 1] = {
-                        ...lastStep,
-                        content: lastStep.content + chunk,
-                    }
-                    return updated
-                }
-                const newThinkStep: ProcessStep = {
-                    id: `think_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
-                    type: 'think',
-                    title: '思考过程',
-                    content: chunk,
-                    status: 'running',
-                    timestamp: Date.now(),
-                }
-                return [...steps, newThinkStep]
-            })
-        })
-
-        const unSubNotice = subscribe(`agent:notice:${SESSION_ID}`, (notice: string) => {
-            setNoticeText(notice)
-        })
-
-        const unSubError = subscribe(`agent:error:${SESSION_ID}`, (errText: string) => {
-            setIsGenerating(false)
-            setStreamingText('')
-            setStreamingReasoningText('')
-            setActiveSteps([])
-            saveHistory([
-                ...messages,
-                { role: 'assistant', content: `❌ 运行时错误: ${errText}`, timestamp: Date.now() },
-            ])
-        })
-
-        const unSubDone = subscribe(`agent:done:${SESSION_ID}`, (data: any) => {
-            setIsGenerating(false)
-            setStreamingText('')
-            setActiveToolCall('')
-            setPendingConfirm(null)
-            const content = typeof data === 'object' && data !== null ? data.content : String(data || '')
-            const reasoning = typeof data === 'object' && data !== null ? data.reasoning_content : ''
-
-            setActiveSteps((currentSteps) => {
-                const finalSteps = currentSteps.map((s) =>
-                    s.type === 'think' ? { ...s, status: 'completed' as const } : s
+    // Approval & Ask handlers
+    const handleApprovePending = async (approved: boolean, remember: boolean) => {
+        if (!pendingApproval) return
+        const confirmId = pendingApproval.confirm_id
+        await API.agentDecideApproval(confirmId, approved, remember)
+        setPendingApproval(null)
+        setMessages((curr) => {
+            const copy = [...curr]
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant' && last.process_steps) {
+                last.process_steps = last.process_steps.map((st) =>
+                    st.id?.startsWith(`confirm_${confirmId}`)
+                        ? {
+                              ...st,
+                              status: approved ? 'completed' : 'failed',
+                              summary: approved ? '已授权执行' : '已拒绝执行',
+                          }
+                        : st
                 )
-                setMessages((prev) => {
-                    const updated = [
-                        ...prev,
-                        {
-                            role: 'assistant' as const,
-                            content: content,
-                            reasoning_content: reasoning || streamingReasoningText,
-                            process_steps: finalSteps,
-                            timestamp: Date.now(),
-                        },
-                    ]
-                    API.agentSaveHistory(updated).catch(() => { })
-                    return updated
-                })
-                return []
-            })
-            setStreamingReasoningText('')
-        })
-
-        const unSubConfirm = subscribe(`agent:confirm_request:${SESSION_ID}`, (req: any) => {
-            setPendingConfirm(req)
-        })
-
-        const unSubToolStart = subscribe(`agent:tool_start:${SESSION_ID}`, (req: any) => {
-            if (req && req.detail) {
-                setActiveToolCall(req.detail)
             }
-            setActiveSteps((prev) =>
-                prev.map((s) => (s.type === 'think' && s.status === 'running' ? { ...s, status: 'completed' as const } : s))
-            )
+            return copy
         })
+    }
 
-        const unSubToolEvent = subscribe(`agent:tool_event:${SESSION_ID}`, (evt: any) => {
-            if (evt && evt.id) {
-                const toolStep: ProcessStep = {
-                    id: evt.id,
-                    type: 'tool',
-                    title: evt.name || 'tool',
-                    summary: evt.args || '',
-                    content: evt.result || '',
-                    status: 'completed',
-                    timestamp: Date.now(),
-                }
-                setActiveSteps((prev) => {
-                    const updated = prev.map((s) => (s.type === 'think' && s.status === 'running' ? { ...s, status: 'completed' as const } : s))
-                    const idx = updated.findIndex((s) => s.id === evt.id)
-                    if (idx >= 0) {
-                        updated[idx] = toolStep
-                        return updated
+    const handleAnswerAsk = async (answer: string) => {
+        if (!pendingAsk) return
+        const askId = pendingAsk.ask_id
+        await API.agentAnswerAsk(askId, answer)
+        setPendingAsk(null)
+        setMessages((curr) => {
+            const copy = [...curr]
+            const last = copy[copy.length - 1]
+            if (last && last.role === 'assistant' && last.process_steps) {
+                let found = false
+                last.process_steps = last.process_steps.map((st) => {
+                    if (
+                        st.id === askId ||
+                        (st.title?.includes('ask_user') && st.status === 'running') ||
+                        (st.title === '交互询问' && st.status === 'running')
+                    ) {
+                        found = true
+                        return {
+                            ...st,
+                            status: 'completed',
+                            summary: answer ? `已回复: ${answer}` : '用户已取消/忽略',
+                        }
                     }
-                    return [...updated, toolStep]
+                    return st
                 })
-            }
-        })
-
-        const pendingPrompt = consumePendingAsk()
-        if (pendingPrompt) {
-            setInput(pendingPrompt)
-            setTimeout(() => {
-                handleSendRef.current(pendingPrompt)
-            }, 100)
-        }
-
-        const unSubAsk = subscribe('agent:ask', (prompt: string) => {
-            const finalPrompt = prompt || consumePendingAsk()
-            if (finalPrompt) {
-                setInput(finalPrompt)
-                setTimeout(() => {
-                    handleSendRef.current(finalPrompt)
-                }, 50)
-            }
-        })
-
-        return () => {
-            unSubChunk()
-            unSubNotice()
-            unSubError()
-            unSubDone()
-            unSubConfirm()
-            unSubToolStart()
-            unSubToolEvent()
-            unSubAsk()
-        }
-    }, [])
-
-    const [expandedTools, setExpandedTools] = useState<Record<number, boolean>>({})
-    const toggleExpandTool = (idx: number) => {
-        setExpandedTools((prev) => ({ ...prev, [idx]: !prev[idx] }))
-    }
-
-    const handleSelectWorkspace = async () => {
-        try {
-            const dir = await API.agentSelectWorkspaceDir()
-            if (dir) {
-                setWorkspaceDir(dir)
-            }
-        } catch {
-            /* ignore */
-        }
-    }
-
-    const handleClearWorkspace = async () => {
-        await API.agentSetWorkspaceDir('')
-        setWorkspaceDir('')
-    }
-
-    const handleConfirmTool = async (approved: boolean) => {
-        if (!pendingConfirm) return
-        await API.agentConfirmTool(pendingConfirm.confirmID, approved)
-        setPendingConfirm(null)
-    }
-
-    // Image Upload & Paste Handlers
-    const handleAddImageBase64 = (base64Str: string) => {
-        setImages((prev) => [...prev, base64Str])
-    }
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files
-        if (!files || files.length === 0) return
-        for (let i = 0; i < files.length; i++) {
-            const reader = new FileReader()
-            reader.onload = (event) => {
-                const res = event.target?.result as string
-                if (res) handleAddImageBase64(res)
-            }
-            reader.readAsDataURL(files[i])
-        }
-        e.target.value = ''
-    }
-
-    const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
-        if (!settings.aiEnableMultimodal) return
-        const items = e.clipboardData?.items
-        if (!items) return
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const file = items[i].getAsFile()
-                if (file) {
-                    const reader = new FileReader()
-                    reader.onload = (event) => {
-                        const res = event.target?.result as string
-                        if (res) handleAddImageBase64(res)
-                    }
-                    reader.readAsDataURL(file)
+                if (!found) {
+                    last.process_steps.push({
+                        id: `ask_${Date.now()}`,
+                        type: 'tool',
+                        title: '交互询问',
+                        summary: answer ? `已回复: ${answer}` : '用户已取消/忽略',
+                        content: '',
+                        status: 'completed',
+                        timestamp: Date.now(),
+                    })
                 }
             }
-        }
+            return copy
+        })
     }
 
-    // Clear History
-    const handleClear = async () => {
-        if (confirm('确定要清除所有 AI 对话历史吗？')) {
-            await API.agentClearHistory()
-            setMessages([])
-            setNoticeText('')
-        }
-    }
-
-    // Token Usage Calculation (Calculates actual input sent to LLM after compression)
+    // Token computation
+    const totalChars = messages.reduce((acc, m) => acc + (m.content?.length || 0), 0)
+    const usedTokens = Math.ceil(totalChars / 3.0)
     const maxTokens = settings.aiMaxContextTokens || 4096
-    const strategy = settings.aiCompressionStrategy || 'summary'
-    const sysPrompt = settings.aiSystemPrompt || ''
-
-    const getEffectiveContext = () => {
-        const rawTotalChars = messages.reduce((acc, m) => acc + (m.content ? m.content.length : 0), 0)
-        const estRawTokens = Math.ceil(rawTotalChars / 3.0)
-        if (estRawTokens <= maxTokens || messages.length <= 4) {
-            return {
-                effectiveMessages: messages,
-                compressedText: '',
-            }
-        }
-        if (strategy === 'sliding') {
-            const cutIdx = Math.max(0, messages.length - 4)
-            return {
-                effectiveMessages: messages.slice(cutIdx),
-                compressedText: '已触发滑动窗口截断，只保留最新 4 条对话',
-            }
-        }
-        const cutIdx = Math.max(0, messages.length - 3)
-        return {
-            effectiveMessages: messages.slice(cutIdx),
-            compressedText: '已触发摘要压缩，只保留最新对话',
-        }
-    }
-
-    const { effectiveMessages, compressedText } = getEffectiveContext()
-    const effectiveChars = effectiveMessages.reduce((acc, m) => acc + (m.content ? m.content.length : 0), 0) + sysPrompt.length
-    const usedTokens = Math.ceil(effectiveChars / 3.0)
     const percent = Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10)
 
-    const formatTokenK = (num: number) => {
-        if (num < 1000) return `${num}`
-        return `${(num / 1000).toFixed(1)}K`
-    }
-
-    const getRingColor = (pct: number) => {
-        if (pct >= 90) return '#ff4d4f'
-        if (pct >= 70) return '#faad14'
-        return '#1890ff'
-    }
-
-    const circumference = 43.98 // 2 * Math.PI * 7
-    const strokeDashoffset = circumference - (circumference * (percent / 100))
-
-    // 缓存历史消息节点：流式 chunk 高频重渲染时避免全部历史气泡重复重建引起抖动
-    const messageNodes = useMemo(() => messages.map((msg, idx) => {
-        if (msg.role === 'tool') {
-            return null
-        }
-
-        if (msg.role === 'assistant' && msg.tool_calls && msg.tool_calls.length > 0 && !msg.content && (!msg.process_steps || msg.process_steps.length === 0)) {
-            return null
-        }
-
-        const steps = getStepsForMessage(msg)
-
-        return (
-            <div key={idx} className={`${s.messageRow} ${s[msg.role]}`}>
-                {msg.role !== 'system' && (
-                    <div className={s.avatar}>
-                        {msg.role === 'user' ? <User size={16} /> : <Bot size={16} />}
-                    </div>
-                )}
-                <div className={msg.role === 'system' ? s.systemNotice : s.bubble}>
-                    {msg.role === 'assistant' && steps.length > 0 && (
-                        <ProcessStepsList steps={steps} isStreaming={false} />
-                    )}
-                    {msg.images && msg.images.length > 0 && (
-                        <div className={s.imageGrid}>
-                            {msg.images.map((img, i) => (
-                                <img key={i} src={img} alt="attached" className={s.imgThumb} />
-                            ))}
-                        </div>
-                    )}
-                    <div className={s.markdownBody}>
-                        {msg.role === 'assistant' ? (
-                            <MarkdownViewer content={msg.content} />
-                        ) : (
-                            msg.content.split('\n').map((line, i) => <p key={i}>{line}</p>)
-                        )}
-                    </div>
-                </div>
-            </div>
-        )
-    }), [messages])
-
     return (
-        <div className={s.agentContainer}>
-            {/* Header */}
-            <div className={s.headerBar}>
-                <div className={s.titleSection}>
-                    <Bot size={16} />
-                    <span>智能体</span>
-                    <span className={s.modelTag}>{settings.aiModel || 'deepseek-v4-flash'}</span>
-                    {settings.aiEnableMultimodal && (
-                        <span className={s.badgeMultimodal}>多模态已开启</span>
-                    )}
-                </div>
-                <div className={s.actions}>
-                    <button
-                        className={`${g.btn} ${g.xs}`}
-                        title="清空对话历史"
-                        disabled={isGenerating || messages.length === 0}
-                        onClick={handleClear}
-                    >
-                        <Trash2 size={13} />
-                    </button>
-                </div>
-            </div>
+        <div className={s.workbenchLayout}>
+            {/* Center Main Workspace */}
+            <div className={s.centerPane}>
+                {/* Header Bar */}
+                <div className={s.headerBar}>
+                    <div className={s.titleSection}>
+                        <Bot size={18} color="#2b90ee" />
+                        <span>xAgent 2.0</span>
+                        {settings.aiModel && <span className={s.modelTag}>{settings.aiModel}</span>}
+                        {settings.aiEnableThinking && (
+                            <span className={s.badgeThinking}>
+                                💭{' '}
+                                {settings.aiReasoningEffort &&
+                                settings.aiReasoningEffort !== 'none'
+                                    ? settings.aiReasoningEffort
+                                    : 'Thinking'}
+                            </span>
+                        )}
+                    </div>
 
-            {/* Chat List */}
-            <div className={s.chatList} ref={chatListRef}>
-                {messages.length === 0 && !isGenerating && (
-                    <div className={s.emptyState}>
-                        <Bot size={48} className={s.emptyIcon} />
-                        <div className={s.emptyTitle}>欢迎使用 AI 智能体</div>
-                        <div className={s.emptySub}>
-                            支持多轮对话、智能上下文压缩、打字机流式推演与多模态识别。
-                            {!settings.aiApiKey && (
-                                <div style={{ color: '#e05c5c', marginTop: 8 }}>
-                                    ⚠️ 当前未配置 API Key，请点击右上角「设置」-「AI 智能体」填入 Key。
-                                </div>
-                            )}
-                        </div>
+                    <div className={s.actions}>
+                        <button
+                            data-inspector-toggle="true"
+                            className={`${s.inspectorToggle} ${showInspector ? s.active : ''}`}
+                            onClick={() => setShowInspector(!showInspector)}
+                            title="切换右侧工作台巡检抽屉"
+                        >
+                            <Activity size={13} />
+                            <span>
+                                工作台 ({jobs.filter((j) => j.state === 'running').length || 0})
+                            </span>
+                        </button>
+                        <button
+                            className={`${g.btn} ${g.xs}`}
+                            title="清空会话历史"
+                            onClick={() => setShowClearConfirm(true)}
+                        >
+                            <Trash2 size={12} />
+                            <span>清空</span>
+                        </button>
+                    </div>
+                </div>
+
+                {noticeText && (
+                    <div className={s.noticeBanner}>
+                        <span>{noticeText}</span>
                     </div>
                 )}
 
-                {messageNodes}
+                {/* Chat Stream & Message List */}
+                <ChatMessageList
+                    messages={visibleMessages}
+                    isGenerating={isGenerating}
+                    chatEndRef={chatEndRef}
+                    onSelectSuggestion={setInput}
+                    onApprovePlan={handleApprovePlan}
+                    onCancelPlan={handleCancelPlan}
+                    onRetryPlanStep={handleRetryPlanStep}
+                    hasMore={hasMore}
+                    remainingRounds={remainingRounds}
+                    onLoadMore={loadMoreHistory}
+                />
 
-                {/* Streaming Response Bubble */}
-                {isGenerating && (
-                    <div className={`${s.messageRow} ${s.assistant}`}>
-                        <div className={s.avatar}>
-                            <Bot size={16} />
-                        </div>
-                        <div className={s.bubble}>
-                            {activeSteps.length > 0 && (
-                                <ProcessStepsList steps={activeSteps} isStreaming={true} />
-                            )}
-                            {activeToolCall && (
-                                <div className={s.toolCallPill}>
-                                    <RotateCw size={13} className={s.spinIcon} />
-                                    <span>{activeToolCall}</span>
-                                </div>
-                            )}
+                {/* Bottom Composer Area */}
+                <div className={s.composerWrapper}>
+                    <ApprovalDock
+                        pendingApproval={pendingApproval}
+                        onApprove={handleApprovePending}
+                    />
 
-                            <div className={s.markdownBody}>
-                                {streamingText ? (
-                                    <MarkdownViewer content={streamingText} streaming={true} />
-                                ) : activeSteps.length === 0 ? (
-                                    <span style={{ color: '#888' }}>思考中…</span>
-                                ) : null}
-                            </div>
-                        </div>
-                    </div>
-                )}
+                    <AskUserDock
+                        pendingAsk={pendingAsk}
+                        onAnswer={handleAnswerAsk}
+                    />
+
+                    <Composer
+                        input={input}
+                        setInput={setInput}
+                        textareaRef={textareaRef}
+                        activeMode={activeMode}
+                        setActiveMode={setActiveMode}
+                        workspaceDir={workspaceDir}
+                        onSelectWorkspace={handleSelectWorkspace}
+                        onClearWorkspace={handleClearWorkspace}
+                        usedTokens={usedTokens}
+                        maxTokens={maxTokens}
+                        percent={percent}
+                        noticeText={noticeText}
+                        isGenerating={isGenerating}
+                        images={images}
+                        onStop={handleStop}
+                        onSend={handleSend}
+                        onKeyDown={handleKeyDown}
+                    />
+                </div>
             </div>
 
-            {/* Input Area */}
-            <div className={s.inputArea}>
-                {/* Floating Permission Approval Box */}
-                {pendingConfirm && (
-                    <div className={s.confirmBox}>
+            {/* Right Inspector Drawer */}
+            <AgentInspectorDrawer
+                showInspector={showInspector}
+                onClose={() => setShowInspector(false)}
+                inspectorTab={inspectorTab}
+                setInspectorTab={setInspectorTab}
+                jobs={jobs}
+                jobOutputs={jobOutputs}
+                onKillJob={handleKillJob}
+                subagents={subagents}
+                subagentInputs={subagentInputs}
+                setSubagentInputs={setSubagentInputs}
+                onSendSubagentMessage={handleSendSubagentMessage}
+                onInterruptSubagent={handleInterruptSubagent}
+                auditLogs={auditLogs}
+                expandedAudit={expandedAudit}
+                toggleAuditExpand={toggleAuditExpand}
+                skillsList={skillsList}
+                expandedSkills={expandedSkills}
+                toggleSkillExpand={toggleSkillExpand}
+            />
+
+            {/* Clear History Confirmation Modal */}
+            {showClearConfirm && (
+                <div className={s.modalOverlay}>
+                    <div className={s.confirmModal}>
                         <div className={s.confirmHeader}>
-                            <Shield size={15} />
-                            <span>安全审批：Agent 请求执行 <strong>{pendingConfirm.path || '高风险指令'}</strong></span>
+                            <AlertTriangle size={18} color="#faad14" />
+                            <span>确认清空会话历史</span>
                         </div>
-                        {pendingConfirm.description && (
-                            <div className={s.confirmBody}>
-                                <pre className={s.confirmCode}>{pendingConfirm.description}</pre>
-                            </div>
-                        )}
+                        <div className={s.confirmBody}>
+                            确定要清空当前的全部对话记录吗？清空后不可恢复。
+                        </div>
                         <div className={s.confirmFooter}>
-                            <button className={s.btnApprove} onClick={() => handleConfirmTool(true)}>
-                                <Check size={12} /> 同意执行
-                            </button>
-                            <button className={s.btnReject} onClick={() => handleConfirmTool(false)}>
-                                <X size={12} /> 拒绝
-                            </button>
-                        </div>
-                    </div>
-                )}
-                {/* Images Preview Bar */}
-                {images.length > 0 && (
-                    <div className={s.previewBar}>
-                        {images.map((img, i) => (
-                            <div key={i} className={s.previewItem}>
-                                <img src={img} alt="preview" />
-                                <button
-                                    className={s.removeBtn}
-                                    onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
-                                >
-                                    ×
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                )}
-
-                <div className={s.composerBox}>
-                    <div className={s.composerInputRow}>
-                        {settings.aiEnableMultimodal && (
-                            <>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    multiple
-                                    ref={fileInputRef}
-                                    style={{ display: 'none' }}
-                                    onChange={handleFileSelect}
-                                />
-                                <button
-                                    className={`${g.btn} ${g.sm}`}
-                                    title="添加图片附件"
-                                    disabled={isGenerating}
-                                    onClick={() => fileInputRef.current?.click()}
-                                >
-                                    <Paperclip size={14} />
-                                </button>
-                            </>
-                        )}
-
-                        <textarea
-                            className={s.textarea}
-                            placeholder="有问题就会有答案 (Shift + Enter 换行)"
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onPaste={handlePaste}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                    e.preventDefault()
-                                    handleSend()
-                                }
-                            }}
-                        />
-                    </div>
-
-                    <div className={s.composerFooter}>
-                        {/* Left: Workspace Selector */}
-                        <div className={s.footerLeft}>
-                            <div
-                                className={s.wsPath}
-                                title={workspaceDir ? `当前工作目录: ${workspaceDir}（点击更换）` : '点击选择工作目录'}
-                                onClick={handleSelectWorkspace}
+                            <button
+                                type="button"
+                                className={`${g.btn} ${g.xs}`}
+                                onClick={() => setShowClearConfirm(false)}
                             >
-                                <Folder size={13} />
-                                <span>工作目录:</span>
-                                {workspaceDir ? (
-                                    <span className={s.pathText}>{workspaceDir}</span>
-                                ) : (
-                                    <span className={s.unsetText}>未选择</span>
-                                )}
-                            </div>
-                            <div className={s.wsActions}>
-                                <button
-                                    className={`${g.btn} ${g.xs}`}
-                                    disabled={isGenerating}
-                                    onClick={handleSelectWorkspace}
-                                >
-                                    {workspaceDir ? '更换' : '选择'}
-                                </button>
-                                {workspaceDir && (
-                                    <button
-                                        className={`${g.btn} ${g.xs}`}
-                                        title="清除工作目录关联"
-                                        disabled={isGenerating}
-                                        onClick={handleClearWorkspace}
-                                    >
-                                        清除
-                                    </button>
-                                )}
-                            </div>
-
-                            {settings.aiEnableWebSearch && (
-                                <span className={s.statusBadge} title="联网搜索功能已开启">🌐 联网</span>
-                            )}
-                            {settings.aiEnableThinking && (
-                                <span className={s.statusBadge} title={`深度思考模式已开启 (${settings.aiReasoningEffort || 'default'})`}>
-                                    💭 思考{settings.aiReasoningEffort && settings.aiReasoningEffort !== 'none' ? ` (${settings.aiReasoningEffort})` : ''}
-                                </span>
-                            )}
-                        </div>
-
-                        {/* Right: Context Length | Divider | Send Button */}
-                        <div className={s.footerRight}>
-                            <div
-                                className={s.contextRingWrapper}
-                                onMouseEnter={() => setIsRingHovered(true)}
-                                onMouseLeave={() => setIsRingHovered(false)}
+                                取消
+                            </button>
+                            <button
+                                type="button"
+                                className={`${g.btn} ${g.danger} ${g.xs}`}
+                                onClick={async () => {
+                                    await clearMessages()
+                                    setShowClearConfirm(false)
+                                }}
                             >
-                                <span className={s.tokenText}>{formatTokenK(usedTokens)} / {formatTokenK(maxTokens)}</span>
-                                <button className={s.ringBtn} aria-label="上下文 Token 使用情况">
-                                    <svg width="18" height="18" viewBox="0 0 18 18">
-                                        <circle
-                                            cx="9"
-                                            cy="9"
-                                            r="7"
-                                            fill="none"
-                                            stroke="rgba(127, 127, 127, 0.25)"
-                                            strokeWidth="2"
-                                        />
-                                        <circle
-                                            cx="9"
-                                            cy="9"
-                                            r="7"
-                                            fill="none"
-                                            stroke={getRingColor(percent)}
-                                            strokeWidth="2"
-                                            strokeDasharray="43.98"
-                                            strokeDashoffset={strokeDashoffset}
-                                            strokeLinecap="round"
-                                        />
-                                    </svg>
-                                </button>
-
-                                {isRingHovered && (
-                                    <div className={s.tooltipCard}>
-                                        <div>{percent.toFixed(1)}% · {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)} 输入上下文已使用</div>
-                                        {compressedText && (
-                                            <div style={{ marginTop: 4, color: '#faad14', fontSize: 11, fontWeight: 500 }}>
-                                                ℹ️ {compressedText}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
-                            </div>
-
-                            {isGenerating ? (
-                                <button
-                                    className={`${g.btn} ${s.stopBtn}`}
-                                    title="停止 AI 智能体推导"
-                                    onClick={handleStop}
-                                >
-                                    <Square size={13} />
-                                    <span>停止</span>
-                                </button>
-                            ) : (
-                                <button
-                                    className={`${g.btn} ${g.primary} ${s.sendBtn}`}
-                                    disabled={!input.trim() && images.length === 0}
-                                    onClick={handleSend}
-                                >
-                                    发送
-                                </button>
-                            )}
+                                确定清空
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     )
 }
