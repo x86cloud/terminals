@@ -53,17 +53,9 @@ jobs:
         working-directory: frontend
         run: pnpm install
 
-      - name: Build Frontend Assets
-        working-directory: frontend
-        run: pnpm run build
-
-      - name: Build Windows Binary
-        shell: bash
+      - name: Build Windows Binary with Wails3
         run: |
-          task windows:build ARCH=amd64 || (
-            wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
-            go build -tags production -trimpath -ldflags="-w -s -H windowsgui" -o bin/terminal-v3.exe .
-          )
+          wails3 build
 
       - name: Package Windows Artifacts
         shell: pwsh
@@ -116,13 +108,10 @@ jobs:
         working-directory: frontend
         run: pnpm install
 
-      - name: Build Frontend Assets
-        working-directory: frontend
-        run: pnpm run build
-
-      - name: Build & Package macOS Universal App
+      - name: Build & Package macOS App with Wails3
         run: |
-          task darwin:package:universal || task darwin:package
+          wails3 build
+          wails3 task darwin:package || wails3 package
 
       - name: Compress macOS Bundle
         run: |
