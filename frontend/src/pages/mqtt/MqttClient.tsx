@@ -33,11 +33,6 @@ import {
     Layers,
     Share2,
     Activity,
-    FileJson,
-    Code2,
-    Eraser,
-    FileText,
-    Binary,
 } from 'lucide-react'
 import { API, subscribe } from '@/api'
 import CodeEditor from '@/components/CodeEditor'
@@ -54,44 +49,6 @@ function fmtTime(ts: number) {
     const d = new Date(ts)
     const p = (n: number) => String(n).padStart(2, '0')
     return `${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}.${String(d.getMilliseconds()).padStart(3, '0')}`
-}
-
-function getPayloadSize(str: string): string {
-    if (!str) return '0 B'
-    const bytes = new Blob([str]).size
-    if (bytes < 1024) return `${bytes} B`
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-function tryParseJson(str: string): { isJson: boolean; formatted: string } {
-    if (!str || typeof str !== 'string') return { isJson: false, formatted: str || '' }
-    const trimmed = str.trim()
-    if ((trimmed.startsWith('{') && trimmed.endsWith('}')) || (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
-        try {
-            const parsed = JSON.parse(trimmed)
-            return { isJson: true, formatted: JSON.stringify(parsed, null, 2) }
-        } catch {
-            return { isJson: false, formatted: str }
-        }
-    }
-    return { isJson: false, formatted: str }
-}
-
-function toHex(str: string): string {
-    const encoder = new TextEncoder()
-    const bytes = encoder.encode(str)
-    return Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, '0').toUpperCase())
-        .join(' ')
-}
-
-function toBase64(str: string): string {
-    try {
-        return btoa(unescape(encodeURIComponent(str)))
-    } catch {
-        return str
-    }
 }
 
 const TOPIC_PALETTE = [
@@ -131,13 +88,11 @@ export default function MqttClient({ session, onClose }: Props) {
     const [pubRetained, setPubRetained] = useState(false)
     const [publishDockExpanded, setPublishDockExpanded] = useState(true)
 
-    // Message Filtering & Formatting
+    // Message Filtering
     const [dirFilter, setDirFilter] = useState<'all' | 'in' | 'out'>('all')
     const [filterTopic, setFilterTopic] = useState<string>('')
     const [searchKeyword, setSearchKeyword] = useState<string>('')
     const [autoScroll, setAutoScroll] = useState<boolean>(true)
-    const [cardFormats, setCardFormats] = useState<Record<number, 'json' | 'raw' | 'hex' | 'base64'>>({})
-    const [expandedCards, setExpandedCards] = useState<Record<number, boolean>>({})
 
     // Copying state feedback
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
@@ -148,6 +103,7 @@ export default function MqttClient({ session, onClose }: Props) {
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const logRef = useRef<HTMLDivElement>(null)
+    const bottomRef = useRef<HTMLDivElement>(null)
 
     const reloadSubs = useCallback(async () => {
         try {
@@ -182,13 +138,6 @@ export default function MqttClient({ session, onClose }: Props) {
         }
     }, [session.id, reloadSubs])
 
-    // Auto-scroll message stream
-    useEffect(() => {
-        if (autoScroll && logRef.current) {
-            logRef.current.scrollTop = logRef.current.scrollHeight
-        }
-    }, [messages, autoScroll])
-
     // Stats
     const totalIn = useMemo(() => messages.filter((m) => m.dir === 'in').length, [messages])
     const totalOut = useMemo(() => messages.filter((m) => m.dir === 'out').length, [messages])
@@ -216,6 +165,19 @@ export default function MqttClient({ session, onClose }: Props) {
             return true
         })
     }, [messages, dirFilter, filterTopic, searchKeyword])
+
+    // Auto-scroll message stream
+    useEffect(() => {
+        if (autoScroll) {
+            requestAnimationFrame(() => {
+                if (bottomRef.current) {
+                    bottomRef.current.scrollIntoView({ behavior: 'auto', block: 'end' })
+                } else if (logRef.current) {
+                    logRef.current.scrollTop = logRef.current.scrollHeight
+                }
+            })
+        }
+    }, [filteredMessages.length, autoScroll])
 
     // Actions
     const doSubscribe = async () => {
@@ -286,7 +248,7 @@ export default function MqttClient({ session, onClose }: Props) {
             const obj = JSON.parse(pubPayload)
             setPubPayload(JSON.stringify(obj, null, 2))
         } catch (e) {
-            setError('当前发布内容不是合法的 JSON 格式')
+            setError('当前内容不是合法的 JSON 格式')
         }
     }
 
@@ -295,7 +257,7 @@ export default function MqttClient({ session, onClose }: Props) {
             const obj = JSON.parse(pubPayload)
             setPubPayload(JSON.stringify(obj))
         } catch (e) {
-            setError('当前发布内容不是合法的 JSON 格式')
+            setError('当前内容不是合法的 JSON 格式')
         }
     }
 
@@ -310,29 +272,6 @@ export default function MqttClient({ session, onClose }: Props) {
         if (payload) setPubPayload(payload)
         setPublishDockExpanded(true)
     }
-
-    const payloadTemplates = [
-        {
-            key: 'json_default',
-            label: '📦 标准 JSON 数据',
-            template: '{\n  "msg": "hello mqtt",\n  "time": ' + Date.now() + '\n}',
-        },
-        {
-            key: 'iot_sensor',
-            label: '🌡️ IoT 传感器上报',
-            template: '{\n  "deviceId": "sensor_001",\n  "temperature": 25.4,\n  "humidity": 58.2,\n  "battery": 98,\n  "ts": ' + Date.now() + '\n}',
-        },
-        {
-            key: 'device_status',
-            label: '🔋 设备心跳与状态',
-            template: '{\n  "status": "online",\n  "uptime": 86400,\n  "firmware": "v1.2.0",\n  "ip": "192.168.1.100"\n}',
-        },
-        {
-            key: 'plain_text',
-            label: '📝 纯文本测试',
-            template: 'hello mqtt world',
-        },
-    ]
 
     return (
         <div className={m.mqttPane}>
@@ -375,23 +314,30 @@ export default function MqttClient({ session, onClose }: Props) {
                 {/* Subscriptions Section */}
                 <div className={m.subSection}>
                     <div className={m.subSectionHeader}>
-                        <span>订阅主题 ({subs.length})</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Layers size={13} color="var(--accent)" />
+                            <span>订阅列表</span>
+                            <Tag style={{ borderRadius: 10, fontSize: 10, lineHeight: '14px', padding: '0 5px' }}>
+                                {subs.length}
+                            </Tag>
+                        </div>
                         <Button
                             size="small"
-                            type={showAddSub ? 'default' : 'primary'}
-                            icon={showAddSub ? <X size={12} /> : <Plus size={12} />}
+                            type={showAddSub ? 'primary' : 'dashed'}
+                            icon={showAddSub ? <ChevronUp size={12} /> : <Plus size={12} />}
                             onClick={() => setShowAddSub(!showAddSub)}
+                            title="添加新主题订阅"
                         >
-                            {showAddSub ? '取消' : '添加订阅'}
+                            {showAddSub ? '收起' : '订阅'}
                         </Button>
                     </div>
 
-                    {/* Inline Add Subscription Panel */}
+                    {/* Inline Quick Subscribe */}
                     {showAddSub && (
                         <div className={m.subAddInline}>
                             <Input
                                 size="small"
-                                placeholder="主题过滤器，如 iot/device/#"
+                                placeholder="主题，如 sensor/# 或 home/+"
                                 value={subTopic}
                                 onChange={(e) => setSubTopic(e.target.value)}
                                 onPressEnter={doSubscribe}
@@ -404,9 +350,9 @@ export default function MqttClient({ session, onClose }: Props) {
                                     value={subQos}
                                     onChange={setSubQos}
                                     options={[
-                                        { value: 0, label: 'QoS 0 (最多一次)' },
-                                        { value: 1, label: 'QoS 1 (至少一次)' },
-                                        { value: 2, label: 'QoS 2 (恰好一次)' },
+                                        { value: 0, label: 'QoS 0' },
+                                        { value: 1, label: 'QoS 1' },
+                                        { value: 2, label: 'QoS 2' },
                                     ]}
                                 />
                                 <Button
@@ -574,21 +520,6 @@ export default function MqttClient({ session, onClose }: Props) {
                     {filteredMessages.map((msg, i) => {
                         const isIncoming = msg.dir === 'in'
                         const topicColor = getTopicColor(msg.topic)
-                        const { isJson, formatted } = tryParseJson(msg.payload)
-                        const currentFormat = cardFormats[i] || (isJson ? 'json' : 'raw')
-                        const isExpanded = !!expandedCards[i]
-                        const payloadLines = (msg.payload || '').split('\n').length
-                        const isLongPayload = payloadLines > 5 || (msg.payload || '').length > 240
-
-                        let displayContent = msg.payload
-                        if (currentFormat === 'json') {
-                            displayContent = isJson ? formatted : msg.payload
-                        } else if (currentFormat === 'hex') {
-                            displayContent = toHex(msg.payload)
-                        } else if (currentFormat === 'base64') {
-                            displayContent = toBase64(msg.payload)
-                        }
-
                         return (
                             <div
                                 key={i}
@@ -617,31 +548,9 @@ export default function MqttClient({ session, onClose }: Props) {
                                                 Retained
                                             </Tag>
                                         )}
-                                        {isJson ? (
-                                            <Tag color="geekblue" style={{ margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 3px' }}>
-                                                JSON
-                                            </Tag>
-                                        ) : (
-                                            <Tag style={{ margin: 0, fontSize: 10, lineHeight: '14px', padding: '0 3px', color: 'var(--text-dim)' }}>
-                                                Text
-                                            </Tag>
-                                        )}
-                                        <span className={m.msgSizeTag}>{getPayloadSize(msg.payload)}</span>
                                     </div>
 
                                     <div className={m.msgCardMetaRight}>
-                                        <Segmented
-                                            size="small"
-                                            value={currentFormat}
-                                            onChange={(val) => setCardFormats((prev) => ({ ...prev, [i]: val as any }))}
-                                            options={[
-                                                { label: 'JSON', value: 'json', disabled: !isJson },
-                                                { label: 'Raw', value: 'raw' },
-                                                { label: 'Hex', value: 'hex' },
-                                                { label: 'Base64', value: 'base64' },
-                                            ]}
-                                        />
-
                                         <div className={m.cardHoverActions}>
                                             <Tooltip title={copiedIdx === i ? '已复制' : '复制 Payload'}>
                                                 <Button
@@ -672,36 +581,23 @@ export default function MqttClient({ session, onClose }: Props) {
                                     </div>
                                 </div>
 
-                                <div className={m.msgCardBody}>
-                                    <pre className={`${m.msgCardPayload}${isLongPayload && !isExpanded ? ' ' + m.collapsed : ''}`}>
-                                        {displayContent || <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>(空消息体 / Empty Payload)</span>}
-                                    </pre>
-                                    {isLongPayload && (
-                                        <div
-                                            className={m.cardExpandBtn}
-                                            onClick={() => setExpandedCards((prev) => ({ ...prev, [i]: !isExpanded }))}
-                                        >
-                                            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                                            <span>{isExpanded ? '收起完整内容' : '展开完整内容'}</span>
-                                        </div>
-                                    )}
-                                </div>
+                                <pre className={m.msgCardPayload}>{msg.payload}</pre>
                             </div>
                         )
                     })}
+                    <div ref={bottomRef} style={{ height: 1, flexShrink: 0 }} />
                 </div>
 
                 {/* ==================== PUBLISH WORKSHOP DOCK ==================== */}
                 <div className={m.publishDock}>
                     <div className={m.publishControlsBar}>
                         <Input
-                            style={{ flex: 1, minWidth: 200 }}
+                            style={{ flex: 1 }}
                             size="small"
-                            placeholder="发布主题，如 iot/mqtt/hello"
+                            placeholder="发布主题，如 sensor/temperature/1"
                             value={pubTopic}
                             onChange={(e) => setPubTopic(e.target.value)}
                             onPressEnter={doPublish}
-                            allowClear
                         />
 
                         <Select
@@ -724,20 +620,6 @@ export default function MqttClient({ session, onClose }: Props) {
                             保留 (Retain)
                         </Checkbox>
 
-                        <Dropdown
-                            menu={{
-                                items: payloadTemplates.map((tpl) => ({
-                                    key: tpl.key,
-                                    label: tpl.label,
-                                    onClick: () => setPubPayload(tpl.template),
-                                })),
-                            }}
-                        >
-                            <Button size="small" icon={<Code2 size={12} />}>
-                                常用模板 <ChevronDown size={11} />
-                            </Button>
-                        </Dropdown>
-
                         <Space size={4}>
                             <Tooltip title="美化 JSON 格式">
                                 <Button
@@ -756,13 +638,6 @@ export default function MqttClient({ session, onClose }: Props) {
                                 >
                                     压缩
                                 </Button>
-                            </Tooltip>
-                            <Tooltip title="清空内容">
-                                <Button
-                                    size="small"
-                                    icon={<Eraser size={12} />}
-                                    onClick={() => setPubPayload('')}
-                                />
                             </Tooltip>
                         </Space>
 
@@ -792,11 +667,11 @@ export default function MqttClient({ session, onClose }: Props) {
                                 value={pubPayload}
                                 onChange={setPubPayload}
                                 lang={/^\s*[[{]/.test(pubPayload) ? 'json' : 'plain'}
-                                height="150px"
-                                minHeight="150px"
+                                height="160px"
+                                minHeight="160px"
                                 bordered={false}
-                                lineNumbers={true}
-                                placeholder="输入发布内容（支持 JSON 自动高亮，按 Ctrl/Cmd + Enter 快速发布）"
+                                lineNumbers={false}
+                                placeholder="输入发布内容（Ctrl/Cmd + Enter 快速发布）"
                                 onModEnter={doPublish}
                             />
                         </div>
