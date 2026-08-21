@@ -1,0 +1,200 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.sqlitePane {
+    flex: 1;
+    .fill();
+    display: flex;
+}
+
+.sqliteSide {
+    width: 240px;
+    min-width: 200px;
+    border-right: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+}
+
+.sqliteHead {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 10px;
+    border-bottom: 1px solid @border;
+    color: @text-dim;
+}
+
+.sqliteTitle {
+    font-weight: 600;
+    color: @text;
+}
+
+.sqlitePath {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: @text-dim;
+    border-bottom: 1px solid @border;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.sqliteStatus {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 8px;
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.pathErr {
+    color: @danger;
+    margin-left: 4px;
+}
+
+.sqliteTables {
+    flex: 1;
+    overflow: auto;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sqliteTableRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    font-size: 12.5px;
+    user-select: none;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        background: @bg-2;
+
+        .sqliteTableMenu {
+            opacity: 1;
+        }
+    }
+
+    &.active {
+        background: @accent-soft;
+        color: @accent;
+        font-weight: 500;
+    }
+}
+
+.tableIcon {
+    flex-shrink: 0;
+    opacity: 0.75;
+}
+
+.tableName {
+    flex: 1;
+    min-width: 0;
+    .ellipsis();
+}
+
+.centerCell {
+    text-align: center;
+}
+
+.cellInput {
+    width: 100%;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.editableCell {
+    cursor: pointer;
+}
+
+.sqliteTableMenu {
+    display: flex;
+    gap: 2px;
+    opacity: 0;
+    transition: opacity .15s;
+}
+
+.sqliteMain {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sqliteToolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid @border;
+}
+
+.sqliteConnTitle {
+    font-weight: 600;
+    color: @text;
+}
+
+.sqliteError {
+    color: @danger;
+    font-size: 12px;
+    max-width: 50%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.sqliteContent {
+    flex: 1;
+    .fill();
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sqliteDataWrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden;
+}
+
+.pager {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    padding-top: 8px;
+    border-top: 1px solid @border;
+}
+
+.pageInfo {
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.rowNew td {
+    background: rgba(72, 199, 116, 0.08);
+}

@@ -1,0 +1,129 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.erWrap {
+    width: 100%;
+    height: 100%;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+
+    &.fullscreen {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 1000 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: @bg !important;
+    }
+}
+
+.erToolBar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
+    background: @bg-1;
+    flex-shrink: 0;
+}
+
+.erZoomBtn {
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-radius: @radius-sm;
+    background: @bg-2;
+    color: @text;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        border-color: @accent;
+        color: @accent;
+        background: @bg-1;
+    }
+}
+
+.erZoomVal {
+    min-width: 36px;
+    text-align: center;
+    font-size: 11px;
+    color: @text;
+    font-variant-numeric: tabular-nums;
+}
+
+.erHint {
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.erCanvas {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    padding: 0;
+    cursor: grab;
+    user-select: none;
+    background: @bg-solid;
+
+    &.dragging {
+        cursor: grabbing !important;
+    }
+}
+
+.erSvg {
+    background: transparent;
+    display: block;
+    will-change: transform;
+}
+
+.erTable {
+    fill: @bg-1-solid;
+    stroke: @border;
+    stroke-width: 1;
+}
+
+.erTableGroup {
+    cursor: default;
+    user-select: none;
+}
+
+.erTableHead {
+    fill: @accent;
+    opacity: 0.9;
+}
+
+.erTableName {
+    fill: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: @font-mono;
+}
+
+.erCol {
+    fill: @text;
+    font-size: 11px;
+    font-family: @font-mono;
+}
+
+.erType {
+    fill: @text-faint;
+    font-size: 11px;
+}
+
+.fkPath {
+    stroke: #5b9bff;
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 0.7;
+}

@@ -1,0 +1,107 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+.transferBar {
+    border-top: 1px solid @border;
+    background: @bg;
+
+    &.open {
+        /* 展开态由父级高度控制，这里仅作占位以便组合 */
+    }
+}
+
+.transferHead {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 6px 10px;
+    cursor: pointer;
+    color: @text-dim;
+
+    &:hover {
+        color: @text;
+    }
+}
+
+.badge {
+    padding: 1px 7px;
+    background: @bg-3;
+    border-radius: 10px;
+    font-size: 11px;
+}
+
+.transferList {
+    max-height: 190px;
+    overflow: auto;
+    padding: 0 6px 6px;
+}
+
+.transferItem {
+    display: grid;
+    grid-template-columns: 20px minmax(90px, 1fr) minmax(150px, 1.4fr) 76px 26px;
+    align-items: center;
+    gap: @space-md;
+    padding: 5px 6px;
+    border-radius: 5px;
+
+    &:hover {
+        background: @bg-2;
+    }
+
+    &.done .tBarInner {
+        background: @ok;
+    }
+
+    &.error .tBarInner,
+    &.canceled .tBarInner {
+        background: @danger;
+    }
+
+    &.error .tStatus {
+        color: @danger;
+    }
+}
+
+.tKind {
+    display: flex;
+    color: @text-dim;
+}
+
+.tName {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tProgress {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+}
+
+.tBar {
+    flex: 1;
+    height: 5px;
+    background: @bg-3;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.tBarInner {
+    display: block;
+    height: 100%;
+    background: @accent;
+    transition: width .15s linear;
+}
+
+.tSize, .tStatus {
+    font-size: 11px;
+    color: @text-dim;
+    white-space: nowrap;
+}
+
+.tAction {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}

@@ -1,0 +1,158 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.fullPane {
+    position: fixed;
+    top: 36px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: @bg;
+    z-index: 500;
+    display: flex;
+    padding: 4px 8px 8px 8px;
+    box-sizing: border-box;
+    overflow: hidden;
+    color: @text;
+    user-select: none;
+    -webkit-user-select: none;
+    animation: fadeIn 0.15s ease-out;
+}
+
+.navSidebar {
+    width: 230px;
+    background: transparent;
+    border-right: none;
+    padding: 6px 12px 12px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: none;
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border-radius: @radius-md;
+    border: 1px solid @border;
+    background: @bg-1-solid;
+    color: @text;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-bottom: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+
+    svg {
+        flex: none;
+        color: @accent;
+    }
+
+    &:hover {
+        background: @bg-2;
+        border-color: @accent;
+        color: @accent;
+    }
+
+    &:active {
+        transform: scale(0.98);
+        background: @bg-3;
+    }
+}
+
+.sidebarHeader {
+    padding: 4px 8px 0;
+}
+
+.sidebarTitle {
+    font-size: 11px;
+    font-weight: 600;
+    color: @text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+}
+
+.navList {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 12px;
+    border-radius: @radius-md;
+    border: 1px solid transparent;
+    background: transparent;
+    color: @text-dim;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+    width: 100%;
+
+    svg {
+        flex: none;
+        color: @text-dim;
+        transition: color 0.15s ease;
+    }
+
+    &:hover {
+        background: @bg-2;
+        color: @text;
+
+        svg {
+            color: @text;
+        }
+    }
+
+    &.active {
+        background: @bg-1-solid;
+        border-color: @border;
+        color: @accent;
+        font-weight: 600;
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+
+        svg {
+            color: @accent;
+        }
+    }
+}
+
+/* 悬浮卡片内容区 */
+.contentPanel {
+    flex: 1;
+    min-width: 0;
+    background: @bg-1-solid;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    padding: 24px 36px;
+    overflow-y: auto;
+    user-select: none;
+    -webkit-user-select: none;
+
+    input,
+    textarea {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(2px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

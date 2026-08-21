@@ -1,0 +1,22 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.mysqlSqlInput {
+    flex: none;
+    height: 70px;
+    resize: vertical;
+    padding: 8px 10px;
+    background: @bg-2;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-radius: @radius-md;
+    color: @text;
+    font-family: @font-mono;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s ease;
+
+    &:focus {
+        border-color: @accent;
+        background: @bg-1;
+    }
+}

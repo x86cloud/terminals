@@ -1,0 +1,113 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.statusCard {
+    background: @bg-elev;
+    border: none;
+    border-radius: @radius-lg;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+        background: @bg-1;
+    }
+
+    &.warning {
+        background: color-mix(in srgb, @warn-bg 45%, @bg-elev);
+        .statusCardVal {
+            color: @warn-text;
+        }
+        .statusCardIcon {
+            color: @warn;
+        }
+    }
+
+    &.danger {
+        background: color-mix(in srgb, @danger-bg 45%, @bg-elev);
+        .statusCardVal {
+            color: @danger-text;
+        }
+        .statusCardIcon {
+            color: @danger;
+        }
+    }
+
+    &.success {
+        background: color-mix(in srgb, @ok-bg 45%, @bg-elev);
+        .statusCardVal {
+            color: @ok-text;
+        }
+        .statusCardIcon {
+            color: @ok;
+        }
+    }
+
+    &.accent {
+        background: color-mix(in srgb, @accent-soft 45%, @bg-elev);
+        .statusCardVal {
+            color: @accent;
+        }
+        .statusCardIcon {
+            color: @accent;
+        }
+    }
+}
+
+.statusCardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.statusCardTitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: @text-dim;
+}
+
+.statusCardIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: @accent;
+    opacity: 0.85;
+}
+
+.statusCardVal {
+    font-size: 20px;
+    font-weight: 700;
+    color: @text;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    margin: 2px 0;
+}
+
+.statusCardSub {
+    font-size: 11px;
+    color: @text-dim;
+    .ellipsis();
+}
+
+.progressBar {
+    height: 3px;
+    background: @bg-3;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 4px 0 2px;
+}
+
+.progressFill {
+    height: 100%;
+    background: @accent;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+}

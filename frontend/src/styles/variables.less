@@ -1,0 +1,74 @@
+// ============================================================
+// 设计变量（Design Tokens）
+// 统一管理主题色、间距、字体、圆角、层级等设计规范
+// ============================================================
+
+// ---- 主题色 ----
+@bg: var(--bg, linear-gradient(135deg, #f0f4f9 0%, #e6edf6 50%, #dbe5f0 100%));                 // 页面最底层背景（渐变）
+@bj: var(--bj, @bg);                      // 背景别名
+@bg-solid: var(--bg-solid, #f0f4f9);      // 页面纯色实体背景（不含渐变透明）
+@bg-1: var(--bg-1, #ffffff);              // 卡片 / 浮层 / 侧栏背景
+@bg-1-solid: var(--bg-1-solid, #ffffff);  // 卡片 / 浮层纯色实体背景（不透明）
+@bg-2: var(--bg-2, #f3f6fa);              // 次级背景（悬浮、表头等）
+@bg-2-solid: var(--bg-2-solid, #f3f6fa);  // 表头纯色实体背景（用于 sticky 表头防透底）
+@bg-3: var(--bg-3, #e3e9f1);              // 按钮 / 边框底纹 / 凹陷背景
+@border: var(--border, #d4dbe6);            // 主边框色
+@text: var(--text, #1f2733);              // 主文字
+@text-dim: var(--text-dim, #6b7686);          // 次要文字
+@text-faint: var(--text-faint, #aab3c0);        // 极淡文字（行号、占位）
+@accent: var(--accent, #3370ff);            // 主题强调色
+@accent-dim: var(--accent-dim, #255cd8);        // 强调色（按下 / 选中）
+@accent-dim-2: rgba(51, 112, 255, 0.12);
+@accent-soft: var(--accent-soft, rgba(51, 112, 255, 0.10)); // 强调色浅底（选中项背景）
+@danger: var(--danger, #d6453f);            // 危险 / 错误
+@ok: var(--ok, #2f9e44);                // 成功
+@warn: var(--warn, #c97a1a);              // 警告
+@bg-elev: var(--bg-elev, #f5f7fa);           // 抬升背景（输入框 / 列表项）
+@bg-elev-solid: var(--bg-elev-solid, #f5f7fa); // 抬升纯色实体背景（不透明）
+
+// ---- 透明度辅助色 ----
+@danger-bg: var(--danger-bg, rgba(214, 69, 63, 0.10));
+@danger-text: var(--danger-text, #a82420);
+@ok-bg: var(--ok-bg, rgba(47, 158, 68, 0.12));
+@ok-text: var(--ok-text, #1b662d);
+@warn-bg: var(--warn-bg, rgba(201, 122, 26, 0.12));
+@warn-text: var(--warn-text, #8c4c06);
+@select-bg: rgba(51, 112, 255, 0.14);
+@drop-bg: rgba(76, 194, 255, 0.1);
+
+// ---- 间距 ----
+@space-xs: 4px;
+@space-sm: 6px;
+@space-md: 8px;
+@space-lg: 12px;
+@space-xl: 16px;
+
+// ---- 圆角 ----
+@radius-sm: 4px;
+@radius: 5px;
+@radius-md: 6px;
+@radius-lg: 8px;
+@radius-xl: 10px;
+@radius-pill: 999px;
+
+// ---- 字体 ----
+@font-family: "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif;
+@font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Courier New", monospace;
+@font-size: 13px;
+@font-size-sm: 11.5px;
+@font-size-xs: 11px;
+
+// ---- 层级 ----
+@z-context-menu: 100;
+@z-modal: 200;
+@z-toast: 300;
+
+// ---- 主题阴影 ----
+@shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.55);
+@shadow-menu: 0 12px 32px rgba(0, 0, 0, 0.45);
+@shadow-toast: 0 8px 24px rgba(0, 0, 0, 0.4);
+@shadow-pop: 0 12px 32px rgba(0, 0, 0, 0.45);
+
+// ---- 过渡 ----
+@transition-fast: .15s;
+@transition: .2s;

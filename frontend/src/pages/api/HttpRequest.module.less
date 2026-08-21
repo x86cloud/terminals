@@ -1,0 +1,135 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.apiToolbar {
+    display: flex;
+    align-items: center;
+    gap: @space-md;
+    padding: 8px 10px;
+    border-bottom: 1px solid @border;
+}
+
+.toolClose {
+    flex: none;
+}
+
+/* 响应区 */
+.responseArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+}
+
+.respHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-bottom: 1px solid @border;
+}
+
+.statusBadge {
+    flex: none;
+    padding: 2px 8px;
+    border-radius: @radius-sm;
+    font-family: @font-mono;
+    font-weight: 700;
+    font-size: 13px;
+    color: #fff;
+    background: @text-faint;
+}
+
+.statusOk { background: @ok; }
+.statusRedirect { background: @accent; }
+.statusClientErr { background: @warn; }
+.statusServerErr { background: @danger; }
+.statusUnknown { background: @text-faint; }
+.statusError { background: @danger; }
+
+.statusText {
+    .ellipsis();
+    color: @text;
+    font-size: 13px;
+}
+
+.respMeta {
+    flex: none;
+    color: @text-dim;
+    font-size: 12px;
+}
+
+.respPlaceholder {
+    color: @text-dim;
+    font-size: 13px;
+}
+
+.respBody {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+}
+
+.respBodyWrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.respBodyTools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 10px;
+    border-bottom: 1px solid @border;
+}
+
+/* CodeMirror 填充响应体区域 */
+.respCodeWrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+
+    > div {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+    }
+
+    :global(.cm-editor) {
+        flex: 1;
+        height: 100%;
+        border: none;
+        border-radius: 0;
+    }
+}
+
+.respHeaders {
+    padding: 6px 10px;
+}
+
+.respHeaderRow {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 4px 0;
+    border-bottom: 1px solid @border;
+}
+
+.respHeaderKey {
+    flex: 0 0 200px;
+    color: @accent;
+    font-family: @font-mono;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.respHeaderVal {
+    flex: 1;
+    min-width: 0;
+    color: @text;
+    font-family: @font-mono;
+    font-size: 13px;
+    word-break: break-all;
+}

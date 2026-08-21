@@ -1,0 +1,111 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.sqlWrap {
+    .fill();
+    display: flex;
+    flex-direction: column;
+
+    :global(.cm-editor) {
+        border: none !important;
+        border-radius: 0 !important;
+    }
+}
+
+.sqlTabBar {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 8px;
+    background: @bg-2;
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
+    flex-shrink: 0;
+    overflow-x: auto;
+}
+
+.sqlTab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: transparent;
+    border: none;
+    border-radius: @radius-md;
+    color: @text-dim;
+    cursor: pointer;
+    font-size: 12px;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: color-mix(in srgb, @bg-1 70%, transparent);
+        color: @text;
+    }
+
+    &.active {
+        background: @bg-1;
+        color: @accent;
+        font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    }
+}
+
+.sqlTabClose {
+    border: none;
+    background: transparent;
+    color: @text-faint;
+    cursor: pointer;
+    display: flex;
+    padding: 0;
+    transition: color 0.15s ease;
+
+    &:hover {
+        color: @danger;
+    }
+}
+
+.sqlTabAdd {
+    border: none;
+    background: transparent;
+    color: @text-dim;
+    cursor: pointer;
+    padding: 4px 6px;
+    display: flex;
+    align-items: center;
+    border-radius: @radius-sm;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: color-mix(in srgb, @bg-1 70%, transparent);
+        color: @accent;
+    }
+}
+
+.sqlRunBar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-top: 1px solid color-mix(in srgb, @border 50%, transparent);
+    background: @bg-1;
+    flex-shrink: 0;
+}
+
+.sqlResultArea {
+    flex: 1;
+    .fill();
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 0;
+    min-height: 0;
+}
+
+.sqlResultMeta {
+    padding: 5px 12px;
+    font-size: 12px;
+    color: @text-dim;
+    background: @bg-2;
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
+    flex-shrink: 0;
+}

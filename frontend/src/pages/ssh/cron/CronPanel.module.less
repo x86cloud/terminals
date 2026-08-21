@@ -1,0 +1,102 @@
+@import (reference) '../../../styles/variables.less';
+@import (reference) '../../../styles/mixins.less';
+
+.cronPanel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: @bg-2;
+    color: @text;
+    font-size: 13px;
+    user-select: none;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    background: @bg-1;
+    border-bottom: 1px solid @border;
+    flex: none;
+    gap: 12px;
+
+    .leftActions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+    }
+
+    .searchWrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1;
+        max-width: 220px;
+        background: @bg-2;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        padding: 3px 8px;
+        color: @text-dim;
+
+        input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            color: @text;
+            outline: none;
+            font-size: 12px;
+        }
+    }
+
+    .toolbarActions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .lastUpdate {
+        font-size: 11.5px;
+        color: @text-dim;
+    }
+}
+
+.searchInput {
+    width: 220px;
+}
+
+.tableWrap {
+    flex: 1;
+    overflow: auto;
+    padding: 0 12px 12px;
+}
+
+.alertBox {
+    margin: 0 12px 8px;
+}
+
+.cmdText {
+    font-family: @font-mono;
+    word-break: break-all;
+}
+
+.commentText {
+    font-size: 11.5px;
+    color: @text-dim;
+    font-style: italic;
+}
+
+.outputContainer {
+    max-height: 480px;
+    overflow: auto;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 12px;
+    border-radius: 6px;
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+}

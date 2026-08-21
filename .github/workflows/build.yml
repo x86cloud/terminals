@@ -1,0 +1,155 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - v3
+      - main
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - v3
+      - main
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows (amd64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package.json'
+
+      - name: Install Wails v3 CLI and Task
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.10
+          go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Frontend Assets
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build Windows Binary
+        shell: bash
+        run: |
+          task windows:build ARCH=amd64 || (
+            wails3 generate syso -arch amd64 -icon build/windows/icon.ico -manifest build/windows/wails.exe.manifest -info build/windows/info.json -out wails_windows_amd64.syso
+            go build -tags production -trimpath -ldflags="-w -s -H windowsgui" -o bin/terminal-v3.exe .
+          )
+
+      - name: Package Windows Artifacts
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          if (Test-Path "bin\terminal-v3.exe") {
+            Compress-Archive -Path "bin\terminal-v3.exe" -DestinationPath "dist/terminal-v3-windows-amd64.zip" -Force
+          } elseif (Test-Path "terminal-v3.exe") {
+            Compress-Archive -Path "terminal-v3.exe" -DestinationPath "dist/terminal-v3-windows-amd64.zip" -Force
+          }
+
+      - name: Upload Windows Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-v3-windows-amd64
+          path: dist/*
+          if-no-files-found: warn
+
+  build-macos:
+    name: Build macOS (Universal)
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'frontend/package.json'
+
+      - name: Install Wails v3 CLI and Task
+        run: |
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.10
+          go install github.com/go-task/task/v3/cmd/task@latest
+
+      - name: Install Frontend Dependencies
+        working-directory: frontend
+        run: npm install
+
+      - name: Build Frontend Assets
+        working-directory: frontend
+        run: npm run build
+
+      - name: Build & Package macOS Universal App
+        run: |
+          task darwin:package:universal || task darwin:package
+
+      - name: Compress macOS Bundle
+        run: |
+          mkdir -p dist
+          if [ -d "bin/terminal-v3.app" ]; then
+            cd bin && zip -r ../dist/terminal-v3-macos.app.zip terminal-v3.app && cd ..
+          elif [ -f "bin/terminal-v3" ]; then
+            cd bin && zip ../dist/terminal-v3-macos.zip terminal-v3 && cd ..
+          fi
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: terminal-v3-macos
+          path: dist/*
+          if-no-files-found: warn
+
+  release:
+    name: Create GitHub Release
+    needs: [build-windows, build-macos]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/**/*
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

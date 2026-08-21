@@ -1,0 +1,213 @@
+@import (reference) '@/styles/variables.less';
+@import (reference) '@/styles/mixins.less';
+
+.inspectorPane {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 440px;
+    background: @bg-1;
+    border-left: 1px solid @border;
+    box-shadow: -6px 0 24px rgba(0, 0, 0, 0.16);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    animation: slideInRight 0.18s ease-out;
+
+    .inspectorHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid @border;
+        background: @bg-2;
+        padding: 8px 12px;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    .inspectorBody {
+        flex: 1;
+        overflow-y: auto;
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        background: @bg-2;
+    }
+}
+
+.emptyTip {
+    color: @text-dim;
+    text-align: center;
+    padding: 20px;
+    font-size: 12px;
+}
+
+.skillsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border: 1px solid @border;
+}
+
+.skillsEmpty {
+    color: @text-dim;
+    text-align: center;
+    padding: 24px 16px;
+    font-size: 12px;
+    line-height: 1.6;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 6px;
+    border: 1px dashed @border;
+}
+
+.skillExpandBtn {
+    font-size: 11px;
+    color: @accent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 6px;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0.7;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Job cards */
+.jobCard {
+    padding: 10px;
+    border-radius: 6px;
+    background: @bg-1;
+    border: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+
+    .jobHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .jobProgressBar {
+        height: 4px;
+        background: rgba(127, 127, 127, 0.2);
+        border-radius: 2px;
+        overflow: hidden;
+
+        .jobProgressFill {
+            height: 100%;
+            background: @accent;
+            transition: width 0.3s ease;
+        }
+    }
+
+    .jobOutputTerminal {
+        background: #000;
+        color: #00ff66;
+        font-family: monospace;
+        font-size: 11px;
+        padding: 6px 8px;
+        border-radius: 4px;
+        max-height: 120px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+    }
+}
+
+/* Audit list */
+.auditRow {
+    padding: 8px;
+    border-radius: 6px;
+    background: @bg-1;
+    border: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+
+    .auditTop {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        .auditTool {
+            font-family: monospace;
+            font-weight: 600;
+            color: @text;
+        }
+    }
+}
+
+/* SOP Skills Cards */
+.skillCard {
+    padding: 10px;
+    border-radius: 6px;
+    background: @bg-1;
+    border: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+
+    .skillHeader {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-weight: 600;
+    }
+
+    .skillTools {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+
+        .toolTag {
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.05);
+            color: @text-dim;
+            font-family: monospace;
+        }
+    }
+}
+
+.riskBadge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 500;
+
+    &.riskLow {
+        background: rgba(47, 158, 68, 0.15);
+        color: @ok;
+        border: 1px solid rgba(47, 158, 68, 0.3);
+    }
+
+    &.riskMedium {
+        background: rgba(201, 122, 26, 0.15);
+        color: @warn;
+        border: 1px solid rgba(201, 122, 26, 0.3);
+    }
+
+    &.riskHigh {
+        background: rgba(214, 69, 63, 0.15);
+        color: @danger;
+        border: 1px solid rgba(214, 69, 63, 0.3);
+    }
+}

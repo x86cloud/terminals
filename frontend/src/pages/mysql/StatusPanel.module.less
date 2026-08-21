@@ -1,0 +1,604 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.mgmtWrap {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    overflow: hidden;
+    padding: 12px;
+}
+
+.mgmtHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 12px;
+    padding-bottom: 12px;
+    flex-shrink: 0;
+}
+
+.headLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.headTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 13.5px;
+    color: @text;
+}
+
+.versionTag {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: @bg-2;
+    border: none;
+    border-radius: 4px;
+    color: @text-dim;
+    font-family: @font-mono;
+}
+
+.uptimeTag {
+    font-size: 11px;
+    padding: 2px 8px;
+    background: @accent-soft;
+    border-radius: 4px;
+    color: @accent;
+    font-weight: 500;
+}
+
+.headRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: auto;
+}
+
+.autoRefreshWrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: @text-dim;
+}
+
+.autoRefreshLabel {
+    white-space: nowrap;
+}
+
+.autoRefreshSelect {
+    background: @bg-2;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11.5px;
+    color: @text;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease;
+
+    &:focus {
+        border-color: @accent;
+        background: @bg-1;
+    }
+}
+
+.scrollArea {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.statusGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+/* 下半部分：无多层嵌套卡片，开放式结构 */
+.subTabsSection {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 380px;
+    gap: 10px;
+}
+
+.subTabsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
+    flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.subTabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.subTabBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px 10px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: @text-dim;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: all 0.15s ease;
+    margin-bottom: -1px;
+
+    &:hover {
+        color: @text;
+    }
+
+    &.active {
+        color: @accent;
+        font-weight: 600;
+        border-bottom-color: @accent;
+    }
+}
+
+.tabBadge {
+    font-size: 10.5px;
+    padding: 1px 5px;
+    background: @bg-2;
+    border-radius: 999px;
+    color: @text-dim;
+    font-weight: normal;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.subTabBody {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sectionContent {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sectionToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 10px;
+    flex-shrink: 0;
+}
+
+.pillFilterGroup {
+    display: flex;
+    align-items: center;
+    background: @bg-2;
+    border-radius: @radius-md;
+    padding: 2px;
+    gap: 2px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex-shrink: 0;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.pillBtn {
+    border: none;
+    background: transparent;
+    color: @text-dim;
+    font-size: 11.5px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: @text;
+    }
+
+    &.active {
+        background: @bg-1;
+        color: @accent;
+        font-weight: 600;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    }
+}
+
+.searchBox {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 140px;
+    min-width: 120px;
+    max-width: 260px;
+    background: @bg-2;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-radius: @radius-md;
+    padding: 4px 8px;
+    color: @text-dim;
+    transition: all 0.15s ease;
+
+    &:focus-within {
+        border-color: @accent;
+        background: @bg-1;
+        box-shadow: 0 0 0 2px @accent-dim-2;
+    }
+
+    svg {
+        flex-shrink: 0;
+    }
+
+    input {
+        width: 100%;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        color: @text;
+        outline: none;
+        font-size: 12px;
+    }
+}
+
+.tableResponsive {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+}
+
+.dataTable {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+    text-align: left;
+
+    th {
+        padding: 7px 12px;
+        background: @bg-2-solid;
+        color: @text-dim;
+        font-weight: 600;
+        font-size: 11.5px;
+        border-bottom: 1px solid @border;
+        white-space: nowrap;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        user-select: none;
+    }
+
+    td {
+        padding: 7px 12px;
+        border-bottom: 1px solid color-mix(in srgb, @border 60%, transparent);
+        color: @text;
+        vertical-align: middle;
+    }
+
+    tbody tr {
+        transition: background 0.12s ease;
+
+        &:hover {
+            background: @bg-2;
+        }
+    }
+}
+
+.idBadge {
+    font-family: @font-mono;
+    font-size: 11px;
+    color: @text-dim;
+}
+
+.userHostWrap {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.procUser {
+    font-weight: 600;
+    color: @text;
+    .ellipsis();
+}
+
+.procHost {
+    font-size: 11px;
+    color: @text-dim;
+    .ellipsis();
+}
+
+.dbBadge {
+    font-size: 11.5px;
+    color: @accent-dim;
+    font-weight: 500;
+}
+
+.cmdBadge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 500;
+    background: @bg-3;
+    color: @text-dim;
+
+    &.queryCmd {
+        background: @ok-bg;
+        color: @ok-text;
+        border: 1px solid rgba(47, 158, 68, 0.2);
+    }
+
+    &.sleepCmd {
+        background: transparent;
+        color: @text-faint;
+    }
+}
+
+.timeBadge {
+    font-family: @font-mono;
+    font-size: 11.5px;
+    color: @text-dim;
+
+    &.dangerTime {
+        color: @danger;
+        font-weight: 700;
+    }
+}
+
+.stateText {
+    font-size: 11.5px;
+    color: @text-dim;
+    display: inline-block;
+    max-width: 140px;
+    .ellipsis();
+}
+
+.sqlSnippetWrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.sqlSnippet {
+    font-family: @font-mono;
+    font-size: 11.5px;
+    background: @bg-2;
+    padding: 2px 6px;
+    border-radius: 3px;
+    border: none;
+    color: @text;
+    max-width: 380px;
+    .ellipsis();
+    user-select: text;
+}
+
+.nullText {
+    color: @text-faint;
+}
+
+.slowHint {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 11.5px;
+    color: @text-dim;
+}
+
+.slowEmptyGuide {
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    color: @text-faint;
+    gap: 10px;
+
+    svg {
+        opacity: 0.5;
+        color: @warn;
+    }
+
+    .emptyGuideTitle {
+        font-size: 14px;
+        font-weight: 600;
+        color: @text;
+    }
+
+    .emptyGuideSub {
+        font-size: 12px;
+        color: @text-dim;
+        max-width: 420px;
+        line-height: 1.6;
+
+        pre {
+            text-align: left;
+            margin: 8px 0 0;
+            padding: 8px 12px;
+            background: @bg-2;
+            border: none;
+            border-radius: @radius-md;
+            font-family: @font-mono;
+            font-size: 11.5px;
+            color: @accent;
+            user-select: text;
+        }
+    }
+}
+
+.slowLogList {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.slowLogCard {
+    background: @bg-elev;
+    border: none;
+    border-radius: @radius-md;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: background 0.15s ease, box-shadow 0.15s ease;
+
+    &:hover {
+        background: @bg-1;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    }
+}
+
+.slowLogHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.slowLogMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.slowIdx {
+    font-size: 11px;
+    font-weight: 700;
+    color: @accent;
+}
+
+.slowTime {
+    font-size: 11.5px;
+    font-family: @font-mono;
+    color: @text-dim;
+}
+
+.slowUserHost {
+    font-size: 11.5px;
+    color: @text;
+    font-weight: 500;
+}
+
+.slowMetrics {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.slowMetricBadge {
+    font-size: 11px;
+    padding: 2px 6px;
+    background: @bg-2;
+    border: none;
+    border-radius: 4px;
+    color: @text-dim;
+
+    strong {
+        color: @danger;
+    }
+}
+
+.slowSqlPre {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    font-family: @font-mono;
+    font-size: 11.5px;
+    line-height: 1.5;
+    background: @bg-2;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 10px;
+    color: @text;
+    user-select: text;
+}
+
+.varName {
+    font-family: @font-mono;
+    font-weight: 600;
+    color: @text;
+    font-size: 12px;
+    user-select: text;
+}
+
+.varValue {
+    font-family: @font-mono;
+    font-size: 12px;
+    color: @accent-dim;
+    word-break: break-all;
+    user-select: text;
+}
+
+.emptyBox {
+    padding: 30px;
+    text-align: center;
+    color: @text-faint;
+    font-size: 12.5px;
+}
+
+.spin {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}

@@ -1,0 +1,103 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+/* 跨子组件共享的 MySQL 通用样式 */
+.mysqlNull {
+    color: @text-dim;
+    font-style: italic;
+}
+
+.mysqlEmpty {
+    color: @text-dim;
+    font-size: 13px;
+    padding: 12px;
+    text-align: center;
+
+    &.small {
+        padding: 6px;
+        font-size: 12px;
+    }
+}
+
+.mysqlGridWrap {
+    min-width: 0;
+}
+
+.mysqlTable {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    font-size: 12px;
+    font-family: @font-mono;
+
+    th, td {
+        border-bottom: 1px solid color-mix(in srgb, @border 60%, transparent);
+        padding: 6px 10px;
+        text-align: left;
+        white-space: nowrap;
+        max-width: 360px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    th {
+        background: @bg-2-solid;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        color: @text-dim;
+        font-weight: 600;
+        font-size: 11.5px;
+        border-bottom: 1px solid @border;
+        user-select: none;
+    }
+
+    tbody tr {
+        transition: background 0.12s ease;
+
+        &:nth-child(even) {
+            background: color-mix(in srgb, @bg-2 45%, transparent);
+        }
+
+        &:hover {
+            background: @bg-2 !important;
+        }
+    }
+}
+
+/* 单元格内联编辑器（DataTab / CellEditorInline 共用） */
+.mysqlCellInput {
+    width: 100%;
+    min-width: 60px;
+    border: none !important;
+    outline: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: @text;
+    padding: 0 !important;
+    margin: 0 !important;
+    font: inherit;
+
+    &.isNull {
+        color: @text-faint;
+        font-style: italic;
+    }
+}
+
+.nullToggle {
+    flex: 0 0 auto;
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 4px;
+    border: 1px solid @border;
+    background: @bg-elev;
+    color: @text-dim;
+    border-radius: 3px;
+    cursor: pointer;
+
+    &.on {
+        background: @accent;
+        border-color: @accent;
+        color: #fff;
+    }
+}

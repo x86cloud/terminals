@@ -1,0 +1,299 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.mgmtWrap {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+    border: none;
+    overflow: hidden;
+}
+
+.mgmtHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
+    background: @bg-1;
+    flex-shrink: 0;
+
+    .headTitle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: @text;
+    }
+
+    .userCount {
+        font-size: 11.5px;
+        font-weight: normal;
+        color: @text-dim;
+    }
+}
+
+.mgmtBody {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    overflow: hidden;
+}
+
+.userList {
+    width: 250px;
+    min-width: 220px;
+    max-width: 300px;
+    border-right: 1px solid color-mix(in srgb, @border 60%, transparent);
+    background: @bg-2;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.searchWrap {
+    margin-bottom: 6px;
+}
+
+.userItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: @radius-md;
+    color: @text;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s ease;
+    position: relative;
+
+    &:hover {
+        background: color-mix(in srgb, @bg-1 60%, transparent);
+
+        .userQuickActions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+    }
+
+    &.active {
+        background: @bg-1;
+        border-color: color-mix(in srgb, @accent 30%, transparent);
+        color: @accent;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+
+        .userIcon {
+            color: @accent;
+        }
+
+        .userName {
+            font-weight: 600;
+        }
+    }
+}
+
+.userIcon {
+    color: @text-dim;
+    flex-shrink: 0;
+}
+
+.userMeta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    flex: 1;
+}
+
+.userName {
+    font-size: 12.5px;
+    font-weight: 500;
+    .ellipsis();
+}
+
+.userHost {
+    color: @text-dim;
+    font-size: 11px;
+    .ellipsis();
+}
+
+.userQuickActions {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.lockBadge {
+    font-size: 10px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: @warn-bg;
+    color: @warn-text;
+    border: 1px solid rgba(201, 122, 26, 0.2);
+    flex-shrink: 0;
+}
+
+.grantsBox {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.grantsInner {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 12px 16px;
+    overflow: hidden;
+}
+
+.grantsHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid color-mix(in srgb, @border 40%, transparent);
+
+    .grantsTitle {
+        font-size: 13.5px;
+        color: @text;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        span {
+            font-weight: 600;
+            color: @accent;
+            font-family: @font-mono;
+        }
+    }
+}
+
+.grantsList {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 4px;
+}
+
+.grantCard {
+    background: @bg-elev;
+    border: 1px solid color-mix(in srgb, @border 40%, transparent);
+    border-radius: @radius-md;
+    padding: 10px 12px;
+    position: relative;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: @bg-2;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+
+        .grantCardActions {
+            opacity: 1;
+        }
+    }
+}
+
+.grantCardHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+
+    .grantIdx {
+        font-size: 11px;
+        font-weight: 600;
+        color: @accent;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+}
+
+.grantCardActions {
+    opacity: 0.7;
+    transition: opacity 0.15s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.grantText {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.55;
+    color: @text;
+    user-select: text;
+    background: color-mix(in srgb, @bg-1 50%, transparent);
+    padding: 6px 8px;
+    border-radius: 4px;
+}
+
+.grantsPre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: anywhere;
+    font-family: @font-mono;
+    font-size: 12px;
+    background: @bg-2;
+    border: none;
+    border-radius: @radius-md;
+    padding: 12px;
+    color: @text;
+    line-height: 1.55;
+}
+
+.emptyPlaceholder {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: @text-faint;
+    font-size: 13px;
+
+    svg {
+        opacity: 0.4;
+    }
+}
+
+.small {
+    padding: 20px 10px;
+    text-align: center;
+    font-size: 12px;
+    color: @text-dim;
+}

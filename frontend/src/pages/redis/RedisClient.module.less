@@ -1,0 +1,34 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.redisPane {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    .fill();
+    width: 100%;
+    min-height: 0;
+}
+
+.redisTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+
+    :global {
+        .ant-tabs-nav {
+            margin-bottom: 0 !important;
+        }
+    }
+}
+
+.redisMsg {
+    background: rgba(230, 162, 60, 0.15);
+    color: #e6a23c;
+    padding: 6px 10px;
+    font-size: 12px;
+    border-bottom: 1px solid @border;
+}

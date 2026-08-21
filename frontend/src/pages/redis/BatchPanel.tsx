@@ -1,0 +1,63 @@
+import React from 'react'
+import { Input, Button } from 'antd'
+import CodeEditor from '@/components/CodeEditor'
+import { RedisPipelineResult, RedisTransactionResult } from '@/types'
+import b from '@/pages/redis/BatchPanel.module.less'
+
+export default function BatchPanel({
+    title,
+    cmds,
+    setCmds,
+    watch,
+    setWatch,
+    onRun,
+    runLabel,
+    result,
+    showWatch,
+}: {
+    title: string
+    cmds: string
+    setCmds: (v: string) => void
+    watch: string
+    setWatch: (v: string) => void
+    onRun: () => void
+    runLabel: string
+    result: RedisPipelineResult | RedisTransactionResult | null
+    showWatch?: boolean
+}) {
+    return (
+        <div className={b.panel}>
+            <div className={b.subHead}>{title}</div>
+            {showWatch && (
+                <div className={b.row} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>WATCH 键(逗号分隔):</span>
+                    <Input size="small" style={{ flex: 1 }} value={watch} onChange={(e) => setWatch(e.target.value)} placeholder="key1,key2" />
+                </div>
+            )}
+            <CodeEditor
+                value={cmds}
+                onChange={setCmds}
+                lang="json"
+                lineNumbers={false}
+                height="168px"
+                placeholder={'每行一条命令，例如：\nSET foo bar\nINCR counter\nHSET h k v'}
+            />
+            <div style={{ marginTop: 8 }}>
+                <Button size="small" type="primary" onClick={onRun}>{runLabel}</Button>
+            </div>
+            {result && (
+                <div className={b.msgList}>
+                    {'aborted' in result && result.aborted && <div className={b.redisMsg}>事务被中止（WATCH 冲突）</div>}
+                    {result.results?.map((r2, i) => (
+                        <div key={i} className={b.msgItem}>
+                            <span className={b.msgChan}>#{i + 1}</span>
+                            <span className={b.msgPayload}>{r2.result}</span>
+                            {r2.error && <span className={b.msgErr}>{r2.error}</span>}
+                        </div>
+                    ))}
+                    {result.error && <div className={b.msgErr}>整体错误: {result.error}</div>}
+                </div>
+            )}
+        </div>
+    )
+}

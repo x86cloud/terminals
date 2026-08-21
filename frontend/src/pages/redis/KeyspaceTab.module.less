@@ -1,0 +1,105 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.input {
+    flex: 1;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    color: @text;
+    font-size: 12px;
+
+    &:focus {
+        border-color: @accent;
+        outline: none;
+    }
+}
+
+.inputSm {
+    width: 70px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    color: @text;
+    font-size: 12px;
+
+    &:focus {
+        border-color: @accent;
+        outline: none;
+    }
+}
+
+.subHead {
+    font-size: 12px;
+    font-weight: 600;
+    color: @text-dim;
+    margin-top: 8px;
+}
+
+.msgList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 200px;
+    overflow-y: auto;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 8px;
+}
+
+.msgItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-family: monospace;
+    padding: 4px 6px;
+    border-bottom: 1px dashed @border;
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
+
+.msgChan {
+    color: @accent;
+    font-weight: 500;
+}
+
+.msgKey {
+    color: #e6a23c;
+}
+
+.msgPayload {
+    color: @text;
+    word-break: break-all;
+}
+
+.redisEmpty {
+    color: @text-dim;
+    font-size: 13px;
+    text-align: center;
+    padding: 24px 0;
+}

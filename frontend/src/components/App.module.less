@@ -1,0 +1,28 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+.app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    background: @bg;
+}
+
+.body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+.main {
+    flex: 1;
+    .fill();
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    min-width: 0;
+}
