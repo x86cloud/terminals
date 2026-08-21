@@ -29,15 +29,20 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
           cache: true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package.json'
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: Install Wails v3 CLI and Task
         run: |
@@ -46,11 +51,11 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: frontend
-        run: npm install
+        run: pnpm install
 
       - name: Build Frontend Assets
         working-directory: frontend
-        run: npm run build
+        run: pnpm run build
 
       - name: Build Windows Binary
         shell: bash
@@ -87,15 +92,20 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24'
+          go-version-file: 'go.mod'
           cache: true
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'frontend/package.json'
+          node-version: '24'
+          cache: 'pnpm'
+          cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
       - name: Install Wails v3 CLI and Task
         run: |
@@ -104,11 +114,11 @@ jobs:
 
       - name: Install Frontend Dependencies
         working-directory: frontend
-        run: npm install
+        run: pnpm install
 
       - name: Build Frontend Assets
         working-directory: frontend
-        run: npm run build
+        run: pnpm run build
 
       - name: Build & Package macOS Universal App
         run: |
