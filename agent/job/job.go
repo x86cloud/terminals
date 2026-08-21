@@ -126,7 +126,9 @@ func (jm *JobManager) Submit(
 ) string {
 	jobID := fmt.Sprintf("job_%d", time.Now().UnixNano())
 
-	jobCtx, cancel := context.WithCancel(ctx)
+	// Detach from parent tool call's ephemeral cancel/timeout while preserving session & trace context values
+	detachedCtx := context.WithoutCancel(ctx)
+	jobCtx, cancel := context.WithCancel(detachedCtx)
 	now := time.Now()
 
 	j := &Job{
@@ -302,6 +304,44 @@ func (jm *JobManager) Kill(jobID string) bool {
 		})
 	}
 	return true
+}
+
+func (jm *JobManager) KillBySession(sessionID string) {
+	if sessionID == "" {
+		return
+	}
+	jm.mu.RLock()
+	var targets []*Job
+	for _, j := range jm.jobs {
+		if j.SessionID == sessionID {
+			targets = append(targets, j)
+		}
+	}
+	jm.mu.RUnlock()
+
+	for _, j := range targets {
+		j.mu.Lock()
+		if j.State == StateRunning || j.State == StatePending || j.State == StateWaitingApproval {
+			if j.cancelFunc != nil {
+				j.cancelFunc()
+			}
+			j.State = StateKilled
+			j.FinishedAt = time.Now()
+			if jm.store != nil {
+				_ = jm.store.SaveJob(store.JobItem{
+					ID:         j.ID,
+					SessionID:  j.SessionID,
+					Kind:       j.Kind,
+					State:      string(StateKilled),
+					Progress:   j.Progress,
+					StartedAt:  j.StartedAt.UnixMilli(),
+					CreatedAt:  j.CreatedAt.UnixMilli(),
+					FinishedAt: j.FinishedAt.UnixMilli(),
+				})
+			}
+		}
+		j.mu.Unlock()
+	}
 }
 
 func (jm *JobManager) GetJob(jobID string) (*store.JobItem, error) {

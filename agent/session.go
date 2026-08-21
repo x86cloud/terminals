@@ -166,6 +166,15 @@ func (s *Session) Stop() {
 		s.cancelFunc()
 	}
 	s.State = SessionStateStopped
+
+	if DefaultRuntime != nil {
+		if DefaultRuntime.JobMgr != nil {
+			DefaultRuntime.JobMgr.KillBySession(s.ID)
+		}
+		if DefaultRuntime.SubagentM != nil {
+			DefaultRuntime.SubagentM.InterruptBySession(s.ID)
+		}
+	}
 }
 
 func (s *Session) WorkingMemory() *memory.WorkingMemory {

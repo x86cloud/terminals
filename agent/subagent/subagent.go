@@ -82,7 +82,9 @@ func (sm *SubagentManager) Spawn(
 	sm.mu.Unlock()
 
 	subID := fmt.Sprintf("sub_%d", time.Now().UnixNano())
-	subCtx, cancel := context.WithCancel(ctx)
+	// Detach from parent tool call's ephemeral cancel/timeout while preserving session & trace context values
+	detachedCtx := context.WithoutCancel(ctx)
+	subCtx, cancel := context.WithCancel(detachedCtx)
 	now := time.Now().UnixMilli()
 
 	sub := &Subagent{
@@ -220,6 +222,38 @@ func (sm *SubagentManager) Interrupt(subID string) bool {
 		})
 	}
 	return true
+}
+
+func (sm *SubagentManager) InterruptBySession(sessionID string) {
+	if sessionID == "" {
+		return
+	}
+	sm.mu.RLock()
+	var targets []*Subagent
+	for _, sub := range sm.subagents {
+		if sub.SessionID == sessionID {
+			targets = append(targets, sub)
+		}
+	}
+	sm.mu.RUnlock()
+
+	for _, sub := range targets {
+		sub.mu.Lock()
+		if sub.State == StateRunning {
+			if sub.cancelFunc != nil {
+				sub.cancelFunc()
+			}
+			sub.State = StateInterrupted
+			if sm.store != nil {
+				_ = sm.store.SaveSubagent(store.SubagentItem{
+					ID:         sub.ID,
+					State:      string(StateInterrupted),
+					FinishedAt: time.Now().UnixMilli(),
+				})
+			}
+		}
+		sub.mu.Unlock()
+	}
 }
 
 func (sm *SubagentManager) Send(ctx context.Context, subID string, message string) (string, error) {

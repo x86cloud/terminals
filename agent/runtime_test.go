@@ -797,4 +797,84 @@ func TestLocalShellTool(t *testing.T) {
 	}
 }
 
+func TestBackgroundJobAndSubagentLifecycleDecoupling(t *testing.T) {
+	st, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	eb := events.NewEventBus()
+	jm := job.NewJobManager(st, eb)
+	wm := tools.NewWorkspaceManager("")
+	jm.RegisterExecutor("local", job.NewLocalExecutor(wm))
+
+	// 1. Verify Job execution survives expired/cancelled parent tool context
+	ephemeralCtx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
+	cancel() // Ensure parent ctx is completely cancelled
+
+	jobID := jm.Submit(ephemeralCtx, "sess_bg", "test", func(jobCtx context.Context, emitProgress job.ProgressFunc) (string, error) {
+		time.Sleep(30 * time.Millisecond)
+		if jobCtx.Err() != nil {
+			return "", jobCtx.Err()
+		}
+		emitProgress(1.0, "ok", "done")
+		return "success", nil
+	})
+
+	jobItem, summary, err := jm.Wait(context.Background(), jobID)
+	if err != nil {
+		t.Fatalf("后台作业应脱钩父 Context 正常执行完毕，但返回错误: %v", err)
+	}
+	if summary != "success" || jobItem.State != string(job.StateCompleted) {
+		t.Fatalf("预期作业状态为 completed，实际: %s, summary: %s", jobItem.State, summary)
+	}
+
+	// 2. Verify Subagent execution survives expired/cancelled parent context
+	subagentRunnerRan := false
+	sm := subagent.NewSubagentManager(st, eb, func(ctx context.Context, subID, prompt string) (string, error) {
+		time.Sleep(30 * time.Millisecond)
+		if ctx.Err() != nil {
+			return "", ctx.Err()
+		}
+		subagentRunnerRan = true
+		return "subagent_result", nil
+	})
+
+	subID, err := sm.Spawn(ephemeralCtx, "", "sess_sub", "test prompt", "", 1)
+	if err != nil {
+		t.Fatalf("启动子代理失败: %v", err)
+	}
+
+	time.Sleep(80 * time.Millisecond)
+	subItem, err := sm.Get(subID)
+	if err != nil || subItem.State != string(subagent.StateCompleted) {
+		t.Fatalf("预期子代理脱钩父 Context 并成功完成，实际状态: %s, err: %v", subItem.State, err)
+	}
+	if !subagentRunnerRan {
+		t.Fatalf("预期子代理 Runner 正常执行完成")
+	}
+
+	// 3. Verify Session.Stop cascade cancellation
+	sess := NewSession("sess_cascade", "测试级联停止会话", "", DefaultRuntime.cfg)
+	DefaultRuntime.JobMgr = jm
+	DefaultRuntime.SubagentM = sm
+
+	longJobID := jm.Submit(context.Background(), "sess_cascade", "long_job", func(jobCtx context.Context, emitProgress job.ProgressFunc) (string, error) {
+		select {
+		case <-jobCtx.Done():
+			return "", jobCtx.Err()
+		case <-time.After(2 * time.Second):
+			return "done", nil
+		}
+	})
+
+	time.Sleep(20 * time.Millisecond)
+	sess.Stop()
+
+	time.Sleep(30 * time.Millisecond)
+	killedJob, _ := jm.GetJob(longJobID)
+	if killedJob != nil && killedJob.State != string(job.StateKilled) {
+		t.Fatalf("预期 session.Stop 级联终止后台作业，实际状态: %s", killedJob.State)
+	}
+}
+
 
