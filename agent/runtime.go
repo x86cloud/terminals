@@ -28,6 +28,7 @@ import (
 	"terminal/redis"
 	"terminal/ssh"
 
+	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 )
 
@@ -113,28 +114,51 @@ func NewAgentRuntime() *AgentRuntime {
 		}
 
 		toolsList := tb.List()
+		var subagentTools []*schema.ToolInfo
 		var toolDesc strings.Builder
 		toolDesc.WriteString("【可用工具列表】:\n")
+
 		for _, t := range toolsList {
+			// Exclude recursive orchestration tools to prevent nesting loops (addresses #6)
+			if t.Name == "subagent_spawn" || t.Name == "subagent_send" || t.Name == "subagent_interrupt" || t.Name == "subagent_list" || t.Name == "ask_user" {
+				continue
+			}
 			toolDesc.WriteString(fmt.Sprintf("- %s: %s\n", t.Name, t.Description))
+
+			if t.BaseTool != nil {
+				if info, err := t.BaseTool.Info(ctx); err == nil && info != nil {
+					subagentTools = append(subagentTools, info)
+					continue
+				}
+			}
+			subagentTools = append(subagentTools, &schema.ToolInfo{
+				Name: t.Name,
+				Desc: t.Description,
+				ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+					"input": {
+						Type: schema.String,
+						Desc: "JSON string arguments for tool",
+					},
+				}),
+			})
 		}
 
 		sysPrompt := fmt.Sprintf(`你是一个专注于单一运维排障与数据分析的专业子代理 (Subagent)。
-你可以分析任务并直接回答，或在必要时直接调用系统工具。
+你可以分析任务并直接回答，或在必要时直接发起工具调用。
 %s
-若需调用工具，请直接输出相应工具指令。最终请给出清晰、结构化的结论报告。`, toolDesc.String())
+若需调用工具，请直接发起相应的 tool_call。最终请给出清晰、结构化的结论报告。`, toolDesc.String())
 
 		schemaMsgs := []*schema.Message{
 			schema.SystemMessage(sysPrompt),
 			schema.UserMessage(prompt),
 		}
 
-		// Tool calling loop: max 4 rounds
-		for round := 0; round < 4; round++ {
+		// Tool calling loop: max 6 rounds
+		for round := 0; round < 6; round++ {
 			if ctx.Err() != nil {
 				return "", ctx.Err()
 			}
-			out, err := res.Model.Generate(ctx, schemaMsgs)
+			out, err := res.Model.Generate(ctx, schemaMsgs, model.WithTools(subagentTools))
 			if err != nil {
 				return "", err
 			}
@@ -160,11 +184,15 @@ func NewAgentRuntime() *AgentRuntime {
 				} else {
 					outStr = fmt.Sprintf("Error: %s", toolRes.Error)
 				}
+				// Truncate overly long tool outputs (max 16KB)
+				if len(outStr) > 16384 {
+					outStr = outStr[:16384] + "\n...(输出过长已截断)..."
+				}
 				schemaMsgs = append(schemaMsgs, schema.ToolMessage(outStr, tc.ID))
 			}
 		}
 
-		finalOut, err := res.Model.Generate(ctx, schemaMsgs)
+		finalOut, err := res.Model.Generate(ctx, schemaMsgs, model.WithTools(subagentTools))
 		if err == nil && finalOut != nil {
 			return finalOut.Content, nil
 		}
