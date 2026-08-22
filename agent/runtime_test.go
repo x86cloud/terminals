@@ -23,6 +23,7 @@ import (
 	"terminal/agent/tools"
 	"terminal/agent/verifier"
 	"terminal/agent/workflow"
+	"terminal/core"
 
 	"github.com/cloudwego/eino/components/tool"
 )
@@ -874,6 +875,67 @@ func TestBackgroundJobAndSubagentLifecycleDecoupling(t *testing.T) {
 	killedJob, _ := jm.GetJob(longJobID)
 	if killedJob != nil && killedJob.State != string(job.StateKilled) {
 		t.Fatalf("预期 session.Stop 级联终止后台作业，实际状态: %s", killedJob.State)
+	}
+}
+
+func TestAppSettingsWiring(t *testing.T) {
+	rt := NewAgentRuntime()
+
+	// 1. Test Guard Enable / Disable wiring
+	cfg := core.DefaultAppSettings()
+	cfg.AiEnablePermissionGuard = false
+	cfg.AiBlockHighRiskCommands = false
+	cfg.AiEnableWebSearch = false
+
+	if err := rt.InitOrUpdate(cfg); err != nil {
+		t.Fatalf("InitOrUpdate failed: %v", err)
+	}
+
+	lvl, _ := rt.Guard.Audit(context.Background(), "s1", "execute", "rm -rf /", guard.LevelConfirm)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期当 AiEnablePermissionGuard=false 时 Audit 返回 LevelAllow，实际: %s", lvl)
+	}
+
+	// 2. Test BlockHighRiskCommands wiring
+	cfg.AiEnablePermissionGuard = true
+	cfg.AiBlockHighRiskCommands = false
+	_ = rt.InitOrUpdate(cfg)
+
+	lvl, _ = rt.Guard.Audit(context.Background(), "s1", "execute", "rm -rf /", guard.LevelConfirm)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期当 AiBlockHighRiskCommands=false 时高危指令降级为 LevelConfirm，实际: %s", lvl)
+	}
+
+	cfg.AiBlockHighRiskCommands = true
+	_ = rt.InitOrUpdate(cfg)
+	lvl, _ = rt.Guard.Audit(context.Background(), "s1", "execute", "rm -rf /", guard.LevelConfirm)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期当 AiBlockHighRiskCommands=true 时高危指令被拦截为 LevelForbidden，实际: %s", lvl)
+	}
+
+	// 3. Test WebSearch dynamic tool registration
+	cfg.AiEnableWebSearch = false
+	_ = rt.InitOrUpdate(cfg)
+	if _, ok := rt.ToolBus.Get("web_search"); ok {
+		t.Fatalf("预期 AiEnableWebSearch=false 时 web_search 工具已注销")
+	}
+
+	cfg.AiEnableWebSearch = true
+	_ = rt.InitOrUpdate(cfg)
+	if _, ok := rt.ToolBus.Get("web_search"); !ok {
+		t.Fatalf("预期 AiEnableWebSearch=true 时 web_search 工具已成功注册")
+	}
+
+	// 4. Test active session settings propagation
+	sess := rt.GetOrCreateSession("test_live_sess")
+	cfg.AiSystemPrompt = "自定义更新提示词"
+	_ = rt.InitOrUpdate(cfg)
+
+	sess.mu.RLock()
+	curPrompt := sess.Settings.AiSystemPrompt
+	sess.mu.RUnlock()
+	if curPrompt != "自定义更新提示词" {
+		t.Fatalf("预期 session Settings 随 InitOrUpdate 自动同步更新，实际: %s", curPrompt)
 	}
 }
 

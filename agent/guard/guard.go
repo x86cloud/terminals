@@ -95,6 +95,18 @@ func (g *PolicyGuard) SetOnConfirmRequest(fn func(req *ApprovalRequest)) {
 	g.onConfirmRequest = fn
 }
 
+func (g *PolicyGuard) SetEnableGuard(enable bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.enableGuard = enable
+}
+
+func (g *PolicyGuard) SetBlockHighRiskCommands(block bool) {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.blockHighRiskCommands = block
+}
+
 func (g *PolicyGuard) initDefaultRules() {
 	// 1. Workspace / Coding File Tools
 	g.rules["read_file"] = ToolRule{ToolName: "read_file", Level: LevelAllow, Description: "读取工作区文件内容（支持行号切片）"}
@@ -191,7 +203,11 @@ func (g *PolicyGuard) initDefaultRules() {
 }
 
 func (g *PolicyGuard) auditShellCommand(ctx context.Context, input string) (PermissionLevel, string) {
-	if !g.blockHighRiskCommands {
+	g.mu.RLock()
+	blockHighRisk := g.blockHighRiskCommands
+	g.mu.RUnlock()
+
+	if !blockHighRisk {
 		return LevelConfirm, ""
 	}
 
@@ -258,7 +274,11 @@ func (g *PolicyGuard) auditMysqlQuery(ctx context.Context, input string) (Permis
 }
 
 func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input string, defaultLevel PermissionLevel) (PermissionLevel, string) {
-	if !g.enableGuard {
+	g.mu.RLock()
+	enabled := g.enableGuard
+	g.mu.RUnlock()
+
+	if !enabled {
 		return LevelAllow, ""
 	}
 

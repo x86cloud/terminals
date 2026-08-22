@@ -67,9 +67,10 @@ type AgentRuntime struct {
 var DefaultRuntime = NewAgentRuntime()
 
 func NewAgentRuntime() *AgentRuntime {
+	defaultCfg := core.DefaultAppSettings()
 	st, _ := store.GetStore()
 	eb := events.DefaultEventBus
-	g := guard.NewPolicyGuard(true, true, st)
+	g := guard.NewPolicyGuard(defaultCfg.AiEnablePermissionGuard, defaultCfg.AiBlockHighRiskCommands, st)
 	r := router.NewModelRouter()
 	mem := memory.NewMemorySystem(st)
 	tb := tools.NewToolBus(g, eb)
@@ -88,6 +89,7 @@ func NewAgentRuntime() *AgentRuntime {
 	rt := &AgentRuntime{
 		sessions:     make(map[string]*Session),
 		activeID:     "ai_agent_default",
+		cfg:          defaultCfg,
 		Store:        st,
 		EventBus:     eb,
 		Guard:        g,
@@ -233,7 +235,9 @@ func (rt *AgentRuntime) SetManagers(
 	// Register all multi-protocol tools
 	_ = tools.RegisterWorkspaceTools(rt.ToolBus, rt.WorkspaceMgr)
 	_ = tools.RegisterLocalShellTool(rt.ToolBus, rt.WorkspaceMgr, rt.JobMgr)
-	_ = tools.RegisterWebSearchTool(rt.ToolBus)
+	if rt.cfg.AiEnableWebSearch {
+		_ = tools.RegisterWebSearchTool(rt.ToolBus)
+	}
 	_ = tools.RegisterSSHTools(rt.ToolBus, sm, rt.WorkspaceMgr)
 	_ = tools.RegisterDatabaseTools(rt.ToolBus, tools.DatabaseManagers{
 		RedisMgr:  rm,
@@ -257,6 +261,28 @@ func (rt *AgentRuntime) InitOrUpdate(cfg core.AppSettings) error {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 	rt.cfg = cfg
+
+	// Wire policy guard and high-risk command blocking
+	if rt.Guard != nil {
+		rt.Guard.SetEnableGuard(cfg.AiEnablePermissionGuard)
+		rt.Guard.SetBlockHighRiskCommands(cfg.AiBlockHighRiskCommands)
+	}
+
+	// Wire dynamic web search tool availability
+	if rt.ToolBus != nil {
+		if cfg.AiEnableWebSearch {
+			_ = tools.RegisterWebSearchTool(rt.ToolBus)
+		} else {
+			rt.ToolBus.Unregister("web_search")
+		}
+	}
+
+	// Update all active sessions with refreshed configuration
+	for _, s := range rt.sessions {
+		s.mu.Lock()
+		s.Settings = cfg
+		s.mu.Unlock()
+	}
 
 	// Update router default model profile
 	rt.Router.SetProfile(router.RoleDefault, router.ModelProfile{
