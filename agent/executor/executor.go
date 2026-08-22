@@ -406,21 +406,52 @@ func (e *Executor) executeSingleStep(
 		if e.workflowEng != nil {
 			var wfSpec struct {
 				WorkflowName string `json:"workflow_name"`
-				Items        []any  `json:"items"`
+				Name         string `json:"name"`
 			}
 			_ = json.Unmarshal([]byte(renderedArgs), &wfSpec)
-			res := e.workflowEng.Pipeline(ctx, plan.SessionID, wfSpec.Items, nil, nil)
-			stepRes = &StepResult{
-				StepID:     step.ID,
-				OK:         true,
-				Output:     res,
-				DurationMs: time.Since(start).Milliseconds(),
+			wfName := wfSpec.WorkflowName
+			if wfName == "" {
+				wfName = wfSpec.Name
+			}
+			if wfName == "" {
+				wfName = step.Action
+			}
+			if wfName == "" || wfName == "workflow" {
+				wfName = step.Description
+			}
+
+			var invoker workflow.ToolInvokerFunc
+			if e.toolBus != nil {
+				invoker = func(c context.Context, sID, toolName, in string) (any, error) {
+					toolRes := e.toolBus.Invoke(c, traceID, sID, toolName, in)
+					if !toolRes.OK {
+						return nil, fmt.Errorf("%s", toolRes.Error)
+					}
+					return toolRes.Data, nil
+				}
+			}
+
+			res, err := e.workflowEng.RunWorkflow(ctx, plan.SessionID, wfName, invoker)
+			if err != nil {
+				stepRes = &StepResult{
+					StepID:     step.ID,
+					OK:         false,
+					Error:      fmt.Sprintf("工作流 [%s] 执行失败: %v", wfName, err),
+					DurationMs: time.Since(start).Milliseconds(),
+				}
+			} else {
+				stepRes = &StepResult{
+					StepID:     step.ID,
+					OK:         true,
+					Output:     res,
+					DurationMs: time.Since(start).Milliseconds(),
+				}
 			}
 		} else {
 			stepRes = &StepResult{
 				StepID:     step.ID,
-				OK:         true,
-				Output:     step.Description,
+				OK:         false,
+				Error:      "工作流引擎未就绪",
 				DurationMs: time.Since(start).Milliseconds(),
 			}
 		}
