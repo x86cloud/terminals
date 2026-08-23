@@ -77,8 +77,8 @@ export default function DataTab(props: {
                     {pkCols.includes(c) && <span className={my.pkBadge}>PK</span>}
                 </>
             ),
-            width: getColW(c),
-            minWidth: 50,
+            width: colWidths[c],
+            minWidth: 60,
         })),
         { key: '__rowact__', label: '操作', width: ROW_ACT_W, minWidth: 38 },
     ]
@@ -138,6 +138,7 @@ export default function DataTab(props: {
                     )}
                     <ResizableTable
                         cols={dataCols}
+                        data={rows}
                         onColResize={handleColResize}
                         className={my.mysqlEditTable}
                     >
