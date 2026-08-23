@@ -171,13 +171,15 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["db_mongo_aggregate"] = ToolRule{ToolName: "db_mongo_aggregate", Level: LevelAllow, Description: "执行 MongoDB 聚合分析查询"}
 	g.rules["db_mongo_health"] = ToolRule{ToolName: "db_mongo_health", Level: LevelAllow, Description: "查看 MongoDB 健康状态"}
 
+	g.rules["db_sqlite_list_connections"] = ToolRule{ToolName: "db_sqlite_list_connections", Level: LevelAllow, Description: "查看已打开连接的 SQLite 数据库文件列表"}
+	g.rules["db_sqlite_list_tables"] = ToolRule{ToolName: "db_sqlite_list_tables", Level: LevelAllow, Description: "查看 SQLite 数据表列表"}
+	g.rules["db_sqlite_schema"] = ToolRule{ToolName: "db_sqlite_schema", Level: LevelAllow, Description: "查看 SQLite 库表结构与外键"}
 	g.rules["db_sqlite_query"] = ToolRule{
 		ToolName:    "db_sqlite_query",
 		Level:       LevelAllow,
 		Description: "执行 SQLite 数据库 SQL 语句 (支持读写与结构变更)",
 		AuditFunc:   g.auditSQLQuery,
 	}
-	g.rules["db_sqlite_list_tables"] = ToolRule{ToolName: "db_sqlite_list_tables", Level: LevelAllow, Description: "查看 SQLite 数据表列表"}
 
 	// 6. Protocol tools
 	g.rules["mqtt_publish"] = ToolRule{ToolName: "mqtt_publish", Level: LevelConfirm, Description: "向 MQTT Broker 发布指定 Topic 消息"}

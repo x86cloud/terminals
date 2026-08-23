@@ -109,8 +109,16 @@ type MongoHealthInput struct {
 }
 
 type SqliteQueryInput struct {
-	FileID string `json:"file_id" jsonschema:"description=已打开的 SQLite 文件会话 ID 或路径"`
+	FileID string `json:"file_id" jsonschema:"description=已打开的 SQLite 文件会话 ID 或路径，若只有一个连接可留空"`
 	SQL    string `json:"sql" jsonschema:"description=要执行的 SQL 语句 (支持 SELECT / PRAGMA / INSERT / UPDATE / DELETE / DDL 等读写操作)"`
+}
+
+type SqliteTablesInput struct {
+	FileID string `json:"file_id" jsonschema:"description=已打开的 SQLite 文件会话 ID 或路径，若只有一个连接可留空"`
+}
+
+type SqliteSchemaInput struct {
+	FileID string `json:"file_id" jsonschema:"description=已打开的 SQLite 文件会话 ID 或路径，若只有一个连接可留空"`
 }
 
 func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
@@ -514,13 +522,64 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 
 	// ---------- 4. SQLite Tools ----------
 	if mgrs.SqliteMgr != nil {
+		listSqliteConnsTool, err := utils.InferTool("db_sqlite_list_connections", "列出当前所有已建立连接/已打开的 SQLite 数据库文件列表",
+			func(ctx context.Context, input *EmptyInput) (any, error) {
+				return mgrs.SqliteMgr.ListConnections(), nil
+			})
+		if err == nil {
+			bus.Register(&RegisteredTool{
+				Name:        "db_sqlite_list_connections",
+				Description: "列出当前所有已建立连接/已打开的 SQLite 数据库文件列表",
+				BaseTool:    listSqliteConnsTool,
+				Level:       guard.LevelAllow,
+			})
+		}
+
+		sqliteTablesTool, err := utils.InferTool("db_sqlite_list_tables", "列出已打开的 SQLite 数据库中的所有数据表与视图列表",
+			func(ctx context.Context, input *SqliteTablesInput) (any, error) {
+				fileID, err := mgrs.SqliteMgr.ResolveID(input.FileID)
+				if err != nil {
+					return nil, err
+				}
+				return mgrs.SqliteMgr.SqliteTables(fileID)
+			})
+		if err == nil {
+			bus.Register(&RegisteredTool{
+				Name:        "db_sqlite_list_tables",
+				Description: "列出已打开的 SQLite 数据库中的所有数据表与视图列表",
+				BaseTool:    sqliteTablesTool,
+				Level:       guard.LevelAllow,
+			})
+		}
+
+		sqliteSchemaTool, err := utils.InferTool("db_sqlite_schema", "查看 SQLite 数据库的表结构、字段类型与外键关系 (ER图数据)",
+			func(ctx context.Context, input *SqliteSchemaInput) (any, error) {
+				fileID, err := mgrs.SqliteMgr.ResolveID(input.FileID)
+				if err != nil {
+					return nil, err
+				}
+				return mgrs.SqliteMgr.SqliteSchema(fileID)
+			})
+		if err == nil {
+			bus.Register(&RegisteredTool{
+				Name:        "db_sqlite_schema",
+				Description: "查看 SQLite 数据库的表结构、字段类型与外键关系 (ER图数据)",
+				BaseTool:    sqliteSchemaTool,
+				Level:       guard.LevelAllow,
+			})
+		}
+
 		sqliteTool, err := utils.InferTool("db_sqlite_query", "执行 SQLite 数据库 SQL 语句 (支持 SELECT/PRAGMA/INSERT/UPDATE/DELETE/DDL 等读写操作)",
 			func(ctx context.Context, input *SqliteQueryInput) (any, error) {
 				cleanSQL := strings.TrimSpace(input.SQL)
 				if cleanSQL == "" {
 					return nil, fmt.Errorf("SQL 语句不能为空")
 				}
-				return mgrs.SqliteMgr.SqliteRun(input.FileID, cleanSQL)
+				fileID, err := mgrs.SqliteMgr.ResolveID(input.FileID)
+				if err != nil {
+					return nil, err
+				}
+				return mgrs.SqliteMgr.SqliteRun(fileID, cleanSQL)
 			})
 		if err == nil {
 			bus.Register(&RegisteredTool{

@@ -277,9 +277,8 @@ export default function ResizableTable({
     return (
         <div
             ref={wrapperRef}
-            className={`${s.tableWrapper}${resizingCol ? ' ' + s.isResizing : ''}${
-                wrapperClassName ? ' ' + wrapperClassName : ''
-            }`}
+            className={`${s.tableWrapper}${resizingCol ? ' ' + s.isResizing : ''}${wrapperClassName ? ' ' + wrapperClassName : ''
+                }`}
             style={style}
         >
             <table

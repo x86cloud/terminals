@@ -98,6 +98,44 @@ func (m *SqliteManager) CloseAll() {
 	m.conns = make(map[string]*sqliteConn)
 }
 
+func (m *SqliteManager) ListConnections() []map[string]any {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	list := make([]map[string]any, 0, len(m.conns))
+	for id, sc := range m.conns {
+		list = append(list, map[string]any{
+			"id":   id,
+			"path": sc.path,
+		})
+	}
+	return list
+}
+
+func (m *SqliteManager) ResolveID(idOrPath string) (string, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	trimmed := strings.TrimSpace(idOrPath)
+	if trimmed != "" {
+		if _, ok := m.conns[trimmed]; ok {
+			return trimmed, nil
+		}
+		for id, sc := range m.conns {
+			if strings.EqualFold(id, trimmed) || strings.EqualFold(sc.path, trimmed) {
+				return id, nil
+			}
+		}
+	}
+	if len(m.conns) == 1 {
+		for id := range m.conns {
+			return id, nil
+		}
+	}
+	if len(m.conns) == 0 {
+		return "", errors.New("当前无已打开的 SQLite 数据库连接，请先打开 SQLite 文件")
+	}
+	return "", fmt.Errorf("存在多个已打开的 SQLite 连接，请指定明确的 file_id 或文件路径")
+}
+
 // normalizeSqliteVal 将驱动原生值转换为前端友好的类型。
 func normalizeSqliteVal(v any) any {
 	switch t := v.(type) {

@@ -24,6 +24,7 @@ import (
 	"terminal/agent/verifier"
 	"terminal/agent/workflow"
 	"terminal/core"
+	"terminal/db"
 
 	"github.com/cloudwego/eino/components/tool"
 )
@@ -1052,6 +1053,78 @@ func TestSqliteQueryReadWriteAndGuard(t *testing.T) {
 	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "ATTACH DATABASE '/etc/passwd' AS shadow"}`, guard.LevelAllow)
 	if lvl != guard.LevelAllow {
 		t.Fatalf("预期当 enableGuard=false 时所有 SQL 均放行 LevelAllow，实际: %s", lvl)
+	}
+}
+
+func TestSqliteToolsFullSuite(t *testing.T) {
+	st, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	tmpDir := t.TempDir()
+	dbFile := filepath.Join(tmpDir, "test.db")
+	_ = os.WriteFile(dbFile, nil, 0644)
+
+	sqMgr := db.NewSqliteManager()
+	if err := sqMgr.Open("conn1", dbFile); err != nil {
+		t.Fatalf("打开 SQLite 失败: %v", err)
+	}
+	defer sqMgr.CloseAll()
+
+	// Create sample table
+	_, err := sqMgr.SqliteRun("conn1", "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)")
+	if err != nil {
+		t.Fatalf("创建表失败: %v", err)
+	}
+	_, _ = sqMgr.SqliteRun("conn1", "INSERT INTO users (name) VALUES ('Alice'), ('Bob')")
+
+	eb := events.NewEventBus()
+	g := guard.NewPolicyGuard(true, true, st)
+	bus := tools.NewToolBus(g, eb)
+	err = tools.RegisterDatabaseTools(bus, tools.DatabaseManagers{
+		SqliteMgr: sqMgr,
+	})
+	if err != nil {
+		t.Fatalf("注册数据库工具失败: %v", err)
+	}
+
+	// 1. Test db_sqlite_list_connections
+	res := bus.Invoke(context.Background(), "t1", "s1", "db_sqlite_list_connections", "{}")
+	if !res.OK {
+		t.Fatalf("调用 db_sqlite_list_connections 失败: %v", res.Error)
+	}
+	resStr := fmt.Sprintf("%v", res.Data)
+	if !strings.Contains(resStr, "conn1") || !strings.Contains(resStr, "test.db") {
+		t.Fatalf("db_sqlite_list_connections 输出不符合预期: %s", resStr)
+	}
+
+	// 2. Test db_sqlite_list_tables
+	res = bus.Invoke(context.Background(), "t2", "s1", "db_sqlite_list_tables", `{"file_id": "conn1"}`)
+	if !res.OK {
+		t.Fatalf("调用 db_sqlite_list_tables 失败: %v", res.Error)
+	}
+	resStr = fmt.Sprintf("%v", res.Data)
+	if !strings.Contains(resStr, "users") {
+		t.Fatalf("db_sqlite_list_tables 输出未包含 users 表: %s", resStr)
+	}
+
+	// 3. Test db_sqlite_schema
+	res = bus.Invoke(context.Background(), "t3", "s1", "db_sqlite_schema", `{"file_id": ""}`)
+	if !res.OK {
+		t.Fatalf("调用 db_sqlite_schema 失败: %v", res.Error)
+	}
+	resStr = fmt.Sprintf("%v", res.Data)
+	if !strings.Contains(resStr, "users") || !strings.Contains(resStr, "name") {
+		t.Fatalf("db_sqlite_schema 输出未包含 users 字段信息: %s", resStr)
+	}
+
+	// 4. Test db_sqlite_query (auto-resolve single connection when file_id is empty)
+	res = bus.Invoke(context.Background(), "t4", "s1", "db_sqlite_query", `{"sql": "SELECT * FROM users"}`)
+	if !res.OK {
+		t.Fatalf("调用 db_sqlite_query 失败: %v", res.Error)
+	}
+	resStr = fmt.Sprintf("%v", res.Data)
+	if !strings.Contains(resStr, "Alice") || !strings.Contains(resStr, "Bob") {
+		t.Fatalf("db_sqlite_query 输出未包含查询记录: %s", resStr)
 	}
 }
 
