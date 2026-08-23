@@ -21,6 +21,7 @@ interface Props {
     wrapperClassName?: string
     style?: React.CSSProperties
     autoFit?: boolean // 是否开启最宽内容自适应测量（默认 true）
+    maxAutoWidth?: number // 单列自适应最大宽度上限（默认 450px，避免单列无限过宽）
 }
 
 // 离屏 Canvas 单例，用于精准、极速测量文字像素宽度
@@ -55,10 +56,13 @@ export default function ResizableTable({
     wrapperClassName,
     style,
     autoFit = true,
+    maxAutoWidth = 450,
 }: Props) {
     const wrapperRef = useRef<HTMLDivElement>(null)
+    const tableRef = useRef<HTMLTableElement>(null)
     const [wrapperWidth, setWrapperWidth] = useState<number>(0)
     const [userWidths, setUserWidths] = useState<Record<string, number>>({})
+    const [domWidths, setDomWidths] = useState<Record<string, number>>({})
     const [resizingCol, setResizingCol] = useState<{ key: string; width: number } | null>(null)
 
     const dragRef = useRef<{
@@ -91,6 +95,36 @@ export default function ResizableTable({
         setUserWidths({})
     }, [colsSignature])
 
+    // 如果未传入 data 属性，自动在挂载/更新后通过 DOM 读取前 50 行单元格计算最宽宽度
+    useEffect(() => {
+        if (data && data.length > 0) return
+        if (!tableRef.current || !autoFit) return
+
+        const trs = tableRef.current.querySelectorAll('tbody tr')
+        if (trs.length === 0) return
+
+        const measured: Record<string, number> = {}
+        const sampleRows = Array.from(trs).slice(0, 50)
+
+        cols.forEach((col, colIdx) => {
+            if (col.key === '__rowact__' || col.key === '__act__') return
+            let maxW = 0
+            for (const tr of sampleRows) {
+                const td = tr.children[colIdx] as HTMLElement
+                if (td) {
+                    const text = td.innerText || td.textContent || ''
+                    const w = measureTextWidth(text.trim().slice(0, 120), '12.5px Consolas, monospace') + 26
+                    if (w > maxW) maxW = w
+                }
+            }
+            if (maxW > 0) {
+                measured[col.key] = maxW
+            }
+        })
+
+        setDomWidths(measured)
+    }, [data, cols, children, autoFit])
+
     // 1. 基于表头文字与每列实际内容，自动计算每列的最佳理想宽度 (Ideal Widths)
     const idealWidths = useMemo(() => {
         const widths: Record<string, number> = {}
@@ -114,10 +148,9 @@ export default function ResizableTable({
                 '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
             ) + 40 // 包含 padding (20px) + 排序/把手空间 (20px)
 
-            // B. 测量内容中最长单元格
-            let maxCellWidth = 0
+            // B. 测量内容中最长单元格 (优先从 data 读取，无 data 时回退 domWidths)
+            let maxCellWidth = domWidths[col.key] ?? 0
             if (data && data.length > 0) {
-                // 采样前 200 行数据保证测量精度与性能
                 const sampleRows = data.slice(0, 200)
                 for (const row of sampleRows) {
                     const cellVal = row[col.key]
@@ -143,13 +176,14 @@ export default function ResizableTable({
             }
 
             const minW = col.minWidth ?? 60
-            const maxW = col.maxWidth ?? 600
+            const maxW = col.maxWidth ?? maxAutoWidth
             const calculated = Math.max(headerWidth, maxCellWidth, minW)
+            // 限制最大宽度，避免单列无限过宽
             widths[col.key] = Math.min(calculated, maxW)
         }
 
         return widths
-    }, [cols, data, autoFit])
+    }, [cols, data, domWidths, autoFit, maxAutoWidth])
 
     // 2. 计算各列最终渲染宽度：若总宽小于容器，按比例自适应弹性拉伸填满右侧留白
     const computedColWidths = useMemo(() => {
@@ -182,13 +216,15 @@ export default function ResizableTable({
                 const isUserResized = userWidths[col.key] !== undefined
                 if (!isActionCol && !isUserResized) {
                     const share = Math.floor(availableExtra * (baseWidths[col.key] / elasticTotal))
-                    finalWidths[col.key] = baseWidths[col.key] + share
+                    const maxW = col.maxWidth ?? maxAutoWidth
+                    // 容器弹性拉伸时也遵循最大上限控制，防止过度膨胀
+                    finalWidths[col.key] = Math.min(baseWidths[col.key] + share, maxW + 100)
                 }
             }
         }
 
         return finalWidths
-    }, [cols, idealWidths, userWidths, wrapperWidth])
+    }, [cols, idealWidths, userWidths, wrapperWidth, maxAutoWidth])
 
     // 启动拖拽列宽
     const startResize = useCallback(
@@ -278,6 +314,7 @@ export default function ResizableTable({
             style={style}
         >
             <table
+                ref={tableRef}
                 className={`${s.table}${className ? ' ' + className : ''}`}
                 style={{ width: tableWidth, minWidth: '100%' }}
             >
