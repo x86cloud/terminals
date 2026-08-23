@@ -156,10 +156,10 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["db_mysql_list_connections"] = ToolRule{ToolName: "db_mysql_list_connections", Level: LevelAllow, Description: "查看已建立连接的 MySQL 实例"}
 	g.rules["db_mysql_databases"] = ToolRule{ToolName: "db_mysql_databases", Level: LevelAllow, Description: "查看 MySQL 服务器所有数据库"}
 	g.rules["db_mysql_tables"] = ToolRule{ToolName: "db_mysql_tables", Level: LevelAllow, Description: "查看 MySQL 数据库数据表"}
-	g.rules["db_mysql_query_readonly"] = ToolRule{
-		ToolName:    "db_mysql_query_readonly",
+	g.rules["db_mysql_query"] = ToolRule{
+		ToolName:    "db_mysql_query",
 		Level:       LevelAllow,
-		Description: "执行只读 MySQL SELECT/SHOW 查询 (受语法白名单与行数限制)",
+		Description: "执行 MySQL 数据库 SQL 语句 (支持读写与结构变更)",
 		AuditFunc:   g.auditMysqlQuery,
 	}
 	g.rules["db_mysql_schema"] = ToolRule{ToolName: "db_mysql_schema", Level: LevelAllow, Description: "查看 MySQL 库表结构与索引"}
@@ -236,6 +236,10 @@ func (g *PolicyGuard) auditShellCommand(ctx context.Context, input string) (Perm
 }
 
 func (g *PolicyGuard) auditMysqlQuery(ctx context.Context, input string) (PermissionLevel, string) {
+	g.mu.RLock()
+	blockHighRisk := g.blockHighRiskCommands
+	g.mu.RUnlock()
+
 	clean := strings.TrimSpace(input)
 	if clean == "" {
 		return LevelAllow, ""
@@ -253,24 +257,36 @@ func (g *PolicyGuard) auditMysqlQuery(ctx context.Context, input string) (Permis
 	cleanSQL := strings.TrimSpace(sqlText)
 	upperSQL := strings.ToUpper(cleanSQL)
 
-	allowedPrefixes := []string{"SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN"}
-	isValid := false
-	for _, p := range allowedPrefixes {
-		if strings.HasPrefix(upperSQL, p) {
-			isValid = true
-			break
+	// 1. Readonly query whitelist -> directly allow
+	readPrefixes := []string{"SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN"}
+	for _, p := range readPrefixes {
+		if strings.HasPrefix(upperSQL, p+" ") || upperSQL == p {
+			return LevelAllow, ""
 		}
 	}
 
-	if !isValid {
-		return LevelForbidden, "MySQL 只读执行器仅允许 SELECT / SHOW / DESCRIBE / EXPLAIN 等查询语句，禁止执行写库与变更操作"
+	// 2. High-risk destructive database commands
+	if blockHighRisk {
+		highRiskPatterns := []string{
+			"DROP DATABASE",
+			"DROP SCHEMA",
+			"SHUTDOWN",
+			"RESET MASTER",
+		}
+		for _, pat := range highRiskPatterns {
+			if strings.Contains(upperSQL, pat) {
+				return LevelForbidden, fmt.Sprintf("MySQL 语句中包含高危危险指令: %s", pat)
+			}
+		}
 	}
 
-	if strings.Contains(cleanSQL, ";") && !strings.HasSuffix(cleanSQL, ";") {
-		return LevelForbidden, "MySQL 只读执行器禁止执行多语句批量复合 SQL"
+	// 3. Write / DML / DDL operations require confirmation
+	fields := strings.Fields(upperSQL)
+	opName := "写操作/结构变更"
+	if len(fields) > 0 {
+		opName = fields[0]
 	}
-
-	return LevelAllow, ""
+	return LevelConfirm, fmt.Sprintf("即将执行 MySQL %s 语句，需确认审批", opName)
 }
 
 func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input string, defaultLevel PermissionLevel) (PermissionLevel, string) {

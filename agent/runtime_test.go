@@ -925,4 +925,69 @@ func TestAppSettingsWiring(t *testing.T) {
 	}
 }
 
+func TestMysqlQueryReadWriteAndGuard(t *testing.T) {
+	st, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	g := guard.NewPolicyGuard(true, true, st)
+
+	// 1. SELECT query -> LevelAllow
+	lvl, _ := g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "SELECT id, name FROM users WHERE status = 1"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 SELECT 查询自动放行 LevelAllow，实际: %s", lvl)
+	}
+
+	// 2. SHOW / DESCRIBE / EXPLAIN -> LevelAllow
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "SHOW TABLES"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 SHOW TABLES 自动放行 LevelAllow，实际: %s", lvl)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "DESCRIBE users"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 DESCRIBE 自动放行 LevelAllow，实际: %s", lvl)
+	}
+
+	// 3. Write / DML / DDL operations -> LevelConfirm
+	lvl, reason := g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "INSERT INTO users (name) VALUES ('alice')"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 INSERT 操作触发审批 LevelConfirm，实际: %s, reason: %s", lvl, reason)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "UPDATE users SET status = 2 WHERE id = 10"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 UPDATE 操作触发审批 LevelConfirm，实际: %s", lvl)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "DELETE FROM users WHERE id = 10"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 DELETE 操作触发审批 LevelConfirm，实际: %s", lvl)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "ALTER TABLE users ADD COLUMN age INT"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 ALTER TABLE 操作触发审批 LevelConfirm，实际: %s", lvl)
+	}
+
+	// 4. High-risk destructive commands -> LevelForbidden when blockHighRiskCommands=true
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "DROP DATABASE production_db"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期 DROP DATABASE 被拦截为 LevelForbidden，实际: %s", lvl)
+	}
+
+	// 5. When blockHighRiskCommands=false -> degrades to LevelConfirm
+	g.SetBlockHighRiskCommands(false)
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "DROP DATABASE production_db"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期当 blockHighRiskCommands=false 时 DROP DATABASE 降级为 LevelConfirm，实际: %s", lvl)
+	}
+
+	// 6. When enableGuard=false -> directly LevelAllow
+	g.SetEnableGuard(false)
+	lvl, _ = g.Audit(context.Background(), "s1", "db_mysql_query", `{"sql": "DROP DATABASE production_db"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期当 enableGuard=false 时所有 SQL 均放行 LevelAllow，实际: %s", lvl)
+	}
+}
+
 

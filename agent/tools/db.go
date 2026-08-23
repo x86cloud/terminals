@@ -68,7 +68,7 @@ type RedisExecuteRawInput struct {
 type MysqlQueryInput struct {
 	ServerID string `json:"server_id" jsonschema:"description=MySQL 服务器连接 ID 或名称，若只有单一连接可留空"`
 	Database string `json:"database" jsonschema:"description=目标数据库名称，若未指定可留空"`
-	SQL      string `json:"sql" jsonschema:"description=要执行的只读 SQL 查询语句 (仅限 SELECT / SHOW / DESCRIBE / EXPLAIN)"`
+	SQL      string `json:"sql" jsonschema:"description=要执行的 SQL 语句 (支持 SELECT / SHOW / INSERT / UPDATE / DELETE / DDL 等读写操作)"`
 }
 
 type MysqlDatabasesInput struct {
@@ -359,22 +359,22 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 			})
 		}
 
-		mysqlQueryTool, err := utils.InferTool("db_mysql_query_readonly", "执行只读 MySQL SELECT/SHOW/DESCRIBE/EXPLAIN 查询 (受 100 行上限与 10s 超时保护)",
+		mysqlQueryTool, err := utils.InferTool("db_mysql_query", "执行 MySQL 数据库 SQL 语句 (支持 SELECT/SHOW/INSERT/UPDATE/DELETE/DDL 等读写操作)",
 			func(ctx context.Context, input *MysqlQueryInput) (any, error) {
 				serverID, err := mgrs.MysqlMgr.ResolveID(input.ServerID)
 				if err != nil {
 					return nil, err
 				}
 				cleanSQL := strings.TrimSpace(input.SQL)
-				if err := isStrictlyReadonlySQL(cleanSQL); err != nil {
-					return nil, err
+				if cleanSQL == "" {
+					return nil, fmt.Errorf("SQL 语句不能为空")
 				}
 				return mgrs.MysqlMgr.MysqlRun(serverID, input.Database, cleanSQL)
 			})
 		if err == nil {
 			bus.Register(&RegisteredTool{
-				Name:        "db_mysql_query_readonly",
-				Description: "执行只读 MySQL SELECT/SHOW/DESCRIBE/EXPLAIN 查询 (受 100 行上限与 10s 超时保护)",
+				Name:        "db_mysql_query",
+				Description: "执行 MySQL 数据库 SQL 语句 (支持 SELECT/SHOW/INSERT/UPDATE/DELETE/DDL 等读写操作)",
 				BaseTool:    mysqlQueryTool,
 				Level:       guard.LevelAllow,
 			})
@@ -528,43 +528,5 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 		}
 	}
 
-	return nil
-}
-
-func isStrictlyReadonlySQL(sqlText string) error {
-	trimmed := strings.TrimSpace(sqlText)
-	if trimmed == "" {
-		return fmt.Errorf("SQL 查询语句不能为空")
-	}
-	parts := strings.Split(trimmed, ";")
-	nonEmptyCount := 0
-	for _, p := range parts {
-		if strings.TrimSpace(p) != "" {
-			nonEmptyCount++
-		}
-	}
-	if nonEmptyCount > 1 {
-		return fmt.Errorf("【安全拦截】只读工具每次仅允许执行单条 SQL 语句，禁止多语句拼接执行")
-	}
-
-	upper := strings.ToUpper(strings.TrimSpace(parts[0]))
-	allowedPrefixes := []string{"SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN"}
-	hasAllowedPrefix := false
-	for _, prefix := range allowedPrefixes {
-		if strings.HasPrefix(upper, prefix+" ") || upper == prefix {
-			hasAllowedPrefix = true
-			break
-		}
-	}
-	if !hasAllowedPrefix {
-		return fmt.Errorf("【安全拦截】只读 MySQL 工具仅允许 SELECT / SHOW / DESCRIBE / EXPLAIN 查询，检测到非法操作")
-	}
-
-	dangerousClauses := []string{"INTO OUTFILE", "INTO DUMPFILE", "LOAD DATA", "SLEEP(", "BENCHMARK("}
-	for _, clause := range dangerousClauses {
-		if strings.Contains(upper, clause) {
-			return fmt.Errorf("【安全拦截】检测到高危或注入语句模式: %s", clause)
-		}
-	}
 	return nil
 }
