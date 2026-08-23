@@ -990,4 +990,69 @@ func TestMysqlQueryReadWriteAndGuard(t *testing.T) {
 	}
 }
 
+func TestSqliteQueryReadWriteAndGuard(t *testing.T) {
+	st, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	g := guard.NewPolicyGuard(true, true, st)
+
+	// 1. SELECT query -> LevelAllow
+	lvl, _ := g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "SELECT id, title FROM todos WHERE completed = 0"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 SELECT 查询自动放行 LevelAllow，实际: %s", lvl)
+	}
+
+	// 2. PRAGMA / EXPLAIN / VALUES -> LevelAllow
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "PRAGMA table_info(todos)"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 PRAGMA 自动放行 LevelAllow，实际: %s", lvl)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "EXPLAIN QUERY PLAN SELECT * FROM todos"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 EXPLAIN 自动放行 LevelAllow，实际: %s", lvl)
+	}
+
+	// 3. Write / DML / DDL operations -> LevelConfirm
+	lvl, reason := g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "INSERT INTO todos (title) VALUES ('Buy milk')"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 INSERT 操作触发审批 LevelConfirm，实际: %s, reason: %s", lvl, reason)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "UPDATE todos SET completed = 1 WHERE id = 1"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 UPDATE 操作触发审批 LevelConfirm，实际: %s", lvl)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "DELETE FROM todos WHERE id = 1"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 DELETE 操作触发审批 LevelConfirm，实际: %s", lvl)
+	}
+
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "CREATE TABLE logs (id INTEGER PRIMARY KEY, msg TEXT)"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 CREATE TABLE 操作触发审批 LevelConfirm，实际: %s", lvl)
+	}
+
+	// 4. High-risk destructive commands -> LevelForbidden when blockHighRiskCommands=true
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "ATTACH DATABASE '/etc/passwd' AS shadow"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期 ATTACH DATABASE 被拦截为 LevelForbidden，实际: %s", lvl)
+	}
+
+	// 5. When blockHighRiskCommands=false -> degrades to LevelConfirm
+	g.SetBlockHighRiskCommands(false)
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "ATTACH DATABASE '/etc/passwd' AS shadow"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期当 blockHighRiskCommands=false 时 ATTACH DATABASE 降级为 LevelConfirm，实际: %s", lvl)
+	}
+
+	// 6. When enableGuard=false -> directly LevelAllow
+	g.SetEnableGuard(false)
+	lvl, _ = g.Audit(context.Background(), "s1", "db_sqlite_query", `{"sql": "ATTACH DATABASE '/etc/passwd' AS shadow"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期当 enableGuard=false 时所有 SQL 均放行 LevelAllow，实际: %s", lvl)
+	}
+}
+
 

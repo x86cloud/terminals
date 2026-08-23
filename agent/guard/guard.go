@@ -171,7 +171,12 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["db_mongo_aggregate"] = ToolRule{ToolName: "db_mongo_aggregate", Level: LevelAllow, Description: "执行 MongoDB 聚合分析查询"}
 	g.rules["db_mongo_health"] = ToolRule{ToolName: "db_mongo_health", Level: LevelAllow, Description: "查看 MongoDB 健康状态"}
 
-	g.rules["db_sqlite_query_readonly"] = ToolRule{ToolName: "db_sqlite_query_readonly", Level: LevelAllow, Description: "执行只读 SQLite 查询"}
+	g.rules["db_sqlite_query"] = ToolRule{
+		ToolName:    "db_sqlite_query",
+		Level:       LevelAllow,
+		Description: "执行 SQLite 数据库 SQL 语句 (支持读写与结构变更)",
+		AuditFunc:   g.auditSqliteQuery,
+	}
 	g.rules["db_sqlite_list_tables"] = ToolRule{ToolName: "db_sqlite_list_tables", Level: LevelAllow, Description: "查看 SQLite 数据表列表"}
 
 	// 6. Protocol tools
@@ -287,6 +292,59 @@ func (g *PolicyGuard) auditMysqlQuery(ctx context.Context, input string) (Permis
 		opName = fields[0]
 	}
 	return LevelConfirm, fmt.Sprintf("即将执行 MySQL %s 语句，需确认审批", opName)
+}
+
+func (g *PolicyGuard) auditSqliteQuery(ctx context.Context, input string) (PermissionLevel, string) {
+	g.mu.RLock()
+	blockHighRisk := g.blockHighRiskCommands
+	g.mu.RUnlock()
+
+	clean := strings.TrimSpace(input)
+	if clean == "" {
+		return LevelAllow, ""
+	}
+
+	// Try parse json {sql: "..."}
+	var obj struct {
+		SQL string `json:"sql"`
+	}
+	sqlText := clean
+	if err := json.Unmarshal([]byte(clean), &obj); err == nil && obj.SQL != "" {
+		sqlText = obj.SQL
+	}
+
+	cleanSQL := strings.TrimSpace(sqlText)
+	upperSQL := strings.ToUpper(cleanSQL)
+
+	// 1. Readonly query whitelist -> directly allow
+	readPrefixes := []string{"SELECT", "PRAGMA", "EXPLAIN", "VALUES"}
+	for _, p := range readPrefixes {
+		if strings.HasPrefix(upperSQL, p+" ") || upperSQL == p {
+			return LevelAllow, ""
+		}
+	}
+
+	// 2. High-risk destructive database commands
+	if blockHighRisk {
+		highRiskPatterns := []string{
+			"ATTACH DATABASE",
+			"DETACH DATABASE",
+			"VACUUM INTO",
+		}
+		for _, pat := range highRiskPatterns {
+			if strings.Contains(upperSQL, pat) {
+				return LevelForbidden, fmt.Sprintf("SQLite 语句中包含高危危险指令: %s", pat)
+			}
+		}
+	}
+
+	// 3. Write / DML / DDL operations require confirmation
+	fields := strings.Fields(upperSQL)
+	opName := "写操作/结构变更"
+	if len(fields) > 0 {
+		opName = fields[0]
+	}
+	return LevelConfirm, fmt.Sprintf("即将执行 SQLite %s 语句，需确认审批", opName)
 }
 
 func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input string, defaultLevel PermissionLevel) (PermissionLevel, string) {

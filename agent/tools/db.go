@@ -109,8 +109,8 @@ type MongoHealthInput struct {
 }
 
 type SqliteQueryInput struct {
-	FileID string `json:"file_id" jsonschema:"description=已打开的 SQLite 文件会话 ID"`
-	SQL    string `json:"sql" jsonschema:"description=只读 SQL 查询语句 (SELECT / SHOW / EXPLAIN)"`
+	FileID string `json:"file_id" jsonschema:"description=已打开的 SQLite 文件会话 ID 或路径"`
+	SQL    string `json:"sql" jsonschema:"description=要执行的 SQL 语句 (支持 SELECT / PRAGMA / INSERT / UPDATE / DELETE / DDL 等读写操作)"`
 }
 
 func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
@@ -514,14 +514,18 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 
 	// ---------- 4. SQLite Tools ----------
 	if mgrs.SqliteMgr != nil {
-		sqliteTool, err := utils.InferTool("db_sqlite_query_readonly", "执行只读 SQLite SELECT/SHOW 查询",
+		sqliteTool, err := utils.InferTool("db_sqlite_query", "执行 SQLite 数据库 SQL 语句 (支持 SELECT/PRAGMA/INSERT/UPDATE/DELETE/DDL 等读写操作)",
 			func(ctx context.Context, input *SqliteQueryInput) (any, error) {
-				return mgrs.SqliteMgr.SqliteRun(input.FileID, input.SQL)
+				cleanSQL := strings.TrimSpace(input.SQL)
+				if cleanSQL == "" {
+					return nil, fmt.Errorf("SQL 语句不能为空")
+				}
+				return mgrs.SqliteMgr.SqliteRun(input.FileID, cleanSQL)
 			})
 		if err == nil {
 			bus.Register(&RegisteredTool{
-				Name:        "db_sqlite_query_readonly",
-				Description: "执行只读 SQLite SELECT/SHOW 查询",
+				Name:        "db_sqlite_query",
+				Description: "执行 SQLite 数据库 SQL 语句 (支持 SELECT/PRAGMA/INSERT/UPDATE/DELETE/DDL 等读写操作)",
 				BaseTool:    sqliteTool,
 				Level:       guard.LevelAllow,
 			})
