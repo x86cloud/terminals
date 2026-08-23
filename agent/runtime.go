@@ -33,11 +33,11 @@ import (
 )
 
 type AgentRuntime struct {
-	mu       sync.RWMutex
-	ctx      context.Context
-	cfg      core.AppSettings
-	sessions map[string]*Session
-	activeID string
+	mu  sync.RWMutex
+	ctx context.Context
+	cfg core.AppSettings
+
+	session *Session
 
 	Store        *store.Store
 	EventBus     *events.EventBus
@@ -86,9 +86,10 @@ func NewAgentRuntime() *AgentRuntime {
 	askMgr := ask.NewAskManager(eb)
 	ex.SetManagers(jm, sm, wf, askMgr)
 
+	defaultSession := NewSession("ai_agent_default", "AI 助手", wm.GetDir(), defaultCfg)
+
 	rt := &AgentRuntime{
-		sessions:     make(map[string]*Session),
-		activeID:     "ai_agent_default",
+		session:      defaultSession,
 		cfg:          defaultCfg,
 		Store:        st,
 		EventBus:     eb,
@@ -277,11 +278,11 @@ func (rt *AgentRuntime) InitOrUpdate(cfg core.AppSettings) error {
 		}
 	}
 
-	// Update all active sessions with refreshed configuration
-	for _, s := range rt.sessions {
-		s.mu.Lock()
-		s.Settings = cfg
-		s.mu.Unlock()
+	// Update active session with refreshed configuration
+	if rt.session != nil {
+		rt.session.mu.Lock()
+		rt.session.Settings = cfg
+		rt.session.mu.Unlock()
 	}
 
 	// Update router default model profile
@@ -308,31 +309,12 @@ func (rt *AgentRuntime) InitOrUpdate(cfg core.AppSettings) error {
 	return nil
 }
 
+func (rt *AgentRuntime) GetSession() *Session {
+	rt.mu.RLock()
+	defer rt.mu.RUnlock()
+	return rt.session
+}
+
 func (rt *AgentRuntime) GetOrCreateSession(id string) *Session {
-	rt.mu.Lock()
-	defer rt.mu.Unlock()
-
-	if id == "" {
-		id = "ai_agent_default"
-	}
-
-	if s, ok := rt.sessions[id]; ok {
-		return s
-	}
-
-	// Try load from DB
-	title := "新会话"
-	workspace := rt.WorkspaceMgr.GetDir()
-	if rt.Store != nil {
-		if dbSess, err := rt.Store.GetSession(id); err == nil && dbSess != nil {
-			title = dbSess.Title
-			if dbSess.Workspace != "" {
-				workspace = dbSess.Workspace
-			}
-		}
-	}
-
-	s := NewSession(id, title, workspace, rt.cfg)
-	rt.sessions[id] = s
-	return s
+	return rt.GetSession()
 }

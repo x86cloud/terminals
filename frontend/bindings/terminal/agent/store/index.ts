@@ -5,6 +5,5 @@ export type {
     AuditLogItem,
     JobItem,
     JobOutputItem,
-    SessionItem,
     SubagentItem
 } from "./models.js";

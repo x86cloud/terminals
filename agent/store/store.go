@@ -12,15 +12,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-type SessionItem struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	Workspace string `json:"workspace"`
-	Settings  string `json:"settings"` // JSON snapshot
-	CreatedAt int64  `json:"created_at"`
-	UpdatedAt int64  `json:"updated_at"`
-}
-
 type MessageItem struct {
 	ID           int64  `json:"id"`
 	SessionID    string `json:"session_id"`
@@ -151,15 +142,6 @@ func (s *Store) Close() error {
 
 func (s *Store) initSchema() error {
 	schemaSQL := `
-	CREATE TABLE IF NOT EXISTS sessions (
-		id          TEXT PRIMARY KEY,
-		title       TEXT,
-		workspace   TEXT,
-		settings    TEXT,
-		created_at  INTEGER,
-		updated_at  INTEGER
-	);
-
 	CREATE TABLE IF NOT EXISTS messages (
 		id            INTEGER PRIMARY KEY AUTOINCREMENT,
 		session_id    TEXT NOT NULL,
@@ -284,13 +266,6 @@ func (s *Store) autoMigrateJSONHistory() {
 	}
 
 	now := time.Now().UnixMilli()
-	_ = s.SaveSession(SessionItem{
-		ID:        "ai_agent_default",
-		Title:     "默认会话",
-		CreatedAt: now,
-		UpdatedAt: now,
-	})
-
 	for _, msg := range oldMsgs {
 		t := msg.Timestamp
 		if t == 0 {
@@ -314,80 +289,6 @@ func (s *Store) autoMigrateJSONHistory() {
 			CreatedAt:    t,
 		})
 	}
-}
-
-// ---------- Session Operations ----------
-
-func (s *Store) ListSessions() ([]SessionItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	rows, err := s.db.Query("SELECT id, title, workspace, settings, created_at, updated_at FROM sessions ORDER BY updated_at DESC")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var list []SessionItem
-	for rows.Next() {
-		var it SessionItem
-		var ws, st sql.NullString
-		if err := rows.Scan(&it.ID, &it.Title, &ws, &st, &it.CreatedAt, &it.UpdatedAt); err != nil {
-			continue
-		}
-		it.Workspace = ws.String
-		it.Settings = st.String
-		list = append(list, it)
-	}
-	return list, nil
-}
-
-func (s *Store) GetSession(id string) (*SessionItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	var it SessionItem
-	var ws, st sql.NullString
-	err := s.db.QueryRow("SELECT id, title, workspace, settings, created_at, updated_at FROM sessions WHERE id = ?", id).
-		Scan(&it.ID, &it.Title, &ws, &st, &it.CreatedAt, &it.UpdatedAt)
-	if err != nil {
-		return nil, err
-	}
-	it.Workspace = ws.String
-	it.Settings = st.String
-	return &it, nil
-}
-
-func (s *Store) SaveSession(it SessionItem) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now().UnixMilli()
-	if it.CreatedAt == 0 {
-		it.CreatedAt = now
-	}
-	it.UpdatedAt = now
-
-	_, err := s.db.Exec(`
-		INSERT INTO sessions (id, title, workspace, settings, created_at, updated_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-		ON CONFLICT(id) DO UPDATE SET
-			title = excluded.title,
-			workspace = excluded.workspace,
-			settings = excluded.settings,
-			updated_at = excluded.updated_at
-	`, it.ID, it.Title, it.Workspace, it.Settings, it.CreatedAt, it.UpdatedAt)
-	return err
-}
-
-func (s *Store) DeleteSession(id string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	_, _ = s.db.Exec("DELETE FROM messages WHERE session_id = ?", id)
-	_, _ = s.db.Exec("DELETE FROM audit_logs WHERE session_id = ?", id)
-	_, err := s.db.Exec("DELETE FROM sessions WHERE id = ?", id)
-	return err
 }
 
 // ---------- Message Operations ----------
@@ -432,9 +333,6 @@ func (s *Store) AddMessage(it MessageItem) error {
 		INSERT INTO messages (session_id, role, content, reasoning, tool_calls, process_steps, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
 	`, it.SessionID, it.Role, it.Content, it.Reasoning, it.ToolCalls, it.ProcessSteps, it.CreatedAt)
-
-	// Update session updated_at
-	_, _ = s.db.Exec("UPDATE sessions SET updated_at = ? WHERE id = ?", it.CreatedAt, it.SessionID)
 	return err
 }
 
@@ -472,7 +370,6 @@ func (s *Store) ReplaceMessages(sessionID string, msgs []MessageItem) error {
 		}
 	}
 
-	_, _ = tx.Exec("UPDATE sessions SET updated_at = ? WHERE id = ?", now, sessionID)
 	return tx.Commit()
 }
 

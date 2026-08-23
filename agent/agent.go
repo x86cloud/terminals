@@ -115,14 +115,14 @@ func (s *Storage) ClearHistory() error {
 }
 
 type AgentManager struct {
-	mu        sync.RWMutex
-	ctx       context.Context
-	cfg       core.AppSettings
-	cm        *openai.ChatModel
-	runner    *adk.Runner
-	storage   *Storage
-	sshMgr    *ssh.SessionManager
-	cancelMap sync.Map // sessionID -> context.CancelFunc
+	mu           sync.RWMutex
+	ctx          context.Context
+	cfg          core.AppSettings
+	cm           *openai.ChatModel
+	runner       *adk.Runner
+	storage      *Storage
+	sshMgr       *ssh.SessionManager
+	activeCancel context.CancelFunc
 }
 
 var DefaultManager = NewAgentManager()
@@ -330,13 +330,17 @@ func (m *AgentManager) applyContextCompression(ctx context.Context, messages []F
 }
 
 func (m *AgentManager) StopChat(sessionID string) {
-	if cancelVal, ok := m.cancelMap.LoadAndDelete(sessionID); ok {
-		if cancel, ok := cancelVal.(context.CancelFunc); ok {
-			cancel()
-		}
+	m.mu.Lock()
+	if m.activeCancel != nil {
+		m.activeCancel()
+		m.activeCancel = nil
 	}
-	sess := DefaultRuntime.GetOrCreateSession(sessionID)
-	sess.Stop()
+	m.mu.Unlock()
+
+	sess := DefaultRuntime.GetSession()
+	if sess != nil {
+		sess.Stop()
+	}
 }
 
 func normalizeChunkDelta(accumulated, chunk string) string {
@@ -353,11 +357,10 @@ func (m *AgentManager) StreamChat(
 	onChunk func(chunk string),
 	onReasoningChunk func(chunk string),
 ) (string, string, string, error) {
-	if sessionID == "" {
-		sessionID = "ai_agent_default"
+	sess := DefaultRuntime.GetSession()
+	if sess == nil {
+		return "", "", "", errors.New("会话未就绪")
 	}
-
-	sess := DefaultRuntime.GetOrCreateSession(sessionID)
 	if err := sess.BuildRunner(ctx, DefaultRuntime.Router, DefaultRuntime.ToolBus); err != nil {
 		return "", "", "", fmt.Errorf("构建会话 Runner 失败: %w", err)
 	}
@@ -375,8 +378,14 @@ func (m *AgentManager) StreamChat(
 	defer cancel()
 
 	sess.SetCancel(cancel)
-	m.cancelMap.Store(sessionID, cancel)
-	defer m.cancelMap.Delete(sessionID)
+	m.mu.Lock()
+	m.activeCancel = cancel
+	m.mu.Unlock()
+	defer func() {
+		m.mu.Lock()
+		m.activeCancel = nil
+		m.mu.Unlock()
+	}()
 
 	compressedMsgs, notice := m.applyContextCompression(chatCtx, messages)
 	schemaMsgs := m.buildSchemaMessages(compressedMsgs, cfg.AiSystemPrompt)

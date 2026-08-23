@@ -53,7 +53,6 @@ import type {
     SSHDockerImage,
     AppSettings,
     AiMessage,
-    AgentSessionItem,
     AgentJobItem,
     AgentJobOutputItem,
     AgentSubagentItem,
@@ -563,12 +562,6 @@ export const API = {
         Promise.resolve(AgentService.AgentAnswerAsk(askId, answer)),
     agentGetPendingAsks: (): Promise<AgentAskRequest[]> =>
         AgentService.AgentGetPendingAsks().then(r => (r || []) as any),
-    agentListSessions: (): Promise<AgentSessionItem[]> =>
-        AgentService.AgentListSessions().then(r => (r || []) as any),
-    agentCreateSession: (title: string): Promise<AgentSessionItem> =>
-        AgentService.AgentCreateSession(title) as any,
-    agentDeleteSession: (sessionId: string): Promise<boolean> =>
-        Promise.resolve(AgentService.AgentDeleteSession(sessionId)),
     agentGetSessionMessages: (sessionId: string): Promise<AiMessage[]> =>
         AgentService.AgentGetSessionMessages(sessionId).then(r => (r || []) as any),
     agentSaveSessionMessages: (sessionId: string, messages: AiMessage[]): Promise<void> =>

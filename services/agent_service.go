@@ -353,39 +353,6 @@ func (s *AgentService) AgentGetWorkspaceDir() string {
 	return dir
 }
 
-func (s *AgentService) AgentListSessions() ([]store.SessionItem, error) {
-	if agent.DefaultRuntime.Store == nil {
-		return []store.SessionItem{}, nil
-	}
-	return agent.DefaultRuntime.Store.ListSessions()
-}
-
-func (s *AgentService) AgentCreateSession(title string) (*store.SessionItem, error) {
-	if agent.DefaultRuntime.Store == nil {
-		return nil, errors.New("存储未就绪")
-	}
-	id := fmt.Sprintf("session_%d", time.Now().UnixNano())
-	now := time.Now().UnixMilli()
-	item := store.SessionItem{
-		ID:        id,
-		Title:     title,
-		Workspace: agent.DefaultRuntime.WorkspaceMgr.GetDir(),
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-	if err := agent.DefaultRuntime.Store.SaveSession(item); err != nil {
-		return nil, err
-	}
-	return &item, nil
-}
-
-func (s *AgentService) AgentDeleteSession(sessionID string) bool {
-	if agent.DefaultRuntime.Store != nil {
-		_ = agent.DefaultRuntime.Store.DeleteSession(sessionID)
-	}
-	return true
-}
-
 func (s *AgentService) AgentGetSessionMessages(sessionID string) ([]agent.FrontendMessage, error) {
 	if sessionID == "" {
 		sessionID = "ai_agent_default"

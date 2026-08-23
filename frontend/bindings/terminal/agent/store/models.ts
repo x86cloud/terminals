@@ -40,19 +40,6 @@ export interface JobOutputItem {
     "chunk": string;
 }
 
-export interface SessionItem {
-    "id": string;
-    "title": string;
-    "workspace": string;
-
-    /**
-     * JSON snapshot
-     */
-    "settings": string;
-    "created_at": number;
-    "updated_at": number;
-}
-
 export interface SubagentItem {
     "id": string;
     "parent_id"?: string;

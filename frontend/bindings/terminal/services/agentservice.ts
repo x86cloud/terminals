@@ -44,16 +44,8 @@ export function AgentConfirmTool(confirmID: string, approved: boolean): $Cancell
     return $Call.ByID(214643347, confirmID, approved);
 }
 
-export function AgentCreateSession(title: string): $CancellablePromise<store$0.SessionItem | null> {
-    return $Call.ByID(526240329, title);
-}
-
 export function AgentDecideApproval(confirmID: string, approved: boolean, remember: boolean, reason: string): $CancellablePromise<boolean> {
     return $Call.ByID(2014994780, confirmID, approved, remember, reason);
-}
-
-export function AgentDeleteSession(sessionID: string): $CancellablePromise<boolean> {
-    return $Call.ByID(2187831712, sessionID);
 }
 
 export function AgentGetAuditLogs(sessionID: string, limit: number): $CancellablePromise<store$0.AuditLogItem[] | null> {
@@ -102,10 +94,6 @@ export function AgentKillJob(jobID: string): $CancellablePromise<boolean> {
 
 export function AgentListJobs(sessionID: string): $CancellablePromise<store$0.JobItem[] | null> {
     return $Call.ByID(3780268623, sessionID);
-}
-
-export function AgentListSessions(): $CancellablePromise<store$0.SessionItem[] | null> {
-    return $Call.ByID(1371193518);
 }
 
 export function AgentListSkills(): $CancellablePromise<skills$0.Skill[] | null> {

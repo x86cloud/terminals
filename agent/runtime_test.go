@@ -49,21 +49,7 @@ func TestStoreCRUD(t *testing.T) {
 	st, cleanup := setupTestStore(t)
 	defer cleanup()
 
-	// 1. Session & Messages
-	sess := store.SessionItem{
-		ID:        "test_sess_1",
-		Title:     "测试会话",
-		CreatedAt: time.Now().UnixMilli(),
-		UpdatedAt: time.Now().UnixMilli(),
-	}
-	if err := st.SaveSession(sess); err != nil {
-		t.Fatalf("保存会话失败: %v", err)
-	}
-	sessions, err := st.ListSessions()
-	if err != nil || len(sessions) == 0 {
-		t.Fatalf("获取会话列表失败: %v", err)
-	}
-
+	// 1. Messages Operations
 	msg := store.MessageItem{
 		SessionID: "test_sess_1",
 		Role:      "user",
