@@ -604,7 +604,7 @@ export default function SqliteClient({ session, onClose }: Props) {
                                 ]
 
                                 return columns.length > 0 ? (
-                                    <ResizableTable cols={sqCols} data={rows}>
+                                    <ResizableTable tableKey={selected ?? ''} cols={sqCols} data={rows}>
                                         <tbody>
                                             {/* 草稿新增行 */}
                                             {newRows.map((nr, idx) => (

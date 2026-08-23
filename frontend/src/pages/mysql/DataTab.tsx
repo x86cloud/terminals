@@ -123,6 +123,7 @@ export default function DataTab(props: {
                         <div className={my.mysqlWarn}>该表无主键，删除/更新将按整行匹配，请谨慎操作。</div>
                     )}
                     <ResizableTable
+                        tableKey={selected ?? ''}
                         cols={dataCols}
                         data={rows}
                         className={my.mysqlEditTable}
