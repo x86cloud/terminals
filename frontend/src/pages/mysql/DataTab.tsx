@@ -54,6 +54,19 @@ export default function DataTab(props: {
         onSetEditing, saving, dirtyCount, onGoPage, onChangePageSize, onAddIndex, onDropIndex,
     } = props
 
+    // Column widths state — reset when table or columns change
+    const [colWidths, setColWidths] = useState<Record<string, number>>({})
+
+    useEffect(() => {
+        setColWidths({})
+    }, [selected, columns.join(',')])
+
+    const getColW = (key: string) => colWidths[key] ?? DEFAULT_COL_W
+
+    const handleColResize = (key: string, newWidth: number) => {
+        setColWidths((prev) => ({ ...prev, [key]: newWidth }))
+    }
+
     // Build ColDef array for ResizableTable
     const dataCols: ColDef[] = [
         ...columns.map((c) => ({
@@ -64,7 +77,8 @@ export default function DataTab(props: {
                     {pkCols.includes(c) && <span className={my.pkBadge}>PK</span>}
                 </>
             ),
-            minWidth: 60,
+            width: getColW(c),
+            minWidth: 50,
         })),
         { key: '__rowact__', label: '操作', width: ROW_ACT_W, minWidth: 38 },
     ]
@@ -123,9 +137,9 @@ export default function DataTab(props: {
                         <div className={my.mysqlWarn}>该表无主键，删除/更新将按整行匹配，请谨慎操作。</div>
                     )}
                     <ResizableTable
-                        tableKey={selected ?? ''}
                         cols={dataCols}
                         data={rows}
+                        onColResize={handleColResize}
                         className={my.mysqlEditTable}
                     >
                         <tbody>

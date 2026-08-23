@@ -598,13 +598,17 @@ export default function SqliteClient({ session, onClose }: Props) {
                     {selected && dataView === 'data' && (
                         <div className={sq.sqliteDataWrap}>
                             {(() => {
+                                const getColW = (key: string) => colWidths[key] ?? DEFAULT_COL_W
+                                const handleColResize = (key: string, w: number) =>
+                                    setColWidths((prev) => ({ ...prev, [key]: w }))
+
                                 const sqCols: ColDef[] = [
-                                    ...columns.map((c) => ({ key: c, label: c, minWidth: 60 })),
+                                    ...columns.map((c) => ({ key: c, label: c, width: getColW(c), minWidth: 50 })),
                                     { key: '__act__', label: '操作', width: ROW_ACT_W, minWidth: 38 },
                                 ]
 
                                 return columns.length > 0 ? (
-                                    <ResizableTable tableKey={selected ?? ''} cols={sqCols} data={rows}>
+                                    <ResizableTable cols={sqCols} data={rows} onColResize={handleColResize}>
                                         <tbody>
                                             {/* 草稿新增行 */}
                                             {newRows.map((nr, idx) => (

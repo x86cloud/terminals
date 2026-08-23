@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect, useCallback, useMemo, useLayoutEffect } from 'react'
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
 import s from './ResizableTable.module.less'
 
 export interface ColDef {
@@ -12,140 +12,164 @@ export interface ColDef {
 }
 
 interface Props {
-    tableKey?: string // 当前数据表唯一标识 (切换数据表时触发重测与重置)
     cols: ColDef[]
-    data?: Record<string, any>[] // 表格数据源，用于自动测量各列最宽数据
+    data?: any[]
+    rows?: any[]
     onColResize?: (key: string, newWidth: number) => void
-    children: React.ReactNode // <tbody> content (and optionally extra <thead> rows)
+    children: React.ReactNode // <tbody> content
     extraHead?: React.ReactNode // extra content before <tbody>, e.g. new-row rows
+    defaultMinWidth?: number
+    defaultMaxWidth?: number
     className?: string
     wrapperClassName?: string
     style?: React.CSSProperties
-    autoFit?: boolean // 是否开启最宽内容自适应测量（默认 true）
-    maxAutoWidth?: number // 单列自适应最大宽度上限（默认 450px，避免单列无限过宽）
 }
 
-// 离屏 Canvas 单例，用于精准、极速测量文字像素宽度
+const DEFAULT_GLOBAL_MIN_W = 80
+const DEFAULT_GLOBAL_MAX_W = 450
+const CELL_HORIZONTAL_PADDING = 28 // 10px padding * 2 + border + buffer
+const HEADER_EXTRA_BUFFER = 28     // padding + potential sort icon / PK badge
+
 let measurementCanvas: HTMLCanvasElement | null = null
 let measurementCtx: CanvasRenderingContext2D | null = null
 
-function measureTextWidth(text: string, font = '12.5px Consolas, monospace'): number {
-    if (typeof document === 'undefined') return text.length * 8
-    if (!measurementCtx) {
-        measurementCanvas = document.createElement('canvas')
-        measurementCtx = measurementCanvas.getContext('2d')
+function measureCellTextWidth(text: string, font = '12.5px Consolas, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace'): number {
+    if (!text) return 0
+    if (typeof window === 'undefined') return text.length * 8
+    try {
+        if (!measurementCanvas) {
+            measurementCanvas = document.createElement('canvas')
+            measurementCtx = measurementCanvas.getContext('2d')
+        }
+        if (measurementCtx) {
+            measurementCtx.font = font
+            return measurementCtx.measureText(text).width
+        }
+    } catch {
+        /* fallback */
     }
-    if (measurementCtx) {
-        measurementCtx.font = font
-        return measurementCtx.measureText(text).width
-    }
-    // 降级粗略计算：中文字符约 14px，ASCII 字符约 7.8px
-    let len = 0
-    for (let i = 0; i < text.length; i++) {
-        len += text.charCodeAt(i) > 255 ? 14 : 7.8
-    }
-    return len
+    return text.length * 8
 }
 
-// 纯函数：同步遍历采样数据与表头，预计算每列的最优理想宽度
-function computeIdealColumnWidths(
-    cols: ColDef[],
-    data?: Record<string, any>[],
-    domFallback?: Record<string, number>,
-    autoFit = true,
-    maxAutoWidth = 450
-): Record<string, number> {
-    const widths: Record<string, number> = {}
-
-    for (const col of cols) {
-        // 特殊操作列固定宽度
-        if (col.key === '__rowact__' || col.key === '__act__') {
-            widths[col.key] = col.width ?? 50
-            continue
+function extractCellValueString(val: any): string {
+    if (val === null || val === undefined) return 'NULL'
+    if (typeof val === 'object') {
+        // e.g. { value: 'abc', isNull: false } in MySQL editable cell
+        if ('value' in val && typeof val.value !== 'object') {
+            return val.isNull ? 'NULL' : String(val.value ?? '')
         }
-
-        if (!autoFit) {
-            widths[col.key] = col.width ?? 120
-            continue
+        try {
+            return JSON.stringify(val)
+        } catch {
+            return String(val)
         }
+    }
+    return String(val)
+}
 
-        // A. 测量表头宽度
-        const headerText = typeof col.label === 'string' ? col.label : col.key
-        const headerWidth = measureTextWidth(
-            headerText,
-            '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-        ) + 40 // 包含 padding (20px) + 排序/把手空间 (20px)
+export function calculateColumnOptimalWidth(
+    col: ColDef,
+    rows: any[] | undefined,
+    defaultMinW = DEFAULT_GLOBAL_MIN_W,
+    defaultMaxW = DEFAULT_GLOBAL_MAX_W
+): number {
+    // Action column fixed width
+    if (col.key === '__rowact__' || col.key === '__act__') {
+        return col.width || 50
+    }
 
-        // B. 测量内容中最长单元格 (优先从 data 采样，无 data 时使用 domFallback)
-        let maxCellWidth = domFallback?.[col.key] ?? 0
-        if (data && data.length > 0) {
-            const sampleRows = data.slice(0, 200)
-            for (const row of sampleRows) {
-                const cellVal = row[col.key]
-                let strVal = ''
-                if (cellVal === null || cellVal === undefined) {
-                    strVal = 'NULL'
-                } else if (typeof cellVal === 'object' && cellVal !== null && 'value' in cellVal) {
-                    strVal = String(cellVal.value ?? '')
-                } else {
-                    strVal = String(cellVal)
+    const minW = col.minWidth ?? defaultMinW
+    const maxW = col.maxWidth ?? defaultMaxW
+
+    // 1. Measure header label
+    let maxWFound = 0
+    let labelStr = ''
+    if (typeof col.label === 'string') {
+        labelStr = col.label
+    } else if (col.key) {
+        labelStr = col.key
+    }
+    if (labelStr) {
+        const headerW = measureCellTextWidth(labelStr, 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif') + HEADER_EXTRA_BUFFER
+        maxWFound = Math.max(maxWFound, headerW)
+    }
+
+    // 2. Measure rows data
+    if (rows && rows.length > 0) {
+        // Sample up to first 200 rows for high performance
+        const sampleCount = Math.min(rows.length, 200)
+        for (let i = 0; i < sampleCount; i++) {
+            const row = rows[i]
+            if (!row) continue
+            const rawVal = row[col.key]
+            const strVal = extractCellValueString(rawVal)
+            if (strVal) {
+                // Short-circuit sample length to avoid measuring massive strings
+                const sampleLength = Math.min(strVal.length, 120)
+                const textW = measureCellTextWidth(strVal.slice(0, sampleLength)) + CELL_HORIZONTAL_PADDING
+                if (textW > maxWFound) {
+                    maxWFound = textW
                 }
-
-                // 限制最大测量字符长度，避免超长文本阻塞计算
-                if (strVal.length > 120) {
-                    strVal = strVal.slice(0, 120)
-                }
-
-                const cellW = measureTextWidth(strVal, '12.5px Consolas, monospace') + 26
-                if (cellW > maxCellWidth) {
-                    maxCellWidth = cellW
+                if (maxWFound >= maxW) {
+                    maxWFound = maxW
+                    break
                 }
             }
         }
-
-        const minW = col.minWidth ?? 60
-        const maxW = col.maxWidth ?? maxAutoWidth
-        const calculated = Math.max(headerWidth, maxCellWidth, minW)
-        // 限制最大宽度，避免单列无限过宽
-        widths[col.key] = Math.min(calculated, maxW)
     }
 
-    return widths
+    // Fallback to col.width if provided and greater than 0, but bound by [minW, maxW]
+    if (maxWFound === 0 && col.width && col.width > 0) {
+        maxWFound = col.width
+    }
+
+    return Math.min(maxW, Math.max(minW, Math.ceil(maxWFound)))
 }
 
 export default function ResizableTable({
-    tableKey,
     cols,
     data,
+    rows,
     onColResize,
     children,
     extraHead,
+    defaultMinWidth = DEFAULT_GLOBAL_MIN_W,
+    defaultMaxWidth = DEFAULT_GLOBAL_MAX_W,
     className,
     wrapperClassName,
     style,
-    autoFit = true,
-    maxAutoWidth = 450,
 }: Props) {
     const wrapperRef = useRef<HTMLDivElement>(null)
-    const tableRef = useRef<HTMLTableElement>(null)
     const [wrapperWidth, setWrapperWidth] = useState<number>(0)
-    const [userWidths, setUserWidths] = useState<Record<string, number>>({})
-    const [domWidths, setDomWidths] = useState<Record<string, number>>({})
     const [resizingCol, setResizingCol] = useState<{ key: string; width: number } | null>(null)
+    const [computedWidths, setComputedWidths] = useState<Record<string, number>>({})
+    const manualWidthsRef = useRef<Record<string, number>>({})
 
-    const colsSignature = cols.map((c) => c.key).join(',')
-    const currentTableKey = `${tableKey ?? ''}::${colsSignature}`
+    const dragRef = useRef<{
+        key: string
+        startX: number
+        startW: number
+        minW: number
+        maxW: number
+        rafId: number | null
+    } | null>(null)
 
-    // 锁定每张表的列宽状态，避免输入/草稿变更时反复跳动
-    const [lockedIdealWidths, setLockedIdealWidths] = useState<Record<string, number>>(() =>
-        computeIdealColumnWidths(cols, data, undefined, autoFit, maxAutoWidth)
-    )
+    const effectiveRows = useMemo(() => data ?? rows ?? [], [data, rows])
 
-    const lastMeasuredKeyRef = useRef<string>(currentTableKey)
-    const hasDataRef = useRef<boolean>(Boolean(data && data.length > 0))
+    // Compute optimal widths whenever cols or data changes
+    useEffect(() => {
+        const newWidths: Record<string, number> = {}
+        for (const c of cols) {
+            if (manualWidthsRef.current[c.key] !== undefined) {
+                newWidths[c.key] = manualWidthsRef.current[c.key]
+            } else {
+                newWidths[c.key] = calculateColumnOptimalWidth(c, effectiveRows, defaultMinWidth, defaultMaxWidth)
+            }
+        }
+        setComputedWidths(newWidths)
+    }, [cols, effectiveRows, defaultMinWidth, defaultMaxWidth])
 
-    // 监听外层容器尺寸变化
-    useLayoutEffect(() => {
+    useEffect(() => {
         if (!wrapperRef.current) return
         const el = wrapperRef.current
         setWrapperWidth(el.clientWidth)
@@ -159,123 +183,39 @@ export default function ResizableTable({
         return () => ro.disconnect()
     }, [])
 
-    // 监听表切换或数据初次加载：同步重新遍历数据计算宽度，之后锁定稳定列宽
-    useEffect(() => {
-        const tableChanged = lastMeasuredKeyRef.current !== currentTableKey
-        const firstDataArrival = !hasDataRef.current && Boolean(data && data.length > 0)
-
-        if (tableChanged || firstDataArrival) {
-            lastMeasuredKeyRef.current = currentTableKey
-            hasDataRef.current = Boolean(data && data.length > 0)
-            if (tableChanged) {
-                setUserWidths({})
+    const getColRenderWidth = useCallback(
+        (c: ColDef): number => {
+            if (resizingCol && resizingCol.key === c.key) {
+                return resizingCol.width
             }
-            const newIdeal = computeIdealColumnWidths(cols, data, domWidths, autoFit, maxAutoWidth)
-            setLockedIdealWidths(newIdeal)
-        }
-    }, [currentTableKey, data, cols, domWidths, autoFit, maxAutoWidth])
-
-    // 如果未传入 data 属性，自动在挂载/更新后通过 DOM 读取前 50 行单元格计算最宽宽度作为回退
-    useEffect(() => {
-        if (data && data.length > 0) return
-        if (!tableRef.current || !autoFit) return
-
-        const trs = tableRef.current.querySelectorAll('tbody tr')
-        if (trs.length === 0) return
-
-        const measured: Record<string, number> = {}
-        const sampleRows = Array.from(trs).slice(0, 50)
-
-        cols.forEach((col, colIdx) => {
-            if (col.key === '__rowact__' || col.key === '__act__') return
-            let maxW = 0
-            for (const tr of sampleRows) {
-                const td = tr.children[colIdx] as HTMLElement
-                if (td) {
-                    const text = td.innerText || td.textContent || ''
-                    const w = measureTextWidth(text.trim().slice(0, 120), '12.5px Consolas, monospace') + 26
-                    if (w > maxW) maxW = w
-                }
+            if (computedWidths[c.key] !== undefined) {
+                return computedWidths[c.key]
             }
-            if (maxW > 0) {
-                measured[col.key] = maxW
+            if (c.width && c.width > 0) {
+                return c.width
             }
-        })
+            return defaultMinWidth
+        },
+        [resizingCol, computedWidths, defaultMinWidth]
+    )
 
-        setDomWidths(measured)
-        setLockedIdealWidths((prev) => ({
-            ...prev,
-            ...computeIdealColumnWidths(cols, data, measured, autoFit, maxAutoWidth),
-        }))
-    }, [data, cols, children, autoFit, maxAutoWidth])
-
-    const dragRef = useRef<{
-        key: string
-        startX: number
-        startW: number
-        minW: number
-        maxW: number
-        rafId: number | null
-    } | null>(null)
-
-    // 计算各列最终渲染宽度：若总宽小于容器，按比例自适应弹性拉伸填满右侧留白
-    const computedColWidths = useMemo(() => {
-        const baseWidths: Record<string, number> = {}
-        let totalBaseWidth = 0
-        let elasticTotal = 0
-
-        for (const col of cols) {
-            const isActionCol = col.key === '__rowact__' || col.key === '__act__'
-            const isUserResized = userWidths[col.key] !== undefined
-            const baseW = isUserResized
-                ? userWidths[col.key]
-                : (col.width && col.width !== 120 ? col.width : (lockedIdealWidths[col.key] ?? 120))
-
-            baseWidths[col.key] = baseW
-            totalBaseWidth += baseW
-
-            if (!isActionCol && !isUserResized) {
-                elasticTotal += baseW
-            }
-        }
-
-        // 如果容器有剩余空间（如图中右侧空白），按比例分配剩余宽度
-        const finalWidths: Record<string, number> = { ...baseWidths }
-        const availableExtra = (wrapperWidth || 0) - totalBaseWidth - 2 // 减去边框预留
-
-        if (availableExtra > 0 && elasticTotal > 0) {
-            for (const col of cols) {
-                const isActionCol = col.key === '__rowact__' || col.key === '__act__'
-                const isUserResized = userWidths[col.key] !== undefined
-                if (!isActionCol && !isUserResized) {
-                    const share = Math.floor(availableExtra * (baseWidths[col.key] / elasticTotal))
-                    const maxW = col.maxWidth ?? maxAutoWidth
-                    // 容器弹性拉伸时也遵循最大上限控制，防止过度膨胀
-                    finalWidths[col.key] = Math.min(baseWidths[col.key] + share, maxW + 100)
-                }
-            }
-        }
-
-        return finalWidths
-    }, [cols, lockedIdealWidths, userWidths, wrapperWidth, maxAutoWidth])
-
-    // 启动拖拽列宽
     const startResize = useCallback(
-        (e: React.MouseEvent, col: ColDef, currentRenderWidth: number) => {
+        (e: React.MouseEvent, col: ColDef) => {
             e.preventDefault()
             e.stopPropagation()
 
-            const minW = col.minWidth ?? 40
-            const maxW = col.maxWidth ?? 1600
+            const currentW = getColRenderWidth(col)
+            const minW = col.minWidth ?? defaultMinWidth
+            const maxW = col.maxWidth ?? defaultMaxWidth
             dragRef.current = {
                 key: col.key,
                 startX: e.clientX,
-                startW: currentRenderWidth,
+                startW: currentW,
                 minW,
                 maxW,
                 rafId: null,
             }
-            setResizingCol({ key: col.key, width: currentRenderWidth })
+            setResizingCol({ key: col.key, width: currentW })
 
             const onMove = (me: MouseEvent) => {
                 if (!dragRef.current) return
@@ -291,9 +231,11 @@ export default function ResizableTable({
 
                 dragRef.current.rafId = requestAnimationFrame(() => {
                     if (dragRef.current) {
-                        setResizingCol({ key: dragRef.current.key, width: newW })
-                        setUserWidths((prev) => ({ ...prev, [dragRef.current!.key]: newW }))
-                        onColResize?.(dragRef.current.key, newW)
+                        const targetKey = dragRef.current.key
+                        manualWidthsRef.current[targetKey] = newW
+                        setResizingCol({ key: targetKey, width: newW })
+                        setComputedWidths((prev) => ({ ...prev, [targetKey]: newW }))
+                        onColResize?.(targetKey, newW)
                     }
                 })
             }
@@ -315,27 +257,21 @@ export default function ResizableTable({
             document.addEventListener('mousemove', onMove)
             document.addEventListener('mouseup', onUp)
         },
-        [onColResize]
+        [getColRenderWidth, defaultMinWidth, defaultMaxWidth, onColResize]
     )
 
-    // 双击恢复自适应最宽内容宽度
     const handleDoubleClick = useCallback(
         (col: ColDef) => {
-            setUserWidths((prev) => {
-                const next = { ...prev }
-                delete next[col.key]
-                return next
-            })
-            const resetW = lockedIdealWidths[col.key] ?? Math.max(col.minWidth ?? 80, 140)
-            onColResize?.(col.key, resetW)
+            // 双击重置为基于当前数据内容自动计算的最佳宽度
+            delete manualWidthsRef.current[col.key]
+            const optimalW = calculateColumnOptimalWidth(col, effectiveRows, defaultMinWidth, defaultMaxWidth)
+            setComputedWidths((prev) => ({ ...prev, [col.key]: optimalW }))
+            onColResize?.(col.key, optimalW)
         },
-        [lockedIdealWidths, onColResize]
+        [effectiveRows, defaultMinWidth, defaultMaxWidth, onColResize]
     )
 
-    const totalWidth = cols.reduce(
-        (sum, c) => sum + (resizingCol?.key === c.key ? resizingCol.width : (computedColWidths[c.key] ?? 100)),
-        0
-    )
+    const totalWidth = cols.reduce((sum, c) => sum + getColRenderWidth(c), 0)
     const tableWidth = Math.max(totalWidth, wrapperWidth || 0, 1)
 
     return (
@@ -347,13 +283,12 @@ export default function ResizableTable({
             style={style}
         >
             <table
-                ref={tableRef}
                 className={`${s.table}${className ? ' ' + className : ''}`}
                 style={{ width: tableWidth, minWidth: '100%' }}
             >
                 <colgroup>
                     {cols.map((col) => {
-                        const w = resizingCol?.key === col.key ? resizingCol.width : (computedColWidths[col.key] ?? 100)
+                        const w = getColRenderWidth(col)
                         return <col key={col.key} style={{ width: w }} />
                     })}
                     <col style={{ width: 'auto' }} />
@@ -364,9 +299,7 @@ export default function ResizableTable({
                             const isLast = idx === cols.length - 1
                             const isResizable = col.resizable !== false && col.key !== '__act__' && col.key !== '__rowact__'
                             const isResizingThis = resizingCol?.key === col.key
-                            const currentW = isResizingThis
-                                ? resizingCol.width
-                                : (computedColWidths[col.key] ?? 100)
+                            const currentW = getColRenderWidth(col)
 
                             return (
                                 <th
@@ -383,9 +316,9 @@ export default function ResizableTable({
                                     {isResizable && !isLast && (
                                         <div
                                             className={`${s.resizeHandle}${isResizingThis ? ' ' + s.activeHandle : ''}`}
-                                            onMouseDown={(e) => startResize(e, col, currentW)}
+                                            onMouseDown={(e) => startResize(e, col)}
                                             onDoubleClick={() => handleDoubleClick(col)}
-                                            title="拖动调整列宽，双击恢复最宽内容自适应"
+                                            title="拖动调整列宽，双击自适应最佳宽度"
                                         >
                                             {isResizingThis && (
                                                 <div className={s.widthTooltip}>{Math.round(currentW)}px</div>
