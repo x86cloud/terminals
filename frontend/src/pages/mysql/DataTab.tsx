@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Select, Button, Segmented, Space, Tooltip, Pagination, Input } from 'antd'
-import { Plus, RotateCw, X, Trash2 } from 'lucide-react'
+import { Plus, RotateCw, X, Trash2, Loader2 } from 'lucide-react'
 import ResizableTable, { ColDef } from '@/components/ResizableTable'
 import my from '@/pages/mysql/DataTab.module.less'
 import sh from '@/pages/mysql/mysqlShared.module.less'
@@ -29,6 +29,7 @@ export default function DataTab(props: {
     totalRows: number
     totalPages: number
     indexData: Record<string, any>[]
+    countingRows?: boolean
     onOpenTable: (t: string, p?: number, s?: number, forceRefresh?: boolean) => void
     onCloseTable: () => void
     onAddRow: () => void
@@ -48,7 +49,7 @@ export default function DataTab(props: {
 }) {
     const {
         busy, selected, dataView, setDataView, columns, structData, pkCols, rows, newRows, drafts,
-        editing, page, pageSize, totalRows, totalPages, indexData, onOpenTable, onCloseTable,
+        editing, page, pageSize, totalRows, totalPages, indexData, countingRows, onOpenTable, onCloseTable,
         onAddRow, onDeleteRow, onSaveAll, onCommitEdit, onUpdateNewCell, onDeleteNewRow, onCellDisplay,
         onSetEditing, saving, dirtyCount, onGoPage, onChangePageSize, onAddIndex, onDropIndex,
     } = props
@@ -100,10 +101,17 @@ export default function DataTab(props: {
                         { label: '索引', value: 'index' },
                     ]}
                 />
-                <span className={my.mysqlCount} style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                    {dataView === 'data'
-                        ? `${rows.length} 行${newRows.length ? ` +${newRows.length} 新` : ''}`
-                        : dataView === 'struct' ? `${structData?.rowCount ?? 0} 列` : `${indexData.length} 个索引`}
+                <span className={my.mysqlCount} style={{ fontSize: 12, color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {dataView === 'data' ? (
+                        <>
+                            {countingRows && <Loader2 size={11} className={my.spinning} style={{ color: 'var(--accent)' }} />}
+                            <span>{rows.length} 行{newRows.length ? ` +${newRows.length} 新` : ''}</span>
+                        </>
+                    ) : dataView === 'struct' ? (
+                        `${structData?.rowCount ?? 0} 列`
+                    ) : (
+                        `${indexData.length} 个索引`
+                    )}
                 </span>
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 6 }}>
                     {dataView === 'data' && (
@@ -215,8 +223,15 @@ export default function DataTab(props: {
                         </tbody>
                     </ResizableTable>
                     <div className={my.mysqlPager} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px' }}>
-                        <span className={my.mysqlCount} style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                            共 {totalRows} 行
+                        <span className={my.mysqlCount} style={{ fontSize: 12, color: 'var(--text-dim)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            {countingRows ? (
+                                <>
+                                    <Loader2 size={12} className={my.spinning} style={{ color: 'var(--accent)' }} />
+                                    <span>共 {totalRows > 0 ? `${totalRows}+` : '…'} 行 (计算中)</span>
+                                </>
+                            ) : (
+                                `共 ${totalRows} 行`
+                            )}
                         </span>
                         <Pagination
                             size="small"

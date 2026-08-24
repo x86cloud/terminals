@@ -71,6 +71,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(50)
     const [totalRows, setTotalRows] = useState(0)
+    const [countingRows, setCountingRows] = useState(false)
 
     // SQL 多标签编辑
     const [sqlTabs, setSqlTabs] = useState<SqlTab[]>(() => [newTab()])
@@ -203,7 +204,8 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
             // 2. 异步解耦：切表或强制刷新时，后台静默拉取总行数与表结构，不阻塞主数据渲染
             if (isSwitchingTable) {
-                // 后台异步刷新总行数
+                // 后台异步刷新总行数，展示微动画
+                setCountingRows(true)
                 API.mysqlCount(session.id, db, table)
                     .then((cnt) => {
                         if (selectedRef.current === table) {
@@ -211,6 +213,11 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                         }
                     })
                     .catch((e) => console.warn('mysqlCount error:', e))
+                    .finally(() => {
+                        if (selectedRef.current === table) {
+                            setCountingRows(false)
+                        }
+                    })
 
                 // 后台异步预加载结构（供 PK 徽标/编辑主键识别）
                 API.mysqlDescribe(session.id, db, table)
@@ -845,6 +852,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             totalRows={totalRows}
                             totalPages={totalPages}
                             indexData={indexData}
+                            countingRows={countingRows}
                             onOpenTable={openTable}
                             onCloseTable={() => setSelected(null)}
                             onAddRow={addRow}
