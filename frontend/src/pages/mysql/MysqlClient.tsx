@@ -173,13 +173,14 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         setDrafts({})
         setNewRows([])
         setEditing(null)
+        setIndexData([])
+        setTableStatus([])
         try {
-            const [data, struct, cnt, idx, ts] = await Promise.all([
+            // Only fetch Select, Describe, Count on table initial open / refresh (indexes and tableStatus are lazily loaded on demand)
+            const [data, struct, cnt] = await Promise.all([
                 API.mysqlSelect(session.id, db, table, ps, (toPage - 1) * ps),
                 API.mysqlDescribe(session.id, db, table),
                 API.mysqlCount(session.id, db, table),
-                API.mysqlIndexes(session.id, db, table),
-                API.mysqlTableStatus(session.id, db),
             ])
             if (data.rows.length === 0 && toPage > 1) {
                 setBusy(false)
@@ -190,8 +191,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             setStructData(struct)
             setRows(data.rows)
             setTotalRows(cnt)
-            setIndexData(idx)
-            setTableStatus(ts)
             setPage(toPage)
         } catch (e) {
             setError(errorMessage(e))
@@ -200,18 +199,58 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         }
     }, [session.id, db, pageSize])
 
+    const fetchPageData = useCallback(async (targetPage: number, size?: number) => {
+        if (!selected || busy) return
+        const ps = size ?? pageSize
+        setBusy(true)
+        setError('')
+        setDrafts({})
+        setNewRows([])
+        setEditing(null)
+        try {
+            const data = await API.mysqlSelect(session.id, db, selected, ps, (targetPage - 1) * ps)
+            setTableData(data)
+            setRows(data.rows)
+            setPage(targetPage)
+        } catch (e) {
+            setError(errorMessage(e))
+        } finally {
+            setBusy(false)
+        }
+    }, [selected, busy, session.id, db, pageSize])
+
     const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
 
     const goPage = (p: number) => {
         if (!selected || busy) return
         const target = Math.min(Math.max(1, p), totalPages)
         if (target === page) return
-        void openTable(selected, target)
+        void fetchPageData(target)
     }
 
     const changePageSize = (size: number) => {
         setPageSize(size)
-        if (selected) void openTable(selected, 1, size)
+        if (selected) void fetchPageData(1, size)
+    }
+
+    const handleDataViewChange = async (v: 'data' | 'struct' | 'index') => {
+        setDataView(v)
+        if (!selected) return
+        if (v === 'index' && indexData.length === 0) {
+            try {
+                const idx = await API.mysqlIndexes(session.id, db, selected)
+                setIndexData(idx)
+            } catch (e) {
+                console.error('加载索引失败', e)
+            }
+        } else if (v === 'struct' && tableStatus.length === 0) {
+            try {
+                const ts = await API.mysqlTableStatus(session.id, db)
+                setTableStatus(ts)
+            } catch (e) {
+                console.error('加载表状态失败', e)
+            }
+        }
     }
 
     /* ----------------- SQL 编辑器（多标签 + 历史） ----------------- */
@@ -782,7 +821,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             busy={busy}
                             selected={selected}
                             dataView={dataView}
-                            setDataView={setDataView}
+                            setDataView={handleDataViewChange}
                             columns={columns}
                             structData={structData}
                             pkCols={pkCols}
