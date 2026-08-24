@@ -74,6 +74,13 @@ export default function TerminalView({ sessionId, active }: Props) {
     const [searchQuery, setSearchQuery] = useState('')
     const [caseSensitive, setCaseSensitive] = useState(false)
 
+    const handleCloseMenu = useCallback(() => {
+        setMenu(closedMenu)
+        setTimeout(() => {
+            termRef.current?.focus()
+        }, 10)
+    }, [])
+
     // 防抖 resize
     const resizeTimerRef = useRef<number | null>(null)
     const debouncedResize = useCallback((cols: number, rows: number) => {
@@ -92,11 +99,19 @@ export default function TerminalView({ sessionId, active }: Props) {
                 await navigator.clipboard.writeText(text)
             } catch {
                 /* ignore */
+            } finally {
+                termRef.current?.focus()
             }
         }
     }, [])
 
+    const lastPasteTimeRef = useRef<number>(0)
     const paste = useCallback(async () => {
+        const now = Date.now()
+        if (now - lastPasteTimeRef.current < 200) {
+            return
+        }
+        lastPasteTimeRef.current = now
         try {
             const text = await navigator.clipboard.readText()
             if (text && termRef.current) {
@@ -105,6 +120,8 @@ export default function TerminalView({ sessionId, active }: Props) {
             }
         } catch {
             /* ignore */
+        } finally {
+            termRef.current?.focus()
         }
     }, [])
 
@@ -178,26 +195,40 @@ export default function TerminalView({ sessionId, active }: Props) {
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
             const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey
 
-            // Ctrl+Shift+C / Cmd+C (存在选中文本时复制)
-            if (ctrlOrCmd && (e.shiftKey || isMac) && (e.key === 'c' || e.key === 'C')) {
+            // Ctrl+Shift+C / Cmd+C / Ctrl+C（有选中文本时复制；无选中文本时放行 Ctrl+C 发送终端中断）
+            if (ctrlOrCmd && (e.key === 'c' || e.key === 'C')) {
                 if (term.hasSelection()) {
+                    e.preventDefault()
+                    e.stopPropagation()
                     void copySelection()
                     return false
                 }
+                if (e.shiftKey) {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    return false
+                }
             }
-            // Ctrl+Shift+V / Cmd+V 粘贴
-            if (ctrlOrCmd && (e.shiftKey || isMac) && (e.key === 'v' || e.key === 'V')) {
+            // Ctrl+V / Ctrl+Shift+V / Cmd+V 粘贴
+            if (ctrlOrCmd && (e.key === 'v' || e.key === 'V')) {
+                e.preventDefault()
+                e.stopPropagation()
                 void paste()
                 return false
             }
             // Ctrl+F / Cmd+F 打开搜索
             if (ctrlOrCmd && (e.key === 'f' || e.key === 'F')) {
+                e.preventDefault()
+                e.stopPropagation()
                 setSearchOpen((prev) => !prev)
                 return false
             }
             // Ctrl+L 清屏
             if (ctrlOrCmd && !e.shiftKey && (e.key === 'l' || e.key === 'L')) {
+                e.preventDefault()
+                e.stopPropagation()
                 term.clear()
+                term.focus()
                 return false
             }
             return true
@@ -287,9 +318,13 @@ export default function TerminalView({ sessionId, active }: Props) {
     }
 
     return (
-        <div className={t.terminalWrap}>
+        <div className={t.terminalWrap} onClick={() => termRef.current?.focus()}>
             {searchOpen && (
-                <div className={t.searchBar} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <div
+                    className={t.searchBar}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+                    onClick={(e) => e.stopPropagation()}
+                >
                     <Input
                         ref={searchInputRef as any}
                         size="small"
@@ -344,6 +379,7 @@ export default function TerminalView({ sessionId, active }: Props) {
             <div
                 ref={hostRef}
                 className={t.terminalHost}
+                onClick={() => termRef.current?.focus()}
                 onContextMenu={(e) => {
                     e.preventDefault()
                     const hasSelection = termRef.current?.hasSelection() ?? false
@@ -384,13 +420,16 @@ export default function TerminalView({ sessionId, active }: Props) {
                                 key: 'clear',
                                 label: '清屏',
                                 icon: 'refresh',
-                                onClick: () => termRef.current?.clear(),
+                                onClick: () => {
+                                    termRef.current?.clear()
+                                    termRef.current?.focus()
+                                },
                             },
                         ],
                     })
                 }}
             />
-            <ContextMenu state={menu} onClose={() => setMenu(closedMenu)} />
+            <ContextMenu state={menu} onClose={handleCloseMenu} />
         </div>
     )
 }

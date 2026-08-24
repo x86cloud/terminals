@@ -13,3 +13,5 @@ build/android/gen/
 *.syso
 .DS_Store
 Thumbs.db
+.idea
+.vscode
