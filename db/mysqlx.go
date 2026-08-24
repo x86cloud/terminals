@@ -501,43 +501,6 @@ func (m *MysqlManagerEx) MysqlSelect(id, dbName, table string, limit, offset int
 }
 
 func (m *MysqlManagerEx) MysqlCount(id, dbName, table string) (int64, error) {
-	cleanDb := strings.TrimSpace(dbName)
-	cleanTable := strings.TrimSpace(table)
-
-	// 1. Query information_schema.TABLES for instant (<1ms) row count estimation on InnoDB & large tables
-	if cleanDb != "" && cleanTable != "" {
-		sqlInfo := fmt.Sprintf("SELECT ENGINE, TABLE_ROWS FROM information_schema.TABLES WHERE TABLE_SCHEMA = '%s' AND TABLE_NAME = '%s'",
-			strings.ReplaceAll(cleanDb, "'", "''"), strings.ReplaceAll(cleanTable, "'", "''"))
-		res, err := m.MysqlRun(id, cleanDb, sqlInfo)
-		if err == nil && len(res.Rows) > 0 {
-			var engine string
-			if engVal, ok := res.Rows[0]["ENGINE"]; ok && engVal != nil {
-				engine = strings.ToUpper(fmt.Sprint(engVal))
-			}
-			var estRows int64
-			if rVal, ok := res.Rows[0]["TABLE_ROWS"]; ok && rVal != nil {
-				switch t := rVal.(type) {
-				case int64:
-					estRows = t
-				case int:
-					estRows = int64(t)
-				case float64:
-					estRows = int64(t)
-				case string:
-					fmt.Sscanf(t, "%d", &estRows)
-				case []byte:
-					fmt.Sscanf(string(t), "%d", &estRows)
-				}
-			}
-
-			// For InnoDB or tables with > 5000 rows, return estimated rows immediately (<1ms) without scanning pages
-			if engine == "INNODB" || estRows > 5000 {
-				return estRows, nil
-			}
-		}
-	}
-
-	// 2. For small tables / views, run standard SELECT COUNT(*)
 	sqlText := fmt.Sprintf("SELECT COUNT(*) AS total FROM %s", quoteIdent(table))
 	res, err := m.MysqlRun(id, dbName, sqlText)
 	if err != nil || len(res.Rows) == 0 {

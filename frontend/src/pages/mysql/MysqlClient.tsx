@@ -197,13 +197,17 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             setRows(data.rows)
             setPage(toPage)
 
+            // 即时初始化/保底总行数，防止 Count 延迟返回时分页器显示 0 行
+            const fetchedCount = (toPage - 1) * ps + (data.rows?.length || 0)
+            setTotalRows((prev) => Math.max(prev, fetchedCount))
+
             // 2. 异步解耦：切表或强制刷新时，后台静默拉取总行数与表结构，不阻塞主数据渲染
             if (isSwitchingTable) {
                 // 后台异步刷新总行数
                 API.mysqlCount(session.id, db, table)
                     .then((cnt) => {
                         if (selectedRef.current === table) {
-                            setTotalRows(cnt)
+                            setTotalRows(Math.max(cnt, fetchedCount))
                         }
                     })
                     .catch((e) => console.warn('mysqlCount error:', e))
@@ -250,7 +254,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
     const goPage = (p: number) => {
         if (!selected || busy) return
-        const target = Math.min(Math.max(1, p), totalPages)
+        const target = Math.max(1, p)
         if (target === page) return
         void openTable(selected, target)
     }
