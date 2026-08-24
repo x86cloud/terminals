@@ -29,8 +29,7 @@ export default function DataTab(props: {
     totalRows: number
     totalPages: number
     indexData: Record<string, any>[]
-    tableStatus: Record<string, any>[]
-    onOpenTable: (t: string, p?: number, s?: number) => void
+    onOpenTable: (t: string, p?: number, s?: number, forceRefresh?: boolean) => void
     onCloseTable: () => void
     onAddRow: () => void
     onDeleteRow: (i: number) => void
@@ -49,7 +48,7 @@ export default function DataTab(props: {
 }) {
     const {
         busy, selected, dataView, setDataView, columns, structData, pkCols, rows, newRows, drafts,
-        editing, page, pageSize, totalRows, totalPages, indexData, tableStatus, onOpenTable, onCloseTable,
+        editing, page, pageSize, totalRows, totalPages, indexData, onOpenTable, onCloseTable,
         onAddRow, onDeleteRow, onSaveAll, onCommitEdit, onUpdateNewCell, onDeleteNewRow, onCellDisplay,
         onSetEditing, saving, dirtyCount, onGoPage, onChangePageSize, onAddIndex, onDropIndex,
     } = props
@@ -116,7 +115,7 @@ export default function DataTab(props: {
                                 {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
                             </Button>
                             <Tooltip title="刷新数据">
-                                <Button size="small" icon={<RotateCw size={13} />} disabled={busy || saving} onClick={() => onOpenTable(selected, page)} />
+                                <Button size="small" icon={<RotateCw size={13} />} disabled={busy || saving} onClick={() => onOpenTable(selected, page, undefined, true)} />
                             </Tooltip>
                         </Space>
                     )}

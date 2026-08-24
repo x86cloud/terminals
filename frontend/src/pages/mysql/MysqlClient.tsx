@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import { Select, Button, Space, Tooltip, Tabs } from 'antd'
 import { RotateCw, Plus, Table, Trash2, X, Download, Upload, Copy, Eraser } from 'lucide-react'
 import { API } from '@/api'
@@ -78,7 +78,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
     // 结构/索引
     const [indexData, setIndexData] = useState<Record<string, any>[]>([])
-    const [tableStatus, setTableStatus] = useState<Record<string, any>[]>([])
 
     // 用户权限
     const [users, setUsers] = useState<Record<string, any>[]>([])
@@ -163,61 +162,89 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         onChange(session.id, value)
     }
 
-    const openTable = useCallback(async (table: string, toPage = 1, size?: number) => {
+    const selectedRef = useRef<string | null>(null)
+
+    const openTable = useCallback(async (table: string, toPage = 1, size?: number, forceRefresh = false) => {
         const ps = size ?? pageSize
+        const isSwitchingTable = selected !== table || forceRefresh
+
         setSelected(table)
-        setDataView('data')
-        setTab('data')
+        selectedRef.current = table
         setBusy(true)
         setError('')
-        setDrafts({})
-        setNewRows([])
-        setEditing(null)
-        setIndexData([])
-        setTableStatus([])
+
+        if (isSwitchingTable) {
+            setDataView('data')
+            setTab('data')
+            setDrafts({})
+            setNewRows([])
+            setEditing(null)
+            setIndexData([])
+        }
+
         try {
-            // Only fetch Select, Describe, Count on table initial open / refresh (indexes and tableStatus are lazily loaded on demand)
-            const [data, struct, cnt] = await Promise.all([
-                API.mysqlSelect(session.id, db, table, ps, (toPage - 1) * ps),
-                API.mysqlDescribe(session.id, db, table),
-                API.mysqlCount(session.id, db, table),
-            ])
+            // 1. 核心优先：仅请求行数据接口，立即渲染首屏
+            const data = await API.mysqlSelect(session.id, db, table, ps, (toPage - 1) * ps)
+            if (selectedRef.current !== table) return
+
             if (data.rows.length === 0 && toPage > 1) {
                 setBusy(false)
-                await openTable(table, toPage - 1, ps)
+                await openTable(table, toPage - 1, ps, forceRefresh)
                 return
             }
-            setTableData(data)
-            setStructData(struct)
-            setRows(data.rows)
-            setTotalRows(cnt)
-            setPage(toPage)
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
-    }, [session.id, db, pageSize])
 
-    const fetchPageData = useCallback(async (targetPage: number, size?: number) => {
-        if (!selected || busy) return
-        const ps = size ?? pageSize
-        setBusy(true)
-        setError('')
-        setDrafts({})
-        setNewRows([])
-        setEditing(null)
-        try {
-            const data = await API.mysqlSelect(session.id, db, selected, ps, (targetPage - 1) * ps)
             setTableData(data)
             setRows(data.rows)
-            setPage(targetPage)
+            setPage(toPage)
+
+            // 2. 异步解耦：切表或强制刷新时，后台静默拉取总行数与表结构，不阻塞主数据渲染
+            if (isSwitchingTable) {
+                // 后台异步刷新总行数
+                API.mysqlCount(session.id, db, table)
+                    .then((cnt) => {
+                        if (selectedRef.current === table) {
+                            setTotalRows(cnt)
+                        }
+                    })
+                    .catch((e) => console.warn('mysqlCount error:', e))
+
+                // 后台异步预加载结构（供 PK 徽标/编辑主键识别）
+                API.mysqlDescribe(session.id, db, table)
+                    .then((struct) => {
+                        if (selectedRef.current === table) {
+                            setStructData(struct)
+                        }
+                    })
+                    .catch((e) => console.warn('mysqlDescribe error:', e))
+            }
         } catch (e) {
-            setError(errorMessage(e))
+            if (selectedRef.current === table) {
+                setError(errorMessage(e))
+            }
         } finally {
-            setBusy(false)
+            if (selectedRef.current === table) {
+                setBusy(false)
+            }
         }
-    }, [selected, busy, session.id, db, pageSize])
+    }, [session.id, db, pageSize, selected])
+
+    const handleSetDataView = useCallback((view: 'data' | 'struct' | 'index') => {
+        setDataView(view)
+        if (!selected) return
+        if (view === 'struct' && !structData) {
+            API.mysqlDescribe(session.id, db, selected)
+                .then((struct) => {
+                    if (selectedRef.current === selected) setStructData(struct)
+                })
+                .catch((e) => console.warn('mysqlDescribe error:', e))
+        } else if (view === 'index' && indexData.length === 0) {
+            API.mysqlIndexes(session.id, db, selected)
+                .then((idx) => {
+                    if (selectedRef.current === selected) setIndexData(idx)
+                })
+                .catch((e) => console.warn('mysqlIndexes error:', e))
+        }
+    }, [selected, structData, indexData.length, session.id, db])
 
     const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
 
@@ -225,32 +252,12 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         if (!selected || busy) return
         const target = Math.min(Math.max(1, p), totalPages)
         if (target === page) return
-        void fetchPageData(target)
+        void openTable(selected, target)
     }
 
     const changePageSize = (size: number) => {
         setPageSize(size)
-        if (selected) void fetchPageData(1, size)
-    }
-
-    const handleDataViewChange = async (v: 'data' | 'struct' | 'index') => {
-        setDataView(v)
-        if (!selected) return
-        if (v === 'index' && indexData.length === 0) {
-            try {
-                const idx = await API.mysqlIndexes(session.id, db, selected)
-                setIndexData(idx)
-            } catch (e) {
-                console.error('加载索引失败', e)
-            }
-        } else if (v === 'struct' && tableStatus.length === 0) {
-            try {
-                const ts = await API.mysqlTableStatus(session.id, db)
-                setTableStatus(ts)
-            } catch (e) {
-                console.error('加载表状态失败', e)
-            }
-        }
+        if (selected) void openTable(selected, 1, size)
     }
 
     /* ----------------- SQL 编辑器（多标签 + 历史） ----------------- */
@@ -821,7 +828,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             busy={busy}
                             selected={selected}
                             dataView={dataView}
-                            setDataView={handleDataViewChange}
+                            setDataView={handleSetDataView}
                             columns={columns}
                             structData={structData}
                             pkCols={pkCols}
@@ -834,7 +841,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             totalRows={totalRows}
                             totalPages={totalPages}
                             indexData={indexData}
-                            tableStatus={tableStatus}
                             onOpenTable={openTable}
                             onCloseTable={() => setSelected(null)}
                             onAddRow={addRow}
