@@ -1,13 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Tooltip, Segmented } from 'antd'
-import { PanelLeft, Folder, BarChart2, Play, Plug, Clock, Box, Maximize2, Minimize2, X } from 'lucide-react'
+import { PanelLeft, Folder, BarChart2, Play, Plug, Clock, Maximize2, Minimize2, X } from 'lucide-react'
 import TerminalView from '@/pages/ssh/terminal/TerminalView'
 import FilePanel from '@/pages/ssh/file/FilePanel'
 import DashboardPanel from '@/pages/ssh/dashboard/DashboardPanel'
 import ProcessPanel from '@/pages/ssh/process/ProcessPanel'
 import ServicePanel from '@/pages/ssh/service/ServicePanel'
 import CronPanel from '@/pages/ssh/cron/CronPanel'
-import DockerPanel from '@/pages/ssh/docker/DockerPanel'
 import { SessionInfo } from '@/types'
 import g from '@/styles/global.module.less'
 import w from '@/pages/ssh/SessionWorkspace.module.less'
@@ -38,7 +37,7 @@ export default function SessionWorkspace({
     })
     const [showPanel, setShowPanel] = useState<boolean>(true)
     const [isMaximized, setIsMaximized] = useState<boolean>(false)
-    const [activeTab, setActiveTab] = useState<'files' | 'process' | 'service' | 'cron' | 'docker' | 'dashboard'>('files')
+    const [activeTab, setActiveTab] = useState<'files' | 'process' | 'service' | 'cron' | 'dashboard'>('files')
 
     const draggingRef = useRef(false)
     const panelWidthRef = useRef(panelWidth)
@@ -121,7 +120,6 @@ export default function SessionWorkspace({
                                         { label: <span className={w.tabLabel}><Play size={13} /> 进程</span>, value: 'process' },
                                         { label: <span className={w.tabLabel}><Plug size={13} /> 服务</span>, value: 'service' },
                                         { label: <span className={w.tabLabel}><Clock size={13} /> 定时任务</span>, value: 'cron' },
-                                        { label: <span className={w.tabLabel}><Box size={13} /> Docker</span>, value: 'docker' },
                                     ]}
                                 />
                             </div>
@@ -173,11 +171,6 @@ export default function SessionWorkspace({
                             <CronPanel
                                 sessionId={session.id}
                                 active={activeTab === 'cron'}
-                                onNotify={onNotify}
-                            />
-                            <DockerPanel
-                                sessionId={session.id}
-                                active={activeTab === 'docker'}
                                 onNotify={onNotify}
                             />
                         </div>

@@ -11,8 +11,10 @@ type AppSettings struct {
 	AiAPIKey                string  `json:"aiApiKey"`
 	AiModel                 string  `json:"aiModel"`
 	AiTemperature           float64 `json:"aiTemperature"`
-	AiMaxContextTokens      int     `json:"aiMaxContextTokens"`
-	AiCompressionStrategy   string  `json:"aiCompressionStrategy"` // "summary" | "sliding"
+	AiModelContextTokens    int     `json:"aiModelContextTokens"`  // 模型上下文窗口总长度 (如 131072 / 128k, 65536 / 64k)
+	AiContextCompressRatio  int     `json:"aiContextCompressRatio"` // 压缩触发百分比 (例如 80 即 80%)
+	AiMaxContextTokens      int     `json:"aiMaxContextTokens"`    // 实际触发 Token 数
+	AiCompressionStrategy   string  `json:"aiCompressionStrategy"` // "none" | "summary" | "sliding"
 	AiEnableMultimodal      bool    `json:"aiEnableMultimodal"`
 	AiSystemPrompt          string  `json:"aiSystemPrompt"`
 	AiWorkspaceDir          string  `json:"aiWorkspaceDir"`
@@ -37,7 +39,9 @@ func DefaultAppSettings() AppSettings {
 		AiAPIKey:                "",
 		AiModel:                 "deepseek-v4-flash",
 		AiTemperature:           0.7,
-		AiMaxContextTokens:      4096,
+		AiModelContextTokens:    65536,
+		AiContextCompressRatio:  80,
+		AiMaxContextTokens:      52428,
 		AiCompressionStrategy:   "summary",
 		AiEnableMultimodal:      false,
 		AiSystemPrompt:          "你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。",

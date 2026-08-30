@@ -16,7 +16,7 @@ import {
 import ClientIcon from '@/components/ClientIcon'
 import ContextMenu, { closedMenu, MenuState, MenuItem } from '@/components/ContextMenu'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
-import { ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, ConnType } from '@/types'
+import { ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType } from '@/types'
 import g from '@/styles/global.module.less'
 import s from '@/components/Sidebar.module.less'
 
@@ -36,6 +36,10 @@ interface Props {
     activeMongoId: string | null
     sqliteSessions: SqliteSessionInfo[]
     activeSqliteId: string | null
+    dockerSessions?: DockerSessionInfo[]
+    activeDockerId?: string | null
+    k8sSessions?: K8sSessionInfo[]
+    activeK8sId?: string | null
     onNew: () => void
     onEdit: (cfg: ServerConfig) => void
     onDelete: (cfg: ServerConfig) => void
@@ -67,6 +71,10 @@ export default function Sidebar({
     activeMongoId,
     sqliteSessions,
     activeSqliteId,
+    dockerSessions = [],
+    activeDockerId = null,
+    k8sSessions = [],
+    activeK8sId = null,
     onNew,
     onEdit,
     onDelete,
@@ -92,7 +100,7 @@ export default function Sidebar({
     const [editingGroup, setEditingGroup] = useState<{ id: string; name: string } | null>(null)
     const [moveMenu, setMoveMenu] = useState<{ serverId: string; x: number; y: number } | null>(null)
 
-    // 合并 SSH 与 Redis，按名称/主机排序，统一展示。
+    // 合并展示各类型服务器列表。
     const filtered = useMemo(() => {
         const kw = keyword.trim().toLowerCase()
         const list = servers.filter(
@@ -102,19 +110,23 @@ export default function Sidebar({
                 s.type === 'mysql' ||
                 s.type === 'mqtt' ||
                 s.type === 'mongo' ||
-                s.type === 'sqlite'
+                s.type === 'sqlite' ||
+                s.type === 'docker' ||
+                s.type === 'k8s'
         )
         const matched = kw
             ? list.filter(
                 (s) =>
                     s.name.toLowerCase().includes(kw) ||
                     s.host.toLowerCase().includes(kw) ||
-                    s.username.toLowerCase().includes(kw)
+                    s.username.toLowerCase().includes(kw) ||
+                    (s.dockerSocketPath || '').toLowerCase().includes(kw) ||
+                    (s.k8sApiServer || '').toLowerCase().includes(kw)
             )
             : list
         return matched.slice().sort((a, b) => {
-            const na = (a.name || a.host).toLowerCase()
-            const nb = (b.name || b.host).toLowerCase()
+            const na = (a.name || a.host || a.dockerSocketPath || a.k8sApiServer || '').toLowerCase()
+            const nb = (b.name || b.host || b.dockerSocketPath || b.k8sApiServer || '').toLowerCase()
             return na < nb ? -1 : na > nb ? 1 : 0
         })
     }, [servers, keyword])
@@ -130,7 +142,9 @@ export default function Sidebar({
                     (s.groupId || '') === g.id &&
                     (s.name.toLowerCase().includes(kw) ||
                         s.host.toLowerCase().includes(kw) ||
-                        s.username.toLowerCase().includes(kw))
+                        s.username.toLowerCase().includes(kw) ||
+                        (s.dockerSocketPath || '').toLowerCase().includes(kw) ||
+                        (s.k8sApiServer || '').toLowerCase().includes(kw))
             )
             if (members.length > 0) {
                 autoExpanded[g.id] = true
@@ -150,7 +164,11 @@ export default function Sidebar({
                         ? 'mongo'
                         : s.type === 'sqlite'
                             ? 'sqlite'
-                            : 'ssh'
+                            : s.type === 'docker'
+                                ? 'docker'
+                                : s.type === 'k8s'
+                                    ? 'k8s'
+                                    : 'ssh'
 
     const sessionsOf = (server: ServerConfig) => {
         const kind = kindOf(server)
@@ -159,6 +177,8 @@ export default function Sidebar({
         if (kind === 'mqtt') return mqttSessions.filter((s) => s.serverId === server.id)
         if (kind === 'mongo') return mongoSessions.filter((s) => s.serverId === server.id)
         if (kind === 'sqlite') return sqliteSessions.filter((s) => s.serverId === server.id)
+        if (kind === 'docker') return dockerSessions.filter((s) => s.serverId === server.id)
+        if (kind === 'k8s') return (k8sSessions || []).filter((s) => s.serverId === server.id)
         return sessions.filter((s) => s.serverId === server.id)
     }
 
@@ -169,6 +189,8 @@ export default function Sidebar({
         if (kind === 'mqtt') return activeMqttId
         if (kind === 'mongo') return activeMongoId
         if (kind === 'sqlite') return activeSqliteId
+        if (kind === 'docker') return activeDockerId
+        if (kind === 'k8s') return activeK8sId
         return activeSessionId
     }
 
@@ -263,14 +285,26 @@ export default function Sidebar({
                         <span className={s.serverName}>
                             {kind === 'sqlite'
                                 ? ((server.name || server.sqlitePath || '').split(/[\\/]/).pop() || 'SQLite 文件')
-                                : server.name || ((isRedis || isMysql || kind === 'mqtt' || kind === 'mongo') ? `${server.host}:${server.port}` : `${server.username}@${server.host}`)}
+                                : kind === 'docker'
+                                    ? server.name || (server.dockerEndpointType === 'ssh' ? `Docker (${server.dockerSshHost || server.host})` : server.dockerEndpointType === 'tcp' ? `Docker (${server.host})` : 'Docker (Local Socket)')
+                                    : kind === 'k8s'
+                                        ? server.name || (server.k8sContext ? `K8s (${server.k8sContext})` : server.k8sApiServer ? `K8s (${server.k8sApiServer})` : 'Kubernetes')
+                                        : server.name || ((isRedis || isMysql || kind === 'mqtt' || kind === 'mongo') ? `${server.host}:${server.port}` : `${server.username}@${server.host}`)}
                         </span>
-                        <span className={s.serverSub} title={server.sqlitePath}>
-                            {isRedis || isMysql || kind === 'mqtt' || kind === 'mongo'
-                                ? `${server.host}:${server.port}`
-                                : kind === 'sqlite'
-                                    ? (server.sqlitePath || '')
-                                    : `${server.username}@${server.host}:${server.port}`}
+                        <span className={s.serverSub} title={server.sqlitePath || server.dockerSocketPath || server.k8sKubeconfigPath || server.k8sApiServer}>
+                            {kind === 'docker'
+                                ? (server.dockerEndpointType === 'ssh'
+                                    ? `ssh://${server.dockerSshUser || 'root'}@${server.dockerSshHost || server.host}:${server.dockerSshPort || 22}`
+                                    : server.dockerEndpointType === 'tcp'
+                                        ? `tcp://${server.host}:${server.port || (server.dockerTlsEnabled ? 2376 : 2375)}`
+                                        : (server.dockerSocketPath || '/var/run/docker.sock'))
+                                : kind === 'k8s'
+                                    ? (server.k8sContext ? `Context: ${server.k8sContext}` : server.k8sKubeconfigPath ? (server.k8sKubeconfigPath.split(/[\\/]/).pop() || '') : (server.k8sApiServer || 'Kubeconfig'))
+                                    : isRedis || isMysql || kind === 'mqtt' || kind === 'mongo'
+                                        ? `${server.host}:${server.port}`
+                                        : kind === 'sqlite'
+                                            ? (server.sqlitePath || '')
+                                            : `${server.username}@${server.host}:${server.port}`}
                         </span>
                     </span>
                     <span className={s.serverActions}>
@@ -278,7 +312,7 @@ export default function Sidebar({
                             <span className={s.spinner} title="连接中…">
                                 <svg className={s.spinSvg} viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <circle cx="12" cy="12" r="9" strokeOpacity="0.22" strokeWidth="2.5" />
-                                    <path d="M12 3a9 9 0 0 1 9 9" strokeWidth="2.5" strokeLinecap="round" />
+                                    <path d="M21 12a9 9 0 0 0-9-9" strokeWidth="2.5" strokeLinecap="round" />
                                 </svg>
                             </span>
                         ) : (
@@ -286,14 +320,19 @@ export default function Sidebar({
                                 <Button
                                     size="small"
                                     type="text"
-                                    icon={<Plug size={15} />}
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        onConnect(server)
-                                    }}
+                                    icon={<Plug size={13} />}
+                                    onClick={() => onConnect(server)}
                                 />
                             </Tooltip>
                         )}
+                        <Tooltip title="编辑">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<Edit size={13} />}
+                                onClick={() => onEdit(server)}
+                            />
+                        </Tooltip>
                     </span>
                 </div>
 
@@ -305,7 +344,7 @@ export default function Sidebar({
                         className={s.sessionBtn}
                         onClick={() => onFocusSession(sess.id, kind)}
                     >
-                        <span className={`${g.dot}${sess.connected ? ' ' + g.on : ''}`} />
+                        <span className={`${g.dot}${sess.connected !== false ? ' ' + g.on : ''}`} />
                         <span className={s.sessionTitle}>
                             {isRedis
                                 ? `Redis ${server.host}:${server.port}`
@@ -317,7 +356,11 @@ export default function Sidebar({
                                             ? `MongoDB ${server.host}:${server.port}`
                                             : kind === 'sqlite'
                                                 ? `SQLite ${((sess as any).title || server.name || server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
-                                                : `会话 ${sess.id.slice(0, 6)}`}
+                                                : kind === 'k8s'
+                                                    ? (sess as any).title || `K8s ${(sess as any).apiServer}`
+                                                    : kind === 'docker'
+                                                        ? (sess as any).title || `Docker ${(sess as any).serverId || sess.id}`
+                                                        : `会话 ${sess.id.slice(0, 6)}`}
                         </span>
                     </Button>
                 ))}

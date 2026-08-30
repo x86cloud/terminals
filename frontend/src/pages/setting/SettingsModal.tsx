@@ -26,8 +26,10 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const [aiApiKey, setAiApiKey] = useState('')
     const [aiModel, setAiModel] = useState('deepseek-v4-flash')
     const [aiTemperature, setAiTemperature] = useState(0.7)
-    const [aiMaxContextTokens, setAiMaxContextTokens] = useState(4096)
-    const [aiCompressionStrategy, setAiCompressionStrategy] = useState<'summary' | 'sliding'>('summary')
+    const [aiModelContextTokens, setAiModelContextTokens] = useState(65536)
+    const [aiContextCompressRatio, setAiContextCompressRatio] = useState(80)
+    const [aiMaxContextTokens, setAiMaxContextTokens] = useState(52428)
+    const [aiCompressionStrategy, setAiCompressionStrategy] = useState<'none' | 'summary' | 'sliding'>('summary')
     const [aiEnableMultimodal, setAiEnableMultimodal] = useState(false)
     const [aiEnableWebSearch, setAiEnableWebSearch] = useState(false)
     const [aiEnablePermissionGuard, setAiEnablePermissionGuard] = useState(true)
@@ -42,13 +44,17 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const prevOpenRef = useRef(false)
     useEffect(() => {
         if (open && !prevOpenRef.current && settings) {
+            const modelTokens = settings.aiModelContextTokens || 65536
+            const ratio = settings.aiContextCompressRatio || 80
             setThemeMode(settings.themeMode || 'light')
             setGlobalFontFamily(settings.globalFontFamily || 'system')
             setAiBaseUrl(settings.aiBaseUrl || 'https://api.deepseek.com')
             setAiApiKey(settings.aiApiKey || '')
             setAiModel(settings.aiModel || 'deepseek-v4-flash')
             setAiTemperature(settings.aiTemperature ?? 0.7)
-            setAiMaxContextTokens(settings.aiMaxContextTokens || 4096)
+            setAiModelContextTokens(modelTokens)
+            setAiContextCompressRatio(ratio)
+            setAiMaxContextTokens(settings.aiMaxContextTokens || Math.round((modelTokens * ratio) / 100))
             setAiCompressionStrategy(settings.aiCompressionStrategy || 'summary')
             setAiEnableMultimodal(!!settings.aiEnableMultimodal)
             setAiEnableWebSearch(!!settings.aiEnableWebSearch)
@@ -85,6 +91,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiApiKey,
             aiModel,
             aiTemperature,
+            aiModelContextTokens,
+            aiContextCompressRatio,
             aiMaxContextTokens,
             aiCompressionStrategy,
             aiEnableMultimodal,
@@ -99,7 +107,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiWorkspaceDir,
             ...partial,
         })
-    }, [settings, themeMode, globalFontFamily, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, onSave])
+    }, [settings, themeMode, globalFontFamily, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiModelContextTokens, aiContextCompressRatio, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, onSave])
 
     if (!open) return null
 
@@ -116,12 +124,31 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     }
 
     const handleAiAgentChange = (fields: Partial<AppSettings>) => {
+        let nextModelTokens = aiModelContextTokens
+        let nextRatio = aiContextCompressRatio
+
         if (fields.aiBaseUrl !== undefined) setAiBaseUrl(fields.aiBaseUrl)
         if (fields.aiApiKey !== undefined) setAiApiKey(fields.aiApiKey)
         if (fields.aiModel !== undefined) setAiModel(fields.aiModel)
         if (fields.aiTemperature !== undefined) setAiTemperature(fields.aiTemperature)
-        if (fields.aiMaxContextTokens !== undefined) setAiMaxContextTokens(fields.aiMaxContextTokens)
+        if (fields.aiModelContextTokens !== undefined) {
+            nextModelTokens = fields.aiModelContextTokens
+            setAiModelContextTokens(fields.aiModelContextTokens)
+        }
+        if (fields.aiContextCompressRatio !== undefined) {
+            nextRatio = fields.aiContextCompressRatio
+            setAiContextCompressRatio(fields.aiContextCompressRatio)
+        }
         if (fields.aiCompressionStrategy !== undefined) setAiCompressionStrategy(fields.aiCompressionStrategy)
+
+        if (fields.aiMaxContextTokens !== undefined) {
+            setAiMaxContextTokens(fields.aiMaxContextTokens)
+        } else if (fields.aiModelContextTokens !== undefined || fields.aiContextCompressRatio !== undefined) {
+            const computed = Math.round((nextModelTokens * nextRatio) / 100)
+            setAiMaxContextTokens(computed)
+            fields.aiMaxContextTokens = computed
+        }
+
         if (fields.aiEnableMultimodal !== undefined) setAiEnableMultimodal(fields.aiEnableMultimodal)
         if (fields.aiEnableWebSearch !== undefined) setAiEnableWebSearch(fields.aiEnableWebSearch)
         if (fields.aiEnablePermissionGuard !== undefined) setAiEnablePermissionGuard(fields.aiEnablePermissionGuard)
@@ -198,6 +225,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         aiApiKey={aiApiKey}
                         aiModel={aiModel}
                         aiTemperature={aiTemperature}
+                        aiModelContextTokens={aiModelContextTokens}
+                        aiContextCompressRatio={aiContextCompressRatio}
                         aiMaxContextTokens={aiMaxContextTokens}
                         aiCompressionStrategy={aiCompressionStrategy}
                         aiEnableMultimodal={aiEnableMultimodal}

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"terminal/agent/events"
 	"terminal/agent/store"
 )
 
@@ -29,30 +30,8 @@ type PermissionLevel string
 const (
 	LevelAllow     PermissionLevel = "allow"
 	LevelConfirm   PermissionLevel = "confirm"
-	LevelEscalate  PermissionLevel = "escalate"
 	LevelForbidden PermissionLevel = "forbidden"
 )
-
-type ApprovalRequest struct {
-	ConfirmID   string                `json:"confirm_id"`
-	SessionID   string                `json:"session_id"`
-	TraceID     string                `json:"trace_id"`
-	ToolName    string                `json:"tool_name"`
-	Action      string                `json:"action"`
-	Path        string                `json:"path"`
-	Description string                `json:"description"`
-	Arguments   string                `json:"arguments"`
-	Level       PermissionLevel       `json:"level"`
-	CreatedAt   int64                 `json:"created_at"`
-	ResponseCh  chan ApprovalDecision `json:"-"`
-}
-
-type ApprovalDecision struct {
-	Approved       bool   `json:"approved"`
-	Remember       bool   `json:"remember"` // Remember decision for session (e.g. 30 mins)
-	Reason         string `json:"reason,omitempty"`
-	EscalateReason string `json:"escalate_reason,omitempty"`
-}
 
 type ToolRule struct {
 	ToolName    string
@@ -61,21 +40,118 @@ type ToolRule struct {
 	AuditFunc   func(ctx context.Context, input string) (PermissionLevel, string)
 }
 
+// HitlDecision represents user's approval response
+type HitlDecision struct {
+	Approved bool   `json:"approved"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+// HitlRequest represents an in-flight human approval request
+type HitlRequest struct {
+	ConfirmID  string            `json:"confirm_id"`
+	SessionID  string            `json:"session_id"`
+	TraceID    string            `json:"trace_id,omitempty"`
+	ToolName   string            `json:"tool_name"`
+	ToolDesc   string            `json:"tool_desc"`
+	Input      string            `json:"input"`
+	RiskDetail string            `json:"risk_detail"`
+	CreatedAt  int64             `json:"created_at"`
+	ResponseCh chan HitlDecision `json:"-"`
+}
+
+// HitlManager handles synchronous human-in-the-loop approvals with zero timeout
+type HitlManager struct {
+	mu       sync.RWMutex
+	pending  sync.Map // confirmID -> *HitlRequest
+	eventBus *events.EventBus
+}
+
+func NewHitlManager(eb *events.EventBus) *HitlManager {
+	return &HitlManager{
+		eventBus: eb,
+	}
+}
+
+func (m *HitlManager) RequestApproval(ctx context.Context, sessionID, traceID, toolName, toolDesc, input, riskDetail string) (bool, string, error) {
+	confirmID := fmt.Sprintf("hitl_%d", time.Now().UnixNano())
+	req := &HitlRequest{
+		ConfirmID:  confirmID,
+		SessionID:  sessionID,
+		TraceID:    traceID,
+		ToolName:   toolName,
+		ToolDesc:   toolDesc,
+		Input:      input,
+		RiskDetail: riskDetail,
+		CreatedAt:  time.Now().UnixMilli(),
+		ResponseCh: make(chan HitlDecision, 1),
+	}
+
+	m.pending.Store(confirmID, req)
+	defer m.pending.Delete(confirmID)
+
+	if m.eventBus != nil {
+		m.eventBus.Emit(events.Event{
+			Type:      events.EventHitlConfirm,
+			SessionID: sessionID,
+			TraceID:   traceID,
+			Payload: events.HitlConfirmPayload{
+				ConfirmID:  confirmID,
+				SessionID:  sessionID,
+				TraceID:    traceID,
+				ToolName:   toolName,
+				ToolDesc:   toolDesc,
+				Input:      input,
+				RiskDetail: riskDetail,
+			},
+		})
+	}
+
+	// Wait indefinitely for user approval, rejection, or context cancellation (NO TIMEOUT)
+	select {
+	case <-ctx.Done():
+		return false, "", ctx.Err()
+	case dec := <-req.ResponseCh:
+		return dec.Approved, dec.Reason, nil
+	}
+}
+
+func (m *HitlManager) ResolveApproval(confirmID string, approved bool, reason string) bool {
+	val, ok := m.pending.Load(confirmID)
+	if !ok {
+		return false
+	}
+	req, ok := val.(*HitlRequest)
+	if !ok {
+		return false
+	}
+
+	trimmedReason := strings.TrimSpace(reason)
+	select {
+	case req.ResponseCh <- HitlDecision{Approved: approved, Reason: trimmedReason}:
+		return true
+	default:
+		return false
+	}
+}
+
+func (m *HitlManager) ListPending() []*HitlRequest {
+	var list []*HitlRequest
+	m.pending.Range(func(key, value any) bool {
+		if req, ok := value.(*HitlRequest); ok {
+			list = append(list, req)
+		}
+		return true
+	})
+	return list
+}
+
 type PolicyGuard struct {
 	mu                    sync.RWMutex
 	enableGuard           bool
 	blockHighRiskCommands bool
 	rules                 map[string]ToolRule
 	store                 *store.Store
-
-	// Session authorization memory: sessionID -> map[key]expireTimestamp
-	authMemory sync.Map
-
-	// Pending approval queue: confirmID -> *ApprovalRequest
-	pendingQueue sync.Map
-
-	// Callback when new confirm request arrives
-	onConfirmRequest func(req *ApprovalRequest)
+	hitlMgr               *HitlManager
 }
 
 func NewPolicyGuard(enableGuard, blockHighRiskCommands bool, st *store.Store) *PolicyGuard {
@@ -89,10 +165,16 @@ func NewPolicyGuard(enableGuard, blockHighRiskCommands bool, st *store.Store) *P
 	return g
 }
 
-func (g *PolicyGuard) SetOnConfirmRequest(fn func(req *ApprovalRequest)) {
+func (g *PolicyGuard) SetHitlManager(hm *HitlManager) {
 	g.mu.Lock()
 	defer g.mu.Unlock()
-	g.onConfirmRequest = fn
+	g.hitlMgr = hm
+}
+
+func (g *PolicyGuard) HitlManager() *HitlManager {
+	g.mu.RLock()
+	defer g.mu.RUnlock()
+	return g.hitlMgr
 }
 
 func (g *PolicyGuard) SetEnableGuard(enable bool) {
@@ -109,12 +191,12 @@ func (g *PolicyGuard) SetBlockHighRiskCommands(block bool) {
 
 func (g *PolicyGuard) initDefaultRules() {
 	// 1. Workspace / Coding File Tools
-	g.rules["read_file"] = ToolRule{ToolName: "read_file", Level: LevelAllow, Description: "读取工作区文件内容（支持行号切片）"}
+	g.rules["read_file"] = ToolRule{ToolName: "read_file", Level: LevelAllow, Description: "读取工作区文件内容"}
 	g.rules["create_file"] = ToolRule{ToolName: "create_file", Level: LevelAllow, Description: "在工作区新建代码文件"}
-	g.rules["apply_file_patch"] = ToolRule{ToolName: "apply_file_patch", Level: LevelAllow, Description: "在工作区应用局部精准代码 Patch 补丁"}
+	g.rules["apply_file_patch"] = ToolRule{ToolName: "apply_file_patch", Level: LevelAllow, Description: "在工作区应用局部代码 Patch 补丁"}
 	g.rules["list_dir"] = ToolRule{ToolName: "list_dir", Level: LevelAllow, Description: "查看工作区文件目录"}
 	g.rules["search_files"] = ToolRule{ToolName: "search_files", Level: LevelAllow, Description: "搜索工作区文件与关键字"}
-	g.rules["move_file"] = ToolRule{ToolName: "move_file", Level: LevelConfirm, Description: "移动或重命名工作区文件"}
+	g.rules["move_file"] = ToolRule{ToolName: "move_file", Level: LevelAllow, Description: "移动或重命名工作区文件"}
 	g.rules["delete_file"] = ToolRule{ToolName: "delete_file", Level: LevelConfirm, Description: "删除工作区文件或目录"}
 	g.rules["execute"] = ToolRule{
 		ToolName:    "execute",
@@ -126,7 +208,8 @@ func (g *PolicyGuard) initDefaultRules() {
 	// 2. Web search
 	g.rules["web_search"] = ToolRule{ToolName: "web_search", Level: LevelAllow, Description: "互联网网页与新闻检索"}
 
-	// 3. SSH Readonly
+	// 3. SSH Tools
+	// 读操作类：直接放行
 	g.rules["ssh_list_sessions"] = ToolRule{ToolName: "ssh_list_sessions", Level: LevelAllow, Description: "查看 SSH 会话列表"}
 	g.rules["ssh_get_system_info"] = ToolRule{ToolName: "ssh_get_system_info", Level: LevelAllow, Description: "查看远程服务器 CPU/内存/磁盘与负载"}
 	g.rules["ssh_list_dir"] = ToolRule{ToolName: "ssh_list_dir", Level: LevelAllow, Description: "查看远程服务器文件目录"}
@@ -134,8 +217,7 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["ssh_download_file"] = ToolRule{ToolName: "ssh_download_file", Level: LevelAllow, Description: "下载远程服务器文件至本地工作目录"}
 	g.rules["ssh_list_processes"] = ToolRule{ToolName: "ssh_list_processes", Level: LevelAllow, Description: "查看远程服务器运行进程"}
 	g.rules["ssh_list_containers"] = ToolRule{ToolName: "ssh_list_containers", Level: LevelAllow, Description: "查看远程服务器 Docker 容器"}
-
-	// 4. SSH Write / Exec
+	// 写操作类：需人工审批 (HITL)
 	g.rules["ssh_write_file"] = ToolRule{ToolName: "ssh_write_file", Level: LevelConfirm, Description: "在远程服务器写入或修改文件"}
 	g.rules["ssh_delete_file"] = ToolRule{ToolName: "ssh_delete_file", Level: LevelConfirm, Description: "在远程服务器删除文件或目录"}
 	g.rules["ssh_upload_file"] = ToolRule{ToolName: "ssh_upload_file", Level: LevelConfirm, Description: "上传本地文件至远程服务器"}
@@ -146,65 +228,64 @@ func (g *PolicyGuard) initDefaultRules() {
 		AuditFunc:   g.auditShellCommand,
 	}
 
-	// 5. Database readonly
-	g.rules["db_redis_list_connections"] = ToolRule{ToolName: "db_redis_list_connections", Level: LevelAllow, Description: "查看已建立连接的 Redis 实例"}
+	// 4. Database tools
+	g.rules["db_redis_list_connections"] = ToolRule{ToolName: "db_redis_list_connections", Level: LevelAllow, Description: "查看 Redis 实例"}
 	g.rules["db_redis_keys"] = ToolRule{ToolName: "db_redis_keys", Level: LevelAllow, Description: "查询 Redis 键列表"}
-	g.rules["db_redis_get"] = ToolRule{ToolName: "db_redis_get", Level: LevelAllow, Description: "读取 Redis 键值与 TTL"}
-	g.rules["db_redis_info"] = ToolRule{ToolName: "db_redis_info", Level: LevelAllow, Description: "查看 Redis 服务器状态与内存使用"}
-	g.rules["db_redis_slowlog"] = ToolRule{ToolName: "db_redis_slowlog", Level: LevelAllow, Description: "查看 Redis 慢查询日志"}
+	g.rules["db_redis_get"] = ToolRule{ToolName: "db_redis_get", Level: LevelAllow, Description: "读取 Redis 键值"}
+	g.rules["db_redis_info"] = ToolRule{ToolName: "db_redis_info", Level: LevelAllow, Description: "查看 Redis 状态"}
+	g.rules["db_redis_slowlog"] = ToolRule{ToolName: "db_redis_slowlog", Level: LevelAllow, Description: "查看 Redis 慢日志"}
 
-	g.rules["db_mysql_list_connections"] = ToolRule{ToolName: "db_mysql_list_connections", Level: LevelAllow, Description: "查看已建立连接的 MySQL 实例"}
-	g.rules["db_mysql_databases"] = ToolRule{ToolName: "db_mysql_databases", Level: LevelAllow, Description: "查看 MySQL 服务器所有数据库"}
-	g.rules["db_mysql_tables"] = ToolRule{ToolName: "db_mysql_tables", Level: LevelAllow, Description: "查看 MySQL 数据库数据表"}
+	g.rules["db_mysql_list_connections"] = ToolRule{ToolName: "db_mysql_list_connections", Level: LevelAllow, Description: "查看 MySQL 实例"}
+	g.rules["db_mysql_databases"] = ToolRule{ToolName: "db_mysql_databases", Level: LevelAllow, Description: "查看 MySQL 数据库"}
+	g.rules["db_mysql_tables"] = ToolRule{ToolName: "db_mysql_tables", Level: LevelAllow, Description: "查看 MySQL 数据表"}
 	g.rules["db_mysql_query"] = ToolRule{
 		ToolName:    "db_mysql_query",
 		Level:       LevelAllow,
-		Description: "执行 MySQL 数据库 SQL 语句 (支持读写与结构变更)",
+		Description: "执行 MySQL 数据库 SQL 语句",
 		AuditFunc:   g.auditSQLQuery,
 	}
-	g.rules["db_mysql_schema"] = ToolRule{ToolName: "db_mysql_schema", Level: LevelAllow, Description: "查看 MySQL 库表结构与索引"}
-	g.rules["db_mysql_status"] = ToolRule{ToolName: "db_mysql_status", Level: LevelAllow, Description: "查看 MySQL 服务器指标看板"}
-	g.rules["db_mysql_processlist"] = ToolRule{ToolName: "db_mysql_processlist", Level: LevelAllow, Description: "查看 MySQL 正在执行的线程进程"}
+	g.rules["db_mysql_schema"] = ToolRule{ToolName: "db_mysql_schema", Level: LevelAllow, Description: "查看 MySQL 表结构"}
+	g.rules["db_mysql_status"] = ToolRule{ToolName: "db_mysql_status", Level: LevelAllow, Description: "查看 MySQL 指标"}
+	g.rules["db_mysql_processlist"] = ToolRule{ToolName: "db_mysql_processlist", Level: LevelAllow, Description: "查看 MySQL 线程"}
 
-	g.rules["db_mongo_list_connections"] = ToolRule{ToolName: "db_mongo_list_connections", Level: LevelAllow, Description: "查看已建立连接的 MongoDB 实例"}
+	g.rules["db_mongo_list_connections"] = ToolRule{ToolName: "db_mongo_list_connections", Level: LevelAllow, Description: "查看 MongoDB 实例"}
 	g.rules["db_mongo_find"] = ToolRule{ToolName: "db_mongo_find", Level: LevelAllow, Description: "查询 MongoDB 集合文档"}
-	g.rules["db_mongo_aggregate"] = ToolRule{ToolName: "db_mongo_aggregate", Level: LevelAllow, Description: "执行 MongoDB 聚合分析查询"}
+	g.rules["db_mongo_aggregate"] = ToolRule{ToolName: "db_mongo_aggregate", Level: LevelAllow, Description: "执行 MongoDB 聚合查询"}
 	g.rules["db_mongo_health"] = ToolRule{ToolName: "db_mongo_health", Level: LevelAllow, Description: "查看 MongoDB 健康状态"}
 
-	g.rules["db_sqlite_list_connections"] = ToolRule{ToolName: "db_sqlite_list_connections", Level: LevelAllow, Description: "查看已打开连接的 SQLite 数据库文件列表"}
-	g.rules["db_sqlite_list_tables"] = ToolRule{ToolName: "db_sqlite_list_tables", Level: LevelAllow, Description: "查看 SQLite 数据表列表"}
-	g.rules["db_sqlite_schema"] = ToolRule{ToolName: "db_sqlite_schema", Level: LevelAllow, Description: "查看 SQLite 库表结构与外键"}
+	g.rules["db_sqlite_list_connections"] = ToolRule{ToolName: "db_sqlite_list_connections", Level: LevelAllow, Description: "查看 SQLite 列表"}
+	g.rules["db_sqlite_list_tables"] = ToolRule{ToolName: "db_sqlite_list_tables", Level: LevelAllow, Description: "查看 SQLite 数据表"}
+	g.rules["db_sqlite_schema"] = ToolRule{ToolName: "db_sqlite_schema", Level: LevelAllow, Description: "查看 SQLite 表结构"}
 	g.rules["db_sqlite_query"] = ToolRule{
 		ToolName:    "db_sqlite_query",
 		Level:       LevelAllow,
-		Description: "执行 SQLite 数据库 SQL 语句 (支持读写与结构变更)",
+		Description: "执行 SQLite 数据库 SQL 语句",
 		AuditFunc:   g.auditSQLQuery,
 	}
 
-	// 6. Protocol tools
-	g.rules["mqtt_publish"] = ToolRule{ToolName: "mqtt_publish", Level: LevelConfirm, Description: "向 MQTT Broker 发布指定 Topic 消息"}
-	g.rules["mqtt_subscribe_once"] = ToolRule{ToolName: "mqtt_subscribe_once", Level: LevelAllow, Description: "单次订阅获取 MQTT 消息"}
-	g.rules["http_request_readonly"] = ToolRule{ToolName: "http_request_readonly", Level: LevelAllow, Description: "发送只读 HTTP GET 请求"}
+	// 5. Protocol & Orchestration tools
+	g.rules["mqtt_publish"] = ToolRule{ToolName: "mqtt_publish", Level: LevelAllow, Description: "发布 MQTT 消息"}
+	g.rules["mqtt_subscribe_once"] = ToolRule{ToolName: "mqtt_subscribe_once", Level: LevelAllow, Description: "单次订阅 MQTT 消息"}
+	g.rules["http_request_readonly"] = ToolRule{ToolName: "http_request_readonly", Level: LevelAllow, Description: "发送 HTTP GET 请求"}
 
-	// 7. Orchestration tools
-	g.rules["job_submit"] = ToolRule{ToolName: "job_submit", Level: LevelConfirm, Description: "提交后台异步执行作业"}
+	g.rules["job_submit"] = ToolRule{ToolName: "job_submit", Level: LevelAllow, Description: "提交后台作业"}
 	g.rules["job_status"] = ToolRule{ToolName: "job_status", Level: LevelAllow, Description: "查询后台作业状态"}
-	g.rules["job_output"] = ToolRule{ToolName: "job_output", Level: LevelAllow, Description: "读取后台作业增量输出"}
-	g.rules["job_kill"] = ToolRule{ToolName: "job_kill", Level: LevelConfirm, Description: "强制终止后台作业"}
+	g.rules["job_output"] = ToolRule{ToolName: "job_output", Level: LevelAllow, Description: "读取后台作业输出"}
+	g.rules["job_kill"] = ToolRule{ToolName: "job_kill", Level: LevelAllow, Description: "终止后台作业"}
 
-	g.rules["subagent_spawn"] = ToolRule{ToolName: "subagent_spawn", Level: LevelConfirm, Description: "委派独立子代理并发执行任务"}
-	g.rules["subagent_send"] = ToolRule{ToolName: "subagent_send", Level: LevelAllow, Description: "向已运行的子代理追加消息"}
-	g.rules["subagent_interrupt"] = ToolRule{ToolName: "subagent_interrupt", Level: LevelConfirm, Description: "中断子代理当前推导"}
-	g.rules["subagent_list"] = ToolRule{ToolName: "subagent_list", Level: LevelAllow, Description: "查看当前子代理列表与层级"}
+	g.rules["subagent_spawn"] = ToolRule{ToolName: "subagent_spawn", Level: LevelAllow, Description: "委派独立子代理"}
+	g.rules["subagent_send"] = ToolRule{ToolName: "subagent_send", Level: LevelAllow, Description: "向子代理追加消息"}
+	g.rules["subagent_interrupt"] = ToolRule{ToolName: "subagent_interrupt", Level: LevelAllow, Description: "中断子代理推导"}
+	g.rules["subagent_list"] = ToolRule{ToolName: "subagent_list", Level: LevelAllow, Description: "查看子代理列表"}
 
-	g.rules["workflow_run"] = ToolRule{ToolName: "workflow_run", Level: LevelConfirm, Description: "执行工作流"}
-	g.rules["workflow_create"] = ToolRule{ToolName: "workflow_create", Level: LevelAllow, Description: "创建工作流定义"}
+	g.rules["workflow_run"] = ToolRule{ToolName: "workflow_run", Level: LevelAllow, Description: "执行工作流"}
+	g.rules["workflow_create"] = ToolRule{ToolName: "workflow_create", Level: LevelAllow, Description: "创建工作流"}
 
-	g.rules["skill_load"] = ToolRule{ToolName: "skill_load", Level: LevelAllow, Description: "加载技能包 SOP 规则"}
+	g.rules["skill_load"] = ToolRule{ToolName: "skill_load", Level: LevelAllow, Description: "加载技能包 SOP"}
 	g.rules["skill_list"] = ToolRule{ToolName: "skill_list", Level: LevelAllow, Description: "列出可用技能包"}
 
-	g.rules["memory_save"] = ToolRule{ToolName: "memory_save", Level: LevelAllow, Description: "保存关键事实至长期语义记忆库"}
-	g.rules["memory_recall"] = ToolRule{ToolName: "memory_recall", Level: LevelAllow, Description: "从记忆库检索召回相关事实"}
+	g.rules["memory_save"] = ToolRule{ToolName: "memory_save", Level: LevelAllow, Description: "保存长期语义记忆"}
+	g.rules["memory_recall"] = ToolRule{ToolName: "memory_recall", Level: LevelAllow, Description: "检索召回事实记忆"}
 
 	g.rules["ask_user"] = ToolRule{ToolName: "ask_user", Level: LevelAllow, Description: "向用户发起交互询问"}
 }
@@ -214,13 +295,8 @@ func (g *PolicyGuard) auditShellCommand(ctx context.Context, input string) (Perm
 	blockHighRisk := g.blockHighRiskCommands
 	g.mu.RUnlock()
 
-	if !blockHighRisk {
-		return LevelConfirm, ""
-	}
-
 	clean := strings.ToLower(strings.TrimSpace(input))
 
-	// If JSON format like {"command": "...", "cmd": "..."}, unpack and append for strict check
 	var obj struct {
 		Command string `json:"command"`
 		Cmd     string `json:"cmd"`
@@ -234,12 +310,15 @@ func (g *PolicyGuard) auditShellCommand(ctx context.Context, input string) (Perm
 		}
 	}
 
-	for _, pattern := range HighRiskCommandPatterns {
-		if strings.Contains(clean, pattern) {
-			return LevelForbidden, fmt.Sprintf("命令中包含高危危险指令关键字: %s", pattern)
+	if blockHighRisk {
+		for _, pattern := range HighRiskCommandPatterns {
+			if strings.Contains(clean, pattern) {
+				return LevelForbidden, fmt.Sprintf("命令中包含高危危险指令关键字: %s", pattern)
+			}
 		}
 	}
-	return LevelConfirm, ""
+
+	return LevelConfirm, "执行本地/远程 Shell 命令行可能改变系统状态，需人工审批确认"
 }
 
 func (g *PolicyGuard) auditSQLQuery(ctx context.Context, input string) (PermissionLevel, string) {
@@ -252,7 +331,6 @@ func (g *PolicyGuard) auditSQLQuery(ctx context.Context, input string) (Permissi
 		return LevelAllow, ""
 	}
 
-	// Try parse json {sql: "..."}
 	var obj struct {
 		SQL string `json:"sql"`
 	}
@@ -264,15 +342,6 @@ func (g *PolicyGuard) auditSQLQuery(ctx context.Context, input string) (Permissi
 	cleanSQL := strings.TrimSpace(sqlText)
 	upperSQL := strings.ToUpper(cleanSQL)
 
-	// 1. Readonly query whitelist -> directly allow
-	readPrefixes := []string{"SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "PRAGMA", "VALUES"}
-	for _, p := range readPrefixes {
-		if strings.HasPrefix(upperSQL, p+" ") || upperSQL == p {
-			return LevelAllow, ""
-		}
-	}
-
-	// 2. High-risk destructive database commands
 	if blockHighRisk {
 		highRiskPatterns := []string{
 			"DROP DATABASE",
@@ -290,13 +359,23 @@ func (g *PolicyGuard) auditSQLQuery(ctx context.Context, input string) (Permissi
 		}
 	}
 
-	// 3. Write / DML / DDL operations require confirmation
-	fields := strings.Fields(upperSQL)
-	opName := "写操作/结构变更"
-	if len(fields) > 0 {
-		opName = fields[0]
+	// 只读 SQL 直接放行
+	readPrefixes := []string{"SELECT", "SHOW", "DESCRIBE", "DESC", "EXPLAIN", "PRAGMA"}
+	for _, p := range readPrefixes {
+		if strings.HasPrefix(upperSQL, p+" ") || upperSQL == p {
+			return LevelAllow, ""
+		}
 	}
-	return LevelConfirm, fmt.Sprintf("即将执行 SQL %s 语句，需确认审批", opName)
+
+	// 写与结构变更 SQL 需确认
+	writeKeywords := []string{"INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE", "REPLACE"}
+	for _, kw := range writeKeywords {
+		if strings.HasPrefix(upperSQL, kw+" ") || strings.Contains(upperSQL, " "+kw+" ") {
+			return LevelConfirm, fmt.Sprintf("检测到数据库写/结构变更 SQL 语句 (%s)，需人工审批确认", kw)
+		}
+	}
+
+	return LevelConfirm, "执行非只读 SQL 语句具有潜在数据风险，需人工审批确认"
 }
 
 func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input string, defaultLevel PermissionLevel) (PermissionLevel, string) {
@@ -308,135 +387,34 @@ func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input stri
 		return LevelAllow, ""
 	}
 
-	targetLevel := defaultLevel
-	if targetLevel == "" {
-		targetLevel = LevelAllow
-	}
-
 	rule, ok := g.rules[toolName]
 	if ok {
-		if rule.Level != "" {
-			targetLevel = rule.Level
-		}
 		if rule.AuditFunc != nil {
 			lvl, reason := rule.AuditFunc(ctx, input)
-			if lvl == LevelForbidden || lvl == LevelEscalate {
+			if lvl == LevelForbidden || lvl == LevelConfirm {
 				return lvl, reason
 			}
-			if lvl != "" {
-				targetLevel = lvl
+			if lvl == LevelAllow {
+				return LevelAllow, ""
 			}
 		}
-	}
-
-	// Check session authorization memory (e.g. user chose "Remember for this session")
-	if targetLevel == LevelConfirm && sessionID != "" {
-		if g.isAuthorizedInMemory(sessionID, toolName) {
-			return LevelAllow, "已通过会话内授权记忆自动放行"
+		if rule.Level == LevelForbidden {
+			return LevelForbidden, rule.Description
 		}
-	}
-
-	return targetLevel, ""
-}
-
-func (g *PolicyGuard) isAuthorizedInMemory(sessionID, toolName string) bool {
-	memVal, ok := g.authMemory.Load(sessionID)
-	if !ok {
-		return false
-	}
-	memMap, ok := memVal.(*sync.Map)
-	if !ok {
-		return false
-	}
-	expVal, ok := memMap.Load(toolName)
-	if !ok {
-		return false
-	}
-	exp, ok := expVal.(int64)
-	if !ok || time.Now().Unix() > exp {
-		memMap.Delete(toolName)
-		return false
-	}
-	return true
-}
-
-func (g *PolicyGuard) RememberAuthorization(sessionID, toolName string, duration time.Duration) {
-	if sessionID == "" || toolName == "" {
-		return
-	}
-	if duration <= 0 {
-		duration = 30 * time.Minute
-	}
-	val, _ := g.authMemory.LoadOrStore(sessionID, &sync.Map{})
-	memMap := val.(*sync.Map)
-	memMap.Store(toolName, time.Now().Add(duration).Unix())
-}
-
-func (g *PolicyGuard) RevokeAuthorization(sessionID, toolName string) {
-	if val, ok := g.authMemory.Load(sessionID); ok {
-		memMap := val.(*sync.Map)
-		if toolName == "" {
-			g.authMemory.Delete(sessionID)
-		} else {
-			memMap.Delete(toolName)
+		if rule.Level == LevelConfirm {
+			return LevelConfirm, rule.Description
 		}
-	}
-}
-
-func (g *PolicyGuard) RequestApproval(ctx context.Context, req *ApprovalRequest) ApprovalDecision {
-	req.CreatedAt = time.Now().UnixMilli()
-	req.ResponseCh = make(chan ApprovalDecision, 1)
-
-	g.pendingQueue.Store(req.ConfirmID, req)
-	defer g.pendingQueue.Delete(req.ConfirmID)
-
-	g.mu.RLock()
-	cb := g.onConfirmRequest
-	g.mu.RUnlock()
-
-	if cb != nil {
-		cb(req)
+		return LevelAllow, ""
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(ctx, 5*time.Minute)
-	defer cancel()
-
-	select {
-	case dec := <-req.ResponseCh:
-		if dec.Approved && dec.Remember {
-			g.RememberAuthorization(req.SessionID, req.ToolName, 30*time.Minute)
-		}
-		return dec
-	case <-timeoutCtx.Done():
-		return ApprovalDecision{
-			Approved: false,
-			Reason:   "审批等待超时（5分钟）已自动取消",
-		}
+	if defaultLevel == LevelForbidden {
+		return LevelForbidden, "默认策略拦截"
 	}
-}
-
-func (g *PolicyGuard) DecideApproval(confirmID string, dec ApprovalDecision) bool {
-	if val, ok := g.pendingQueue.Load(confirmID); ok {
-		req := val.(*ApprovalRequest)
-		select {
-		case req.ResponseCh <- dec:
-			return true
-		default:
-			return false
-		}
+	if defaultLevel == LevelConfirm {
+		return LevelConfirm, "默认策略需确认"
 	}
-	return false
-}
 
-func (g *PolicyGuard) ListPendingApprovals() []*ApprovalRequest {
-	var list []*ApprovalRequest
-	g.pendingQueue.Range(func(key, value any) bool {
-		if req, ok := value.(*ApprovalRequest); ok {
-			list = append(list, req)
-		}
-		return true
-	})
-	return list
+	return LevelAllow, ""
 }
 
 func (g *PolicyGuard) RecordAuditLog(traceID, sessionID, tool, input, decision, outputHead string, durationMs int64) {

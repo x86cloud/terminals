@@ -40,6 +40,10 @@ const (
 	ConnMongo ConnType = "mongo"
 	// ConnSqlite 本地 SQLite 数据库文件，使用内置 SQLite 客户端管理。
 	ConnSqlite ConnType = "sqlite"
+	// ConnDocker 独立 Docker 实例，支持 Unix Socket / TCP / SSH 访问。
+	ConnDocker ConnType = "docker"
+	// ConnK8s Kubernetes 集群，支持直连 API Server 与 SSH 隧道。
+	ConnK8s ConnType = "k8s"
 )
 
 // ServerGroup 描述服务器分组。
@@ -48,7 +52,7 @@ type ServerGroup struct {
 	Name string `json:"name"`
 }
 
-// ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL。
+// ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker。
 type ServerConfig struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
@@ -61,7 +65,7 @@ type ServerConfig struct {
 	PrivateKey string `json:"privateKey"` // 私钥文件路径或 PEM 内容
 	Passphrase string `json:"passphrase"`
 	Remark     string `json:"remark"`
-	Type       string `json:"type"`         // ssh | redis | mysql | mqtt
+	Type       string `json:"type"`         // ssh | redis | mysql | mqtt | mongo | sqlite | docker
 	DB         int    `json:"db,omitempty"` // Redis 数据库编号
 
 	// Redis 高级配置
@@ -131,6 +135,46 @@ type ServerConfig struct {
 	// SQLite 本地文件配置
 	SqlitePath string `json:"sqlitePath,omitempty"` // 本地 .db / .sqlite 文件路径
 
+	// Docker 专用配置
+	DockerEndpointType  string `json:"dockerEndpointType,omitempty"`  // "unix" | "tcp" | "ssh"
+	DockerSocketPath    string `json:"dockerSocketPath,omitempty"`    // unix 套接字路径 (默认 /var/run/docker.sock 或 //./pipe/docker_engine)
+	DockerTLSEnabled    bool   `json:"dockerTlsEnabled,omitempty"`    // TCP 是否启用 TLS
+	DockerTLSInsecure   bool   `json:"dockerTlsInsecure,omitempty"`   // TLS 是否跳过证书校验
+	DockerTLSCACert     string `json:"dockerTlsCaCert,omitempty"`     // TLS CA 证书
+	DockerTLSClientCert string `json:"dockerTlsClientCert,omitempty"` // TLS 客户端证书
+	DockerTLSClientKey  string `json:"dockerTlsClientKey,omitempty"`  // TLS 客户端私钥
+	DockerSSHHost       string `json:"dockerSshHost,omitempty"`       // SSH 模式：跳板主机
+	DockerSSHPort       int    `json:"dockerSshPort,omitempty"`       // SSH 模式：跳板端口 (默认 22)
+	DockerSSHUser       string `json:"dockerSshUser,omitempty"`       // SSH 模式：用户名
+	DockerSSHAuthType   string `json:"dockerSshAuthType,omitempty"`   // password | key
+	DockerSSHPassword   string `json:"dockerSshPassword,omitempty"`   // SSH 模式：密码
+	DockerSSHKeyPath    string `json:"dockerSshKeyPath,omitempty"`    // SSH 模式：私钥路径
+	DockerSSHKeyData    string `json:"dockerSshKeyData,omitempty"`    // SSH 模式：私钥内容
+	DockerSSHPassphrase string `json:"dockerSshPassphrase,omitempty"` // SSH 模式：私钥口令
+
+	// Kubernetes (K8s) 专用配置
+	K8sAuthMode        string `json:"k8sAuthMode,omitempty"`        // kubeconfig | direct (默认 kubeconfig)
+	K8sKubeconfigData  string `json:"k8sKubeconfigData,omitempty"`  // Kubeconfig 文本内容 (YAML)
+	K8sKubeconfigPath  string `json:"k8sKubeconfigPath,omitempty"`  // Kubeconfig 本地文件路径
+	K8sContext         string `json:"k8sContext,omitempty"`         // 指定 context 上下文名称（可选）
+	K8sAPIServer       string `json:"k8sApiServer,omitempty"`       // API Server 地址，如 https://192.168.1.100:6443
+	K8sAuthType        string `json:"k8sAuthType,omitempty"`        // token | cert | none
+	K8sBearerToken     string `json:"k8sBearerToken,omitempty"`     // Bearer Token
+	K8sCAData          string `json:"k8sCaData,omitempty"`          // CA 证书（PEM 字符串或文件路径）
+	K8sCertData        string `json:"k8sCertData,omitempty"`        // 客户端证书（PEM 字符串或文件路径）
+	K8sKeyData         string `json:"k8sKeyData,omitempty"`         // 客户端私钥（PEM 字符串或文件路径）
+	K8sInsecureSkipTLS bool   `json:"k8sInsecureSkipTLS,omitempty"` // 跳过 TLS 证书校验
+	K8sNamespace       string `json:"k8sNamespace,omitempty"`       // 默认命名空间（可选）
+	K8sSSHEnabled      bool   `json:"k8sSshEnabled,omitempty"`      // 是否启用 SSH 隧道代理
+	K8sSSHHost         string `json:"k8sSshHost,omitempty"`         // SSH 跳板机地址
+	K8sSSHPort         int    `json:"k8sSshPort,omitempty"`         // SSH 跳板机端口 (默认 22)
+	K8sSSHUser         string `json:"k8sSshUser,omitempty"`         // SSH 用户名
+	K8sSSHAuthType     string `json:"k8sSshAuthType,omitempty"`     // password | key
+	K8sSSHPassword     string `json:"k8sSshPassword,omitempty"`     // SSH 密码
+	K8sSSHKeyPath      string `json:"k8sSshKeyPath,omitempty"`      // SSH 私钥路径
+	K8sSSHKeyData      string `json:"k8sSshKeyData,omitempty"`      // SSH 私钥内容
+	K8sSSHPassphrase   string `json:"k8sSshPassphrase,omitempty"`   // SSH 私钥口令
+
 	// MQTT 高级配置
 	MqttProto          string `json:"mqttProto,omitempty"`          // 协议版本："3.1.1" | "3.1"
 	MqttKeepAlive      int    `json:"mqttKeepAlive,omitempty"`      // 心跳间隔（秒）
@@ -162,6 +206,10 @@ func (c ServerConfig) ConnType() ConnType {
 		return ConnMongo
 	case string(ConnSqlite):
 		return ConnSqlite
+	case string(ConnDocker):
+		return ConnDocker
+	case string(ConnK8s):
+		return ConnK8s
 	}
 	return ConnSSH
 }
@@ -177,6 +225,25 @@ func (c ServerConfig) Label() string {
 		if name := c.SqlitePath; name != "" {
 			return filepath.Base(name)
 		}
+	case ConnDocker:
+		if c.DockerEndpointType == "unix" || (c.DockerEndpointType == "" && c.DockerSocketPath != "") {
+			return fmt.Sprintf("Docker (%s)", c.DockerSocketPath)
+		}
+		if c.DockerEndpointType == "ssh" {
+			return fmt.Sprintf("Docker (%s@%s)", c.DockerSSHUser, c.DockerSSHHost)
+		}
+		return fmt.Sprintf("Docker (%s:%d)", c.Host, c.DisplayPort())
+	case ConnK8s:
+		if c.K8sKubeconfigPath != "" {
+			return fmt.Sprintf("K8s (%s)", filepath.Base(c.K8sKubeconfigPath))
+		}
+		if c.K8sContext != "" {
+			return fmt.Sprintf("K8s (%s)", c.K8sContext)
+		}
+		if c.K8sAPIServer != "" {
+			return fmt.Sprintf("K8s (%s)", c.K8sAPIServer)
+		}
+		return fmt.Sprintf("K8s (%s)", c.Host)
 	}
 	return fmt.Sprintf("%s@%s", c.Username, c.Host)
 }
@@ -195,6 +262,17 @@ func (c ServerConfig) DisplayPort() int {
 	case ConnMongo:
 		return 27017
 	case ConnSqlite:
+		return 0
+	case ConnDocker:
+		if c.DockerEndpointType == "tcp" {
+			if c.DockerTLSEnabled {
+				return 2376
+			}
+			return 2375
+		}
+		if c.DockerEndpointType == "ssh" {
+			return 22
+		}
 		return 0
 	}
 	return 22
@@ -228,6 +306,63 @@ func (c ServerConfig) Validate() error {
 	if c.ConnType() == ConnSqlite {
 		if strings.TrimSpace(c.SqlitePath) == "" {
 			return errors.New("请选择 SQLite 数据库文件（.db / .sqlite）")
+		}
+		return nil
+	}
+	// Docker 容器连接校验
+	if c.ConnType() == ConnDocker {
+		epType := strings.ToLower(strings.TrimSpace(c.DockerEndpointType))
+		if epType == "" {
+			epType = "unix"
+		}
+		switch epType {
+		case "unix":
+			return nil
+		case "tcp", "http", "https":
+			if strings.TrimSpace(c.Host) == "" {
+				return errors.New("Docker TCP 主机地址不能为空")
+			}
+			return nil
+		case "ssh":
+			sshHost := strings.TrimSpace(c.DockerSSHHost)
+			if sshHost == "" {
+				sshHost = strings.TrimSpace(c.Host)
+			}
+			if sshHost == "" {
+				return errors.New("SSH 主机地址不能为空")
+			}
+			sshUser := strings.TrimSpace(c.DockerSSHUser)
+			if sshUser == "" {
+				sshUser = strings.TrimSpace(c.Username)
+			}
+			if sshUser == "" {
+				return errors.New("SSH 登录用户名不能为空")
+			}
+			return nil
+		}
+		return nil
+	}
+	// Kubernetes (K8s) 连接校验
+	if c.ConnType() == ConnK8s {
+		authMode := c.K8sAuthMode
+		if authMode == "" {
+			authMode = "kubeconfig"
+		}
+		if authMode == "kubeconfig" {
+			if strings.TrimSpace(c.K8sKubeconfigData) == "" && strings.TrimSpace(c.K8sKubeconfigPath) == "" {
+				// If neither is provided, check if apiServer exists, otherwise error
+				if strings.TrimSpace(c.K8sAPIServer) == "" && strings.TrimSpace(c.Host) == "" {
+					return errors.New("请提供 Kubeconfig 配置内容或文件路径")
+				}
+			}
+			return nil
+		}
+		apiServer := strings.TrimSpace(c.K8sAPIServer)
+		if apiServer == "" {
+			apiServer = strings.TrimSpace(c.Host)
+		}
+		if apiServer == "" {
+			return errors.New("Kubernetes API Server 地址不能为空 (例如 https://192.168.1.100:6443)")
 		}
 		return nil
 	}
@@ -463,8 +598,17 @@ func fillAiDefaults(settings *AppSettings) {
 	if settings.AiTemperature <= 0 {
 		settings.AiTemperature = 0.7
 	}
+	if settings.AiModelContextTokens <= 0 {
+		settings.AiModelContextTokens = 65536
+	}
+	if settings.AiContextCompressRatio <= 0 {
+		settings.AiContextCompressRatio = 80
+	}
 	if settings.AiMaxContextTokens <= 0 {
-		settings.AiMaxContextTokens = 4096
+		settings.AiMaxContextTokens = (settings.AiModelContextTokens * settings.AiContextCompressRatio) / 100
+		if settings.AiMaxContextTokens <= 0 {
+			settings.AiMaxContextTokens = 52428
+		}
 	}
 	if settings.AiCompressionStrategy == "" {
 		settings.AiCompressionStrategy = "summary"

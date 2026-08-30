@@ -1,5 +1,5 @@
 export type AuthType = 'password' | 'key'
-export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite'
+export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite' | 'docker' | 'k8s'
 
 export interface ServerGroup {
     id: string
@@ -102,6 +102,44 @@ export interface ServerConfig {
     mongoAppName?: string
     // SQLite 本地文件配置
     sqlitePath?: string
+    // Docker 专用配置
+    dockerEndpointType?: 'unix' | 'tcp' | 'ssh'
+    dockerSocketPath?: string
+    dockerTlsEnabled?: boolean
+    dockerTlsInsecure?: boolean
+    dockerTlsCaCert?: string
+    dockerTlsClientCert?: string
+    dockerTlsClientKey?: string
+    dockerSshHost?: string
+    dockerSshPort?: number
+    dockerSshUser?: string
+    dockerSshAuthType?: AuthType
+    dockerSshPassword?: string
+    dockerSshKeyPath?: string
+    dockerSshKeyData?: string
+    dockerSshPassphrase?: string
+    // Kubernetes (K8s) 专用配置
+    k8sAuthMode?: 'kubeconfig' | 'direct' | string
+    k8sKubeconfigData?: string
+    k8sKubeconfigPath?: string
+    k8sContext?: string
+    k8sApiServer?: string
+    k8sAuthType?: 'token' | 'cert' | 'none' | string
+    k8sBearerToken?: string
+    k8sCaData?: string
+    k8sCertData?: string
+    k8sKeyData?: string
+    k8sInsecureSkipTLS?: boolean
+    k8sNamespace?: string
+    k8sSshEnabled?: boolean
+    k8sSshHost?: string
+    k8sSshPort?: number
+    k8sSshUser?: string
+    k8sSshAuthType?: AuthType
+    k8sSshPassword?: string
+    k8sSshKeyPath?: string
+    k8sSshKeyData?: string
+    k8sSshPassphrase?: string
     updatedAt: number
 }
 
@@ -228,12 +266,77 @@ export function emptyServer(): ServerConfig {
         mongoMaxConnIdleTime: 0,
         mongoConnectTimeout: 10,
         mongoServerSelectTimeout: 10,
-        mongoSocketTimeout: 30,
         mongoCompressors: '',
         mongoAppName: 'xClient',
+        // Docker 高级参数默认值
+        dockerEndpointType: 'unix',
+        dockerSocketPath: '',
+        dockerTlsEnabled: false,
+        dockerTlsInsecure: false,
+        dockerTlsCaCert: '',
+        dockerTlsClientCert: '',
+        dockerTlsClientKey: '',
+        dockerSshHost: '',
+        dockerSshPort: 22,
+        dockerSshUser: 'root',
+        dockerSshAuthType: 'password',
+        dockerSshPassword: '',
+        dockerSshKeyPath: '',
+        dockerSshKeyData: '',
+        dockerSshPassphrase: '',
         updatedAt: 0,
     }
 }
+
+/* ---------------- Docker ---------------- */
+
+export interface DockerSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    endpointType: 'unix' | 'tcp' | 'ssh'
+    target: string
+    connected: boolean
+}
+
+export type {
+    DockerOverview,
+    DockerPortMapping,
+    DockerContainerInfo,
+    DockerImageInfo,
+    DockerVolumeInfo,
+    DockerNetworkInfo,
+    DockerCreateContainerReq,
+    DockerPruneReport,
+    DockerComposeStackInfo,
+    DockerComposeServiceInfo,
+    DockerComposeDeployReq,
+} from '../bindings/terminal/docker/models'
+
+/* ---------------- Kubernetes (K8s) ---------------- */
+
+export interface K8sSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    apiServer: string
+    namespace?: string
+    connected: boolean
+}
+
+export type {
+    K8sOverview,
+    K8sNodeInfo,
+    K8sNamespaceInfo,
+    K8sPodInfo,
+    K8sContainerSummary,
+    K8sDeploymentInfo,
+    K8sServiceInfo,
+    K8sIngressInfo,
+    K8sConfigMapInfo,
+    K8sSecretInfo,
+    K8sPVCInfo,
+} from '../bindings/terminal/k8s/models'
 
 /* ---------------- Redis ---------------- */
 
@@ -830,8 +933,10 @@ export interface AppSettings {
     aiApiKey?: string
     aiModel?: string
     aiTemperature?: number
+    aiModelContextTokens?: number
+    aiContextCompressRatio?: number
     aiMaxContextTokens?: number
-    aiCompressionStrategy?: 'summary' | 'sliding'
+    aiCompressionStrategy?: 'none' | 'summary' | 'sliding'
     aiEnableMultimodal?: boolean
     aiSystemPrompt?: string
     aiWorkspaceDir?: string
@@ -857,6 +962,7 @@ export interface ProcessStep {
     summary?: string
     content: string
     timestamp: number
+    duration_ms?: number
     status?: 'running' | 'completed' | 'failed'
 }
 
@@ -879,24 +985,6 @@ export interface AiMessage {
     timestamp?: number
     plan?: AgentPlan
     plan_summary?: string
-}
-
-export interface SSHDockerContainer {
-    id: string
-    name: string
-    image: string
-    status: string
-    ports: string
-    createdAt: string
-    running: boolean
-}
-
-export interface SSHDockerImage {
-    id: string
-    repo: string
-    tag: string
-    size: string
-    createdAt: string
 }
 
 // ===================== xAgent 2.0 Workbench Types =====================
@@ -1015,13 +1103,14 @@ export interface AgentPlan {
 
 export interface AgentApprovalRequest {
     confirm_id: string
-    session_id: string
+    session_id?: string
     trace_id?: string
     tool_name: string
     action: string
     description: string
     arguments: string
     risk_level: string
+    created_at?: number
 }
 
 export interface AgentAskRequest {
@@ -1031,5 +1120,30 @@ export interface AgentAskRequest {
     question: string
     options?: string[]
     created_at?: number
+}
+
+export interface AgentHitlConfirmRequest {
+    confirm_id: string
+    session_id: string
+    trace_id?: string
+    tool_name: string
+    tool_desc: string
+    input: string
+    risk_detail: string
+    created_at?: number
+}
+
+export interface KubeconfigContextInfo {
+    currentContext: string
+    contexts: string[]
+    clusterHost: string
+}
+
+export interface K8sApplyResult {
+    kind: string
+    name: string
+    namespace?: string
+    action: 'created' | 'configured' | 'failed'
+    message?: string
 }
 

@@ -79,27 +79,3 @@ func (s *SshService) SSHRunCronCommand(sessionID string, command string) (string
 	return GetContainer().Sessions.RunCronCommand(sessionID, command)
 }
 
-func (s *SshService) SSHDockerContainerList(sessionID string) ([]ssh.SSHDockerContainer, error) {
-	return GetContainer().Sessions.GetDockerContainerList(sessionID)
-}
-
-func (s *SshService) SSHDockerControlContainer(sessionID string, containerID string, action string) error {
-	return GetContainer().Sessions.ControlDockerContainer(sessionID, containerID, action)
-}
-
-func (s *SshService) SSHDockerContainerLogs(sessionID string, containerID string, tail int) (string, error) {
-	return GetContainer().Sessions.GetDockerContainerLogs(sessionID, containerID, tail)
-}
-
-func (s *SshService) SSHDockerImageList(sessionID string) ([]ssh.SSHDockerImage, error) {
-	return GetContainer().Sessions.GetDockerImageList(sessionID)
-}
-
-func (s *SshService) SSHDockerRemoveImage(sessionID string, imageID string) error {
-	return GetContainer().Sessions.RemoveDockerImage(sessionID, imageID)
-}
-
-func (s *SshService) SSHDockerPullImage(sessionID string, imageName string) (string, error) {
-	return GetContainer().Sessions.PullDockerImage(sessionID, imageName)
-}
-

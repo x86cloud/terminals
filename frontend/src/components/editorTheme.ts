@@ -54,6 +54,26 @@ const baseTheme = EditorView.theme(
         '.cm-placeholder': {
             color: 'var(--text-faint, #aab3c0)',
         },
+        '.cm-foldGutter .cm-gutterElement': {
+            cursor: 'pointer',
+            color: 'var(--text-dim, #6b7686)',
+            padding: '0 3px',
+            userSelect: 'none',
+            transition: 'color 0.15s ease',
+        },
+        '.cm-foldGutter .cm-gutterElement:hover': {
+            color: 'var(--accent, #3370ff)',
+        },
+        '.cm-foldPlaceholder': {
+            backgroundColor: 'var(--accent-soft, rgba(51, 112, 255, 0.08))',
+            color: 'var(--accent, #3370ff)',
+            border: '1px solid var(--accent-dim-2, rgba(51, 112, 255, 0.25))',
+            borderRadius: '3px',
+            padding: '0 4px',
+            margin: '0 2px',
+            fontSize: '11px',
+            cursor: 'pointer',
+        },
     },
 )
 

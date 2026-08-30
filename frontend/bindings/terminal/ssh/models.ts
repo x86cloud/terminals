@@ -58,24 +58,6 @@ export interface SSHDiskInfo {
     "isVirtual": boolean;
 }
 
-export interface SSHDockerContainer {
-    "id": string;
-    "name": string;
-    "image": string;
-    "status": string;
-    "ports": string;
-    "createdAt": string;
-    "running": boolean;
-}
-
-export interface SSHDockerImage {
-    "id": string;
-    "repo": string;
-    "tag": string;
-    "size": string;
-    "createdAt": string;
-}
-
 export interface SSHMemInfo {
     "total": number;
     "used": number;

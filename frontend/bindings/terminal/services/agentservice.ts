@@ -64,12 +64,16 @@ export function AgentGetJobOutput(jobID: string, fromSeq: number): $CancellableP
     return $Call.ByID(3833284901, jobID, fromSeq);
 }
 
-export function AgentGetPendingApprovals(): $CancellablePromise<(guard$0.ApprovalRequest | null)[] | null> {
+export function AgentGetPendingApprovals(): $CancellablePromise<any[] | null> {
     return $Call.ByID(3524130632);
 }
 
 export function AgentGetPendingAsks(): $CancellablePromise<(ask$0.AskRequest | null)[] | null> {
     return $Call.ByID(761804974);
+}
+
+export function AgentGetPendingHitls(): $CancellablePromise<(guard$0.HitlRequest | null)[] | null> {
+    return $Call.ByID(2086036240);
 }
 
 export function AgentGetSessionMessages(sessionID: string): $CancellablePromise<agent$0.FrontendMessage[] | null> {
@@ -114,6 +118,10 @@ export function AgentProposePlan(sessionID: string, objective: string): $Cancell
 
 export function AgentRecallMemories(query: string, limit: number): $CancellablePromise<string[] | null> {
     return $Call.ByID(2571516017, query, limit);
+}
+
+export function AgentResolveHitl(confirmID: string, approved: boolean, reason: string): $CancellablePromise<boolean> {
+    return $Call.ByID(696413550, confirmID, approved, reason);
 }
 
 export function AgentRetryPlanStep(planID: string, stepID: string): $CancellablePromise<planner$0.PlanStep | null> {

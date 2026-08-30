@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"encoding/json"
+	"log"
 	"terminal/agent/events"
 	"terminal/agent/router"
 	"terminal/agent/store"
@@ -18,7 +19,7 @@ import (
 	"terminal/ssh"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
-	"github.com/cloudwego/eino/adk"
+	"github.com/cloudwego/eino/components/model"
 	"github.com/cloudwego/eino/schema"
 )
 
@@ -29,13 +30,14 @@ type ToolCallItem struct {
 }
 
 type ProcessStep struct {
-	ID        string `json:"id"`
-	Type      string `json:"type"` // "think" | "tool"
-	Title     string `json:"title"`
-	Summary   string `json:"summary,omitempty"`
-	Content   string `json:"content"`
-	Timestamp int64  `json:"timestamp"`
-	Status    string `json:"status,omitempty"`
+	ID         string `json:"id"`
+	Type       string `json:"type"` // "think" | "tool"
+	Title      string `json:"title"`
+	Summary    string `json:"summary,omitempty"`
+	Content    string `json:"content"`
+	Timestamp  int64  `json:"timestamp"`
+	DurationMs int64  `json:"duration_ms,omitempty"`
+	Status     string `json:"status,omitempty"`
 }
 
 type FrontendMessage struct {
@@ -119,7 +121,6 @@ type AgentManager struct {
 	ctx          context.Context
 	cfg          core.AppSettings
 	cm           *openai.ChatModel
-	runner       *adk.Runner
 	storage      *Storage
 	sshMgr       *ssh.SessionManager
 	activeCancel context.CancelFunc
@@ -157,7 +158,6 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 	_ = DefaultRuntime.InitOrUpdate(cfg)
 
 	if strings.TrimSpace(cfg.AiAPIKey) == "" {
-		m.runner = nil
 		m.cm = nil
 		return nil
 	}
@@ -173,12 +173,7 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 	}
 	m.cm = resolved.Model
 
-	// Build default session runner
-	sess := DefaultRuntime.GetOrCreateSession("ai_agent_default")
-	if err := sess.BuildRunner(ctx, DefaultRuntime.Router, DefaultRuntime.ToolBus); err != nil {
-		return fmt.Errorf("创建 ADK Runner 失败: %w", err)
-	}
-	m.runner = sess.GetRunner()
+	_ = DefaultRuntime.GetOrCreateSession("ai_agent_default")
 
 	return nil
 }
@@ -276,11 +271,20 @@ func alignCutToUserMessage(messages []FrontendMessage, cutIdx int) int {
 }
 
 func (m *AgentManager) applyContextCompression(ctx context.Context, messages []FrontendMessage) ([]FrontendMessage, string) {
+	strategy := m.cfg.AiCompressionStrategy
+	if strategy == "none" {
+		return messages, ""
+	}
+
 	maxTokens := m.cfg.AiMaxContextTokens
 	if maxTokens <= 0 {
-		maxTokens = 4096
+		if m.cfg.AiModelContextTokens > 0 && m.cfg.AiContextCompressRatio > 0 {
+			maxTokens = (m.cfg.AiModelContextTokens * m.cfg.AiContextCompressRatio) / 100
+		}
+		if maxTokens <= 0 {
+			maxTokens = 52428
+		}
 	}
-	strategy := m.cfg.AiCompressionStrategy
 
 	totalChars := 0
 	for _, msg := range messages {
@@ -359,18 +363,15 @@ func (m *AgentManager) StreamChat(
 ) (string, string, string, error) {
 	sess := DefaultRuntime.GetSession()
 	if sess == nil {
-		return "", "", "", errors.New("会话未就绪")
+		sess = DefaultRuntime.GetOrCreateSession(sessionID)
 	}
-	if err := sess.BuildRunner(ctx, DefaultRuntime.Router, DefaultRuntime.ToolBus); err != nil {
-		return "", "", "", fmt.Errorf("构建会话 Runner 失败: %w", err)
-	}
-	runner := sess.GetRunner()
 
 	m.mu.RLock()
 	cfg := m.cfg
 	m.mu.RUnlock()
 
-	if runner == nil {
+	resolved, err := DefaultRuntime.Router.Resolve(ctx, router.RoleDefault)
+	if err != nil || resolved == nil || resolved.Model == nil {
 		return "", "", "", errors.New("AI Agent 未配置或 API Key 为空，请在设置中配置 API Key")
 	}
 
@@ -390,177 +391,304 @@ func (m *AgentManager) StreamChat(
 	compressedMsgs, notice := m.applyContextCompression(chatCtx, messages)
 	schemaMsgs := m.buildSchemaMessages(compressedMsgs, cfg.AiSystemPrompt)
 
-	iter := runner.Run(chatCtx, schemaMsgs)
+	toolInfos := DefaultRuntime.ToolBus.ConvertToToolInfos(chatCtx)
 
 	var fullResp strings.Builder
 	var reasoningResp strings.Builder
 	inThinkTag := false
+	maxTurns := 50
 
-	for {
+	log.Printf("[Agent][StreamChat] Starting Native ReAct engine for session %s with %d messages, %d tools...", sessionID, len(schemaMsgs), len(toolInfos))
+
+	for turn := 1; turn <= maxTurns; turn++ {
 		if errors.Is(chatCtx.Err(), context.Canceled) {
+			log.Printf("[Agent][StreamChat] Session %s context canceled by user on turn %d", sessionID, turn)
 			return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
 		}
 
-		event, ok := iter.Next()
-		if !ok || event == nil {
-			break
-		}
-		if errors.Is(chatCtx.Err(), context.Canceled) {
-			return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
-		}
-		if event.Err != nil {
-			return fullResp.String(), reasoningResp.String(), notice, fmt.Errorf("Agent 事件错误: %w", event.Err)
-		}
+		log.Printf("[Agent][StreamChat] Turn %d: calling model.Stream (context: %d messages)...", turn, len(schemaMsgs))
 
-		if event.Output != nil && event.Output.MessageOutput != nil {
-			mv := event.Output.MessageOutput
-			if mv.Role == schema.Tool || (mv.Role != schema.Assistant && mv.ToolName != "") {
-				continue
+		// Heartbeat ticker during waiting for LLM stream
+		waitTicker := time.NewTicker(4 * time.Second)
+		waitDone := make(chan struct{})
+		go func(tNum int) {
+			startWait := time.Now()
+			for {
+				select {
+				case <-waitDone:
+					return
+				case <-waitTicker.C:
+					elapsed := int(time.Since(startWait).Seconds())
+					log.Printf("[Agent][StreamChat] Waiting for LLM generation on Turn %d (%ds elapsed)...", tNum, elapsed)
+					DefaultRuntime.EventBus.Emit(events.Event{
+						Type:      events.EventNotice,
+						SessionID: sessionID,
+						Payload:   fmt.Sprintf("正在结合最新执行结果深入推演中 (%ds)...", elapsed),
+					})
+				}
 			}
+		}(turn)
 
-			if mv.IsStreaming && mv.MessageStream != nil {
-				func() {
-					defer mv.MessageStream.Close()
-					streamReasoningAcc := ""
-					streamContentAcc := ""
-					for {
-						if errors.Is(chatCtx.Err(), context.Canceled) {
-							return
-						}
-						chunk, err := mv.MessageStream.Recv()
-						if errors.Is(err, io.EOF) || err != nil {
-							break
-						}
-						if chunk != nil {
-							reasoningText := chunk.ReasoningContent
-							if reasoningText == "" && chunk.Extra != nil {
-								if r, ok := chunk.Extra["reasoning-content"].(string); ok && r != "" {
-									reasoningText = r
-								} else if r, ok := chunk.Extra["reasoning_content"].(string); ok && r != "" {
-									reasoningText = r
-								} else if r, ok := chunk.Extra["thinking"].(string); ok && r != "" {
-									reasoningText = r
-								}
-							}
-							if reasoningText != "" {
-								delta := normalizeChunkDelta(streamReasoningAcc, reasoningText)
-								streamReasoningAcc += delta
-								if delta != "" {
-									reasoningResp.WriteString(delta)
-									if onReasoningChunk != nil {
-										onReasoningChunk(delta)
-									}
-									DefaultRuntime.EventBus.Emit(events.Event{
-										Type:      events.EventReasoningChunk,
-										SessionID: sessionID,
-										Payload:   events.ReasoningChunkPayload{Chunk: delta},
-									})
-								}
-							}
+		streamReader, err := resolved.Model.Stream(chatCtx, schemaMsgs, model.WithTools(toolInfos))
+		waitTicker.Stop()
+		close(waitDone)
 
-							text := chunk.Content
-							if text != "" {
-								text = normalizeChunkDelta(streamContentAcc, text)
-								streamContentAcc += text
-							}
-							if text != "" {
-								if strings.Contains(text, "<think>") {
-									parts := strings.SplitN(text, "<think>", 2)
-									if parts[0] != "" {
-										fullResp.WriteString(parts[0])
-										if onChunk != nil {
-											onChunk(parts[0])
-										}
-										DefaultRuntime.EventBus.Emit(events.Event{
-											Type:      events.EventChatChunk,
-											SessionID: sessionID,
-											Payload:   events.ChatChunkPayload{Chunk: parts[0]},
-										})
-									}
-									inThinkTag = true
-									text = parts[1]
-								}
+		if err != nil {
+			if errors.Is(chatCtx.Err(), context.Canceled) {
+				return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
+			}
+			log.Printf("[Agent][StreamChat] Turn %d model.Stream error: %v", turn, err)
+			return fullResp.String(), reasoningResp.String(), notice, fmt.Errorf("大模型请求异常: %w", err)
+		}
 
-								if inThinkTag {
-									if strings.Contains(text, "</think>") {
-										parts := strings.SplitN(text, "</think>", 2)
-										if parts[0] != "" {
-											reasoningResp.WriteString(parts[0])
-											streamReasoningAcc += parts[0]
-											if onReasoningChunk != nil {
-												onReasoningChunk(parts[0])
-											}
-											DefaultRuntime.EventBus.Emit(events.Event{
-												Type:      events.EventReasoningChunk,
-												SessionID: sessionID,
-												Payload:   events.ReasoningChunkPayload{Chunk: parts[0]},
-											})
-										}
-										inThinkTag = false
-										if parts[1] != "" {
-											fullResp.WriteString(parts[1])
-											if onChunk != nil {
-												onChunk(parts[1])
-											}
-											DefaultRuntime.EventBus.Emit(events.Event{
-												Type:      events.EventChatChunk,
-												SessionID: sessionID,
-												Payload:   events.ChatChunkPayload{Chunk: parts[1]},
-											})
-										}
-									} else {
-										reasoningResp.WriteString(text)
-										streamReasoningAcc += text
-										if onReasoningChunk != nil {
-											onReasoningChunk(text)
-										}
-										DefaultRuntime.EventBus.Emit(events.Event{
-											Type:      events.EventReasoningChunk,
-											SessionID: sessionID,
-											Payload:   events.ReasoningChunkPayload{Chunk: text},
-										})
-									}
-								} else {
-									fullResp.WriteString(text)
-									if onChunk != nil {
-										onChunk(text)
-									}
-									DefaultRuntime.EventBus.Emit(events.Event{
-										Type:      events.EventChatChunk,
-										SessionID: sessionID,
-										Payload:   events.ChatChunkPayload{Chunk: text},
-									})
-								}
-							}
-						}
+		var turnContentAcc strings.Builder
+		var turnReasoningAcc strings.Builder
+		var streamReasoningAcc string
+		var streamContentAcc string
+		toolCallsMap := make(map[int]*schema.ToolCall)
+		chunkCount := 0
+		var streamRecvErr error
+
+		func() {
+			defer streamReader.Close()
+			for {
+				if errors.Is(chatCtx.Err(), context.Canceled) {
+					return
+				}
+				chunk, err := streamReader.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					streamRecvErr = err
+					log.Printf("[Agent][StreamChat] Turn %d stream Recv error: %v", turn, err)
+					break
+				}
+				if chunk == nil {
+					continue
+				}
+				chunkCount++
+
+				// 1. Process reasoning content
+				reasoningText := chunk.ReasoningContent
+				if reasoningText == "" && chunk.Extra != nil {
+					if r, ok := chunk.Extra["reasoning-content"].(string); ok && r != "" {
+						reasoningText = r
+					} else if r, ok := chunk.Extra["reasoning_content"].(string); ok && r != "" {
+						reasoningText = r
+					} else if r, ok := chunk.Extra["thinking"].(string); ok && r != "" {
+						reasoningText = r
 					}
-				}()
-			} else if mv.Message != nil {
-				if mv.Role == schema.Assistant || mv.Role == "" {
-					if mv.Message.ReasoningContent != "" {
-						reasoningResp.WriteString(mv.Message.ReasoningContent)
+				}
+				if reasoningText != "" {
+					delta := normalizeChunkDelta(streamReasoningAcc, reasoningText)
+					streamReasoningAcc += delta
+					if delta != "" {
+						reasoningResp.WriteString(delta)
+						turnReasoningAcc.WriteString(delta)
 						if onReasoningChunk != nil {
-							onReasoningChunk(mv.Message.ReasoningContent)
+							onReasoningChunk(delta)
 						}
 						DefaultRuntime.EventBus.Emit(events.Event{
 							Type:      events.EventReasoningChunk,
 							SessionID: sessionID,
-							Payload:   events.ReasoningChunkPayload{Chunk: mv.Message.ReasoningContent},
+							Payload:   events.ReasoningChunkPayload{Chunk: delta},
 						})
 					}
-					if mv.Message.Content != "" {
-						fullResp.WriteString(mv.Message.Content)
+				}
+
+				// 2. Process content & think tags
+				text := chunk.Content
+				if text != "" {
+					text = normalizeChunkDelta(streamContentAcc, text)
+					streamContentAcc += text
+				}
+				if text != "" {
+					if strings.Contains(text, "<think>") {
+						parts := strings.SplitN(text, "<think>", 2)
+						if parts[0] != "" {
+							fullResp.WriteString(parts[0])
+							turnContentAcc.WriteString(parts[0])
+							if onChunk != nil {
+								onChunk(parts[0])
+							}
+							DefaultRuntime.EventBus.Emit(events.Event{
+								Type:      events.EventChatChunk,
+								SessionID: sessionID,
+								Payload:   events.ChatChunkPayload{Chunk: parts[0]},
+							})
+						}
+						inThinkTag = true
+						text = parts[1]
+					}
+
+					if inThinkTag {
+						if strings.Contains(text, "</think>") {
+							parts := strings.SplitN(text, "</think>", 2)
+							if parts[0] != "" {
+								reasoningResp.WriteString(parts[0])
+								turnReasoningAcc.WriteString(parts[0])
+								streamReasoningAcc += parts[0]
+								if onReasoningChunk != nil {
+									onReasoningChunk(parts[0])
+								}
+								DefaultRuntime.EventBus.Emit(events.Event{
+									Type:      events.EventReasoningChunk,
+									SessionID: sessionID,
+									Payload:   events.ReasoningChunkPayload{Chunk: parts[0]},
+								})
+							}
+							inThinkTag = false
+							if parts[1] != "" {
+								fullResp.WriteString(parts[1])
+								turnContentAcc.WriteString(parts[1])
+								if onChunk != nil {
+									onChunk(parts[1])
+								}
+								DefaultRuntime.EventBus.Emit(events.Event{
+									Type:      events.EventChatChunk,
+									SessionID: sessionID,
+									Payload:   events.ChatChunkPayload{Chunk: parts[1]},
+								})
+							}
+						} else {
+							reasoningResp.WriteString(text)
+							turnReasoningAcc.WriteString(text)
+							streamReasoningAcc += text
+							if onReasoningChunk != nil {
+								onReasoningChunk(text)
+							}
+							DefaultRuntime.EventBus.Emit(events.Event{
+								Type:      events.EventReasoningChunk,
+								SessionID: sessionID,
+								Payload:   events.ReasoningChunkPayload{Chunk: text},
+							})
+						}
+					} else {
+						fullResp.WriteString(text)
+						turnContentAcc.WriteString(text)
 						if onChunk != nil {
-							onChunk(mv.Message.Content)
+							onChunk(text)
 						}
 						DefaultRuntime.EventBus.Emit(events.Event{
 							Type:      events.EventChatChunk,
 							SessionID: sessionID,
-							Payload:   events.ChatChunkPayload{Chunk: mv.Message.Content},
+							Payload:   events.ChatChunkPayload{Chunk: text},
 						})
 					}
 				}
+
+				// 3. Accumulate ToolCalls from chunk
+				if len(chunk.ToolCalls) > 0 {
+					for _, tc := range chunk.ToolCalls {
+						idx := 0
+						if tc.Index != nil {
+							idx = *tc.Index
+						}
+						existing, exists := toolCallsMap[idx]
+						if !exists {
+							newTc := tc
+							toolCallsMap[idx] = &newTc
+						} else {
+							if tc.ID != "" {
+								existing.ID = tc.ID
+							}
+							if tc.Type != "" {
+								existing.Type = tc.Type
+							}
+							if tc.Function.Name != "" {
+								existing.Function.Name += tc.Function.Name
+							}
+							if tc.Function.Arguments != "" {
+								existing.Function.Arguments += tc.Function.Arguments
+							}
+						}
+					}
+				}
 			}
+		}()
+
+		if errors.Is(chatCtx.Err(), context.Canceled) {
+			return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
+		}
+
+		if streamRecvErr != nil {
+			if fullResp.Len() == 0 && reasoningResp.Len() == 0 {
+				return "", "", notice, fmt.Errorf("大模型流式响应异常: %w", streamRecvErr)
+			}
+			return fullResp.String(), reasoningResp.String(), notice, fmt.Errorf("大模型流式生成异常中断: %w", streamRecvErr)
+		}
+
+		// Collect tool calls
+		var collectedToolCalls []schema.ToolCall
+		for i := 0; i < len(toolCallsMap); i++ {
+			if tc, ok := toolCallsMap[i]; ok && tc != nil && tc.Function.Name != "" {
+				if tc.ID == "" {
+					tc.ID = fmt.Sprintf("call_%d_%d", turn, i)
+				}
+				collectedToolCalls = append(collectedToolCalls, *tc)
+			}
+		}
+		if len(collectedToolCalls) == 0 && len(toolCallsMap) > 0 {
+			for _, tc := range toolCallsMap {
+				if tc != nil && tc.Function.Name != "" {
+					if tc.ID == "" {
+						tc.ID = fmt.Sprintf("call_%d_%d", turn, len(collectedToolCalls))
+					}
+					collectedToolCalls = append(collectedToolCalls, *tc)
+				}
+			}
+		}
+
+		log.Printf("[Agent][StreamChat] Turn %d completed (received %d chunks, %d tool calls)", turn, chunkCount, len(collectedToolCalls))
+
+		// If no tool calls, the model finished the conversation!
+		if len(collectedToolCalls) == 0 {
+			log.Printf("[Agent][StreamChat] Model finished final answer on Turn %d", turn)
+			break
+		}
+
+		// Append Assistant message with tool calls to history
+		assistantMsg := &schema.Message{
+			Role:             schema.Assistant,
+			Content:          turnContentAcc.String(),
+			ReasoningContent: turnReasoningAcc.String(),
+			ToolCalls:        collectedToolCalls,
+		}
+		schemaMsgs = append(schemaMsgs, assistantMsg)
+
+		// Execute all tool calls
+		for _, tc := range collectedToolCalls {
+			if errors.Is(chatCtx.Err(), context.Canceled) {
+				return fullResp.String(), reasoningResp.String(), notice, errors.New("用户手动停止了推导")
+			}
+			log.Printf("[Agent][StreamChat] Executing Tool: %s (id: %s) with args: %s", tc.Function.Name, tc.ID, tc.Function.Arguments)
+			toolRes := DefaultRuntime.ToolBus.Invoke(chatCtx, "", sessionID, tc.Function.Name, tc.Function.Arguments)
+			var outStr string
+			if !toolRes.OK {
+				if toolRes.Error != "" {
+					outStr = fmt.Sprintf("Error: %s", toolRes.Error)
+				} else {
+					outStr = "Error: 工具执行失败"
+				}
+			} else {
+				if s, ok := toolRes.Data.(string); ok {
+					outStr = s
+				} else if toolRes.Data != nil {
+					b, err := json.Marshal(toolRes.Data)
+					if err == nil {
+						outStr = string(b)
+					} else {
+						outStr = fmt.Sprintf("%v", toolRes.Data)
+					}
+				} else {
+					outStr = "{\"ok\": true}"
+				}
+			}
+			if len(outStr) > 32768 {
+				outStr = outStr[:32768] + "\n...(输出过长已截断)..."
+			}
+			schemaMsgs = append(schemaMsgs, schema.ToolMessage(outStr, tc.ID))
 		}
 	}
 

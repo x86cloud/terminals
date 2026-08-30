@@ -5,6 +5,7 @@ package shell
 import (
 	"context"
 	"os/exec"
+	"strings"
 	"syscall"
 )
 
@@ -19,6 +20,7 @@ func newOSCommand(ctx context.Context, command string) *exec.Cmd {
 		cmd = exec.CommandContext(ctx, "/bin/sh", "-c", command)
 	}
 
+	cmd.Stdin = strings.NewReader("")
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Setpgid: true,
 	}

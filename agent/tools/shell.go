@@ -2,9 +2,13 @@ package tools
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"strings"
 	"time"
 
+	"terminal/agent/events"
 	"terminal/agent/guard"
 	"terminal/agent/job"
 	"terminal/agent/shell"
@@ -52,15 +56,69 @@ func RegisterLocalShellTool(bus *ToolBus, wm *WorkspaceManager, jm *job.JobManag
 				}, nil
 			}
 
+			// Synchronous execution with real-time stream relay to eventBus
 			sh := shell.NewLocalStreamingShell(cwd)
-			resp, err := sh.Execute(ctx, &filesystem.ExecuteRequest{
+			sr, err := sh.ExecuteStreaming(ctx, &filesystem.ExecuteRequest{
 				Command:            input.Command,
 				RunInBackendGround: input.RunInBackground,
 			})
 			if err != nil {
 				return nil, err
 			}
-			return resp, nil
+			defer sr.Close()
+
+			var outBuilder strings.Builder
+			var exitCode *int
+			var isTruncated bool
+
+			callID := CallIDFromContext(ctx)
+			traceID := TraceIDFromContext(ctx)
+
+			for {
+				resp, err := sr.Recv()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				if err != nil {
+					return nil, err
+				}
+				if resp != nil {
+					if resp.Output != "" {
+						outBuilder.WriteString(resp.Output)
+						// Live stream output to eventBus so user sees live output in UI!
+						if bus != nil && bus.eventBus != nil && sessionID != "" {
+							bus.eventBus.Emit(events.Event{
+								Type:      events.EventToolEvent,
+								SessionID: sessionID,
+								TraceID:   traceID,
+								Payload: events.ToolEventPayload{
+									CallID:   callID,
+									ToolName: "execute",
+									Input:    input.Command,
+									Output:   outBuilder.String(),
+								},
+							})
+						}
+					}
+					if resp.ExitCode != nil {
+						exitCode = resp.ExitCode
+					}
+					if resp.Truncated {
+						isTruncated = true
+					}
+				}
+			}
+
+			if exitCode == nil {
+				zero := 0
+				exitCode = &zero
+			}
+
+			return &filesystem.ExecuteResponse{
+				Output:    outBuilder.String(),
+				ExitCode:  exitCode,
+				Truncated: isTruncated,
+			}, nil
 		})
 	if err != nil {
 		return err
@@ -70,8 +128,8 @@ func RegisterLocalShellTool(bus *ToolBus, wm *WorkspaceManager, jm *job.JobManag
 		Name:        "execute",
 		Description: toolDesc,
 		BaseTool:    shellTool,
-		Level:       guard.LevelConfirm,
-		Timeout:     5 * time.Minute,
+		Level:       guard.LevelAllow,
+		Timeout:     60 * time.Second,
 	})
 
 	return nil

@@ -132,7 +132,7 @@ func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error 
 				Name:        "job_submit",
 				Description: "提交并启动一个新的后台异步执行作业 (支持本地与远程命令长任务)",
 				BaseTool:    submitTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -175,7 +175,7 @@ func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error 
 				Name:        "job_kill",
 				Description: "强制终止正在后台运行的作业",
 				BaseTool:    killTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 	}
@@ -195,7 +195,7 @@ func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error 
 				Name:        "subagent_spawn",
 				Description: "委派独立子代理并发执行子任务 (隔离上下文与后台运行)",
 				BaseTool:    spawnTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -208,7 +208,7 @@ func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error 
 				Name:        "subagent_send",
 				Description: "向指定子代理发送追问或追加指令以进行多轮排障交互",
 				BaseTool:    sendSubTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -225,7 +225,7 @@ func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error 
 				Name:        "subagent_interrupt",
 				Description: "中断正在运行的子代理推导",
 				BaseTool:    interruptTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -260,7 +260,7 @@ func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error 
 				Name:        "workflow_run",
 				Description: "执行已保存的标准运维排障工作流",
 				BaseTool:    wfRunTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -306,7 +306,7 @@ func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error 
 				Name:        "memory_save",
 				Description: "将重要事实、配置或总结固化保存至长期语义记忆库",
 				BaseTool:    memSaveTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 

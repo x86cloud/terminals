@@ -3,6 +3,8 @@
 
 import * as AgentService from "./agentservice.js";
 import * as ApiService from "./apiservice.js";
+import * as DockerService from "./dockerservice.js";
+import * as K8sService from "./k8sservice.js";
 import * as MongoService from "./mongoservice.js";
 import * as MqttService from "./mqttservice.js";
 import * as MysqlService from "./mysqlservice.js";
@@ -14,6 +16,8 @@ import * as SystemService from "./systemservice.js";
 export {
     AgentService,
     ApiService,
+    DockerService,
+    K8sService,
     MongoService,
     MqttService,
     MysqlService,
@@ -23,3 +27,7 @@ export {
     SshService,
     SystemService
 };
+
+export type {
+    K8sGenerateYAMLRequest
+} from "./models.js";

@@ -9,6 +9,8 @@ import * as SqliteService from '../bindings/terminal/services/sqliteservice'
 import * as MqttService from '../bindings/terminal/services/mqttservice'
 import * as ApiService from '../bindings/terminal/services/apiservice'
 import * as AgentService from '../bindings/terminal/services/agentservice'
+import * as DockerService from '../bindings/terminal/services/dockerservice'
+import * as K8sService from '../bindings/terminal/services/k8sservice'
 
 import type {
     DirListing,
@@ -49,8 +51,6 @@ import type {
     SSHProcessInfo,
     SSHServiceInfo,
     SSHCronItem,
-    SSHDockerContainer,
-    SSHDockerImage,
     AppSettings,
     AiMessage,
     AgentJobItem,
@@ -63,6 +63,10 @@ import type {
     AgentApprovalRequest,
     AgentAskRequest,
     FrontendMessage,
+    DockerComposeStackInfo,
+    DockerComposeDeployReq,
+    KubeconfigContextInfo,
+    K8sApplyResult,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -526,18 +530,6 @@ export const API = {
         SshService.SSHSaveCronList(sessionId, items as any),
     sshRunCronCommand: (sessionId: string, command: string): Promise<string> =>
         SshService.SSHRunCronCommand(sessionId, command),
-    sshDockerContainerList: (sessionId: string): Promise<SSHDockerContainer[]> =>
-        SshService.SSHDockerContainerList(sessionId).then(r => (r || []) as any),
-    sshDockerControlContainer: (sessionId: string, containerId: string, action: string): Promise<void> =>
-        SshService.SSHDockerControlContainer(sessionId, containerId, action),
-    sshDockerContainerLogs: (sessionId: string, containerId: string, tail: number): Promise<string> =>
-        SshService.SSHDockerContainerLogs(sessionId, containerId, tail),
-    sshDockerImageList: (sessionId: string): Promise<SSHDockerImage[]> =>
-        SshService.SSHDockerImageList(sessionId).then(r => (r || []) as any),
-    sshDockerRemoveImage: (sessionId: string, imageId: string): Promise<void> =>
-        SshService.SSHDockerRemoveImage(sessionId, imageId),
-    sshDockerPullImage: (sessionId: string, imageName: string): Promise<string> =>
-        SshService.SSHDockerPullImage(sessionId, imageName),
 
     // AI Agent 2.0
     agentSend: (sessionId: string, messages: FrontendMessage[]): Promise<string> =>
@@ -554,9 +546,9 @@ export const API = {
     agentGetWorkspaceDir: (): Promise<string> => Promise.resolve(AgentService.AgentGetWorkspaceDir()),
     agentConfirmTool: (confirmId: string, approved: boolean): Promise<boolean> =>
         Promise.resolve(AgentService.AgentConfirmTool(confirmId, approved)),
-    agentDecideApproval: (confirmId: string, approved: boolean, remember: boolean, reason?: string): Promise<boolean> =>
+    agentDecideApproval: (confirmId: string, approved: boolean, remember: boolean = false, reason: string = ''): Promise<boolean> =>
         Promise.resolve(AgentService.AgentDecideApproval(confirmId, approved, remember, reason || '')),
-    agentGetPendingApprovals: (): Promise<AgentApprovalRequest[]> =>
+    agentGetPendingApprovals: (): Promise<any[]> =>
         AgentService.AgentGetPendingApprovals().then(r => (r || []) as any),
     agentAnswerAsk: (askId: string, answer: string): Promise<boolean> =>
         Promise.resolve(AgentService.AgentAnswerAsk(askId, answer)),
@@ -594,6 +586,109 @@ export const API = {
     agentSaveHistory: (messages: AiMessage[]): Promise<void> =>
         AgentService.AgentSaveHistory(messages as any),
     agentClearHistory: (): Promise<void> => AgentService.AgentClearHistory(),
+
+    // Docker 独立客户端
+    dockerConnect: (id: string): Promise<boolean> => DockerService.DockerConnect(id),
+    dockerClose: (id: string): Promise<void> => DockerService.DockerClose(id),
+    dockerTestConnection: (cfg: ServerConfig): Promise<string> => DockerService.DockerTestConnection(cfg as any),
+    dockerPing: (id: string): Promise<string> => DockerService.DockerPing(id),
+    dockerGetOverview: (id: string) => DockerService.DockerGetOverview(id),
+    dockerListContainers: (id: string, all: boolean) => DockerService.DockerListContainers(id, all).then(r => r || []),
+    dockerControlContainer: (id: string, containerId: string, action: string): Promise<void> =>
+        DockerService.DockerControlContainer(id, containerId, action),
+    dockerInspectContainer: (id: string, containerId: string): Promise<string> =>
+        DockerService.DockerInspectContainer(id, containerId),
+    dockerGetContainerLogs: (id: string, containerId: string, tail: number, timestamps: boolean): Promise<string> =>
+        DockerService.DockerGetContainerLogs(id, containerId, tail, timestamps),
+    dockerCreateContainer: (id: string, req: any): Promise<string> =>
+        DockerService.DockerCreateContainer(id, req),
+    dockerListImages: (id: string) => DockerService.DockerListImages(id).then(r => r || []),
+    dockerInspectImage: (id: string, imageId: string): Promise<string> =>
+        DockerService.DockerInspectImage(id, imageId),
+    dockerPullImage: (id: string, imageName: string): Promise<string> =>
+        DockerService.DockerPullImage(id, imageName),
+    dockerRemoveImage: (id: string, imageId: string, force: boolean): Promise<void> =>
+        DockerService.DockerRemoveImage(id, imageId, force),
+    dockerListVolumes: (id: string) => DockerService.DockerListVolumes(id).then(r => r || []),
+    dockerCreateVolume: (id: string, name: string, driver: string, labels: Record<string, string>) =>
+        DockerService.DockerCreateVolume(id, name, driver, labels),
+    dockerRemoveVolume: (id: string, name: string, force: boolean): Promise<void> =>
+        DockerService.DockerRemoveVolume(id, name, force),
+    dockerListNetworks: (id: string) => DockerService.DockerListNetworks(id).then(r => r || []),
+    dockerCreateNetwork: (id: string, name: string, driver: string): Promise<string> =>
+        DockerService.DockerCreateNetwork(id, name, driver),
+    dockerRemoveNetwork: (id: string, networkId: string): Promise<void> =>
+        DockerService.DockerRemoveNetwork(id, networkId),
+    dockerSystemPrune: (id: string, pruneContainers: boolean, pruneImages: boolean, pruneVolumes: boolean, pruneNetworks: boolean) =>
+        DockerService.DockerSystemPrune(id, pruneContainers, pruneImages, pruneVolumes, pruneNetworks),
+
+    // Docker Compose
+    dockerListComposeStacks: (id: string): Promise<DockerComposeStackInfo[]> =>
+        DockerService.DockerListComposeStacks(id).then(r => (r || []) as any),
+    dockerGetComposeStack: (id: string, projectName: string): Promise<DockerComposeStackInfo | null> =>
+        DockerService.DockerGetComposeStack(id, projectName) as any,
+    dockerDeployComposeStack: (id: string, req: any): Promise<void> =>
+        DockerService.DockerDeployComposeStack(id, req),
+    dockerControlComposeStack: (id: string, projectName: string, action: string): Promise<void> =>
+        DockerService.DockerControlComposeStack(id, projectName, action),
+    dockerGetComposeStackLogs: (id: string, projectName: string, tail: number): Promise<string> =>
+        DockerService.DockerGetComposeStackLogs(id, projectName, tail),
+
+    // Kubernetes (K8s) 独立客户端
+    k8sConnect: (id: string): Promise<boolean> => K8sService.K8sConnect(id),
+    k8sClose: (id: string): Promise<void> => K8sService.K8sClose(id),
+    k8sTestConnection: (cfg: ServerConfig): Promise<string> => K8sService.K8sTestConnection(cfg as any),
+    k8sParseKubeconfig: (data: string, path: string): Promise<KubeconfigContextInfo> =>
+        K8sService.K8sParseKubeconfig(data, path) as any,
+    k8sPing: (id: string): Promise<string> => K8sService.K8sPing(id),
+    k8sGetOverview: (id: string) => K8sService.K8sGetOverview(id),
+    k8sListNamespaces: (id: string) => K8sService.K8sListNamespaces(id).then(r => r || []),
+    k8sListNodes: (id: string) => K8sService.K8sListNodes(id).then(r => r || []),
+    k8sListPods: (id: string, namespace: string) => K8sService.K8sListPods(id, namespace).then(r => r || []),
+    k8sGetPodLogs: (id: string, namespace: string, podName: string, containerName: string, tail: number, timestamps: boolean): Promise<string> =>
+        K8sService.K8sGetPodLogs(id, namespace, podName, containerName, tail, timestamps),
+    k8sDeletePod: (id: string, namespace: string, podName: string): Promise<void> =>
+        K8sService.K8sDeletePod(id, namespace, podName),
+    k8sListDeployments: (id: string, namespace: string) => K8sService.K8sListDeployments(id, namespace).then(r => r || []),
+    k8sScaleDeployment: (id: string, namespace: string, name: string, replicas: number): Promise<void> =>
+        K8sService.K8sScaleDeployment(id, namespace, name, replicas),
+    k8sRestartDeployment: (id: string, namespace: string, name: string): Promise<void> =>
+        K8sService.K8sRestartDeployment(id, namespace, name),
+    k8sDeleteDeployment: (id: string, namespace: string, name: string): Promise<void> =>
+        (K8sService as any).K8sDeleteDeployment(id, namespace, name),
+    k8sListServices: (id: string, namespace: string) => K8sService.K8sListServices(id, namespace).then(r => r || []),
+    k8sDeleteService: (id: string, namespace: string, name: string): Promise<void> =>
+        (K8sService as any).K8sDeleteService(id, namespace, name),
+    k8sListIngresses: (id: string, namespace: string) => K8sService.K8sListIngresses(id, namespace).then(r => r || []),
+    k8sDeleteIngress: (id: string, namespace: string, name: string): Promise<void> =>
+        (K8sService as any).K8sDeleteIngress(id, namespace, name),
+    k8sListConfigMaps: (id: string, namespace: string) => K8sService.K8sListConfigMaps(id, namespace).then(r => r || []),
+    k8sDeleteConfigMap: (id: string, namespace: string, name: string): Promise<void> =>
+        (K8sService as any).K8sDeleteConfigMap(id, namespace, name),
+    k8sListSecrets: (id: string, namespace: string) => K8sService.K8sListSecrets(id, namespace).then(r => r || []),
+    k8sDeleteSecret: (id: string, namespace: string, name: string): Promise<void> =>
+        (K8sService as any).K8sDeleteSecret(id, namespace, name),
+    k8sListPVCs: (id: string, namespace: string) => K8sService.K8sListPVCs(id, namespace).then(r => r || []),
+    k8sDeletePVC: (id: string, namespace: string, name: string): Promise<void> =>
+        (K8sService as any).K8sDeletePVC(id, namespace, name),
+    k8sCreateNamespace: (id: string, name: string): Promise<void> =>
+        (K8sService as any).K8sCreateNamespace(id, name),
+    k8sDeleteNamespace: (id: string, name: string): Promise<void> =>
+        (K8sService as any).K8sDeleteNamespace(id, name),
+    k8sGetResourceYAML: (id: string, kind: string, namespace: string, name: string): Promise<string> =>
+        K8sService.K8sGetResourceYAML(id, kind, namespace, name),
+    k8sExecStart: (id: string, namespace: string, podName: string, container: string, command: string, cols: number, rows: number): Promise<string> =>
+        (K8sService as any).K8sExecStart(id, namespace, podName, container, command, cols, rows),
+    k8sExecWrite: (execID: string, data: string): Promise<void> =>
+        (K8sService as any).K8sExecWrite(execID, data),
+    k8sExecResize: (execID: string, cols: number, rows: number): Promise<void> =>
+        (K8sService as any).K8sExecResize(execID, cols, rows),
+    k8sExecClose: (execID: string): Promise<void> =>
+        (K8sService as any).K8sExecClose(execID),
+    k8sGenerateYAML: (namespace: string, kinds: string[], images: string[], prompt: string): Promise<string> =>
+        (K8sService as any).K8sGenerateYAML({ namespace, kinds, images, prompt }),
+    k8sApplyYAML: (id: string, yamlContent: string): Promise<K8sApplyResult[]> =>
+        (K8sService as any).K8sApplyYAML(id, yamlContent).then((r: any) => r || []),
 }
 
 /* ------------------------------------------------------------------ */

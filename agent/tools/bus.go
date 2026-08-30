@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -88,6 +89,7 @@ func (b *ToolBus) List() []*RegisteredTool {
 
 type sessionCtxKey struct{}
 type traceCtxKey struct{}
+type callIDCtxKey struct{}
 
 func WithSessionID(ctx context.Context, sessionID string) context.Context {
 	return context.WithValue(ctx, sessionCtxKey{}, sessionID)
@@ -115,6 +117,19 @@ func TraceIDFromContext(ctx context.Context) string {
 	return ""
 }
 
+func WithCallID(ctx context.Context, callID string) context.Context {
+	return context.WithValue(ctx, callIDCtxKey{}, callID)
+}
+
+func CallIDFromContext(ctx context.Context) string {
+	if v := ctx.Value(callIDCtxKey{}); v != nil {
+		if s, ok := v.(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
 func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, input string) *ToolResult {
 	start := time.Now()
 	callID := fmt.Sprintf("call_%d", start.UnixNano())
@@ -125,6 +140,7 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 	if traceID != "" {
 		ctx = WithTraceID(ctx, traceID)
 	}
+	ctx = WithCallID(ctx, callID)
 
 	// 1. Check Tool existence
 	t, ok := b.Get(toolName)
@@ -154,61 +170,46 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 	decision := "allow"
 	if b.guard != nil {
 		lvl, reason := b.guard.Audit(ctx, sessionID, toolName, input, t.Level)
-		switch lvl {
-		case guard.LevelForbidden:
+		if lvl == guard.LevelForbidden {
 			res := &ToolResult{
 				OK:    false,
 				Error: fmt.Sprintf("【权限审查模块硬拦截】操作拒绝: %s", reason),
 			}
 			b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "forbidden", res.String(), time.Since(start).Milliseconds())
-			b.emitToolEvent(sessionID, callID, toolName, input, res.String())
+			b.emitToolEvent(sessionID, callID, toolName, input, res.String(), time.Since(start).Milliseconds())
 			return res
-
-		case guard.LevelConfirm:
-			confirmID := fmt.Sprintf("guard_%d", time.Now().UnixNano())
-			req := &guard.ApprovalRequest{
-				ConfirmID:   confirmID,
-				SessionID:   sessionID,
-				TraceID:     traceID,
-				ToolName:    toolName,
-				Action:      t.Description,
-				Description: fmt.Sprintf("工具 [%s]: %s", toolName, t.Description),
-				Arguments:   input,
-				Level:       lvl,
-			}
-
-			// Emit confirm request event
-			if b.eventBus != nil {
-				b.eventBus.Emit(events.Event{
-					Type:      events.EventConfirmRequest,
-					SessionID: sessionID,
-					TraceID:   traceID,
-					Payload: events.ConfirmRequestPayload{
-						ConfirmID:   confirmID,
-						Action:      t.Description,
-						Description: req.Description,
-						ToolName:    toolName,
-						Arguments:   input,
-						RiskLevel:   string(lvl),
-					},
-				})
-			}
-
-			appDec := b.guard.RequestApproval(ctx, req)
-			if !appDec.Approved {
-				reasonText := appDec.Reason
-				if reasonText == "" {
-					reasonText = "用户取消了该工具执行操作"
+		} else if lvl == guard.LevelConfirm {
+			hitlMgr := b.guard.HitlManager()
+			if hitlMgr != nil {
+				toolDesc := t.Description
+				if toolDesc == "" {
+					toolDesc = toolName
 				}
-				res := &ToolResult{
-					OK:    false,
-					Error: fmt.Sprintf("【用户拒绝审批】: %s", reasonText),
+				approved, rejectReason, err := hitlMgr.RequestApproval(ctx, sessionID, traceID, toolName, toolDesc, input, reason)
+				if err != nil {
+					res := &ToolResult{
+						OK:    false,
+						Error: fmt.Sprintf("【人工审批中断】%s", err.Error()),
+					}
+					b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "aborted", res.String(), time.Since(start).Milliseconds())
+					b.emitToolEvent(sessionID, callID, toolName, input, res.String(), time.Since(start).Milliseconds())
+					return res
 				}
-				b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "rejected", res.String(), time.Since(start).Milliseconds())
-				b.emitToolEvent(sessionID, callID, toolName, input, res.String())
-				return res
+				if !approved {
+					errMsg := "【用户审批拒绝】用户拒绝执行此操作。"
+					if strings.TrimSpace(rejectReason) != "" {
+						errMsg += fmt.Sprintf(" 用户反馈/理由: %s", strings.TrimSpace(rejectReason))
+					}
+					res := &ToolResult{
+						OK:    false,
+						Error: errMsg,
+					}
+					b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "rejected", res.String(), time.Since(start).Milliseconds())
+					b.emitToolEvent(sessionID, callID, toolName, input, res.String(), time.Since(start).Milliseconds())
+					return res
+				}
+				decision = "confirmed_allow"
 			}
-			decision = "approved"
 		}
 	}
 
@@ -255,24 +256,53 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 	if b.guard != nil {
 		b.guard.RecordAuditLog(traceID, sessionID, toolName, input, decision, finalRes.String(), duration)
 	}
-	b.emitToolEvent(sessionID, callID, toolName, input, finalRes.String())
+	b.emitToolEvent(sessionID, callID, toolName, input, finalRes.String(), duration)
 
 	return finalRes
 }
 
-func (b *ToolBus) emitToolEvent(sessionID, callID, toolName, input, output string) {
+func (b *ToolBus) emitToolEvent(sessionID, callID, toolName, input, output string, durationMs int64) {
 	if b.eventBus != nil {
 		b.eventBus.Emit(events.Event{
 			Type:      events.EventToolEvent,
 			SessionID: sessionID,
 			Payload: events.ToolEventPayload{
-				CallID:   callID,
-				ToolName: toolName,
-				Input:    input,
-				Output:   output,
+				CallID:     callID,
+				ToolName:   toolName,
+				Input:      input,
+				Output:     output,
+				DurationMs: durationMs,
 			},
 		})
 	}
+}
+
+// ConvertToToolInfos converts all registered tools into schema.ToolInfo for ChatModel
+func (b *ToolBus) ConvertToToolInfos(ctx context.Context) []*schema.ToolInfo {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	var out []*schema.ToolInfo
+	for _, rt := range b.tools {
+		if rt.BaseTool != nil {
+			info, err := rt.BaseTool.Info(ctx)
+			if err == nil && info != nil {
+				out = append(out, info)
+				continue
+			}
+		}
+		out = append(out, &schema.ToolInfo{
+			Name: rt.Name,
+			Desc: rt.Description,
+			ParamsOneOf: schema.NewParamsOneOfByParams(map[string]*schema.ParameterInfo{
+				"input": {
+					Type: schema.String,
+					Desc: "JSON string arguments for tool",
+				},
+			}),
+		})
+	}
+	return out
 }
 
 // ConvertToEinoTools converts all registered tools into Eino BaseTool wrappers
@@ -318,11 +348,31 @@ func (w *guardWrappedEinoTool) Info(ctx context.Context) (*schema.ToolInfo, erro
 
 func (w *guardWrappedEinoTool) InvokableRun(ctx context.Context, input string, opts ...tool.Option) (string, error) {
 	res := w.bus.Invoke(ctx, "", w.sessionID, w.tool.Name, input)
+	var outStr string
 	if !res.OK {
 		if res.Error != "" {
-			return fmt.Sprintf(`{"ok":false,"error":%q}`, res.Error), nil
+			outStr = fmt.Sprintf("Error: %s", res.Error)
+		} else {
+			outStr = "Error: 工具执行失败"
 		}
-		return `{"ok":false,"error":"工具执行失败"}`, nil
+	} else {
+		if s, ok := res.Data.(string); ok {
+			outStr = s
+		} else if res.Data != nil {
+			b, err := json.Marshal(res.Data)
+			if err == nil {
+				outStr = string(b)
+			} else {
+				outStr = fmt.Sprintf("%v", res.Data)
+			}
+		} else {
+			outStr = "{\"ok\": true}"
+		}
 	}
-	return res.String(), nil
+
+	// Safe 32KB truncation protection for LLM context window
+	if len(outStr) > 32768 {
+		outStr = outStr[:32768] + "\n...(输出过长已安全截断)..."
+	}
+	return outStr, nil
 }

@@ -8,15 +8,25 @@ import MysqlClient from '@/pages/mysql/MysqlClient'
 import MqttClient from '@/pages/mqtt/MqttClient'
 import MongoClient from '@/pages/mongo/MongoClient'
 import SqliteClient from '@/pages/sqlite/SqliteClient'
+import DockerClient from '@/pages/docker/DockerClient'
+import K8sClient from '@/pages/k8s/K8sClient'
 import ApiClient from '@/pages/api/ApiClient'
 import AiAgentPanel from '@/pages/agent/AiAgentPanel'
 import DevTools from '@/components/DevTools'
 import g from '@/styles/global.module.less'
 import a from '@/components/app/Stage.module.less'
-import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, AppSettings } from '@/types'
+import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, AppSettings } from '@/types'
 
 const hiddenPane = { display: 'none' as const }
-const shownPane = { display: 'flex' as const, flex: 1, minHeight: 0, minWidth: 0 }
+const shownPane = {
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    flex: 1,
+    minHeight: 0,
+    minWidth: 0,
+    width: '100%',
+    height: '100%',
+}
 
 export interface StageProps {
     sessions: SessionInfo[]
@@ -32,6 +42,10 @@ export interface StageProps {
     activeMongoId: string | null
     sqliteSessions: SqliteSessionInfo[]
     activeSqliteId: string | null
+    dockerSessions?: DockerSessionInfo[]
+    activeDockerId?: string | null
+    k8sSessions?: K8sSessionInfo[]
+    activeK8sId?: string | null
     aiAgentOpen: boolean
     aiAgentActive: boolean
     devToolsOpen: boolean
@@ -49,6 +63,8 @@ export interface StageProps {
     onCloseMongo: (id: string) => void
     onMongoChange: (id: string, database: string) => void
     onCloseSqlite: (id: string) => void
+    onCloseDocker?: (id: string) => void
+    onCloseK8s?: (id: string) => void
     onCloseAiAgent: () => void
     onCloseDevTools: () => void
     onCloseApi: () => void
@@ -58,12 +74,15 @@ export interface StageProps {
 export default function Stage(props: StageProps) {
     const {
         sessions, activeId, nativeDrop, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive, settings,
+        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId,
+        dockerSessions = [], activeDockerId = null,
+        k8sSessions = [], activeK8sId = null,
+        aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive, settings,
         onPathChange, onNotify, onCloseRedis, onRedisDbChange, onCloseMysql, onMysqlChange,
-        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseAiAgent, onCloseDevTools, onCloseApi, onNewServer,
+        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseDocker, onCloseK8s, onCloseAiAgent, onCloseDevTools, onCloseApi, onNewServer,
     } = props
 
-    const empty = sessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen && !aiAgentOpen
+    const empty = sessions.length === 0 && dockerSessions.length === 0 && k8sSessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen && !aiAgentOpen
 
     return (
         <div className={a.stage}>
@@ -76,6 +95,27 @@ export default function Stage(props: StageProps) {
                     onPathChange={onPathChange}
                     onNotify={onNotify}
                 />
+            ))}
+
+            {dockerSessions.map((s) => (
+                <div key={s.id} style={s.id === activeDockerId ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="Docker 页面渲染异常" onClose={() => onCloseDocker?.(s.id)}>
+                        <DockerClient
+                            session={s}
+                            onClose={() => onCloseDocker?.(s.id)}
+                        />
+                    </ErrorBoundary>
+                </div>
+            ))}
+
+            {k8sSessions.map((s) => (
+                <div key={s.id} style={s.id === activeK8sId ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="Kubernetes 页面渲染异常" onClose={() => onCloseK8s?.(s.id)}>
+                        <K8sClient
+                            session={s}
+                        />
+                    </ErrorBoundary>
+                </div>
             ))}
 
             {redisSessions.map((s) => (

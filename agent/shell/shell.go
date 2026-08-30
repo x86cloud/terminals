@@ -1,7 +1,6 @@
 package shell
 
 import (
-	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -124,6 +123,76 @@ func (s *LocalStreamingShell) Execute(ctx context.Context, input *filesystem.Exe
 	}, nil
 }
 
+// streamWriterPipe adapts io.Writer to schema.StreamWriter[*filesystem.ExecuteResponse] line by line without pipe descriptor deadlocks.
+type streamWriterPipe struct {
+	sw         *schema.StreamWriter[*filesystem.ExecuteResponse]
+	ctx        context.Context
+	totalBytes int64
+	truncated  atomic.Bool
+	buf        strings.Builder
+	mu         sync.Mutex
+}
+
+func (w *streamWriterPipe) Write(p []byte) (n int, err error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	n = len(p)
+	if n == 0 {
+		return 0, nil
+	}
+
+	w.buf.Write(p)
+	raw := w.buf.String()
+
+	for {
+		idx := strings.IndexByte(raw, '\n')
+		if idx < 0 {
+			break
+		}
+		line := raw[:idx+1]
+		raw = raw[idx+1:]
+
+		cur := atomic.AddInt64(&w.totalBytes, int64(len(line)))
+		if cur > maxOutputBytes {
+			if !w.truncated.Swap(true) {
+				w.sw.Send(&filesystem.ExecuteResponse{
+					Output:    "\n[Output truncated: exceeded 1MB limit]\n",
+					Truncated: true,
+				}, nil)
+			}
+		} else if !w.truncated.Load() {
+			select {
+			case <-w.ctx.Done():
+				return n, w.ctx.Err()
+			default:
+				w.sw.Send(&filesystem.ExecuteResponse{
+					Output: line,
+				}, nil)
+			}
+		}
+	}
+
+	w.buf.Reset()
+	if len(raw) > 0 {
+		w.buf.WriteString(raw)
+	}
+
+	return n, nil
+}
+
+func (w *streamWriterPipe) Flush() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	remaining := w.buf.String()
+	if remaining != "" && !w.truncated.Load() {
+		w.sw.Send(&filesystem.ExecuteResponse{
+			Output: remaining,
+		}, nil)
+	}
+	w.buf.Reset()
+}
+
 // ExecuteStreaming executes a command and streams output line by line to a StreamReader.
 func (s *LocalStreamingShell) ExecuteStreaming(ctx context.Context, input *filesystem.ExecuteRequest) (*schema.StreamReader[*filesystem.ExecuteResponse], error) {
 	if input == nil || strings.TrimSpace(input.Command) == "" {
@@ -131,137 +200,61 @@ func (s *LocalStreamingShell) ExecuteStreaming(ctx context.Context, input *files
 	}
 
 	cmd := s.buildCommand(ctx, input.Command)
-
-	stdoutPipe, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
-	}
-
-	stderrPipe, err := cmd.StderrPipe()
-	if err != nil {
-		_ = stdoutPipe.Close()
-		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
-	}
-
-	if err := cmd.Start(); err != nil {
-		_ = stdoutPipe.Close()
-		_ = stderrPipe.Close()
-		return nil, fmt.Errorf("failed to start command: %w", err)
-	}
-
-	sr, sw := schema.Pipe[*filesystem.ExecuteResponse](32)
+	sr, sw := schema.Pipe[*filesystem.ExecuteResponse](64)
 
 	// Background execution mode
 	if input.RunInBackendGround {
 		go func() {
-			defer func() {
-				_ = stdoutPipe.Close()
-				_ = stderrPipe.Close()
-			}()
-
-			done := make(chan struct{})
-			go func() {
-				// Drain pipes in background
-				var wg sync.WaitGroup
-				wg.Add(2)
-				go func() {
-					defer wg.Done()
-					_, _ = io.Copy(io.Discard, stdoutPipe)
-				}()
-				go func() {
-					defer wg.Done()
-					_, _ = io.Copy(io.Discard, stderrPipe)
-				}()
-				wg.Wait()
-				_ = cmd.Wait()
-				close(done)
-			}()
-
-			select {
-			case <-done:
-			case <-ctx.Done():
-				killProcessTree(cmd)
-			}
-		}()
-
-		go func() {
 			defer sw.Close()
+			if err := cmd.Start(); err != nil {
+				sw.Send(nil, fmt.Errorf("failed to start background command: %w", err))
+				return
+			}
+			go func() {
+				_ = cmd.Wait()
+			}()
 			zero := 0
 			sw.Send(&filesystem.ExecuteResponse{
 				Output:   "command started in background\n",
 				ExitCode: &zero,
 			}, nil)
 		}()
-
 		return sr, nil
 	}
+
+	outPipe := &streamWriterPipe{
+		sw:  sw,
+		ctx: ctx,
+	}
+
+	cmd.Stdout = outPipe
+	cmd.Stderr = outPipe
 
 	// Foreground streaming execution mode
 	go func() {
 		defer func() {
-			_ = stdoutPipe.Close()
-			_ = stderrPipe.Close()
+			outPipe.Flush()
 			sw.Close()
 		}()
 
-		var totalBytes int64
-		var truncated atomic.Bool
-
-		var wg sync.WaitGroup
-		wg.Add(2)
-
-		readPipe := func(r io.Reader, isStderr bool) {
-			defer wg.Done()
-			reader := bufio.NewReader(r)
-			for {
-				line, err := reader.ReadString('\n')
-				if line != "" {
-					cur := atomic.AddInt64(&totalBytes, int64(len(line)))
-					if cur > maxOutputBytes {
-						if !truncated.Swap(true) {
-							sw.Send(&filesystem.ExecuteResponse{
-								Output:    "\n[Output truncated: exceeded 1MB limit]\n",
-								Truncated: true,
-							}, nil)
-						}
-					} else if !truncated.Load() {
-						select {
-						case <-ctx.Done():
-							killProcessTree(cmd)
-							return
-						default:
-							sw.Send(&filesystem.ExecuteResponse{
-								Output: line,
-							}, nil)
-						}
-					}
-				}
-				if err != nil {
-					break
-				}
-			}
-		}
-
-		go readPipe(stdoutPipe, false)
-		go readPipe(stderrPipe, true)
-
-		// Wait for I/O completion or context cancellation
-		ioDone := make(chan struct{})
-		go func() {
-			wg.Wait()
-			close(ioDone)
-		}()
-
-		select {
-		case <-ioDone:
-		case <-ctx.Done():
-			killProcessTree(cmd)
-			sw.Send(nil, ctx.Err())
+		if err := cmd.Start(); err != nil {
+			sw.Send(nil, fmt.Errorf("failed to start command: %w", err))
 			return
 		}
 
-		// Wait for process exit and determine exit code
+		// Monitor context cancellation
+		cancelCh := make(chan struct{})
+		go func() {
+			select {
+			case <-ctx.Done():
+				killProcessTree(cmd)
+			case <-cancelCh:
+			}
+		}()
+
 		waitErr := cmd.Wait()
+		close(cancelCh)
+
 		var exitCode int
 		if waitErr != nil {
 			var exitError *exec.ExitError
@@ -274,7 +267,7 @@ func (s *LocalStreamingShell) ExecuteStreaming(ctx context.Context, input *files
 
 		sw.Send(&filesystem.ExecuteResponse{
 			ExitCode:  &exitCode,
-			Truncated: truncated.Load(),
+			Truncated: outPipe.truncated.Load(),
 		}, nil)
 	}()
 

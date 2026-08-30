@@ -3,8 +3,11 @@ package router
 import (
 	"context"
 	"fmt"
+	"net"
+	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/cloudwego/eino-ext/components/model/openai"
 )
@@ -80,18 +83,43 @@ func (r *ModelRouter) Resolve(ctx context.Context, role ModelRole) (*ResolvedMod
 		baseURL = "https://api.deepseek.com"
 	}
 
+	httpClient := &http.Client{
+		Timeout: 3 * time.Minute,
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+			DialContext: (&net.Dialer{
+				Timeout:   15 * time.Second,
+				KeepAlive: 15 * time.Second,
+			}).DialContext,
+			ForceAttemptHTTP2:     true,
+			MaxIdleConns:          50,
+			MaxIdleConnsPerHost:   10,
+			IdleConnTimeout:       30 * time.Second,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			ResponseHeaderTimeout: 90 * time.Second,
+		},
+	}
+
 	cfg := &openai.ChatModelConfig{
 		BaseURL:     baseURL,
 		APIKey:      strings.TrimSpace(profile.APIKey),
 		Model:       strings.TrimSpace(profile.Model),
 		Temperature: &temp,
+		Timeout:     3 * time.Minute,
+		HTTPClient:  httpClient,
 	}
 
 	if profile.EnableThinking {
-		cfg.ExtraFields = map[string]any{
-			"thinking": map[string]any{
-				"type": "enabled",
-			},
+		lowerURL := strings.ToLower(baseURL)
+		if strings.Contains(lowerURL, "anthropic") || strings.Contains(lowerURL, "claude") {
+			cfg.ExtraFields = map[string]any{
+				"thinking": map[string]any{
+					"type": "enabled",
+				},
+			}
+		} else if cfg.ReasoningEffort == "" {
+			cfg.ReasoningEffort = openai.ReasoningEffortLevelMedium
 		}
 	}
 	if profile.ReasoningEffort != "" && profile.ReasoningEffort != "none" {

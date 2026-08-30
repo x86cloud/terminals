@@ -11,7 +11,7 @@ import {
     Sun,
     Moon,
 } from 'lucide-react'
-import { Window } from '@wailsio/runtime'
+import { Window, Events } from '@wailsio/runtime'
 import AppLogo from './AppLogo'
 import s from './TitleBar.module.less'
 
@@ -44,12 +44,27 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
     useEffect(() => {
         updateWindowStates()
-        const interval = setInterval(updateWindowStates, 600)
         window.addEventListener('resize', updateWindowStates)
 
+        const unsubs: Array<() => void> = []
+        try {
+            if (Events && typeof Events.On === 'function') {
+                const onMax = Events.On('windows:WindowMaximise', () => setIsMaximised(true))
+                const onUnmax = Events.On('windows:WindowUnMaximise', () => setIsMaximised(false))
+                const onRestore = Events.On('windows:WindowRestore', () => setIsMaximised(false))
+                const onMacMax = Events.On('mac:WindowMaximise' as any, () => setIsMaximised(true))
+                const onMacUnmax = Events.On('mac:WindowUnMaximise' as any, () => setIsMaximised(false))
+                unsubs.push(onMax, onUnmax, onRestore, onMacMax, onMacUnmax)
+            }
+        } catch {
+            // fallback
+        }
+
         return () => {
-            clearInterval(interval)
             window.removeEventListener('resize', updateWindowStates)
+            unsubs.forEach(u => {
+                if (typeof u === 'function') u()
+            })
         }
     }, [])
 

@@ -45,6 +45,12 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = ({
         setExpandedSteps((prev) => ({ ...prev, [stepId]: !prev[stepId] }))
     }
 
+    const formatDuration = (ms?: number) => {
+        if (!ms || ms <= 0) return null
+        if (ms < 1000) return `${ms}ms`
+        return `${(ms / 1000).toFixed(1)}s`
+    }
+
     const formatSummary = (step: ProcessStep) => {
         if (step.type === 'think') return '深度思考过程'
         if (step.status === 'running') {
@@ -92,6 +98,7 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = ({
                         const isStepExpanded =
                             expandedSteps[step.id] ??
                             (isStreaming && step.status === 'running')
+                        const durText = formatDuration(step.duration_ms)
                         return (
                             <div key={step.id} className={s.stepBlockRow}>
                                 <div
@@ -105,6 +112,11 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = ({
                                         <span className={s.stepTitleText}>
                                             {formatSummary(step)}
                                         </span>
+                                        {step.type === 'tool' && durText && (
+                                            <span className={s.durationBadge}>
+                                                ⏱️ {durText}
+                                            </span>
+                                        )}
                                         {step.status === 'running' && (
                                             <RotateCw size={11} className={s.spinIcon} />
                                         )}
@@ -121,6 +133,12 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = ({
                                             <div className={s.reasoningBox}>{step.content || '思考中...'}</div>
                                         ) : (
                                             <div>
+                                                {durText && (
+                                                    <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                                        <span>⏱️ 执行耗时:</span>
+                                                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>{durText}</span>
+                                                    </div>
+                                                )}
                                                 {step.summary && !step.summary.startsWith('正在调用') && (
                                                     <div className={s.toolSection}>
                                                         <div className={s.toolSectionTitle}>输入参数 (Input):</div>

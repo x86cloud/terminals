@@ -26,6 +26,8 @@ func main() {
 	mqttSvc := services.NewMqttService()
 	apiSvc := services.NewApiService()
 	agentSvc := services.NewAgentService()
+	dockerSvc := services.NewDockerService()
+	k8sSvc := services.NewK8sService()
 
 	app := application.New(application.Options{
 		Name:        "xClient",
@@ -41,6 +43,8 @@ func main() {
 			application.NewService(mqttSvc),
 			application.NewService(apiSvc),
 			application.NewService(agentSvc),
+			application.NewService(dockerSvc),
+			application.NewService(k8sSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

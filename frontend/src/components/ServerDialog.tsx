@@ -12,6 +12,7 @@ import {
     Alert,
     Tooltip,
     Collapse,
+    Segmented,
 } from 'antd'
 import {
     Terminal,
@@ -60,6 +61,8 @@ export default function ServerDialog({
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
     const [testResult, setTestResult] = useState<{ success?: boolean; message?: string } | null>(null)
+    const [kubeconfigContexts, setKubeconfigContexts] = useState<string[]>([])
+    const [kubeconfigInfo, setKubeconfigInfo] = useState<{ currentContext?: string; clusterHost?: string } | null>(null)
 
     useEffect(() => {
         if (open) {
@@ -77,12 +80,30 @@ export default function ServerDialog({
                                     ? 27017
                                     : base.type === 'sqlite'
                                         ? 0
-                                        : 22
+                                        : base.type === 'k8s'
+                                            ? 6443
+                                            : 22
+            }
+            if (base.type === 'k8s') {
+                if (!base.k8sAuthMode) base.k8sAuthMode = 'kubeconfig'
             }
             if (!base.username && (base.type === 'ssh' || base.type === 'mysql')) base.username = 'root'
             setForm(base)
             setError('')
             setTestResult(null)
+            if (base.type === 'k8s' && (base.k8sKubeconfigData || base.k8sKubeconfigPath)) {
+                API.k8sParseKubeconfig(base.k8sKubeconfigData || '', base.k8sKubeconfigPath || '')
+                    .then((info) => {
+                        if (info) {
+                            setKubeconfigContexts(info.contexts || [])
+                            setKubeconfigInfo({ currentContext: info.currentContext, clusterHost: info.clusterHost })
+                        }
+                    })
+                    .catch(() => undefined)
+            } else {
+                setKubeconfigContexts([])
+                setKubeconfigInfo(null)
+            }
         }
     }, [open, initial])
 
@@ -100,21 +121,55 @@ export default function ServerDialog({
             mqtt: 1883,
             mongo: 27017,
             sqlite: 0,
+            docker: 0,
+            k8s: 6443,
         }
         const defaultPort = defaultPortMap[t] || 0
         const isCurrentDefault = !form.port || Object.values(defaultPortMap).includes(form.port)
 
         update({
             type: t,
+            k8sAuthMode: t === 'k8s' ? (form.k8sAuthMode || 'kubeconfig') : form.k8sAuthMode,
             port: isCurrentDefault ? defaultPort : form.port,
-            username: t === 'redis' || t === 'mqtt' || t === 'sqlite' ? '' : form.username || 'root',
+            username: t === 'redis' || t === 'mqtt' || t === 'sqlite' || t === 'docker' || t === 'k8s' ? '' : form.username || 'root',
         })
     }
 
     const validateForm = (cfg: ServerConfig): string | null => {
+        if (cfg.type === 'k8s') {
+            const mode = cfg.k8sAuthMode || 'kubeconfig'
+            if (mode === 'kubeconfig') {
+                if (!cfg.k8sKubeconfigData?.trim() && !cfg.k8sKubeconfigPath?.trim()) {
+                    return '请粘贴 Kubeconfig 文本内容或选择 Kubeconfig 本地文件'
+                }
+            } else {
+                if (!cfg.k8sApiServer?.trim() && !cfg.host?.trim()) {
+                    return '请输入 Kubernetes API Server 地址 (如 https://192.168.1.100:6443)'
+                }
+            }
+            return null
+        }
+
         if (cfg.type === 'sqlite') {
             if (!cfg.sqlitePath?.trim()) {
                 return '请选择或输入 SQLite 数据库文件路径'
+            }
+            return null
+        }
+
+        if (cfg.type === 'docker') {
+            if (cfg.dockerEndpointType === 'ssh') {
+                if (!cfg.dockerSshHost?.trim() && !cfg.host?.trim()) {
+                    return '请输入 SSH 跳板主机地址'
+                }
+            } else if (cfg.dockerEndpointType === 'tcp') {
+                if (!cfg.host?.trim()) {
+                    return '请输入 Docker 守护进程主机地址 (Host)'
+                }
+                const port = Number(cfg.port)
+                if (!port || isNaN(port) || port < 1 || port > 65535) {
+                    return '请输入有效的 TCP 端口号 (1 - 65535)'
+                }
             }
             return null
         }
@@ -172,7 +227,8 @@ export default function ServerDialog({
                 update({ privateKey: path })
             }
         } catch (err) {
-            setError(errorMessage(err))
+            const msg = errorMessage(err)
+            if (msg) setError(msg)
         }
     }
 
@@ -183,7 +239,8 @@ export default function ServerDialog({
                 update({ sqlitePath: path })
             }
         } catch (err) {
-            setError(errorMessage(err))
+            const msg = errorMessage(err)
+            if (msg) setError(msg)
         }
     }
 
@@ -194,7 +251,8 @@ export default function ServerDialog({
                 update({ [field]: path })
             }
         } catch (err) {
-            setError(errorMessage(err))
+            const msg = errorMessage(err)
+            if (msg) setError(msg)
         }
     }
 
@@ -235,6 +293,44 @@ export default function ServerDialog({
         }
     }
 
+    const handleParseKubeconfig = async (data?: string, path?: string) => {
+        const d = data !== undefined ? data : (form.k8sKubeconfigData || '')
+        const p = path !== undefined ? path : (form.k8sKubeconfigPath || '')
+        if (!d.trim() && !p.trim()) return
+        try {
+            const info = await API.k8sParseKubeconfig(d, p)
+            if (info) {
+                setKubeconfigContexts(info.contexts || [])
+                setKubeconfigInfo({ currentContext: info.currentContext, clusterHost: info.clusterHost })
+                const patch: Partial<ServerConfig> = {}
+                if (!form.k8sContext && info.currentContext) {
+                    patch.k8sContext = info.currentContext
+                }
+                if (!form.name && info.currentContext) {
+                    patch.name = `K8s (${info.currentContext})`
+                }
+                if (Object.keys(patch).length > 0) {
+                    update(patch)
+                }
+            }
+        } catch {
+            // ignore
+        }
+    }
+
+    const handlePickKubeconfigFile = async () => {
+        try {
+            const path = await API.selectCertFile()
+            if (path) {
+                update({ k8sKubeconfigPath: path })
+                void handleParseKubeconfig(undefined, path)
+            }
+        } catch (err) {
+            const msg = errorMessage(err)
+            if (msg) setError(msg)
+        }
+    }
+
     const handleTestConnection = async () => {
         const valErr = validateForm(form)
         if (valErr) {
@@ -244,7 +340,10 @@ export default function ServerDialog({
         setBusy(true)
         setTestResult(null)
         try {
-            if (form.type === 'mongo') {
+            if (form.type === 'docker') {
+                const msg = await API.dockerTestConnection(form)
+                setTestResult({ success: true, message: msg || 'Docker 连通性测试通过！' })
+            } else if (form.type === 'mongo') {
                 const res = await API.mongoTestConnection(form)
                 setTestResult({ success: true, message: `MongoDB 连接成功! Ping: ${res.pingMs || 0}ms` })
             } else if (form.type === 'mqtt') {
@@ -256,6 +355,9 @@ export default function ServerDialog({
             } else if (form.type === 'mysql') {
                 const res = await API.mysqlTestConnection(form)
                 setTestResult({ success: true, message: `MySQL 连接成功! 延迟: ${res.pingMs || 0}ms` })
+            } else if (form.type === 'k8s') {
+                const res = await API.k8sTestConnection(form)
+                setTestResult({ success: true, message: res || 'Kubernetes 连接测试成功！' })
             } else {
                 setTestResult({ success: true, message: '配置格式校验通过' })
             }
@@ -268,6 +370,8 @@ export default function ServerDialog({
 
     const protocolItems: { key: ConnType; label: React.ReactNode }[] = [
         { key: 'ssh', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="ssh" size={14} /><span>SSH</span></span> },
+        { key: 'docker', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="docker" size={14} /><span>Docker</span></span> },
+        { key: 'k8s', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="k8s" size={14} /><span>K8s</span></span> },
         { key: 'redis', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="redis" size={14} /><span>Redis</span></span> },
         { key: 'mysql', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="mysql" size={14} /><span>MySQL</span></span> },
         { key: 'mongo', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="mongo" size={14} /><span>MongoDB</span></span> },
@@ -292,7 +396,7 @@ export default function ServerDialog({
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        {['mongo', 'redis', 'mysql', 'mqtt'].includes(form.type || '') && (
+                        {['mongo', 'redis', 'mysql', 'mqtt', 'docker', 'k8s'].includes(form.type || '') && (
                             <Button onClick={handleTestConnection} loading={busy}>
                                 测试连接
                             </Button>
@@ -365,8 +469,411 @@ export default function ServerDialog({
                         </div>
                     </div>
 
-                    {/* SQLite 专用 */}
-                    {form.type === 'sqlite' ? (
+                    {/* Docker 专用设置 */}
+                    {form.type === 'docker' ? (
+                        <>
+                            <div>
+                                <div style={{ fontSize: 13, marginBottom: 6, fontWeight: 500 }}>连接通信方式</div>
+                                <Radio.Group
+                                    value={form.dockerEndpointType || 'unix'}
+                                    onChange={(e) => {
+                                        const ep = e.target.value
+                                        update({
+                                            dockerEndpointType: ep,
+                                            port: ep === 'tcp' ? (form.dockerTlsEnabled ? 2376 : 2375) : 0,
+                                        })
+                                    }}
+                                    buttonStyle="solid"
+                                >
+                                    <Radio.Button value="unix">Unix Socket</Radio.Button>
+                                    <Radio.Button value="tcp">TCP/HTTP</Radio.Button>
+                                    <Radio.Button value="ssh">SSH</Radio.Button>
+                                </Radio.Group>
+                            </div>
+
+                            {(!form.dockerEndpointType || form.dockerEndpointType === 'unix') && (
+                                <div>
+                                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>Docker Socket 路径</div>
+                                    <Input
+                                        placeholder="/var/run/docker.sock 或 //./pipe/docker_engine"
+                                        value={form.dockerSocketPath || ''}
+                                        onChange={(e) => update({ dockerSocketPath: e.target.value })}
+                                    />
+                                    <div style={{ marginTop: 6, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>快捷预设:</span>
+                                        <Button size="small" onClick={() => update({ dockerSocketPath: '/var/run/docker.sock' })}>
+                                            Linux/macOS (Unix Socket)
+                                        </Button>
+                                        <Button size="small" onClick={() => update({ dockerSocketPath: '//./pipe/docker_engine' })}>
+                                            Windows(Pipe)
+                                        </Button>
+                                        <Button size="small" onClick={() => update({ dockerSocketPath: '/run/user/1000/docker.sock' })}>
+                                            Rootless Socket
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {form.dockerEndpointType === 'tcp' && (
+                                <Space orientation="vertical" size={10} style={{ width: '100%' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>Docker 守护进程地址 (Host)</div>
+                                            <Input
+                                                placeholder="127.0.0.1 / 192.168.1.100"
+                                                value={form.host}
+                                                onChange={(e) => update({ host: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>端口 (Port)</div>
+                                            <InputNumber
+                                                min={1}
+                                                max={65535}
+                                                style={{ width: '100%' }}
+                                                value={form.port || (form.dockerTlsEnabled ? 2376 : 2375)}
+                                                onChange={(val) => update({ port: val || 2375 })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', background: 'var(--bg-1)', borderRadius: 6 }}>
+                                        <div>
+                                            <div style={{ fontSize: 13, fontWeight: 500 }}>启用 TLS 加密认证 (HTTPS / 2376)</div>
+                                            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>使用 CA 证书与双向客户端证书验证安全连接</div>
+                                        </div>
+                                        <Switch
+                                            checked={!!form.dockerTlsEnabled}
+                                            onChange={(checked) => update({
+                                                dockerTlsEnabled: checked,
+                                                port: checked && form.port === 2375 ? 2376 : form.port,
+                                            })}
+                                        />
+                                    </div>
+
+                                    {form.dockerTlsEnabled && (
+                                        <Space orientation="vertical" size={10} style={{ width: '100%' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <Switch
+                                                    size="small"
+                                                    checked={!!form.dockerTlsInsecure}
+                                                    onChange={(checked) => update({ dockerTlsInsecure: checked })}
+                                                />
+                                                <span style={{ fontSize: 12 }}>跳过服务端证书校验 (Insecure Skip Verify)</span>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>CA 证书路径 / PEM</div>
+                                                <Space.Compact style={{ width: '100%' }}>
+                                                    <Input
+                                                        placeholder="选择 ca.pem 文件或粘贴"
+                                                        value={form.dockerTlsCaCert || ''}
+                                                        onChange={(e) => update({ dockerTlsCaCert: e.target.value })}
+                                                    />
+                                                    <Button onClick={() => handlePickCert('dockerTlsCaCert')}>选择证书</Button>
+                                                </Space.Compact>
+                                            </div>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                                <div>
+                                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端证书 (cert.pem)</div>
+                                                    <Space.Compact style={{ width: '100%' }}>
+                                                        <Input
+                                                            placeholder="选择 cert.pem"
+                                                            value={form.dockerTlsClientCert || ''}
+                                                            onChange={(e) => update({ dockerTlsClientCert: e.target.value })}
+                                                        />
+                                                        <Button onClick={() => handlePickCert('dockerTlsClientCert')}>选择</Button>
+                                                    </Space.Compact>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端私钥 (key.pem)</div>
+                                                    <Space.Compact style={{ width: '100%' }}>
+                                                        <Input
+                                                            placeholder="选择 key.pem"
+                                                            value={form.dockerTlsClientKey || ''}
+                                                            onChange={(e) => update({ dockerTlsClientKey: e.target.value })}
+                                                        />
+                                                        <Button onClick={() => handlePickCert('dockerTlsClientKey')}>选择</Button>
+                                                    </Space.Compact>
+                                                </div>
+                                            </div>
+                                        </Space>
+                                    )}
+                                </Space>
+                            )}
+
+                            {form.dockerEndpointType === 'ssh' && (
+                                <Space orientation="vertical" size={10} style={{ width: '100%' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SSH 主机地址 (Host)</div>
+                                            <Input
+                                                placeholder="如 192.168.1.50 / ssh.example.com"
+                                                value={form.dockerSshHost || form.host || ''}
+                                                onChange={(e) => update({ dockerSshHost: e.target.value, host: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SSH 端口</div>
+                                            <InputNumber
+                                                min={1}
+                                                max={65535}
+                                                style={{ width: '100%' }}
+                                                value={form.dockerSshPort || 22}
+                                                onChange={(val) => update({ dockerSshPort: val || 22 })}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SSH 登录用户</div>
+                                            <Input
+                                                placeholder="root"
+                                                value={form.dockerSshUser ?? form.username ?? 'root'}
+                                                onChange={(e) => update({ dockerSshUser: e.target.value, username: e.target.value })}
+                                            />
+                                        </div>
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SSH 认证方式</div>
+                                            <Radio.Group
+                                                value={form.dockerSshAuthType || form.authType || 'password'}
+                                                onChange={(e) => update({ dockerSshAuthType: e.target.value, authType: e.target.value })}
+                                                buttonStyle="solid"
+                                            >
+                                                <Radio.Button value="password">密码</Radio.Button>
+                                                <Radio.Button value="key">私钥</Radio.Button>
+                                            </Radio.Group>
+                                        </div>
+                                    </div>
+
+                                    {form.dockerSshAuthType === 'key' ? (
+                                        <>
+                                            <div>
+                                                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SSH 私钥文件</div>
+                                                <Space.Compact style={{ width: '100%' }}>
+                                                    <Input
+                                                        placeholder="选择私钥文件或粘贴"
+                                                        value={form.dockerSshKeyPath || form.privateKey || form.dockerSshKeyData || ''}
+                                                        onChange={(e) => update({ dockerSshKeyPath: e.target.value, privateKey: e.target.value })}
+                                                    />
+                                                    <Button icon={<Key size={14} />} onClick={async () => {
+                                                        const p = await API.selectPrivateKey()
+                                                        if (p) update({ dockerSshKeyPath: p, privateKey: p })
+                                                    }}>选择</Button>
+                                                </Space.Compact>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>私钥密码 (Passphrase, 可选)</div>
+                                                <Input.Password
+                                                    placeholder="如有密码请填写"
+                                                    value={form.dockerSshPassphrase || form.passphrase || ''}
+                                                    onChange={(e) => update({ dockerSshPassphrase: e.target.value, passphrase: e.target.value })}
+                                                />
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SSH 登录密码</div>
+                                            <Input.Password
+                                                placeholder="请输入 SSH 密码"
+                                                value={form.dockerSshPassword || form.password || ''}
+                                                onChange={(e) => update({ dockerSshPassword: e.target.value, password: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>远程 Docker Socket 路径</div>
+                                        <Input
+                                            placeholder="/var/run/docker.sock"
+                                            value={form.dockerSocketPath || '/var/run/docker.sock'}
+                                            onChange={(e) => update({ dockerSocketPath: e.target.value })}
+                                        />
+                                    </div>
+                                </Space>
+                            )}
+                        </>
+                    ) : form.type === 'k8s' ? (
+                        <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                            <div>
+                                <div style={{ fontSize: 13, marginBottom: 6, fontWeight: 500 }}>认证方式 (Authentication Mode)</div>
+                                <Segmented
+                                    block
+                                    value={form.k8sAuthMode || 'kubeconfig'}
+                                    onChange={(v) => update({ k8sAuthMode: v as string })}
+                                    options={[
+                                        { label: 'Kubeconfig 配置文件 (推荐)', value: 'kubeconfig' },
+                                        { label: '直连 API Server', value: 'direct' },
+                                    ]}
+                                />
+                            </div>
+
+                            {(!form.k8sAuthMode || form.k8sAuthMode === 'kubeconfig') ? (
+                                <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                                    <div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 500 }}>
+                                                Kubeconfig 内容 (YAML 文本) <span style={{ color: 'var(--danger)' }}>*</span>
+                                            </div>
+                                            <Button
+                                                size="small"
+                                                icon={<FolderOpen size={13} />}
+                                                onClick={handlePickKubeconfigFile}
+                                                style={{ fontSize: 12 }}
+                                            >
+                                                选择本地文件
+                                            </Button>
+                                        </div>
+                                        <Input.TextArea
+                                            rows={7}
+                                            placeholder={`# 请粘贴 ~/.kube/config 或云厂商集群导出的 YAML 配置\napiVersion: v1\nclusters:\n- cluster:\n    server: https://192.168.1.100:6443\n  name: kubernetes\ncontexts:\n- context:\n    cluster: kubernetes\n    user: admin\n  name: default\ncurrent-context: default`}
+                                            value={form.k8sKubeconfigData || ''}
+                                            onChange={(e) => {
+                                                const text = e.target.value
+                                                update({ k8sKubeconfigData: text })
+                                                void handleParseKubeconfig(text, undefined)
+                                            }}
+                                            style={{ fontFamily: 'monospace', fontSize: 12 }}
+                                        />
+                                    </div>
+
+                                    {form.k8sKubeconfigPath && (
+                                        <div style={{ background: 'var(--bg-2)', padding: '6px 10px', borderRadius: 6, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <span>已选本地文件: <code style={{ color: 'var(--accent)' }}>{form.k8sKubeconfigPath}</code></span>
+                                            <Button size="small" type="link" onClick={() => update({ k8sKubeconfigPath: '' })}>清除</Button>
+                                        </div>
+                                    )}
+
+                                    {kubeconfigInfo?.clusterHost && (
+                                        <div style={{ background: 'rgba(82, 196, 26, 0.08)', border: '1px solid rgba(82, 196, 26, 0.25)', padding: '6px 10px', borderRadius: 6, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <span>集群地址: <strong>{kubeconfigInfo.clusterHost}</strong></span>
+                                            {kubeconfigInfo.currentContext && <span>默认 Context: <code>{kubeconfigInfo.currentContext}</code></span>}
+                                        </div>
+                                    )}
+
+                                    {kubeconfigContexts.length > 0 && (
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
+                                                选择 Context 上下文
+                                            </div>
+                                            <Select
+                                                style={{ width: '100%' }}
+                                                value={form.k8sContext || kubeconfigInfo?.currentContext || (kubeconfigContexts.length > 0 ? kubeconfigContexts[0] : '')}
+                                                onChange={(v) => update({ k8sContext: v })}
+                                                options={kubeconfigContexts.map((c) => ({
+                                                    label: c === kubeconfigInfo?.currentContext ? `${c} (当前默认)` : c,
+                                                    value: c,
+                                                }))}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认命名空间 (Namespace, 可选)</div>
+                                        <Input
+                                            placeholder="默认从 Kubeconfig 上下文读取或 default"
+                                            value={form.k8sNamespace || ''}
+                                            onChange={(e) => update({ k8sNamespace: e.target.value })}
+                                        />
+                                    </div>
+                                </Space>
+                            ) : (
+                                <Space orientation="vertical" size={12} style={{ width: '100%' }}>
+                                    <div>
+                                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
+                                            Kubernetes API Server 地址 <span style={{ color: 'var(--danger)' }}>*</span>
+                                        </div>
+                                        <Input
+                                            placeholder="https://192.168.1.100:6443"
+                                            value={form.k8sApiServer || form.host || ''}
+                                            onChange={(e) => update({ k8sApiServer: e.target.value, host: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>凭证类型 (Credentials)</div>
+                                        <Radio.Group
+                                            value={form.k8sAuthType || 'token'}
+                                            onChange={(e) => update({ k8sAuthType: e.target.value })}
+                                            buttonStyle="solid"
+                                        >
+                                            <Radio.Button value="token">Bearer Token</Radio.Button>
+                                            <Radio.Button value="cert">X.509 客户端证书</Radio.Button>
+                                            <Radio.Button value="none">匿名 / 无认证</Radio.Button>
+                                        </Radio.Group>
+                                    </div>
+
+                                    {(!form.k8sAuthType || form.k8sAuthType === 'token') && (
+                                        <div>
+                                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>Bearer Token</div>
+                                            <Input.Password
+                                                placeholder="请输入 ServiceAccount Token 或 Bearer Token"
+                                                value={form.k8sBearerToken || form.password || ''}
+                                                onChange={(e) => update({ k8sBearerToken: e.target.value, password: e.target.value })}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {form.k8sAuthType === 'cert' && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                            <div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端公钥证书 (client.crt)</div>
+                                                <Space.Compact style={{ width: '100%' }}>
+                                                    <Input
+                                                        placeholder="选择 client.crt 或粘贴"
+                                                        value={form.k8sCertData || ''}
+                                                        onChange={(e) => update({ k8sCertData: e.target.value })}
+                                                    />
+                                                    <Button onClick={() => handlePickCert('k8sCertData')}>选择</Button>
+                                                </Space.Compact>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端私钥 (client.key)</div>
+                                                <Space.Compact style={{ width: '100%' }}>
+                                                    <Input
+                                                        placeholder="选择 client.key 或粘贴"
+                                                        value={form.k8sKeyData || ''}
+                                                        onChange={(e) => update({ k8sKeyData: e.target.value })}
+                                                    />
+                                                    <Button onClick={() => handlePickCert('k8sKeyData')}>选择</Button>
+                                                </Space.Compact>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>CA 证书 (ca.crt, 可选)</div>
+                                        <Space.Compact style={{ width: '100%' }}>
+                                            <Input
+                                                placeholder="选择 ca.crt 文件或粘贴 PEM 内容"
+                                                value={form.k8sCaData || ''}
+                                                onChange={(e) => update({ k8sCaData: e.target.value })}
+                                            />
+                                            <Button onClick={() => handlePickCert('k8sCaData')}>选择证书</Button>
+                                        </Space.Compact>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <Switch
+                                            size="small"
+                                            checked={!!form.k8sInsecureSkipTLS}
+                                            onChange={(checked) => update({ k8sInsecureSkipTLS: checked })}
+                                        />
+                                        <span style={{ fontSize: 12 }}>跳过 TLS 服务端证书校验 (Insecure Skip Verify)</span>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认命名空间 (Namespace, 可选)</div>
+                                        <Input
+                                            placeholder="默认 default"
+                                            value={form.k8sNamespace || ''}
+                                            onChange={(e) => update({ k8sNamespace: e.target.value })}
+                                        />
+                                    </div>
+                                </Space>
+                            )}
+                        </Space>
+                    ) : form.type === 'sqlite' ? (
                         <div>
                             <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SQLite 文件路径</div>
                             <Space.Compact style={{ width: '100%' }}>

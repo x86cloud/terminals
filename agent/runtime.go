@@ -55,6 +55,7 @@ type AgentRuntime struct {
 	Executor     *executor.Executor
 	Verifier     *verifier.Verifier
 	AskMgr       *ask.AskManager
+	HitlMgr      *guard.HitlManager
 
 	sshMgr    *ssh.SessionManager
 	redisMgr  *redis.RedisManager
@@ -71,6 +72,8 @@ func NewAgentRuntime() *AgentRuntime {
 	st, _ := store.GetStore()
 	eb := events.DefaultEventBus
 	g := guard.NewPolicyGuard(defaultCfg.AiEnablePermissionGuard, defaultCfg.AiBlockHighRiskCommands, st)
+	hitlMgr := guard.NewHitlManager(eb)
+	g.SetHitlManager(hitlMgr)
 	r := router.NewModelRouter()
 	mem := memory.NewMemorySystem(st)
 	tb := tools.NewToolBus(g, eb)
@@ -107,6 +110,7 @@ func NewAgentRuntime() *AgentRuntime {
 		Executor:     ex,
 		Verifier:     vr,
 		AskMgr:       askMgr,
+		HitlMgr:      hitlMgr,
 	}
 
 	// Register subagent runner with autonomous tool execution loop

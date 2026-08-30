@@ -172,7 +172,7 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			Name:        "ssh_exec_command",
 			Description: "在远程服务器上执行 Shell 命令行",
 			BaseTool:    execCmdTool,
-			Level:       guard.LevelConfirm,
+			Level:       guard.LevelAllow,
 		})
 	}
 
@@ -243,7 +243,7 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			Name:        "ssh_write_file",
 			Description: "在远程服务器上写入或修改文件",
 			BaseTool:    writeFileTool,
-			Level:       guard.LevelConfirm,
+			Level:       guard.LevelAllow,
 		})
 	}
 
@@ -264,7 +264,7 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			Name:        "ssh_delete_file",
 			Description: "在远程服务器上删除指定文件或目录",
 			BaseTool:    deleteFileTool,
-			Level:       guard.LevelConfirm,
+			Level:       guard.LevelAllow,
 		})
 	}
 
@@ -329,7 +329,7 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			Name:        "ssh_upload_file",
 			Description: "上传本地工作目录中的文件至远程服务器",
 			BaseTool:    uploadFileTool,
-			Level:       guard.LevelConfirm,
+			Level:       guard.LevelAllow,
 		})
 	}
 
@@ -347,24 +347,6 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			Name:        "ssh_list_processes",
 			Description: "查看远程服务器上运行的进程列表",
 			BaseTool:    processesTool,
-			Level:       guard.LevelAllow,
-		})
-	}
-
-	// 11. ssh_list_containers
-	containersTool, err := utils.InferTool("ssh_list_containers", "查看远程服务器上的 Docker 容器列表",
-		func(ctx context.Context, input *SSHGetSystemInfoInput) (any, error) {
-			sess, err := resolveSession(input.SessionID)
-			if err != nil {
-				return nil, err
-			}
-			return sm.GetDockerContainerList(sess.Info().ID)
-		})
-	if err == nil {
-		bus.Register(&RegisteredTool{
-			Name:        "ssh_list_containers",
-			Description: "查看远程服务器上的 Docker 容器列表",
-			BaseTool:    containersTool,
 			Level:       guard.LevelAllow,
 		})
 	}

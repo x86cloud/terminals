@@ -8,8 +8,6 @@ export type {
     SSHCronItem,
     SSHDashboardInfo,
     SSHDiskInfo,
-    SSHDockerContainer,
-    SSHDockerImage,
     SSHMemInfo,
     SSHNetInfo,
     SSHProcessInfo,

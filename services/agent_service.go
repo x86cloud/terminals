@@ -136,6 +136,20 @@ func (s *AgentService) AgentGetPendingAsks() []*ask.AskRequest {
 	return agent.DefaultRuntime.AskMgr.ListPending()
 }
 
+func (s *AgentService) AgentResolveHitl(confirmID string, approved bool, reason string) bool {
+	if agent.DefaultRuntime.HitlMgr == nil {
+		return false
+	}
+	return agent.DefaultRuntime.HitlMgr.ResolveApproval(confirmID, approved, reason)
+}
+
+func (s *AgentService) AgentGetPendingHitls() []*guard.HitlRequest {
+	if agent.DefaultRuntime.HitlMgr == nil {
+		return nil
+	}
+	return agent.DefaultRuntime.HitlMgr.ListPending()
+}
+
 func (s *AgentService) AgentProposePlan(sessionID, objective string) (*planner.Plan, error) {
 	if sessionID == "" {
 		sessionID = "ai_agent_default"
@@ -411,19 +425,29 @@ func (s *AgentService) AgentSaveSessionMessages(sessionID string, messages []age
 }
 
 func (s *AgentService) AgentConfirmTool(confirmID string, approved bool) bool {
-	return s.AgentDecideApproval(confirmID, approved, false, "")
+	if agent.DefaultRuntime.HitlMgr == nil {
+		return false
+	}
+	return agent.DefaultRuntime.HitlMgr.ResolveApproval(confirmID, approved, "")
 }
 
 func (s *AgentService) AgentDecideApproval(confirmID string, approved, remember bool, reason string) bool {
-	return agent.DefaultRuntime.Guard.DecideApproval(confirmID, guard.ApprovalDecision{
-		Approved: approved,
-		Remember: remember,
-		Reason:   reason,
-	})
+	if agent.DefaultRuntime.HitlMgr == nil {
+		return false
+	}
+	return agent.DefaultRuntime.HitlMgr.ResolveApproval(confirmID, approved, reason)
 }
 
-func (s *AgentService) AgentGetPendingApprovals() []*guard.ApprovalRequest {
-	return agent.DefaultRuntime.Guard.ListPendingApprovals()
+func (s *AgentService) AgentGetPendingApprovals() []any {
+	if agent.DefaultRuntime.HitlMgr == nil {
+		return nil
+	}
+	list := agent.DefaultRuntime.HitlMgr.ListPending()
+	res := make([]any, 0, len(list))
+	for _, item := range list {
+		res = append(res, item)
+	}
+	return res
 }
 
 func (s *AgentService) AgentListJobs(sessionID string) ([]store.JobItem, error) {

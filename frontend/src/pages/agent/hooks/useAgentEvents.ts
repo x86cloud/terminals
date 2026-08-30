@@ -4,6 +4,7 @@ import {
     AiMessage,
     AgentApprovalRequest,
     AgentAskRequest,
+    AgentHitlConfirmRequest,
     AgentPlan,
 } from '@/types'
 
@@ -13,8 +14,8 @@ interface UseAgentEventsProps {
     setIsGenerating: (generating: boolean) => void
     setActiveReasoning: React.Dispatch<React.SetStateAction<string>>
     setNoticeText: (msg: string) => void
-    setPendingApproval: (approval: AgentApprovalRequest | null) => void
     setPendingAsk: (ask: AgentAskRequest | null) => void
+    setPendingHitl: (hitl: AgentHitlConfirmRequest | null) => void
     setPendingPlan: (plan: AgentPlan | null) => void
     setJobOutputs: React.Dispatch<React.SetStateAction<Record<string, string>>>
     loadInspectorData: (sessId: string) => Promise<void>
@@ -26,8 +27,8 @@ export function useAgentEvents({
     setIsGenerating,
     setActiveReasoning,
     setNoticeText,
-    setPendingApproval,
     setPendingAsk,
+    setPendingHitl,
     setPendingPlan,
     setJobOutputs,
     loadInspectorData,
@@ -70,18 +71,19 @@ export function useAgentEvents({
                 last.reasoning_content = newReasoning
 
                 const steps = [...(last.process_steps || [])]
-                const thinkIdx = steps.findIndex((s) => s.type === 'think')
-                if (thinkIdx >= 0) {
-                    steps[thinkIdx] = {
-                        ...steps[thinkIdx],
-                        content: newReasoning,
-                    }
+                const lastStep = steps[steps.length - 1]
+
+                // If the last step is an active thinking step, stream into it
+                if (lastStep && lastStep.type === 'think' && lastStep.status === 'running') {
+                    lastStep.content = (lastStep.content || '') + chunk
                 } else {
-                    steps.unshift({
-                        id: `think_${last.timestamp || Date.now()}`,
+                    // Otherwise start a new thinking step below the latest tool execution
+                    const hasTools = steps.some((s) => s.type === 'tool')
+                    steps.push({
+                        id: `think_${Date.now()}_${steps.length}`,
                         type: 'think',
-                        title: '深度思考过程',
-                        content: newReasoning,
+                        title: hasTools ? '继续思考与推演' : '深度思考过程',
+                        content: chunk,
                         status: 'running',
                         timestamp: Date.now(),
                     })
@@ -101,12 +103,16 @@ export function useAgentEvents({
             if (payload) setPendingAsk(payload as AgentAskRequest)
         })
 
-        const unsubConfirmSess = subscribe(
-            `agent:confirm_request:${activeSessionId}`,
+        const unsubHitlConfirmSess = subscribe(
+            `agent:hitl_confirm:${activeSessionId}`,
             (payload: any) => {
-                if (payload) setPendingApproval(payload as AgentApprovalRequest)
+                if (payload) setPendingHitl(payload as AgentHitlConfirmRequest)
             }
         )
+
+        const unsubHitlConfirmGlobal = subscribe('agent:hitl_confirm', (payload: any) => {
+            if (payload) setPendingHitl(payload as AgentHitlConfirmRequest)
+        })
 
         const unsubUnifiedEvent = subscribe('agent:event', (event: any) => {
             if (!event) return
@@ -116,7 +122,14 @@ export function useAgentEvents({
                 event.session_id === 'ai_agent_default' ||
                 activeSessionId === 'ai_agent_default'
 
-            if (!isTargetSession && event.type !== 'AskUser' && event.type !== 'ask_user') return
+            if (
+                !isTargetSession &&
+                event.type !== 'AskUser' &&
+                event.type !== 'ask_user' &&
+                event.type !== 'HitlConfirm' &&
+                event.type !== 'hitl_confirm'
+            )
+                return
 
             switch (event.type) {
                 case 'ReasoningChunk':
@@ -128,26 +141,6 @@ export function useAgentEvents({
                     if (rChunk) {
                         handleReasoningChunk(rChunk)
                     }
-                    break
-
-                case 'ConfirmRequest':
-                case 'confirm_request':
-                    setPendingApproval(event.payload as AgentApprovalRequest)
-                    appendOrUpdateAssistant((last) => {
-                        const steps = [...(last.process_steps || [])]
-                        steps.push({
-                            id: `confirm_${event.payload?.confirm_id || Date.now()}`,
-                            type: 'tool',
-                            title: `安全审批: [${event.payload?.tool_name || '工具执行'}]`,
-                            summary: `等待授权: ${event.payload?.description || ''}`,
-                            content: event.payload?.arguments
-                                ? `调用参数:\n${event.payload.arguments}`
-                                : '',
-                            status: 'running',
-                            timestamp: Date.now(),
-                        })
-                        last.process_steps = steps
-                    })
                     break
 
                 case 'ToolStart':
@@ -162,11 +155,14 @@ export function useAgentEvents({
                     appendOrUpdateAssistant((last) => {
                         const steps = [...(last.process_steps || [])]
                         const existingIdx = steps.findIndex(
-                            (s) => startCallId && s.id === startCallId
+                            (s) =>
+                                (startCallId && s.id === startCallId) ||
+                                (s.type === 'tool' && s.title === startToolName && s.status === 'running')
                         )
                         if (existingIdx >= 0) {
                             steps[existingIdx] = {
                                 ...steps[existingIdx],
+                                id: startCallId || steps[existingIdx].id,
                                 title: startToolName,
                                 summary: startDetail || steps[existingIdx].summary,
                                 status: 'running',
@@ -176,7 +172,7 @@ export function useAgentEvents({
                                 id: startCallId || `tool_${Date.now()}_${steps.length}`,
                                 type: 'tool',
                                 title: startToolName,
-                                summary: startDetail,
+                                summary: startDetail || `正在调用工具 [${startToolName}]...`,
                                 content: '',
                                 status: 'running',
                                 timestamp: Date.now(),
@@ -204,17 +200,21 @@ export function useAgentEvents({
                         event.payload?.result ||
                         event.payload?.data ||
                         ''
+                    const durationMs = event.payload?.duration_ms || event.payload?.duration
                     appendOrUpdateAssistant((last) => {
                         const steps = [...(last.process_steps || [])]
                         let targetIdx = -1
+
+                        // 1. Match by callId
                         if (callId) {
                             targetIdx = steps.findIndex((s) => s.id === callId)
                         }
+                        // 2. Match active running tool step
                         if (targetIdx < 0 && toolName && toolName !== '工具执行') {
                             targetIdx = steps.findIndex(
                                 (s) =>
                                     s.type === 'tool' &&
-                                    s.title === toolName &&
+                                    (s.title === toolName || s.title?.includes(toolName)) &&
                                     s.status === 'running'
                             )
                         }
@@ -223,20 +223,36 @@ export function useAgentEvents({
                                 (s) => s.type === 'tool' && s.status === 'running'
                             )
                         }
+                        // 3. Fallback: match last tool step of same toolName
+                        if (targetIdx < 0 && toolName && toolName !== '工具执行') {
+                            for (let i = steps.length - 1; i >= 0; i--) {
+                                if (steps[i].type === 'tool' && (steps[i].title === toolName || steps[i].title?.includes(toolName))) {
+                                    targetIdx = i
+                                    break
+                                }
+                            }
+                        }
 
                         if (targetIdx >= 0) {
+                            const oldStep = steps[targetIdx]
+                            const computedDuration =
+                                durationMs ||
+                                (oldStep.timestamp ? Date.now() - oldStep.timestamp : undefined)
+
                             steps[targetIdx] = {
-                                ...steps[targetIdx],
+                                ...oldStep,
+                                id: callId || oldStep.id,
                                 title:
                                     toolName && toolName !== '工具执行'
                                         ? toolName
-                                        : steps[targetIdx].title,
+                                        : oldStep.title,
                                 summary:
                                     toolInput ||
-                                    (steps[targetIdx].summary?.startsWith('正在调用')
-                                        ? ''
-                                        : steps[targetIdx].summary),
+                                    (oldStep.summary?.startsWith('正在调用') || oldStep.summary?.startsWith('已授权')
+                                        ? '指令执行完成'
+                                        : oldStep.summary),
                                 content: toolOutput,
+                                duration_ms: computedDuration || oldStep.duration_ms,
                                 status: 'completed',
                             }
                         } else {
@@ -244,8 +260,9 @@ export function useAgentEvents({
                                 id: callId || `tool_${Date.now()}_${steps.length}`,
                                 type: 'tool',
                                 title: toolName,
-                                summary: toolInput,
+                                summary: toolInput || '指令执行完成',
                                 content: toolOutput,
+                                duration_ms: durationMs,
                                 status: 'completed',
                                 timestamp: Date.now(),
                             })
@@ -323,6 +340,13 @@ export function useAgentEvents({
                     })
                     break
 
+                case 'HitlConfirm':
+                case 'hitl_confirm':
+                    if (event.payload) {
+                        setPendingHitl(event.payload as AgentHitlConfirmRequest)
+                    }
+                    break
+
                 case 'StepStarted':
                 case 'step_started':
                 case 'StepFinished':
@@ -398,6 +422,8 @@ export function useAgentEvents({
                 case 'done':
                     setIsGenerating(false)
                     setActiveReasoning('')
+                    setPendingHitl(null)
+                    setPendingAsk(null)
                     const doneContent = event.payload?.content || ''
                     const isPlanReport =
                         doneContent.includes('### 🎯 规划执行完成') ||
@@ -458,9 +484,12 @@ export function useAgentEvents({
                     loadInspectorData(activeSessionId)
                     break
 
+                case 'Error':
                 case 'error':
                     setIsGenerating(false)
                     setActiveReasoning('')
+                    setPendingHitl(null)
+                    setPendingAsk(null)
                     const errPayload = String(event.payload || '')
                     setNoticeText(`❌ 出错: ${errPayload}`)
                     appendOrUpdateAssistant((last) => {
@@ -481,7 +510,8 @@ export function useAgentEvents({
             unsubChatChunk()
             unsubAskUserSess()
             unsubAskUserGlobal()
-            unsubConfirmSess()
+            unsubHitlConfirmSess()
+            unsubHitlConfirmGlobal()
             unsubUnifiedEvent()
         }
     }, [
@@ -490,8 +520,8 @@ export function useAgentEvents({
         setIsGenerating,
         setActiveReasoning,
         setNoticeText,
-        setPendingApproval,
         setPendingAsk,
+        setPendingHitl,
         setPendingPlan,
         setJobOutputs,
         loadInspectorData,

@@ -40,7 +40,7 @@ func RegisterMqttTools(bus *ToolBus, mgr *proto.MqttManager) error {
 			Name:        "mqtt_publish",
 			Description: "向已连接的 MQTT Broker 发布指定 Topic 消息",
 			BaseTool:    pubTool,
-			Level:       guard.LevelConfirm,
+			Level:       guard.LevelAllow,
 		})
 	}
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Button, Modal, Tag, Space, Tooltip } from 'antd'
 import { Bot, Activity, Trash2, AlertTriangle } from 'lucide-react'
 import { API } from '@/api'
-import { AppSettings, AgentSkillItem } from '@/types'
+import { AppSettings, AgentSkillItem, AgentHitlConfirmRequest } from '@/types'
 import { useAgentSessions } from './hooks/useAgentSessions'
 import { useAgentInspector } from './hooks/useAgentInspector'
 import { useAgentEvents } from './hooks/useAgentEvents'
@@ -11,6 +11,7 @@ import { AgentInspectorDrawer } from './views/AgentInspectorDrawer'
 import { ChatMessageList } from './components/ChatMessageList'
 import { ApprovalDock } from './components/ApprovalDock'
 import { AskUserDock } from './components/AskUserDock'
+import { HitlConfirmModal } from './components/HitlConfirmModal'
 import { Composer } from './components/Composer'
 import s from '@/pages/agent/AiAgentPanel.module.less'
 
@@ -20,8 +21,9 @@ interface Props {
 
 export default function AiAgentPanel({ settings }: Props) {
     const [noticeText, setNoticeText] = useState<string>('')
-    const [pendingApproval, setPendingApproval] = useState<any>(null)
+    const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
     const [pendingAsk, setPendingAsk] = useState<any>(null)
+    const [pendingHitl, setPendingHitl] = useState<AgentHitlConfirmRequest | null>(null)
     const [pendingPlan, setPendingPlan] = useState<any>(null)
     const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false)
 
@@ -98,32 +100,36 @@ export default function AiAgentPanel({ settings }: Props) {
         setIsGenerating,
         setActiveReasoning,
         setNoticeText,
-        setPendingApproval,
         setPendingAsk,
+        setPendingHitl,
         setPendingPlan,
         setJobOutputs,
         loadInspectorData,
     })
 
-    // Approval & Ask handlers
-    const handleApprovePending = async (approved: boolean, remember: boolean) => {
-        if (!pendingApproval) return
-        const confirmId = pendingApproval.confirm_id
-        await API.agentDecideApproval(confirmId, approved, remember)
-        setPendingApproval(null)
+    const handleResolveHitl = async (confirmId: string, approved: boolean, reason?: string) => {
+        if (!pendingHitl) return
+        await API.agentDecideApproval(confirmId, approved, false, reason || '')
+        setPendingHitl(null)
         setMessages((curr) => {
             const copy = [...curr]
             const last = copy[copy.length - 1]
             if (last && last.role === 'assistant' && last.process_steps) {
-                last.process_steps = last.process_steps.map((st) =>
-                    st.id?.startsWith(`confirm_${confirmId}`)
-                        ? {
+                last.process_steps = last.process_steps.map((st) => {
+                    if (
+                        st.id === confirmId ||
+                        (st.type === 'tool' && st.status === 'running')
+                    ) {
+                        return {
                             ...st,
-                            status: approved ? 'completed' : 'failed',
-                            summary: approved ? '已授权执行' : '已拒绝执行',
+                            status: approved ? 'running' : 'completed',
+                            summary: approved
+                                ? '已审批允许，正在执行...'
+                                : `用户已拒绝执行${reason ? ` (理由: ${reason})` : ''}`,
                         }
-                        : st
-                )
+                    }
+                    return st
+                })
             }
             return copy
         })
@@ -173,7 +179,7 @@ export default function AiAgentPanel({ settings }: Props) {
     // Token computation
     const totalChars = messages.reduce((acc, m) => acc + (m.content?.length || 0), 0)
     const usedTokens = Math.ceil(totalChars / 3.0)
-    const maxTokens = settings.aiMaxContextTokens || 4096
+    const maxTokens = settings.aiModelContextTokens || 65536
     const percent = Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10)
 
     return (
@@ -241,11 +247,6 @@ export default function AiAgentPanel({ settings }: Props) {
 
                 {/* Bottom Composer Area */}
                 <div className={s.composerWrapper}>
-                    <ApprovalDock
-                        pendingApproval={pendingApproval}
-                        onApprove={handleApprovePending}
-                    />
-
                     <AskUserDock
                         pendingAsk={pendingAsk}
                         onAnswer={handleAnswerAsk}
@@ -315,6 +316,12 @@ export default function AiAgentPanel({ settings }: Props) {
             >
                 <p style={{ margin: '8px 0', fontSize: 14 }}>确定要清空当前的全部对话记录吗？清空后不可恢复。</p>
             </Modal>
+
+            {/* HITL High Risk Action Confirmation Modal */}
+            <HitlConfirmModal
+                pendingHitl={pendingHitl}
+                onResolve={handleResolveHitl}
+            />
         </div>
     )
 }

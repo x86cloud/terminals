@@ -12,10 +12,24 @@ export interface AppSettings {
     "aiApiKey": string;
     "aiModel": string;
     "aiTemperature": number;
+
+    /**
+     * 模型上下文窗口总长度 (如 131072 / 128k, 65536 / 64k)
+     */
+    "aiModelContextTokens": number;
+
+    /**
+     * 压缩触发百分比 (例如 80 即 80%)
+     */
+    "aiContextCompressRatio": number;
+
+    /**
+     * 实际触发 Token 数
+     */
     "aiMaxContextTokens": number;
 
     /**
-     * "summary" | "sliding"
+     * "none" | "summary" | "sliding"
      */
     "aiCompressionStrategy": string;
     "aiEnableMultimodal": boolean;
@@ -35,7 +49,7 @@ export interface AppSettings {
 }
 
 /**
- * ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL。
+ * ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker。
  */
 export interface ServerConfig {
     "id": string;
@@ -63,7 +77,7 @@ export interface ServerConfig {
     "remark": string;
 
     /**
-     * ssh | redis | mysql | mqtt
+     * ssh | redis | mysql | mqtt | mongo | sqlite | docker
      */
     "type": string;
 
@@ -365,6 +379,188 @@ export interface ServerConfig {
      * 本地 .db / .sqlite 文件路径
      */
     "sqlitePath"?: string;
+
+    /**
+     * Docker 专用配置
+     * "unix" | "tcp" | "ssh"
+     */
+    "dockerEndpointType"?: string;
+
+    /**
+     * unix 套接字路径 (默认 /var/run/docker.sock 或 //./pipe/docker_engine)
+     */
+    "dockerSocketPath"?: string;
+
+    /**
+     * TCP 是否启用 TLS
+     */
+    "dockerTlsEnabled"?: boolean;
+
+    /**
+     * TLS 是否跳过证书校验
+     */
+    "dockerTlsInsecure"?: boolean;
+
+    /**
+     * TLS CA 证书
+     */
+    "dockerTlsCaCert"?: string;
+
+    /**
+     * TLS 客户端证书
+     */
+    "dockerTlsClientCert"?: string;
+
+    /**
+     * TLS 客户端私钥
+     */
+    "dockerTlsClientKey"?: string;
+
+    /**
+     * SSH 模式：跳板主机
+     */
+    "dockerSshHost"?: string;
+
+    /**
+     * SSH 模式：跳板端口 (默认 22)
+     */
+    "dockerSshPort"?: number;
+
+    /**
+     * SSH 模式：用户名
+     */
+    "dockerSshUser"?: string;
+
+    /**
+     * password | key
+     */
+    "dockerSshAuthType"?: string;
+
+    /**
+     * SSH 模式：密码
+     */
+    "dockerSshPassword"?: string;
+
+    /**
+     * SSH 模式：私钥路径
+     */
+    "dockerSshKeyPath"?: string;
+
+    /**
+     * SSH 模式：私钥内容
+     */
+    "dockerSshKeyData"?: string;
+
+    /**
+     * SSH 模式：私钥口令
+     */
+    "dockerSshPassphrase"?: string;
+
+    /**
+     * Kubernetes (K8s) 专用配置
+     * kubeconfig | direct (默认 kubeconfig)
+     */
+    "k8sAuthMode"?: string;
+
+    /**
+     * Kubeconfig 文本内容 (YAML)
+     */
+    "k8sKubeconfigData"?: string;
+
+    /**
+     * Kubeconfig 本地文件路径
+     */
+    "k8sKubeconfigPath"?: string;
+
+    /**
+     * 指定 context 上下文名称（可选）
+     */
+    "k8sContext"?: string;
+
+    /**
+     * API Server 地址，如 https://192.168.1.100:6443
+     */
+    "k8sApiServer"?: string;
+
+    /**
+     * token | cert | none
+     */
+    "k8sAuthType"?: string;
+
+    /**
+     * Bearer Token
+     */
+    "k8sBearerToken"?: string;
+
+    /**
+     * CA 证书（PEM 字符串或文件路径）
+     */
+    "k8sCaData"?: string;
+
+    /**
+     * 客户端证书（PEM 字符串或文件路径）
+     */
+    "k8sCertData"?: string;
+
+    /**
+     * 客户端私钥（PEM 字符串或文件路径）
+     */
+    "k8sKeyData"?: string;
+
+    /**
+     * 跳过 TLS 证书校验
+     */
+    "k8sInsecureSkipTLS"?: boolean;
+
+    /**
+     * 默认命名空间（可选）
+     */
+    "k8sNamespace"?: string;
+
+    /**
+     * 是否启用 SSH 隧道代理
+     */
+    "k8sSshEnabled"?: boolean;
+
+    /**
+     * SSH 跳板机地址
+     */
+    "k8sSshHost"?: string;
+
+    /**
+     * SSH 跳板机端口 (默认 22)
+     */
+    "k8sSshPort"?: number;
+
+    /**
+     * SSH 用户名
+     */
+    "k8sSshUser"?: string;
+
+    /**
+     * password | key
+     */
+    "k8sSshAuthType"?: string;
+
+    /**
+     * SSH 密码
+     */
+    "k8sSshPassword"?: string;
+
+    /**
+     * SSH 私钥路径
+     */
+    "k8sSshKeyPath"?: string;
+
+    /**
+     * SSH 私钥内容
+     */
+    "k8sSshKeyData"?: string;
+
+    /**
+     * SSH 私钥口令
+     */
+    "k8sSshPassphrase"?: string;
 
     /**
      * MQTT 高级配置

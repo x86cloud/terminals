@@ -4,7 +4,7 @@ import { X, Bot, BarChart2, Link as LinkIcon } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import g from '@/styles/global.module.less'
 import a from '@/components/app/SessionTabs.module.less'
-import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo} from '@/types'
+import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType} from '@/types'
 
 export interface SessionTabsProps {
     sessions: SessionInfo[]
@@ -19,19 +19,25 @@ export interface SessionTabsProps {
     activeMongoId: string | null
     sqliteSessions: SqliteSessionInfo[]
     activeSqliteId: string | null
+    dockerSessions?: DockerSessionInfo[]
+    activeDockerId?: string | null
+    k8sSessions?: K8sSessionInfo[]
+    activeK8sId?: string | null
     aiAgentOpen: boolean
     aiAgentActive: boolean
     devToolsOpen: boolean
     devToolsActive: boolean
     apiOpen: boolean
     apiActive: boolean
-    onFocusSession: (id: string, kind: 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite') => void
+    onFocusSession: (id: string, kind: ConnType) => void
     onCloseSession: (id: string) => void
     onCloseRedis: (id: string) => void
     onCloseMysql: (id: string) => void
     onCloseMqtt: (id: string) => void
     onCloseMongo: (id: string) => void
     onCloseSqlite: (id: string) => void
+    onCloseDocker?: (id: string) => void
+    onCloseK8s?: (id: string) => void
     onActivateAiAgent: () => void
     onCloseAiAgent: () => void
     onActivateDevTools: () => void
@@ -78,8 +84,12 @@ function Tab({
 export default function SessionTabs(props: SessionTabsProps) {
     const {
         sessions, activeId, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        mqttSessions, activeMqttId,         mongoSessions, activeMongoId, sqliteSessions, activeSqliteId, aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive,
-        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onCloseMqtt, onCloseMongo, onCloseSqlite, onActivateAiAgent, onCloseAiAgent, onActivateDevTools, onCloseDevTools, onActivateApi, onCloseApi,
+        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId,
+        dockerSessions = [], activeDockerId = null,
+        k8sSessions = [], activeK8sId = null,
+        aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive,
+        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onCloseMqtt, onCloseMongo, onCloseSqlite, onCloseDocker, onCloseK8s,
+        onActivateAiAgent, onCloseAiAgent, onActivateDevTools, onCloseDevTools, onActivateApi, onCloseApi,
     } = props
 
     return (
@@ -91,6 +101,28 @@ export default function SessionTabs(props: SessionTabsProps) {
                     onClick={() => onFocusSession(s.id, 'ssh')}
                     onClose={() => onCloseSession(s.id)}
                     icon={<ClientIcon kind="ssh" size={14}/>}
+                    dotOn={s.connected}
+                    title={s.title}
+                />
+            ))}
+            {dockerSessions.map((s) => (
+                <Tab
+                    key={s.id}
+                    active={s.id === activeDockerId}
+                    onClick={() => onFocusSession(s.id, 'docker')}
+                    onClose={() => onCloseDocker?.(s.id)}
+                    icon={<ClientIcon kind="docker" size={14}/>}
+                    dotOn={s.connected}
+                    title={s.title}
+                />
+            ))}
+            {k8sSessions.map((s) => (
+                <Tab
+                    key={s.id}
+                    active={s.id === activeK8sId}
+                    onClick={() => onFocusSession(s.id, 'k8s')}
+                    onClose={() => onCloseK8s?.(s.id)}
+                    icon={<ClientIcon kind="k8s" size={14}/>}
                     dotOn={s.connected}
                     title={s.title}
                 />

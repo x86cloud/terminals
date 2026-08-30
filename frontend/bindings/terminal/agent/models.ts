@@ -24,6 +24,7 @@ export interface ProcessStep {
     "summary"?: string;
     "content": string;
     "timestamp": number;
+    "duration_ms"?: number;
     "status"?: string;
 }
 

@@ -2,11 +2,12 @@ import React, { useMemo, useRef } from 'react'
 import CodeMirror from '@uiw/react-codemirror'
 import { json } from '@codemirror/lang-json'
 import { sql } from '@codemirror/lang-sql'
+import { yaml } from '@codemirror/lang-yaml'
 import { EditorView, keymap } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { lightEditorTheme } from './editorTheme'
 
-export type LangKey = 'json' | 'plain' | 'sql'
+export type LangKey = 'json' | 'plain' | 'sql' | 'yaml'
 
 function langExt(lang: LangKey) {
     switch (lang) {
@@ -14,6 +15,8 @@ function langExt(lang: LangKey) {
             return json()
         case 'sql':
             return sql()
+        case 'yaml':
+            return yaml()
         default:
             return []
     }
@@ -32,6 +35,7 @@ interface Props {
     /** Ctrl/Cmd + 回车时触发（参数为当前内容），常用于提交 */
     onModEnter?: (value: string) => void
     lineNumbers?: boolean
+    foldGutter?: boolean
     bordered?: boolean
     className?: string
     style?: React.CSSProperties
@@ -47,7 +51,8 @@ export default function CodeEditor({
     placeholder,
     onEnter,
     onModEnter,
-    lineNumbers = false,
+    lineNumbers = true,
+    foldGutter,
     bordered = true,
     className,
     style,
@@ -56,6 +61,8 @@ export default function CodeEditor({
     enterRef.current = onEnter
     const modEnterRef = useRef(onModEnter)
     modEnterRef.current = onModEnter
+
+    const isFoldGutter = foldGutter !== undefined ? foldGutter : lineNumbers
 
     const extensions = useMemo(() => {
         const arr: any[] = [EditorView.lineWrapping]
@@ -95,12 +102,13 @@ export default function CodeEditor({
     const basicSetup = useMemo(
         () => ({
             lineNumbers,
-            foldGutter: false,
+            foldGutter: isFoldGutter,
             highlightActiveLine: !readOnly,
             highlightActiveLineGutter: !readOnly,
             autocompletion: true,
+            bracketMatching: true,
         }),
-        [lineNumbers, readOnly],
+        [lineNumbers, isFoldGutter, readOnly],
     )
 
     return (

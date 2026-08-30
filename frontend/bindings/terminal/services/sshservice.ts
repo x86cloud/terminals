@@ -44,30 +44,6 @@ export function SSHDashboardStats(sessionID: string): $CancellablePromise<ssh$0.
     return $Call.ByID(2656132434, sessionID);
 }
 
-export function SSHDockerContainerList(sessionID: string): $CancellablePromise<ssh$0.SSHDockerContainer[] | null> {
-    return $Call.ByID(1639180020, sessionID);
-}
-
-export function SSHDockerContainerLogs(sessionID: string, containerID: string, tail: number): $CancellablePromise<string> {
-    return $Call.ByID(4136830599, sessionID, containerID, tail);
-}
-
-export function SSHDockerControlContainer(sessionID: string, containerID: string, action: string): $CancellablePromise<void> {
-    return $Call.ByID(3213963537, sessionID, containerID, action);
-}
-
-export function SSHDockerImageList(sessionID: string): $CancellablePromise<ssh$0.SSHDockerImage[] | null> {
-    return $Call.ByID(3920102122, sessionID);
-}
-
-export function SSHDockerPullImage(sessionID: string, imageName: string): $CancellablePromise<string> {
-    return $Call.ByID(2328790751, sessionID, imageName);
-}
-
-export function SSHDockerRemoveImage(sessionID: string, imageID: string): $CancellablePromise<void> {
-    return $Call.ByID(603304526, sessionID, imageID);
-}
-
 export function SSHKillProcess(sessionID: string, pid: number): $CancellablePromise<void> {
     return $Call.ByID(1155799794, sessionID, pid);
 }

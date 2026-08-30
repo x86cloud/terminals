@@ -35,18 +35,25 @@ func (wm *WorkspaceManager) GetDir() string {
 	return wm.dir
 }
 
+func normalizeDriveLetter(p string) string {
+	if len(p) >= 2 && p[1] == ':' {
+		return strings.ToUpper(p[:1]) + p[1:]
+	}
+	return p
+}
+
 func (wm *WorkspaceManager) ResolvePath(targetPath string) (string, error) {
 	dir := wm.GetDir()
 	if dir == "" {
 		return "", fmt.Errorf("当前未设置工作目录，请先在右上角或设置中选择工作目录")
 	}
 
-	cleanedDir := filepath.Clean(dir)
+	cleanedDir := normalizeDriveLetter(filepath.Clean(dir))
 	var fullPath string
 	if filepath.IsAbs(targetPath) {
-		fullPath = filepath.Clean(targetPath)
+		fullPath = normalizeDriveLetter(filepath.Clean(targetPath))
 	} else {
-		fullPath = filepath.Clean(filepath.Join(cleanedDir, targetPath))
+		fullPath = normalizeDriveLetter(filepath.Clean(filepath.Join(cleanedDir, targetPath)))
 	}
 
 	rel, err := filepath.Rel(cleanedDir, fullPath)
@@ -446,7 +453,7 @@ func RegisterWorkspaceTools(bus *ToolBus, wm *WorkspaceManager) error {
 		Name:        "move_file",
 		Description: "重命名文件或将其移动到新路径。可自动创建目标目录。",
 		BaseTool:    moveTool,
-		Level:       guard.LevelConfirm,
+		Level:       guard.LevelAllow,
 	})
 
 	// 5. delete_file
@@ -475,7 +482,7 @@ func RegisterWorkspaceTools(bus *ToolBus, wm *WorkspaceManager) error {
 		Name:        "delete_file",
 		Description: "删除工作目录内的指定文件或目录。",
 		BaseTool:    deleteTool,
-		Level:       guard.LevelConfirm,
+		Level:       guard.LevelAllow,
 	})
 
 	// 6. list_dir

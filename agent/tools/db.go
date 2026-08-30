@@ -243,7 +243,7 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 				Name:        "db_redis_set",
 				Description: "创建或更新 Redis 键值数据 (支持 String/Hash/List/Set/ZSet 及 TTL 过期时间设置)",
 				BaseTool:    setTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -271,7 +271,7 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 				Name:        "db_redis_delete",
 				Description: "删除 Redis 中指定的一个或多个 Key",
 				BaseTool:    deleteTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -296,7 +296,7 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 				Name:        "db_redis_expire",
 				Description: "设置或修改 Redis Key 的 TTL 过期时间 (秒)",
 				BaseTool:    expireTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 
@@ -313,7 +313,7 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 				Name:        "db_redis_execute_raw",
 				Description: "执行任意原生 Redis 写或读命令 (如 HSET, LPUSH, INCR, SADD, ZADD 等)",
 				BaseTool:    executeRawTool,
-				Level:       guard.LevelConfirm,
+				Level:       guard.LevelAllow,
 			})
 		}
 	}

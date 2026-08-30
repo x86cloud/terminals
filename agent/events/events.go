@@ -16,7 +16,6 @@ const (
 	EventReasoningChunk   EventType = "ReasoningChunk"
 	EventToolStart        EventType = "ToolStart"
 	EventToolEvent        EventType = "ToolEvent"
-	EventConfirmRequest   EventType = "ConfirmRequest"
 	EventJobCreated       EventType = "JobCreated"
 	EventJobProgress      EventType = "JobProgress"
 	EventJobFinished      EventType = "JobFinished"
@@ -28,6 +27,7 @@ const (
 	EventStepFinished     EventType = "StepFinished"
 	EventGoalUpdated      EventType = "GoalUpdated"
 	EventAskUser          EventType = "ask_user"
+	EventHitlConfirm      EventType = "HitlConfirm"
 	EventNotice           EventType = "Notice"
 	EventError            EventType = "Error"
 	EventDone             EventType = "Done"
@@ -58,20 +58,11 @@ type ToolStartPayload struct {
 }
 
 type ToolEventPayload struct {
-	CallID   string `json:"call_id"`
-	ToolName string `json:"tool_name"`
-	Input    string `json:"input"`
-	Output   string `json:"output"`
-}
-
-type ConfirmRequestPayload struct {
-	ConfirmID   string `json:"confirm_id"`
-	Action      string `json:"action"`
-	Path        string `json:"path"`
-	Description string `json:"description"`
-	ToolName    string `json:"tool_name"`
-	Arguments   string `json:"arguments"`
-	RiskLevel   string `json:"risk_level"`
+	CallID     string `json:"call_id"`
+	ToolName   string `json:"tool_name"`
+	Input      string `json:"input"`
+	Output     string `json:"output"`
+	DurationMs int64  `json:"duration_ms,omitempty"`
 }
 
 type JobProgressPayload struct {
@@ -130,6 +121,16 @@ type AskUserPayload struct {
 	Options   []string `json:"options,omitempty"`
 }
 
+type HitlConfirmPayload struct {
+	ConfirmID   string `json:"confirm_id"`
+	SessionID   string `json:"session_id"`
+	TraceID     string `json:"trace_id,omitempty"`
+	ToolName    string `json:"tool_name"`
+	ToolDesc    string `json:"tool_desc"`
+	Input       string `json:"input"`
+	RiskDetail  string `json:"risk_detail"`
+}
+
 type DonePayload struct {
 	Content          string `json:"content"`
 	ReasoningContent string `json:"reasoning_content,omitempty"`
@@ -137,18 +138,16 @@ type DonePayload struct {
 
 // EventBus provides thread-safe event pub/sub and bridges to Wails
 type EventBus struct {
-	mu        sync.RWMutex
-	ctx       context.Context
-	handlers  map[EventType][]func(e Event)
-	rawEvents chan Event
+	mu       sync.RWMutex
+	ctx      context.Context
+	handlers map[EventType][]func(e Event)
 }
 
 var DefaultEventBus = NewEventBus()
 
 func NewEventBus() *EventBus {
 	return &EventBus{
-		handlers:  make(map[EventType][]func(e Event)),
-		rawEvents: make(chan Event, 256),
+		handlers: make(map[EventType][]func(e Event)),
 	}
 }
 
@@ -169,16 +168,18 @@ func (b *EventBus) Emit(e Event) {
 		e.Timestamp = time.Now().UnixMilli()
 	}
 
-	// 1. In-process handlers
+	// 1. Direct synchronous in-process handlers
 	b.mu.RLock()
 	handlers := b.handlers[e.Type]
 	b.mu.RUnlock()
 
 	for _, h := range handlers {
-		go h(e)
+		if h != nil {
+			h(e)
+		}
 	}
 
-	// 2. Emit to Wails runtime for frontend
+	// 2. Direct synchronous emit to Wails frontend
 	// Generic unified event stream
 	core.EmitEvent("agent:event", e)
 	if e.SessionID != "" {
@@ -199,14 +200,15 @@ func (b *EventBus) Emit(e Event) {
 		} else if s, ok := e.Payload.(string); ok {
 			core.EmitEvent(fmt.Sprintf("agent:reasoning_chunk:%s", e.SessionID), s)
 		}
-	case EventConfirmRequest:
-		if p, ok := e.Payload.(ConfirmRequestPayload); ok {
-			core.EmitEvent(fmt.Sprintf("agent:confirm_request:%s", e.SessionID), p)
-		}
 	case EventAskUser:
 		if p, ok := e.Payload.(AskUserPayload); ok {
 			core.EmitEvent(fmt.Sprintf("agent:ask_user:%s", e.SessionID), p)
 			core.EmitEvent("agent:ask_user", p)
+		}
+	case EventHitlConfirm:
+		if p, ok := e.Payload.(HitlConfirmPayload); ok {
+			core.EmitEvent(fmt.Sprintf("agent:hitl_confirm:%s", e.SessionID), p)
+			core.EmitEvent("agent:hitl_confirm", p)
 		}
 	case EventToolStart:
 		if p, ok := e.Payload.(ToolStartPayload); ok {
