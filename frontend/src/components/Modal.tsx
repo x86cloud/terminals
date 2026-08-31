@@ -93,6 +93,8 @@ export interface ConfirmState {
     title: string
     message: string
     danger?: boolean
+    confirmText?: string
+    cancelText?: string
     onConfirm?: () => void
 }
 
@@ -104,13 +106,13 @@ export function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCance
             onClose={onCancel}
             footer={
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                    <Button onClick={onCancel}>取消</Button>
+                    <Button onClick={onCancel}>{state.cancelText || '取消'}</Button>
                     <Button
                         type="primary"
                         danger={state.danger}
                         onClick={() => state.onConfirm?.()}
                     >
-                        确定
+                        {state.confirmText || '确定'}
                     </Button>
                 </div>
             }

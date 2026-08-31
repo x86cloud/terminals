@@ -40,7 +40,10 @@ export default function ApiTreeList({ state }: Props) {
         showHistory,
         setShowHistory,
         setSaveModalOpen,
+        saveModalMode,
         setSaveModalMode,
+        isModified,
+        currentApiName,
     } = state
 
     const [keyword, setKeyword] = useState('')
@@ -63,8 +66,53 @@ export default function ApiTreeList({ state }: Props) {
     })
     const [nameInputValue, setNameInputValue] = useState('')
 
-    // 删除确认弹窗
+    // 删除确认 / 未保存确认弹窗
     const [confirm, setConfirm] = useState<ConfirmState>({ open: false, title: '', message: '' })
+
+    // 安全加载接口（若未保存则提示）
+    const safeLoadApi = (item: SavedApiItem) => {
+        if (!item || item.id === currentApiId) return
+        if (isModified) {
+            setConfirm({
+                open: true,
+                title: '未保存修改提示',
+                danger: true,
+                confirmText: '放弃修改并切换',
+                cancelText: '留在当前接口',
+                message: `当前接口「${currentApiName || '未命名'}」有未保存的修改，切换到「${item.name || '新接口'}」将丢失这些修改。确定要继续切换吗？`,
+                onConfirm: () => {
+                    setConfirm({ open: false, title: '', message: '' })
+                    loadSavedApi(item)
+                },
+            })
+            return
+        }
+        loadSavedApi(item)
+    }
+
+    // 安全新建接口（若未保存则提示）
+    const safeNewBlankApi = () => {
+        if (isModified) {
+            setConfirm({
+                open: true,
+                title: '未保存修改提示',
+                danger: true,
+                confirmText: '放弃修改并新建',
+                cancelText: '留在当前接口',
+                message: `当前接口「${currentApiName || '未命名'}」有未保存的修改，新建接口将丢失这些修改。确定要继续新建吗？`,
+                onConfirm: () => {
+                    setConfirm({ open: false, title: '', message: '' })
+                    newBlankApi()
+                    setSaveModalMode('saveAs')
+                    setSaveModalOpen(true)
+                },
+            })
+            return
+        }
+        newBlankApi()
+        setSaveModalMode('saveAs')
+        setSaveModalOpen(true)
+    }
 
     const methodColors: Record<string, string> = {
         GET: 'green',
@@ -123,9 +171,7 @@ export default function ApiTreeList({ state }: Props) {
                 icon: <Plus size={14} />,
                 label: '新建接口',
                 onClick: () => {
-                    newBlankApi()
-                    setSaveModalMode('saveAs')
-                    setSaveModalOpen(true)
+                    safeNewBlankApi()
                 },
             },
             {
@@ -353,7 +399,7 @@ export default function ApiTreeList({ state }: Props) {
         const key = String(selectedKeys[0])
         const found = findTreeNode(apiTree || [], key)
         if (found && !found.isFolder) {
-            loadSavedApi(found as SavedApiItem)
+            safeLoadApi(found as SavedApiItem)
         }
     }
 
@@ -390,9 +436,7 @@ export default function ApiTreeList({ state }: Props) {
             icon: <Plus size={14} />,
             label: '新建接口',
             onClick: () => {
-                newBlankApi()
-                setSaveModalMode('saveAs')
-                setSaveModalOpen(true)
+                safeNewBlankApi()
             },
         },
         {
@@ -435,11 +479,7 @@ export default function ApiTreeList({ state }: Props) {
                             type="text"
                             style={{ height: 32, width: 32, padding: 0 }}
                             icon={<Plus size={16} />}
-                            onClick={() => {
-                                newBlankApi()
-                                setSaveModalMode('saveAs')
-                                setSaveModalOpen(true)
-                            }}
+                            onClick={safeNewBlankApi}
                         />
                     </Tooltip>
                     <Tooltip title="新建分组">
@@ -502,11 +542,7 @@ export default function ApiTreeList({ state }: Props) {
                                     type="primary"
                                     style={{ height: 32, marginTop: 4 }}
                                     icon={<Plus size={14} />}
-                                    onClick={() => {
-                                        newBlankApi()
-                                        setSaveModalMode('saveAs')
-                                        setSaveModalOpen(true)
-                                    }}
+                                    onClick={safeNewBlankApi}
                                 >
                                     新建接口
                                 </Button>

@@ -21,7 +21,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
         mode, wsStatus, wsConnect, wsDisconnect, wsConnecting, wsSendMsg,
         method, setMethod, methods, url, updateUrl, doSend, sending, showHistory, setShowHistory,
         currentApiName, currentApiId, renameTreeNode, saveCurrentApi, setSaveModalOpen, setSaveModalMode,
-        params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects, apiTree,
+        params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects, apiTree, isModified,
     } = state
 
     const [isEditingName, setIsEditingName] = useState(false)
@@ -40,30 +40,6 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
         }
         setIsEditingName(false)
     }
-
-    // 查找已保存的基准接口数据
-    const currentSavedItem = useMemo(() => {
-        if (!currentApiId) return null
-        const found = findTreeNode(apiTree || [], currentApiId)
-        return found && !found.isFolder ? (found as any) : null
-    }, [apiTree, currentApiId])
-
-    // 检测接口内容是否发生变更
-    const isModified = useMemo(() => {
-        if (!currentSavedItem) return false
-        if (currentSavedItem.mode !== mode) return true
-        if (currentSavedItem.url !== url) return true
-        if (mode === 'http' && currentSavedItem.method !== method) return true
-        if (currentSavedItem.bodyType !== bodyType) return true
-        if ((currentSavedItem.body || '') !== (body || '')) return true
-        if (JSON.stringify(currentSavedItem.params || []) !== JSON.stringify(params || [])) return true
-        if (JSON.stringify(currentSavedItem.headers || []) !== JSON.stringify(headers || [])) return true
-        if (JSON.stringify(currentSavedItem.auth || {}) !== JSON.stringify(auth || {})) return true
-        if (currentSavedItem.timeoutMs !== timeoutMs) return true
-        if (currentSavedItem.insecureTLS !== insecureTLS) return true
-        if (currentSavedItem.followRedirects !== followRedirects) return true
-        return false
-    }, [currentSavedItem, mode, method, url, params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects])
 
     const handleSaveClick = () => {
         if (currentApiId) {

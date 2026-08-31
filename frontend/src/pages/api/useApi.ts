@@ -617,6 +617,30 @@ export function useApi() {
         })
     }, [history, historyKeyword, historyMethodFilter])
 
+    const currentSavedItem = useMemo(() => {
+        if (!currentApiId) return null
+        const found = findTreeNode(apiTree, currentApiId)
+        return found && !found.isFolder ? (found as SavedApiItem) : null
+    }, [apiTree, currentApiId])
+
+    const isModified = useMemo(() => {
+        if (!currentSavedItem) {
+            return false
+        }
+        if (currentSavedItem.mode !== mode) return true
+        if (currentSavedItem.url !== url) return true
+        if (mode === 'http' && currentSavedItem.method !== method) return true
+        if (currentSavedItem.bodyType !== bodyType) return true
+        if ((currentSavedItem.body || '') !== (body || '')) return true
+        if (JSON.stringify(currentSavedItem.params || []) !== JSON.stringify(params || [])) return true
+        if (JSON.stringify(currentSavedItem.headers || []) !== JSON.stringify(headers || [])) return true
+        if (JSON.stringify(currentSavedItem.auth || {}) !== JSON.stringify(auth || {})) return true
+        if (currentSavedItem.timeoutMs !== timeoutMs) return true
+        if (currentSavedItem.insecureTLS !== insecureTLS) return true
+        if (currentSavedItem.followRedirects !== followRedirects) return true
+        return false
+    }, [currentSavedItem, mode, method, url, params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects])
+
     const respHeaders = response ? Object.entries(response.headers || {}) : []
     const respLang: 'json' | 'plain' = useMemo(() => {
         if (!response) return 'plain'
@@ -648,6 +672,7 @@ export function useApi() {
         apiTreeExpandedKeys, setApiTreeExpandedKeys,
         saveModalOpen, setSaveModalOpen,
         saveModalMode, setSaveModalMode,
+        isModified,
         loadSavedApi,
         saveCurrentApi,
         saveAsNewApi,
