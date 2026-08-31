@@ -1,0 +1,233 @@
+﻿@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+/* 数据/结构/索引/约束/DDL 视图容器 */
+.dataWrap {
+    flex: 1;
+    .fill();
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.tableHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid color-mix(in srgb, @border 60%, transparent);
+    background: @bg-1;
+    flex-wrap: wrap;
+    min-height: 42px;
+    flex-shrink: 0;
+
+    .segmented {
+        flex-shrink: 0;
+    }
+}
+
+.tableNameWrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.schemaTag {
+    font-size: 11px;
+    color: @text-dim;
+    background: @bg-2;
+    padding: 1px 6px;
+    border-radius: @radius-sm;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
+    font-family: @font-mono;
+}
+
+.tableName {
+    font-weight: 700;
+    font-family: @font-mono;
+    font-size: 13px;
+    color: @accent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.countBadge {
+    font-size: 12px;
+    color: @text-dim;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.crudActions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* WHERE 过滤条件栏 */
+.filterBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    background: @bg-2;
+    border-bottom: 1px solid color-mix(in srgb, @border 60%, transparent);
+    flex-shrink: 0;
+}
+
+.tableBody {
+    flex: 1;
+    .fill();
+    min-height: 0;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+}
+
+/* 底部翻页栏 */
+.tablePager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-top: 1px solid color-mix(in srgb, @border 60%, transparent);
+    background: @bg-1;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    min-height: 38px;
+}
+
+/* 数据网格/单元格状态 */
+.editTable {
+    td {
+        position: relative;
+        cursor: text;
+    }
+
+    td.cellDirty {
+        background: rgba(250, 173, 20, 0.15) !important;
+        box-shadow: inset 2px 0 0 #faad14;
+    }
+
+    td.cellNull {
+        color: @text-faint;
+        font-style: italic;
+    }
+}
+
+.cellInput {
+    width: 100%;
+    border: none;
+    outline: none;
+    box-shadow: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.rownum {
+    width: 42px;
+    text-align: center;
+    color: @text-faint;
+    font-variant-numeric: tabular-nums;
+    background: @bg-2-solid;
+    user-select: none;
+}
+
+.rowact {
+    width: 42px;
+    text-align: center;
+}
+
+.rowNew td {
+    background: rgba(82, 196, 26, 0.1) !important;
+}
+
+.pkBadge {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: @accent;
+    color: #fff;
+    vertical-align: middle;
+}
+
+.fkBadge {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: #722ed1;
+    color: #fff;
+    vertical-align: middle;
+}
+
+.warnBanner {
+    padding: 6px 12px;
+    background: color-mix(in srgb, @warn 12%, transparent);
+    color: @warn;
+    font-size: 12px;
+    border-bottom: 1px solid color-mix(in srgb, @warn 30%, transparent);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.ddlViewer {
+    padding: 14px;
+    font-family: @font-mono;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: @text;
+    background: @bg-1;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow: auto;
+    flex: 1;
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: @text-dim;
+    font-size: 13px;
+    gap: 8px;
+}
+
+.spinning {
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}

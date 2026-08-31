@@ -4,6 +4,7 @@ import * as SshService from '../bindings/terminal/services/sshservice'
 import * as SftpService from '../bindings/terminal/services/sftpservice'
 import * as RedisService from '../bindings/terminal/services/redisservice'
 import * as MysqlService from '../bindings/terminal/services/mysqlservice'
+import * as PostgresService from '../bindings/terminal/services/postgresservice'
 import * as MongoService from '../bindings/terminal/services/mongoservice'
 import * as SqliteService from '../bindings/terminal/services/sqliteservice'
 import * as MqttService from '../bindings/terminal/services/mqttservice'
@@ -326,6 +327,82 @@ export const API = {
     mysqlBackup: (serverID: string, dbName: string): Promise<string> => MysqlService.MysqlBackup(serverID, dbName),
     mysqlBackupToFile: (serverID: string, dbName: string): Promise<string> =>
         MysqlService.MysqlBackupToFile(serverID, dbName),
+
+    // PostgreSQL
+    postgresTestConnection: (cfg: ServerConfig): Promise<{ connected: boolean; pingMs: number }> =>
+        (PostgresService as any).PostgresTestConnection?.(cfg as any) || Promise.resolve({ connected: true, pingMs: 0 }),
+    postgresConnect: (serverID: string): Promise<boolean> => PostgresService.PostgresConnect(serverID),
+    postgresClose: (serverID: string): Promise<void> => PostgresService.PostgresClose(serverID),
+    postgresDatabases: (serverID: string): Promise<any[]> => PostgresService.PostgresDatabases(serverID).then(r => r || []),
+    postgresSchemas: (serverID: string, dbName: string): Promise<any[]> => PostgresService.PostgresSchemas(serverID, dbName).then(r => r || []),
+    postgresTables: (serverID: string, dbName: string, schema: string): Promise<any[]> => PostgresService.PostgresTables(serverID, dbName, schema).then(r => r || []),
+    postgresSequences: (serverID: string, dbName: string, schema: string): Promise<any[]> => PostgresService.PostgresSequences(serverID, dbName, schema).then(r => r || []),
+    postgresFunctions: (serverID: string, dbName: string, schema: string): Promise<any[]> => PostgresService.PostgresFunctions(serverID, dbName, schema).then(r => r || []),
+    postgresDescribe: (serverID: string, dbName: string, schema: string, table: string): Promise<any> => PostgresService.PostgresDescribe(serverID, dbName, schema, table),
+    postgresTableDDL: (serverID: string, dbName: string, schema: string, table: string): Promise<string> => PostgresService.PostgresTableDDL(serverID, dbName, schema, table),
+    postgresSelect: (
+        serverID: string,
+        dbName: string,
+        schema: string,
+        table: string,
+        limit: number,
+        offset: number,
+        sortCol: string,
+        sortOrder: string,
+        whereClause: string
+    ): Promise<any> => PostgresService.PostgresSelect(serverID, dbName, schema, table, limit, offset, sortCol, sortOrder, whereClause),
+    postgresCount: (serverID: string, dbName: string, schema: string, table: string, whereClause: string): Promise<number> =>
+        PostgresService.PostgresCount(serverID, dbName, schema, table, whereClause),
+    postgresInsert: (serverID: string, dbName: string, schema: string, table: string, columns: string[], values: any[]): Promise<number> =>
+        PostgresService.PostgresInsert(serverID, dbName, schema, table, columns, values),
+    postgresUpdate: (
+        serverID: string,
+        dbName: string,
+        schema: string,
+        table: string,
+        setCols: string[],
+        setVals: any[],
+        whereCols: string[],
+        whereVals: any[]
+    ): Promise<number> => PostgresService.PostgresUpdate(serverID, dbName, schema, table, setCols, setVals, whereCols, whereVals),
+    postgresDelete: (serverID: string, dbName: string, schema: string, table: string, whereCols: string[], whereVals: any[]): Promise<number> =>
+        PostgresService.PostgresDelete(serverID, dbName, schema, table, whereCols, whereVals),
+    postgresRun: (serverID: string, dbName: string, sqlText: string): Promise<any> => PostgresService.PostgresRun(serverID, dbName, sqlText),
+    postgresExplain: (serverID: string, dbName: string, sqlText: string, analyze: boolean, buffers: boolean, verbose: boolean): Promise<string> =>
+        PostgresService.PostgresExplain(serverID, dbName, sqlText, analyze, buffers, verbose),
+    postgresSessions: (serverID: string, dbName: string): Promise<any[]> => PostgresService.PostgresSessions(serverID, dbName).then(r => r || []),
+    postgresKillSession: (serverID: string, dbName: string, pid: number, terminate: boolean): Promise<boolean> =>
+        PostgresService.PostgresKillSession(serverID, dbName, pid, terminate),
+    postgresStatus: (serverID: string, dbName: string): Promise<any> => PostgresService.PostgresStatus(serverID, dbName),
+    postgresRoles: (serverID: string): Promise<any[]> => PostgresService.PostgresRoles(serverID).then(r => r || []),
+    postgresCreateRole: (serverID: string, roleName: string, password: string, superUser: boolean, canLogin: boolean, createDB: boolean, createRole: boolean, connLimit: number): Promise<void> =>
+        PostgresService.PostgresCreateRole(serverID, roleName, password, superUser, canLogin, createDB, createRole, connLimit),
+    postgresUpdateRolePassword: (serverID: string, roleName: string, newPassword: string): Promise<void> =>
+        PostgresService.PostgresUpdateRolePassword(serverID, roleName, newPassword),
+    postgresDropRole: (serverID: string, roleName: string): Promise<void> => PostgresService.PostgresDropRole(serverID, roleName),
+    postgresGrantPrivileges: (serverID: string, dbName: string, roleName: string, schema: string, table: string, privileges: string, isGrant: boolean): Promise<void> =>
+        PostgresService.PostgresGrantPrivileges(serverID, dbName, roleName, schema, table, privileges, isGrant),
+    postgresCreateDatabase: (serverID: string, name: string, owner: string, encoding: string, template: string): Promise<void> =>
+        PostgresService.PostgresCreateDatabase(serverID, name, owner, encoding, template),
+    postgresDropDatabase: (serverID: string, name: string): Promise<void> => PostgresService.PostgresDropDatabase(serverID, name),
+    postgresCreateSchema: (serverID: string, dbName: string, schema: string, owner: string): Promise<void> =>
+        PostgresService.PostgresCreateSchema(serverID, dbName, schema, owner),
+    postgresDropSchema: (serverID: string, dbName: string, schema: string, cascade: boolean): Promise<void> =>
+        PostgresService.PostgresDropSchema(serverID, dbName, schema, cascade),
+    postgresCreateTable: (serverID: string, dbName: string, schema: string, table: string, defs: string): Promise<void> =>
+        PostgresService.PostgresCreateTable(serverID, dbName, schema, table, defs),
+    postgresDropTable: (serverID: string, dbName: string, schema: string, table: string, cascade: boolean): Promise<void> =>
+        PostgresService.PostgresDropTable(serverID, dbName, schema, table, cascade),
+    postgresTruncateTable: (serverID: string, dbName: string, schema: string, table: string, restartIdentity: boolean, cascade: boolean): Promise<void> =>
+        PostgresService.PostgresTruncateTable(serverID, dbName, schema, table, restartIdentity, cascade),
+    postgresExport: (serverID: string, dbName: string, schema: string, mode: string, source: string, table: string, sqlText: string, limit: number): Promise<string> =>
+        PostgresService.PostgresExport(serverID, dbName, schema, mode, source, table, sqlText, limit),
+    postgresExportToFile: (serverID: string, dbName: string, schema: string, mode: string, source: string, table: string, sqlText: string, limit: number): Promise<string> =>
+        PostgresService.PostgresExportToFile(serverID, dbName, schema, mode, source, table, sqlText, limit),
+    postgresImport: (serverID: string, dbName: string, schema: string, mode: string, table: string, content: string): Promise<string> =>
+        PostgresService.PostgresImport(serverID, dbName, schema, mode, table, content),
+    postgresImportFromFile: (serverID: string, dbName: string, schema: string, mode: string, table: string): Promise<string> =>
+        PostgresService.PostgresImportFromFile(serverID, dbName, schema, mode, table),
 
     // MQTT
     mqttConnect: (id: string): Promise<boolean> => MqttService.MqttConnect(id),

@@ -40,6 +40,8 @@ const (
 	ConnMongo ConnType = "mongo"
 	// ConnSqlite 本地 SQLite 数据库文件，使用内置 SQLite 客户端管理。
 	ConnSqlite ConnType = "sqlite"
+	// ConnPostgres PostgreSQL 实例，使用内置 PostgreSQL 客户端管理。
+	ConnPostgres ConnType = "postgres"
 	// ConnDocker 独立 Docker 实例，支持 Unix Socket / TCP / SSH 访问。
 	ConnDocker ConnType = "docker"
 	// ConnK8s Kubernetes 集群，支持直连 API Server 与 SSH 隧道。
@@ -52,7 +54,7 @@ type ServerGroup struct {
 	Name string `json:"name"`
 }
 
-// ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker。
+// ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker / Postgres。
 type ServerConfig struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
@@ -65,7 +67,7 @@ type ServerConfig struct {
 	PrivateKey string `json:"privateKey"` // 私钥文件路径或 PEM 内容
 	Passphrase string `json:"passphrase"`
 	Remark     string `json:"remark"`
-	Type       string `json:"type"`         // ssh | redis | mysql | mqtt | mongo | sqlite | docker
+	Type       string `json:"type"`         // ssh | redis | mysql | mqtt | mongo | sqlite | docker | postgres
 	DB         int    `json:"db,omitempty"` // Redis 数据库编号
 
 	// Redis 高级配置
@@ -105,6 +107,25 @@ type ServerConfig struct {
 	MysqlSSHKeyData        string `json:"mysqlSSHKeyData,omitempty"`        // 跳板机私钥内容
 	MysqlSSHPassphrase     string `json:"mysqlSSHPassphrase,omitempty"`     // 私钥口令
 	MysqlSSHProxyLocalPort int    `json:"mysqlSSHProxyLocalPort,omitempty"` // 本地监听端口（0=自动）
+
+	// PostgreSQL 高级配置
+	PostgresDatabase        string `json:"postgresDatabase,omitempty"`        // 默认数据库（默认 postgres）
+	PostgresSchema          string `json:"postgresSchema,omitempty"`          // 默认 Schema（默认 public）
+	PostgresSSLMode         string `json:"postgresSSLMode,omitempty"`         // disable | require | verify-ca | verify-full
+	PostgresMaxOpenConns    int    `json:"postgresMaxOpenConns,omitempty"`    // 连接池最大连接数
+	PostgresMinIdleConns    int    `json:"postgresMinIdleConns,omitempty"`    // 最小空闲连接数
+	PostgresConnMaxLifetime int    `json:"postgresConnMaxLifetime,omitempty"` // 连接最大存活（秒）
+	PostgresConnMaxIdleTime int    `json:"postgresConnMaxIdleTime,omitempty"` // 连接最大空闲（秒）
+	PostgresConnectTimeout  int    `json:"postgresConnectTimeout,omitempty"`  // 连接超时（秒）
+	PostgresSSHEnabled     bool   `json:"postgresSSHEnabled,omitempty"`     // 是否启用 SSH 隧道
+	PostgresSSHHost        string `json:"postgresSSHHost,omitempty"`        // 跳板机地址
+	PostgresSSHHostPort    int    `json:"postgresSSHHostPort,omitempty"`    // 跳板机端口
+	PostgresSSHUser        string `json:"postgresSSHUser,omitempty"`        // 跳板机用户名
+	PostgresSSHAuthType    string `json:"postgresSSHAuthType,omitempty"`    // password | key
+	PostgresSSHPassword    string `json:"postgresSSHPassword,omitempty"`    // 跳板机密码
+	PostgresSSHKeyPath     string `json:"postgresSSHKeyPath,omitempty"`     // 跳板机私钥路径
+	PostgresSSHKeyData     string `json:"postgresSSHKeyData,omitempty"`     // 跳板机私钥内容
+	PostgresSSHPassphrase  string `json:"postgresSSHPassphrase,omitempty"`  // 私钥口令
 
 	// MongoDB 高级配置
 	MongoURI                 string `json:"mongoUri,omitempty"`                 // 完整连接串，填写后优先生效
@@ -200,6 +221,8 @@ func (c ServerConfig) ConnType() ConnType {
 		return ConnRedis
 	case string(ConnMysql):
 		return ConnMysql
+	case string(ConnPostgres):
+		return ConnPostgres
 	case string(ConnMqtt):
 		return ConnMqtt
 	case string(ConnMongo):
@@ -219,7 +242,7 @@ func (c ServerConfig) Label() string {
 		return c.Name
 	}
 	switch c.ConnType() {
-	case ConnRedis, ConnMysql, ConnMqtt, ConnMongo:
+	case ConnRedis, ConnMysql, ConnPostgres, ConnMqtt, ConnMongo:
 		return fmt.Sprintf("%s:%d", c.Host, c.DisplayPort())
 	case ConnSqlite:
 		if name := c.SqlitePath; name != "" {
@@ -257,6 +280,8 @@ func (c ServerConfig) DisplayPort() int {
 		return 6379
 	case ConnMysql:
 		return 3306
+	case ConnPostgres:
+		return 5432
 	case ConnMqtt:
 		return 1883
 	case ConnMongo:
@@ -373,6 +398,11 @@ func (c ServerConfig) Validate() error {
 	case ConnRedis:
 		return nil
 	case ConnMysql:
+		if strings.TrimSpace(c.Username) == "" {
+			return errors.New("用户名不能为空")
+		}
+		return nil
+	case ConnPostgres:
 		if strings.TrimSpace(c.Username) == "" {
 			return errors.New("用户名不能为空")
 		}
@@ -544,6 +574,9 @@ func (s *Store) load() error {
 		list[i].PrivateKey = s.box.decrypt(list[i].PrivateKey)
 		list[i].MongoURI = s.box.decrypt(list[i].MongoURI)
 		list[i].MongoTLSClientKey = s.box.decrypt(list[i].MongoTLSClientKey)
+		list[i].PostgresSSHPassword = s.box.decrypt(list[i].PostgresSSHPassword)
+		list[i].PostgresSSHPassphrase = s.box.decrypt(list[i].PostgresSSHPassphrase)
+		list[i].PostgresSSHKeyData = s.box.decrypt(list[i].PostgresSSHKeyData)
 	}
 	s.servers = list
 	if wrapper.Groups == nil {
@@ -567,6 +600,9 @@ func (s *Store) persist() error {
 		out[i].PrivateKey = s.box.encrypt(out[i].PrivateKey)
 		out[i].MongoURI = s.box.encrypt(out[i].MongoURI)
 		out[i].MongoTLSClientKey = s.box.encrypt(out[i].MongoTLSClientKey)
+		out[i].PostgresSSHPassword = s.box.encrypt(out[i].PostgresSSHPassword)
+		out[i].PostgresSSHPassphrase = s.box.encrypt(out[i].PostgresSSHPassphrase)
+		out[i].PostgresSSHKeyData = s.box.encrypt(out[i].PostgresSSHKeyData)
 	}
 	wrapper := struct {
 		Servers  []ServerConfig `json:"servers"`
@@ -686,6 +722,8 @@ func (s *Store) Save(cfg ServerConfig) (ServerConfig, error) {
 			cfg.Port = 6379
 		case ConnMysql:
 			cfg.Port = 3306
+		case ConnPostgres:
+			cfg.Port = 5432
 		case ConnMqtt:
 			cfg.Port = 1883
 			if cfg.MqttKeepAlive <= 0 {

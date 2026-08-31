@@ -16,7 +16,7 @@ import {
 import ClientIcon from '@/components/ClientIcon'
 import ContextMenu, { closedMenu, MenuState, MenuItem } from '@/components/ContextMenu'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
-import { ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType } from '@/types'
+import { ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, PostgresSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType } from '@/types'
 import g from '@/styles/global.module.less'
 import s from '@/components/Sidebar.module.less'
 
@@ -30,6 +30,8 @@ interface Props {
     activeRedisId: string | null
     mysqlSessions: MysqlSessionInfo[]
     activeMysqlId: string | null
+    postgresSessions?: PostgresSessionInfo[]
+    activePostgresId?: string | null
     mqttSessions: MqttSessionInfo[]
     activeMqttId: string | null
     mongoSessions: MongoSessionInfo[]
@@ -65,6 +67,8 @@ export default function Sidebar({
     activeRedisId,
     mysqlSessions,
     activeMysqlId,
+    postgresSessions = [],
+    activePostgresId = null,
     mqttSessions,
     activeMqttId,
     mongoSessions,
@@ -108,6 +112,7 @@ export default function Sidebar({
                 (s.type ?? 'ssh') === 'ssh' ||
                 s.type === 'redis' ||
                 s.type === 'mysql' ||
+                s.type === 'postgres' ||
                 s.type === 'mqtt' ||
                 s.type === 'mongo' ||
                 s.type === 'sqlite' ||
@@ -158,22 +163,25 @@ export default function Sidebar({
             ? 'redis'
             : s.type === 'mysql'
                 ? 'mysql'
-                : s.type === 'mqtt'
-                    ? 'mqtt'
-                    : s.type === 'mongo'
-                        ? 'mongo'
-                        : s.type === 'sqlite'
-                            ? 'sqlite'
-                            : s.type === 'docker'
-                                ? 'docker'
-                                : s.type === 'k8s'
-                                    ? 'k8s'
-                                    : 'ssh'
+                : s.type === 'postgres'
+                    ? 'postgres'
+                    : s.type === 'mqtt'
+                        ? 'mqtt'
+                        : s.type === 'mongo'
+                            ? 'mongo'
+                            : s.type === 'sqlite'
+                                ? 'sqlite'
+                                : s.type === 'docker'
+                                    ? 'docker'
+                                    : s.type === 'k8s'
+                                        ? 'k8s'
+                                        : 'ssh'
 
     const sessionsOf = (server: ServerConfig) => {
         const kind = kindOf(server)
         if (kind === 'redis') return redisSessions.filter((s) => s.serverId === server.id)
         if (kind === 'mysql') return mysqlSessions.filter((s) => s.serverId === server.id)
+        if (kind === 'postgres') return postgresSessions.filter((s) => s.serverId === server.id)
         if (kind === 'mqtt') return mqttSessions.filter((s) => s.serverId === server.id)
         if (kind === 'mongo') return mongoSessions.filter((s) => s.serverId === server.id)
         if (kind === 'sqlite') return sqliteSessions.filter((s) => s.serverId === server.id)
@@ -186,6 +194,7 @@ export default function Sidebar({
         const kind = kindOf(server)
         if (kind === 'redis') return activeRedisId
         if (kind === 'mysql') return activeMysqlId
+        if (kind === 'postgres') return activePostgresId
         if (kind === 'mqtt') return activeMqttId
         if (kind === 'mongo') return activeMongoId
         if (kind === 'sqlite') return activeSqliteId
@@ -227,6 +236,7 @@ export default function Sidebar({
         const kind = kindOf(server)
         const isRedis = kind === 'redis'
         const isMysql = kind === 'mysql'
+        const isPostgres = kind === 'postgres'
         const activeId = activeIdOf(server)
         return (
             <div key={server.id} className={s.serverGroup}>
@@ -289,7 +299,7 @@ export default function Sidebar({
                                     ? server.name || (server.dockerEndpointType === 'ssh' ? `Docker (${server.dockerSshHost || server.host})` : server.dockerEndpointType === 'tcp' ? `Docker (${server.host})` : 'Docker (Local Socket)')
                                     : kind === 'k8s'
                                         ? server.name || (server.k8sContext ? `K8s (${server.k8sContext})` : server.k8sApiServer ? `K8s (${server.k8sApiServer})` : 'Kubernetes')
-                                        : server.name || ((isRedis || isMysql || kind === 'mqtt' || kind === 'mongo') ? `${server.host}:${server.port}` : `${server.username}@${server.host}`)}
+                                        : server.name || ((isRedis || isMysql || isPostgres || kind === 'mqtt' || kind === 'mongo') ? `${server.host}:${server.port}` : `${server.username}@${server.host}`)}
                         </span>
                         <span className={s.serverSub} title={server.sqlitePath || server.dockerSocketPath || server.k8sKubeconfigPath || server.k8sApiServer}>
                             {kind === 'docker'
@@ -300,7 +310,7 @@ export default function Sidebar({
                                         : (server.dockerSocketPath || '/var/run/docker.sock'))
                                 : kind === 'k8s'
                                     ? (server.k8sContext ? `Context: ${server.k8sContext}` : server.k8sKubeconfigPath ? (server.k8sKubeconfigPath.split(/[\\/]/).pop() || '') : (server.k8sApiServer || 'Kubeconfig'))
-                                    : isRedis || isMysql || kind === 'mqtt' || kind === 'mongo'
+                                    : isRedis || isMysql || isPostgres || kind === 'mqtt' || kind === 'mongo'
                                         ? `${server.host}:${server.port}`
                                         : kind === 'sqlite'
                                             ? (server.sqlitePath || '')

@@ -49,7 +49,7 @@ export interface AppSettings {
 }
 
 /**
- * ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker。
+ * ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker / Postgres。
  */
 export interface ServerConfig {
     "id": string;
@@ -77,7 +77,7 @@ export interface ServerConfig {
     "remark": string;
 
     /**
-     * ssh | redis | mysql | mqtt | mongo | sqlite | docker
+     * ssh | redis | mysql | mqtt | mongo | sqlite | docker | postgres
      */
     "type": string;
 
@@ -257,6 +257,92 @@ export interface ServerConfig {
      * 本地监听端口（0=自动）
      */
     "mysqlSSHProxyLocalPort"?: number;
+
+    /**
+     * PostgreSQL 高级配置
+     * 默认数据库（默认 postgres）
+     */
+    "postgresDatabase"?: string;
+
+    /**
+     * 默认 Schema（默认 public）
+     */
+    "postgresSchema"?: string;
+
+    /**
+     * disable | require | verify-ca | verify-full
+     */
+    "postgresSSLMode"?: string;
+
+    /**
+     * 连接池最大连接数
+     */
+    "postgresMaxOpenConns"?: number;
+
+    /**
+     * 最小空闲连接数
+     */
+    "postgresMinIdleConns"?: number;
+
+    /**
+     * 连接最大存活（秒）
+     */
+    "postgresConnMaxLifetime"?: number;
+
+    /**
+     * 连接最大空闲（秒）
+     */
+    "postgresConnMaxIdleTime"?: number;
+
+    /**
+     * 连接超时（秒）
+     */
+    "postgresConnectTimeout"?: number;
+
+    /**
+     * 是否启用 SSH 隧道
+     */
+    "postgresSSHEnabled"?: boolean;
+
+    /**
+     * 跳板机地址
+     */
+    "postgresSSHHost"?: string;
+
+    /**
+     * 跳板机端口
+     */
+    "postgresSSHHostPort"?: number;
+
+    /**
+     * 跳板机用户名
+     */
+    "postgresSSHUser"?: string;
+
+    /**
+     * password | key
+     */
+    "postgresSSHAuthType"?: string;
+
+    /**
+     * 跳板机密码
+     */
+    "postgresSSHPassword"?: string;
+
+    /**
+     * 跳板机私钥路径
+     */
+    "postgresSSHKeyPath"?: string;
+
+    /**
+     * 跳板机私钥内容
+     */
+    "postgresSSHKeyData"?: string;
+
+    /**
+     * 私钥口令
+     */
+    "postgresSSHPassphrase"?: string;
 
     /**
      * MongoDB 高级配置

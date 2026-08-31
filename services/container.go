@@ -22,10 +22,11 @@ type Container struct {
 	MqttMgr   *proto.MqttManager
 	MongoMgr  *mongo.MongoManager
 	WsMgr     *proto.WsManager
-	MysqlMgr  *db.MysqlManagerEx
-	SqliteMgr *db.SqliteManager
-	DockerMgr *docker.DockerManager
-	K8sMgr    *k8s.K8sManager
+	MysqlMgr    *db.MysqlManagerEx
+	PostgresMgr *db.PostgresManager
+	SqliteMgr   *db.SqliteManager
+	DockerMgr   *docker.DockerManager
+	K8sMgr      *k8s.K8sManager
 }
 
 var (
@@ -40,17 +41,18 @@ func GetContainer() *Container {
 			store = &core.Store{}
 		}
 		GlobalContainer = &Container{
-			Store:     store,
-			Sessions:  ssh.NewSessionManager(),
-			Transfers: ssh.NewTransferManager(),
-			RedisMgr:  redis.NewRedisManager(),
-			MqttMgr:   proto.NewMqttManager(),
-			MongoMgr:  mongo.NewMongoManager(),
-			WsMgr:     proto.NewWsManager(),
-			MysqlMgr:  db.NewMysqlManagerEx(),
-			SqliteMgr: db.NewSqliteManager(),
-			DockerMgr: docker.NewDockerManager(),
-			K8sMgr:    k8s.NewK8sManager(),
+			Store:       store,
+			Sessions:    ssh.NewSessionManager(),
+			Transfers:   ssh.NewTransferManager(),
+			RedisMgr:    redis.NewRedisManager(),
+			MqttMgr:     proto.NewMqttManager(),
+			MongoMgr:    mongo.NewMongoManager(),
+			WsMgr:       proto.NewWsManager(),
+			MysqlMgr:    db.NewMysqlManagerEx(),
+			PostgresMgr: db.NewPostgresManager(),
+			SqliteMgr:   db.NewSqliteManager(),
+			DockerMgr:   docker.NewDockerManager(),
+			K8sMgr:      k8s.NewK8sManager(),
 		}
 	})
 	return GlobalContainer

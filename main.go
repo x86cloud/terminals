@@ -21,6 +21,7 @@ func main() {
 	sftpSvc := services.NewSftpService()
 	redisSvc := services.NewRedisService()
 	mysqlSvc := services.NewMysqlService()
+	postgresSvc := services.NewPostgresService()
 	mongoSvc := services.NewMongoService()
 	sqliteSvc := services.NewSqliteService()
 	mqttSvc := services.NewMqttService()
@@ -38,6 +39,7 @@ func main() {
 			application.NewService(sftpSvc),
 			application.NewService(redisSvc),
 			application.NewService(mysqlSvc),
+			application.NewService(postgresSvc),
 			application.NewService(mongoSvc),
 			application.NewService(sqliteSvc),
 			application.NewService(mqttSvc),

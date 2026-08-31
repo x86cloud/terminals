@@ -18,6 +18,7 @@ import {
     Transfer,
     RedisSessionInfo,
     MysqlSessionInfo,
+    PostgresSessionInfo,
     MqttSessionInfo,
     MongoSessionInfo,
     SqliteSessionInfo,
@@ -105,6 +106,21 @@ async function connectMysqlHelper(cfg: ServerConfig): Promise<MysqlSessionInfo> 
     }
 }
 
+async function connectPostgresHelper(cfg: ServerConfig): Promise<PostgresSessionInfo> {
+    const ok = await API.postgresConnect(cfg.id)
+    if (!ok) throw new Error('PostgreSQL 连接失败')
+    return {
+        id: cfg.id,
+        serverId: cfg.id,
+        title: cfg.name || `${cfg.host}:${cfg.port || 5432}`,
+        host: cfg.host,
+        port: cfg.port || 5432,
+        connected: true,
+        database: cfg.postgresDatabase || cfg.database || 'postgres',
+        schema: cfg.postgresSchema || 'public',
+    }
+}
+
 async function connectMqttHelper(cfg: ServerConfig): Promise<MqttSessionInfo> {
     const ok = await API.mqttConnect(cfg.id)
     if (!ok) throw new Error('MQTT 连接失败')
@@ -187,6 +203,9 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     const [mysqlSessions, setMysqlSessions] = useState<MysqlSessionInfo[]>([])
     const [activeMysqlId, setActiveMysqlId] = useState<string | null>(null)
 
+    const [postgresSessions, setPostgresSessions] = useState<PostgresSessionInfo[]>([])
+    const [activePostgresId, setActivePostgresId] = useState<string | null>(null)
+
     const [mqttSessions, setMqttSessions] = useState<MqttSessionInfo[]>([])
     const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
 
@@ -245,10 +264,11 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         }
     }, [notify])
 
-    const activateTab = useCallback((kind: 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite' | 'docker' | 'k8s' | 'api' | 'devtools' | 'aiAgent' | null, id: string | null = null) => {
+    const activateTab = useCallback((kind: 'ssh' | 'redis' | 'mysql' | 'postgres' | 'mqtt' | 'mongo' | 'sqlite' | 'docker' | 'k8s' | 'api' | 'devtools' | 'aiAgent' | null, id: string | null = null) => {
         setActiveId(kind === 'ssh' ? id : null)
         setActiveRedisId(kind === 'redis' ? id : null)
         setActiveMysqlId(kind === 'mysql' ? id : null)
+        setActivePostgresId(kind === 'postgres' ? id : null)
         setActiveMqttId(kind === 'mqtt' ? id : null)
         setActiveMongoId(kind === 'mongo' ? id : null)
         setActiveSqliteId(kind === 'sqlite' ? id : null)
@@ -467,6 +487,14 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                         notify(`已连接 MySQL ${info.title}`)
                         break
                     }
+                    case 'postgres': {
+                        const info = await connectPostgresHelper(cfg)
+                        setPostgresSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
+                        setActivePostgresId(cfg.id)
+                        activateTab('postgres', cfg.id)
+                        notify(`已连接 PostgreSQL ${info.title}`)
+                        break
+                    }
                     case 'mqtt': {
                         const info = await connectMqttHelper(cfg)
                         setMqttSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
@@ -539,7 +567,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
 
     const pickFallback = useCallback(
         (kind: ConnType, lists: Record<ConnType, Array<{ id: string }>>): { kind: ConnType; id: string } | null => {
-            const rest = (['ssh', 'docker', 'k8s', 'redis', 'mysql', 'mqtt', 'mongo', 'sqlite'] as ConnType[]).filter((k) => k !== kind)
+            const rest = (['ssh', 'docker', 'k8s', 'redis', 'mysql', 'postgres', 'mqtt', 'mongo', 'sqlite'] as ConnType[]).filter((k) => k !== kind)
             for (const k of [kind, ...rest]) {
                 const list = lists[k]
                 if (list && list.length) return { kind: k, id: list[list.length - 1].id }
@@ -560,9 +588,9 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             setSessions(remaining)
             delete pathsRef.current[sessionId]
             if (activeId !== sessionId) return
-            applyActive(pickFallback('ssh', { ssh: remaining, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+            applyActive(pickFallback('ssh', { ssh: remaining, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
         },
-        [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeId, applyActive, pickFallback]
+        [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeId, applyActive, pickFallback]
     )
 
     const closeDockerSession = useCallback(async (id: string) => {
@@ -574,8 +602,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const remaining = dockerSessions.filter((s) => s.id !== id)
         setDockerSessions(remaining)
         if (activeDockerId !== id) return
-        applyActive(pickFallback('docker', { ssh: sessions, docker: remaining, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeDockerId, applyActive, pickFallback])
+        applyActive(pickFallback('docker', { ssh: sessions, docker: remaining, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeDockerId, applyActive, pickFallback])
 
     const closeK8sSession = useCallback(async (id: string) => {
         try {
@@ -586,8 +614,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const remaining = k8sSessions.filter((s) => s.id !== id)
         setK8sSessions(remaining)
         if (activeK8sId !== id) return
-        applyActive(pickFallback('k8s', { ssh: sessions, docker: dockerSessions, k8s: remaining, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeK8sId, applyActive, pickFallback])
+        applyActive(pickFallback('k8s', { ssh: sessions, docker: dockerSessions, k8s: remaining, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeK8sId, applyActive, pickFallback])
 
     const closeRedisSession = useCallback(async (id: string) => {
         try {
@@ -598,8 +626,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const remaining = redisSessions.filter((s) => s.id !== id)
         setRedisSessions(remaining)
         if (activeRedisId !== id) return
-        applyActive(pickFallback('redis', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: remaining, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeRedisId, applyActive, pickFallback])
+        applyActive(pickFallback('redis', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: remaining, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeRedisId, applyActive, pickFallback])
 
     const closeMysqlSession = useCallback(async (id: string) => {
         try {
@@ -610,8 +638,20 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const remaining = mysqlSessions.filter((s) => s.id !== id)
         setMysqlSessions(remaining)
         if (activeMysqlId !== id) return
-        applyActive(pickFallback('mysql', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: remaining, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeMysqlId, applyActive, pickFallback])
+        applyActive(pickFallback('mysql', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: remaining, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeMysqlId, applyActive, pickFallback])
+
+    const closePostgresSession = useCallback(async (id: string) => {
+        try {
+            await API.postgresClose(id)
+        } catch {
+            /* ignore */
+        }
+        const remaining = postgresSessions.filter((s) => s.id !== id)
+        setPostgresSessions(remaining)
+        if (activePostgresId !== id) return
+        applyActive(pickFallback('postgres', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: remaining, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activePostgresId, applyActive, pickFallback])
 
     const closeMqttSession = useCallback(async (id: string) => {
         try {
@@ -622,8 +662,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const remaining = mqttSessions.filter((s) => s.id !== id)
         setMqttSessions(remaining)
         if (activeMqttId !== id) return
-        applyActive(pickFallback('mqtt', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, mqtt: remaining, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeMqttId, applyActive, pickFallback])
+        applyActive(pickFallback('mqtt', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: remaining, mongo: mongoSessions, sqlite: sqliteSessions }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeMqttId, applyActive, pickFallback])
 
     const closeMongoSession = useCallback(async (id: string) => {
         try {
@@ -634,8 +674,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const remaining = mongoSessions.filter((s) => s.id !== id)
         setMongoSessions(remaining)
         if (activeMongoId !== id) return
-        applyActive(pickFallback('mongo', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: remaining, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeMongoId, applyActive, pickFallback])
+        applyActive(pickFallback('mongo', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: remaining, sqlite: sqliteSessions }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeMongoId, applyActive, pickFallback])
 
     const closeSqliteSession = useCallback(async (id: string) => {
         try {
@@ -646,8 +686,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const remaining = sqliteSessions.filter((s) => s.id !== id)
         setSqliteSessions(remaining)
         if (activeSqliteId !== id) return
-        applyActive(pickFallback('sqlite', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: remaining }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, mqttSessions, mongoSessions, sqliteSessions, activeSqliteId, applyActive, pickFallback])
+        applyActive(pickFallback('sqlite', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: remaining }))
+    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeSqliteId, applyActive, pickFallback])
 
     /* ---------------- 工具面板与 Tab 激活 ---------------- */
 
@@ -706,6 +746,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                     activeRedisId={activeRedisId}
                     mysqlSessions={mysqlSessions}
                     activeMysqlId={activeMysqlId}
+                    postgresSessions={postgresSessions}
+                    activePostgresId={activePostgresId}
                     mqttSessions={mqttSessions}
                     activeMqttId={activeMqttId}
                     mongoSessions={mongoSessions}
@@ -743,6 +785,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                         activeRedisId={activeRedisId}
                         mysqlSessions={mysqlSessions}
                         activeMysqlId={activeMysqlId}
+                        postgresSessions={postgresSessions}
+                        activePostgresId={activePostgresId}
                         mqttSessions={mqttSessions}
                         activeMqttId={activeMqttId}
                         mongoSessions={mongoSessions}
@@ -761,6 +805,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                         onCloseK8s={(id) => void closeK8sSession(id)}
                         onCloseRedis={(id) => void closeRedisSession(id)}
                         onCloseMysql={(id) => void closeMysqlSession(id)}
+                        onClosePostgres={(id) => void closePostgresSession(id)}
                         onCloseMqtt={(id) => void closeMqttSession(id)}
                         onCloseMongo={(id) => void closeMongoSession(id)}
                         onCloseSqlite={(id) => void closeSqliteSession(id)}
@@ -784,6 +829,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                         activeRedisId={activeRedisId}
                         mysqlSessions={mysqlSessions}
                         activeMysqlId={activeMysqlId}
+                        postgresSessions={postgresSessions}
+                        activePostgresId={activePostgresId}
                         mqttSessions={mqttSessions}
                         activeMqttId={activeMqttId}
                         mongoSessions={mongoSessions}
@@ -808,6 +855,10 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                         onCloseMysql={(id) => void closeMysqlSession(id)}
                         onMysqlChange={(id, database) =>
                             setMysqlSessions((prev) => prev.map((x) => (x.id === id ? { ...x, database } : x)))
+                        }
+                        onClosePostgres={(id) => void closePostgresSession(id)}
+                        onPostgresChange={(id, database) =>
+                            setPostgresSessions((prev) => prev.map((x) => (x.id === id ? { ...x, database } : x)))
                         }
                         onCloseMqtt={(id) => void closeMqttSession(id)}
                         onCloseMongo={(id) => void closeMongoSession(id)}

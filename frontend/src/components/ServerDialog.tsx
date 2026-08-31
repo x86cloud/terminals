@@ -74,20 +74,23 @@ export default function ServerDialog({
                         ? 6379
                         : base.type === 'mysql'
                             ? 3306
-                            : base.type === 'mqtt'
-                                ? 1883
-                                : base.type === 'mongo'
-                                    ? 27017
-                                    : base.type === 'sqlite'
-                                        ? 0
-                                        : base.type === 'k8s'
-                                            ? 6443
-                                            : 22
+                            : base.type === 'postgres'
+                                ? 5432
+                                : base.type === 'mqtt'
+                                    ? 1883
+                                    : base.type === 'mongo'
+                                        ? 27017
+                                        : base.type === 'sqlite'
+                                            ? 0
+                                            : base.type === 'k8s'
+                                                ? 6443
+                                                : 22
             }
             if (base.type === 'k8s') {
                 if (!base.k8sAuthMode) base.k8sAuthMode = 'kubeconfig'
             }
             if (!base.username && (base.type === 'ssh' || base.type === 'mysql')) base.username = 'root'
+            if (!base.username && base.type === 'postgres') base.username = 'postgres'
             setForm(base)
             setError('')
             setTestResult(null)
@@ -118,6 +121,7 @@ export default function ServerDialog({
             ssh: 22,
             redis: 6379,
             mysql: 3306,
+            postgres: 5432,
             mqtt: 1883,
             mongo: 27017,
             sqlite: 0,
@@ -131,7 +135,7 @@ export default function ServerDialog({
             type: t,
             k8sAuthMode: t === 'k8s' ? (form.k8sAuthMode || 'kubeconfig') : form.k8sAuthMode,
             port: isCurrentDefault ? defaultPort : form.port,
-            username: t === 'redis' || t === 'mqtt' || t === 'sqlite' || t === 'docker' || t === 'k8s' ? '' : form.username || 'root',
+            username: t === 'postgres' ? (form.username || 'postgres') : (t === 'redis' || t === 'mqtt' || t === 'sqlite' || t === 'docker' || t === 'k8s' ? '' : form.username || 'root'),
         })
     }
 
@@ -355,6 +359,9 @@ export default function ServerDialog({
             } else if (form.type === 'mysql') {
                 const res = await API.mysqlTestConnection(form)
                 setTestResult({ success: true, message: `MySQL 连接成功! 延迟: ${res.pingMs || 0}ms` })
+            } else if (form.type === 'postgres') {
+                const res = await API.postgresTestConnection(form)
+                setTestResult({ success: true, message: `PostgreSQL 连接成功! 延迟: ${res.pingMs || 0}ms` })
             } else if (form.type === 'k8s') {
                 const res = await API.k8sTestConnection(form)
                 setTestResult({ success: true, message: res || 'Kubernetes 连接测试成功！' })
@@ -374,6 +381,7 @@ export default function ServerDialog({
         { key: 'k8s', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="k8s" size={14} /><span>K8s</span></span> },
         { key: 'redis', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="redis" size={14} /><span>Redis</span></span> },
         { key: 'mysql', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="mysql" size={14} /><span>MySQL</span></span> },
+        { key: 'postgres', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="postgres" size={14} /><span>PostgreSQL</span></span> },
         { key: 'mongo', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="mongo" size={14} /><span>MongoDB</span></span> },
         { key: 'sqlite', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="sqlite" size={14} /><span>SQLite</span></span> },
         { key: 'mqtt', label: <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><ClientIcon kind="mqtt" size={14} /><span>MQTT</span></span> },
@@ -396,7 +404,7 @@ export default function ServerDialog({
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        {['mongo', 'redis', 'mysql', 'mqtt', 'docker', 'k8s'].includes(form.type || '') && (
+                        {['mongo', 'redis', 'mysql', 'postgres', 'mqtt', 'docker', 'k8s'].includes(form.type || '') && (
                             <Button onClick={handleTestConnection} loading={busy}>
                                 测试连接
                             </Button>
@@ -1058,6 +1066,48 @@ export default function ServerDialog({
                         </>
                     )}
 
+                    {/* PostgreSQL 基础认证与设置 */}
+                    {form.type === 'postgres' && (
+                        <>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <div>
+                                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>用户名 (User)</div>
+                                    <Input
+                                        placeholder="postgres"
+                                        value={form.username || 'postgres'}
+                                        onChange={(e) => update({ username: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>密码 (Password)</div>
+                                    <Input.Password
+                                        placeholder="请输入 PostgreSQL 密码"
+                                        value={form.password || ''}
+                                        onChange={(e) => update({ password: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                <div>
+                                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认数据库 (Database)</div>
+                                    <Input
+                                        placeholder="postgres"
+                                        value={form.postgresDatabase || form.database || 'postgres'}
+                                        onChange={(e) => update({ postgresDatabase: e.target.value, database: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认 Schema (命名空间)</div>
+                                    <Input
+                                        placeholder="public"
+                                        value={form.postgresSchema || 'public'}
+                                        onChange={(e) => update({ postgresSchema: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+                        </>
+                    )}
+
                     {/* MongoDB 认证与基础设置 */}
                     {form.type === 'mongo' && (
                         <>
@@ -1565,6 +1615,130 @@ export default function ServerDialog({
                                                     value={form.mysqlConnMaxLifetime ?? 3600}
                                                     addonAfter="秒"
                                                     onChange={(v) => update({ mysqlConnMaxLifetime: v ?? 3600 })}
+                                                />
+                                            </div>
+                                        </div>
+                                    ),
+                                },
+                            ]}
+                        />
+                    ) : form.type === 'postgres' ? (
+                        <Collapse
+                            ghost
+                            size="small"
+                            items={[
+                                {
+                                    key: 'ssh',
+                                    label: (
+                                        <Space size={6}>
+                                            <Workflow size={13} color={form.postgresSSHEnabled ? 'var(--accent)' : undefined} />
+                                            <span style={{ fontSize: 13, fontWeight: form.postgresSSHEnabled ? 600 : 400 }}>
+                                                SSH 隧道代理 (SSH Bastion Tunnel)
+                                            </span>
+                                            {form.postgresSSHEnabled && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[已启用]</span>}
+                                        </Space>
+                                    ),
+                                    children: (
+                                        <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                                <span style={{ fontSize: 12 }}>启用 SSH 隧道连接内网 PG</span>
+                                                <Switch
+                                                    size="small"
+                                                    checked={!!form.postgresSSHEnabled}
+                                                    onChange={(checked) => update({ postgresSSHEnabled: checked })}
+                                                />
+                                            </div>
+                                            {form.postgresSSHEnabled && (
+                                                <>
+                                                    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
+                                                        <div>
+                                                            <div style={{ fontSize: 12, marginBottom: 4 }}>跳板机地址 (Host)</div>
+                                                            <Input
+                                                                placeholder="如: bastion.internal.net"
+                                                                value={form.postgresSSHHost || ''}
+                                                                onChange={(e) => update({ postgresSSHHost: e.target.value })}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ fontSize: 12, marginBottom: 4 }}>跳板机端口</div>
+                                                            <InputNumber
+                                                                min={1}
+                                                                max={65535}
+                                                                style={{ width: '100%' }}
+                                                                value={form.postgresSSHHostPort ?? 22}
+                                                                onChange={(v) => update({ postgresSSHHostPort: v ?? 22 })}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: 12, marginBottom: 4 }}>跳板机用户名</div>
+                                                        <Input
+                                                            placeholder="如: ec2-user / root"
+                                                            value={form.postgresSSHUser || ''}
+                                                            onChange={(e) => update({ postgresSSHUser: e.target.value })}
+                                                        />
+                                                    </div>
+                                                </>
+                                            )}
+                                        </Space>
+                                    ),
+                                },
+                                {
+                                    key: 'ssl',
+                                    label: (
+                                        <Space size={6}>
+                                            <ShieldCheck size={13} color={form.postgresSSLMode && form.postgresSSLMode !== 'disable' ? 'var(--accent)' : undefined} />
+                                            <span style={{ fontSize: 13, fontWeight: form.postgresSSLMode && form.postgresSSLMode !== 'disable' ? 600 : 400 }}>
+                                                SSL 传输安全 (SSL Mode)
+                                            </span>
+                                            {form.postgresSSLMode && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{form.postgresSSLMode}]</span>}
+                                        </Space>
+                                    ),
+                                    children: (
+                                        <div>
+                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>SSL Mode</div>
+                                            <Select
+                                                style={{ width: '100%' }}
+                                                value={form.postgresSSLMode || 'disable'}
+                                                onChange={(val) => update({ postgresSSLMode: val })}
+                                                options={[
+                                                    { label: 'disable (禁用 SSL / 明文直连)', value: 'disable' },
+                                                    { label: 'require (要求 SSL 加密传输)', value: 'require' },
+                                                    { label: 'verify-ca (校验 CA 证书)', value: 'verify-ca' },
+                                                    { label: 'verify-full (严格校验 CA 及主机名)', value: 'verify-full' },
+                                                ]}
+                                            />
+                                        </div>
+                                    ),
+                                },
+                                {
+                                    key: 'pool',
+                                    label: (
+                                        <Space size={6}>
+                                            <Zap size={13} />
+                                            <span style={{ fontSize: 13 }}>连接池设置 (Connection Pool)</span>
+                                        </Space>
+                                    ),
+                                    children: (
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                                            <div>
+                                                <div style={{ fontSize: 12, marginBottom: 4 }}>最大连接数 (MaxConns)</div>
+                                                <InputNumber
+                                                    min={1}
+                                                    max={500}
+                                                    style={{ width: '100%' }}
+                                                    value={form.postgresMaxOpenConns ?? 20}
+                                                    onChange={(v) => update({ postgresMaxOpenConns: v ?? 20 })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <div style={{ fontSize: 12, marginBottom: 4 }}>最小空闲数 (MinConns)</div>
+                                                <InputNumber
+                                                    min={0}
+                                                    max={100}
+                                                    style={{ width: '100%' }}
+                                                    value={form.postgresMinIdleConns ?? 2}
+                                                    onChange={(v) => update({ postgresMinIdleConns: v ?? 2 })}
                                                 />
                                             </div>
                                         </div>

@@ -1,5 +1,5 @@
 export type AuthType = 'password' | 'key'
-export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite' | 'docker' | 'k8s'
+export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite' | 'docker' | 'k8s' | 'postgres'
 
 export interface ServerGroup {
     id: string
@@ -76,6 +76,24 @@ export interface ServerConfig {
     charset?: string
     sftpHome?: string
     tls?: boolean
+    // PostgreSQL 高级配置
+    postgresDatabase?: string
+    postgresSchema?: string
+    postgresSSLMode?: 'disable' | 'require' | 'verify-ca' | 'verify-full'
+    postgresMaxOpenConns?: number
+    postgresMinIdleConns?: number
+    postgresConnMaxLifetime?: number
+    postgresConnMaxIdleTime?: number
+    postgresConnectTimeout?: number
+    postgresSSHEnabled?: boolean
+    postgresSSHHost?: string
+    postgresSSHHostPort?: number
+    postgresSSHUser?: string
+    postgresSSHAuthType?: 'password' | 'key'
+    postgresSSHPassword?: string
+    postgresSSHKeyPath?: string
+    postgresSSHKeyData?: string
+    postgresSSHPassphrase?: string
     // MongoDB 高级配置
     mongoUri?: string
     mongoURI?: string
@@ -462,6 +480,19 @@ export interface MysqlSessionInfo {
     port: number
     connected: boolean
     database: string
+}
+
+/* ---------------- PostgreSQL ---------------- */
+
+export interface PostgresSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    connected: boolean
+    database: string
+    schema?: string
 }
 
 export interface MqttSessionInfo {

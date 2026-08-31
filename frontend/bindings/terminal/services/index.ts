@@ -8,6 +8,7 @@ import * as K8sService from "./k8sservice.js";
 import * as MongoService from "./mongoservice.js";
 import * as MqttService from "./mqttservice.js";
 import * as MysqlService from "./mysqlservice.js";
+import * as PostgresService from "./postgresservice.js";
 import * as RedisService from "./redisservice.js";
 import * as SftpService from "./sftpservice.js";
 import * as SqliteService from "./sqliteservice.js";
@@ -21,6 +22,7 @@ export {
     MongoService,
     MqttService,
     MysqlService,
+    PostgresService,
     RedisService,
     SftpService,
     SqliteService,

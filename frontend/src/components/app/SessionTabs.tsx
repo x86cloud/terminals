@@ -4,7 +4,7 @@ import { X, Bot, BarChart2, Link as LinkIcon } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import g from '@/styles/global.module.less'
 import a from '@/components/app/SessionTabs.module.less'
-import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType} from '@/types'
+import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, PostgresSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType} from '@/types'
 
 export interface SessionTabsProps {
     sessions: SessionInfo[]
@@ -13,6 +13,8 @@ export interface SessionTabsProps {
     activeRedisId: string | null
     mysqlSessions: MysqlSessionInfo[]
     activeMysqlId: string | null
+    postgresSessions?: PostgresSessionInfo[]
+    activePostgresId?: string | null
     mqttSessions: MqttSessionInfo[]
     activeMqttId: string | null
     mongoSessions: MongoSessionInfo[]
@@ -33,6 +35,7 @@ export interface SessionTabsProps {
     onCloseSession: (id: string) => void
     onCloseRedis: (id: string) => void
     onCloseMysql: (id: string) => void
+    onClosePostgres?: (id: string) => void
     onCloseMqtt: (id: string) => void
     onCloseMongo: (id: string) => void
     onCloseSqlite: (id: string) => void
@@ -84,11 +87,12 @@ function Tab({
 export default function SessionTabs(props: SessionTabsProps) {
     const {
         sessions, activeId, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
+        postgresSessions = [], activePostgresId = null,
         mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId,
         dockerSessions = [], activeDockerId = null,
         k8sSessions = [], activeK8sId = null,
         aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive,
-        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onCloseMqtt, onCloseMongo, onCloseSqlite, onCloseDocker, onCloseK8s,
+        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onClosePostgres, onCloseMqtt, onCloseMongo, onCloseSqlite, onCloseDocker, onCloseK8s,
         onActivateAiAgent, onCloseAiAgent, onActivateDevTools, onCloseDevTools, onActivateApi, onCloseApi,
     } = props
 
@@ -145,6 +149,17 @@ export default function SessionTabs(props: SessionTabsProps) {
                     onClick={() => onFocusSession(s.id, 'mysql')}
                     onClose={() => onCloseMysql(s.id)}
                     icon={<ClientIcon kind="mysql" size={14}/>}
+                    dotOn={true}
+                    title={s.database ? `${s.title} · ${s.database}` : s.title}
+                />
+            ))}
+            {postgresSessions.map((s) => (
+                <Tab
+                    key={s.id}
+                    active={s.id === activePostgresId}
+                    onClick={() => onFocusSession(s.id, 'postgres')}
+                    onClose={() => onClosePostgres?.(s.id)}
+                    icon={<ClientIcon kind="postgres" size={14}/>}
                     dotOn={true}
                     title={s.database ? `${s.title} · ${s.database}` : s.title}
                 />

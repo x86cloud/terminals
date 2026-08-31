@@ -9,3 +9,138 @@ export interface MysqlQueryResult {
     "rows": ({ [_ in string]?: any } | null)[] | null;
     "affected": number;
 }
+
+/**
+ * PgDatabase 描述 PostgreSQL 数据库。
+ */
+export interface PgDatabase {
+    "name": string;
+    "owner": string;
+    "encoding": string;
+    "collate": string;
+    "size": string;
+    "sizeBytes": number;
+    "tableCount": number;
+}
+
+/**
+ * PgFunction 描述存储过程与函数。
+ */
+export interface PgFunction {
+    "name": string;
+    "schema": string;
+    "resultType": string;
+    "argTypes": string;
+    "argNames": string[] | null;
+    "language": string;
+    "def": string;
+    "comment": string;
+    "isProc": boolean;
+}
+
+/**
+ * PgRole 描述数据库角色/用户。
+ */
+export interface PgRole {
+    "name": string;
+    "super": boolean;
+    "inherit": boolean;
+    "createRole": boolean;
+    "createDb": boolean;
+    "canLogin": boolean;
+    "replication": boolean;
+    "connLimit": number;
+    "validUntil": string;
+    "memberOf": string;
+}
+
+/**
+ * PgSchema 描述 PostgreSQL Schema 命名空间。
+ */
+export interface PgSchema {
+    "name": string;
+    "owner": string;
+    "tableCount": number;
+    "viewCount": number;
+    "functionCount": number;
+}
+
+/**
+ * PgSequence 描述序列。
+ */
+export interface PgSequence {
+    "name": string;
+    "schema": string;
+    "dataType": string;
+    "startValue": number;
+    "minValue": number;
+    "maxValue": number;
+    "increment": number;
+    "currentValue": number;
+    "lastValue": number;
+}
+
+/**
+ * PgSession 描述活跃会话（pg_stat_activity）。
+ */
+export interface PgSession {
+    "pid": number;
+    "user": string;
+    "database": string;
+    "clientAddr": string;
+    "clientPort": number;
+    "backendStart": string;
+    "queryStart": string;
+    "stateChange": string;
+    "waitEventType": string;
+    "waitEvent": string;
+    "state": string;
+    "query": string;
+    "durationSec": number;
+}
+
+/**
+ * PgStatus 描述数据库服务器健康与运行状态。
+ */
+export interface PgStatus {
+    "version": string;
+    "uptime": string;
+    "activeConnections": number;
+    "maxConnections": number;
+    "databaseSize": string;
+    "cacheHitRatio": string;
+    "tps": number;
+    "deadlocks": number;
+    "tempFiles": number;
+    "tempBytes": string;
+}
+
+/**
+ * PgTable 描述 PostgreSQL 数据表或视图元数据。
+ */
+export interface PgTable {
+    "name": string;
+    "schema": string;
+
+    /**
+     * BASE TABLE | VIEW | MATERIALIZED VIEW | FOREIGN TABLE | PARTITIONED TABLE
+     */
+    "type": string;
+    "rowCount": number;
+    "totalSize": string;
+    "tableSize": string;
+    "indexSize": string;
+    "comment": string;
+}
+
+/**
+ * PostgresQueryResult 表示 SQL 执行的统一输出结构。
+ */
+export interface PostgresQueryResult {
+    "columns": string[] | null;
+    "columnTypes": string[] | null;
+    "rows": ({ [_ in string]?: any } | null)[] | null;
+    "affected": number;
+    "durationMs": number;
+    "error"?: string;
+}

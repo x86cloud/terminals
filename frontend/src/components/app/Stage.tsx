@@ -5,6 +5,7 @@ import ErrorBoundary from '@/components/ErrorBoundary'
 import SessionWorkspace from '@/pages/ssh/SessionWorkspace'
 import RedisClient from '@/pages/redis/RedisClient'
 import MysqlClient from '@/pages/mysql/MysqlClient'
+import PostgresClient from '@/pages/postgres/PostgresClient'
 import MqttClient from '@/pages/mqtt/MqttClient'
 import MongoClient from '@/pages/mongo/MongoClient'
 import SqliteClient from '@/pages/sqlite/SqliteClient'
@@ -15,7 +16,7 @@ import AiAgentPanel from '@/pages/agent/AiAgentPanel'
 import DevTools from '@/components/DevTools'
 import g from '@/styles/global.module.less'
 import a from '@/components/app/Stage.module.less'
-import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, AppSettings } from '@/types'
+import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, PostgresSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, AppSettings } from '@/types'
 
 const hiddenPane = { display: 'none' as const }
 const shownPane = {
@@ -36,6 +37,8 @@ export interface StageProps {
     activeRedisId: string | null
     mysqlSessions: MysqlSessionInfo[]
     activeMysqlId: string | null
+    postgresSessions?: PostgresSessionInfo[]
+    activePostgresId?: string | null
     mqttSessions: MqttSessionInfo[]
     activeMqttId: string | null
     mongoSessions: MongoSessionInfo[]
@@ -59,6 +62,8 @@ export interface StageProps {
     onRedisDbChange: (id: string, db: number, dbSize: number) => void
     onCloseMysql: (id: string) => void
     onMysqlChange: (id: string, database: string) => void
+    onClosePostgres?: (id: string) => void
+    onPostgresChange?: (id: string, database: string) => void
     onCloseMqtt: (id: string) => void
     onCloseMongo: (id: string) => void
     onMongoChange: (id: string, database: string) => void
@@ -74,15 +79,17 @@ export interface StageProps {
 export default function Stage(props: StageProps) {
     const {
         sessions, activeId, nativeDrop, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
+        postgresSessions = [], activePostgresId = null,
         mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId,
         dockerSessions = [], activeDockerId = null,
         k8sSessions = [], activeK8sId = null,
         aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive, settings,
         onPathChange, onNotify, onCloseRedis, onRedisDbChange, onCloseMysql, onMysqlChange,
+        onClosePostgres = () => {}, onPostgresChange = () => {},
         onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseDocker, onCloseK8s, onCloseAiAgent, onCloseDevTools, onCloseApi, onNewServer,
     } = props
 
-    const empty = sessions.length === 0 && dockerSessions.length === 0 && k8sSessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen && !aiAgentOpen
+    const empty = sessions.length === 0 && dockerSessions.length === 0 && k8sSessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && postgresSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen && !aiAgentOpen
 
     return (
         <div className={a.stage}>
@@ -137,6 +144,18 @@ export default function Stage(props: StageProps) {
                             session={s}
                             onClose={() => onCloseMysql(s.id)}
                             onChange={(id, database) => onMysqlChange(id, database)}
+                        />
+                    </ErrorBoundary>
+                </div>
+            ))}
+
+            {postgresSessions.map((s) => (
+                <div key={s.id} style={s.id === activePostgresId ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="PostgreSQL 页面渲染异常" onClose={() => onClosePostgres(s.id)}>
+                        <PostgresClient
+                            session={s}
+                            onClose={() => onClosePostgres(s.id)}
+                            onChange={(id, database) => onPostgresChange(id, database)}
                         />
                     </ErrorBoundary>
                 </div>

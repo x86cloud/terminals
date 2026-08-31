@@ -565,7 +565,11 @@ export default function ApiTreeList({ state }: Props) {
                             titleRender={(nodeData: any) => {
                                 const raw = nodeData.rawNode
                                 if (!raw) return <span>{nodeData.title}</span>
-                                return raw.isFolder ? renderFolderTitle(raw) : renderApiTitle(raw)
+                                return (
+                                    <div onContextMenu={(e) => e.stopPropagation()}>
+                                        {raw.isFolder ? renderFolderTitle(raw) : renderApiTitle(raw)}
+                                    </div>
+                                )
                             }}
                         />
                     )}

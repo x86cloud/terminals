@@ -1,0 +1,72 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.erWrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+    background: @bg-1;
+}
+
+.erToolbar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: @bg-2;
+    padding: 4px 8px;
+    border-radius: @radius-md;
+    border: 1px solid color-mix(in srgb, @border 70%, transparent);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+.canvas {
+    flex: 1;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    position: relative;
+
+    &:active {
+        cursor: grabbing;
+    }
+}
+
+.tableCard {
+    background: @bg-2;
+    border: 1px solid color-mix(in srgb, @border 70%, transparent);
+    border-radius: @radius-md;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    font-size: 11.5px;
+}
+
+.cardHead {
+    padding: 6px 10px;
+    background: color-mix(in srgb, @accent 10%, @bg-2);
+    border-bottom: 1px solid color-mix(in srgb, @border 70%, transparent);
+    font-weight: 700;
+    color: @text;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.colRow {
+    padding: 3px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid color-mix(in srgb, @border 40%, transparent);
+
+    &:last-child {
+        border-bottom: none;
+    }
+}
