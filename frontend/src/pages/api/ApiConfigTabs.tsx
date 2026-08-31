@@ -1,6 +1,6 @@
 import React from 'react'
-import { Select, Input, InputNumber, Button, Segmented, Checkbox, Tooltip, Space } from 'antd'
-import { Trash2, Plus } from 'lucide-react'
+import { Select, Input, InputNumber, Button, Segmented, Checkbox, Tooltip, Space, Badge } from 'antd'
+import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import a from '@/pages/api/ApiConfigTabs.module.less'
 import type { ApiState } from '@/pages/api/useApi'
@@ -8,22 +8,26 @@ import type { ApiState } from '@/pages/api/useApi'
 export default function ApiConfigTabs({ state }: { state: ApiState }) {
     const {
         mode, configTab, setConfigTab, showConfig, setShowConfig,
+        params, headers, bodyType, auth,
     } = state
+
+    const enabledParamsCount = params.filter((p) => p.enabled && p.name.trim()).length
+    const enabledHeadersCount = headers.filter((h) => h.enabled && h.name.trim()).length
 
     const tabs: Array<{ key: 'params' | 'headers' | 'body' | 'auth' | 'options' | 'messages'; label: string }> =
         mode === 'ws'
             ? [
                 { key: 'messages', label: '消息' },
-                { key: 'params', label: 'Params' },
-                { key: 'headers', label: '请求头' },
-                { key: 'auth', label: '鉴权' },
+                { key: 'params', label: enabledParamsCount > 0 ? `Params (${enabledParamsCount})` : 'Params' },
+                { key: 'headers', label: enabledHeadersCount > 0 ? `请求头 (${enabledHeadersCount})` : '请求头' },
+                { key: 'auth', label: auth.type !== 'none' ? `鉴权 (${auth.type.toUpperCase()})` : '鉴权' },
                 { key: 'options', label: '选项' },
             ]
             : [
-                { key: 'params', label: 'Params' },
-                { key: 'headers', label: '请求头' },
-                { key: 'body', label: '请求体' },
-                { key: 'auth', label: '鉴权' },
+                { key: 'params', label: enabledParamsCount > 0 ? `Params (${enabledParamsCount})` : 'Params' },
+                { key: 'headers', label: enabledHeadersCount > 0 ? `请求头 (${enabledHeadersCount})` : '请求头' },
+                { key: 'body', label: bodyType !== 'none' ? `请求体 (${bodyType.toUpperCase()})` : '请求体' },
+                { key: 'auth', label: auth.type !== 'none' ? `鉴权 (${auth.type.toUpperCase()})` : '鉴权' },
                 { key: 'options', label: '选项' },
             ]
 
@@ -33,18 +37,20 @@ export default function ApiConfigTabs({ state }: { state: ApiState }) {
     }
 
     return (
-        <div className={a.configBar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px' }}>
+        <div className={a.configBar}>
             <Segmented
-                size="small"
+                style={{ height: 32, display: 'flex', alignItems: 'center' }}
                 value={configTab}
                 onChange={(v) => selectTab(v as any)}
                 options={tabs.map((t) => ({ label: t.label, value: t.key }))}
             />
             <Button
-                size="small"
+                type="text"
+                style={{ height: 32 }}
+                icon={showConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 onClick={() => setShowConfig((v) => !v)}
             >
-                {showConfig ? '收起' : '展开'}
+                {showConfig ? '收起配置' : '展开配置'}
             </Button>
         </div>
     )
@@ -64,30 +70,36 @@ export function ConfigBody({ state }: { state: ApiState }) {
     if (!showConfig) return null
 
     return (
-        <div className={`${a.configBody} ${mode === 'ws' && configTab === 'messages' ? a.configBodyWs : ''}`} style={{ padding: '8px 12px' }}>
+        <div className={a.configBody}>
             {configTab === 'params' && (
                 <div className={a.headersEditor}>
+                    {params.length > 0 && (
+                        <div className={a.headerTableHead}>
+                            <span style={{ width: 24, textAlign: 'center' }}>启用</span>
+                            <span style={{ flex: 1 }}>参数名 (Key)</span>
+                            <span style={{ flex: 2 }}>参数值 (Value)</span>
+                            <span style={{ width: 32 }}></span>
+                        </div>
+                    )}
                     {params.length === 0 && (
-                        <div className={`${a.emptyHint} ${a.small}`}>暂无 Query 参数，点击「添加」新增</div>
+                        <div className={a.emptyHint}>暂无 Query 参数，点击下方按钮添加</div>
                     )}
                     {params.map((p, i) => (
-                        <div key={i} className={a.headerRow} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <div key={i} className={a.headerRow}>
                             <Checkbox
                                 checked={p.enabled}
                                 title="启用"
                                 onChange={(e) => updateParam(i, { enabled: e.target.checked })}
                             />
                             <Input
-                                size="small"
-                                style={{ flex: 1 }}
+                                style={{ flex: 1, height: 32 }}
                                 placeholder="Parameter Key"
                                 value={p.name}
                                 spellCheck={false}
                                 onChange={(e) => updateParam(i, { name: e.target.value })}
                             />
                             <Input
-                                size="small"
-                                style={{ flex: 2 }}
+                                style={{ flex: 2, height: 32 }}
                                 placeholder="Value"
                                 value={p.value}
                                 spellCheck={false}
@@ -95,16 +107,16 @@ export function ConfigBody({ state }: { state: ApiState }) {
                             />
                             <Tooltip title="删除">
                                 <Button
-                                    size="small"
                                     type="text"
                                     danger
-                                    icon={<Trash2 size={13} />}
+                                    style={{ height: 32, width: 32, padding: 0 }}
+                                    icon={<Trash2 size={14} />}
                                     onClick={() => removeParam(i)}
                                 />
                             </Tooltip>
                         </div>
                     ))}
-                    <Button size="small" icon={<Plus size={13} />} onClick={addParam} style={{ marginTop: 4 }}>
+                    <Button type="dashed" icon={<Plus size={14} />} onClick={addParam} style={{ width: '100%', height: 32, marginTop: 4 }}>
                         添加 Query 参数
                     </Button>
                 </div>
@@ -112,44 +124,50 @@ export function ConfigBody({ state }: { state: ApiState }) {
 
             {configTab === 'headers' && (
                 <div className={a.headersEditor}>
+                    {headers.length > 0 && (
+                        <div className={a.headerTableHead}>
+                            <span style={{ width: 24, textAlign: 'center' }}>启用</span>
+                            <span style={{ flex: 1 }}>请求头名称 (Header)</span>
+                            <span style={{ flex: 2 }}>请求头值 (Value)</span>
+                            <span style={{ width: 32 }}></span>
+                        </div>
+                    )}
                     {headers.length === 0 && (
-                        <div className={`${a.emptyHint} ${a.small}`}>暂无请求头，点击「添加」新增</div>
+                        <div className={a.emptyHint}>暂无自定义请求头，点击下方按钮添加</div>
                     )}
                     {headers.map((h, i) => (
-                        <div key={i} className={a.headerRow} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                        <div key={i} className={a.headerRow}>
                             <Checkbox
                                 checked={h.enabled}
                                 title="启用"
                                 onChange={(e) => updateHeader(i, { enabled: e.target.checked })}
                             />
                             <Input
-                                size="small"
-                                style={{ flex: 1 }}
-                                placeholder="Header"
+                                style={{ flex: 1, height: 32 }}
+                                placeholder="Header Key (如 Content-Type)"
                                 value={h.name}
                                 spellCheck={false}
                                 onChange={(e) => updateHeader(i, { name: e.target.value })}
                             />
                             <Input
-                                size="small"
-                                style={{ flex: 2 }}
-                                placeholder="Value"
+                                style={{ flex: 2, height: 32 }}
+                                placeholder="Header Value"
                                 value={h.value}
                                 spellCheck={false}
                                 onChange={(e) => updateHeader(i, { value: e.target.value })}
                             />
                             <Tooltip title="删除">
                                 <Button
-                                    size="small"
                                     type="text"
                                     danger
-                                    icon={<Trash2 size={13} />}
+                                    style={{ height: 32, width: 32, padding: 0 }}
+                                    icon={<Trash2 size={14} />}
                                     onClick={() => removeHeader(i)}
                                 />
                             </Tooltip>
                         </div>
                     ))}
-                    <Button size="small" icon={<Plus size={13} />} onClick={addHeader} style={{ marginTop: 4 }}>
+                    <Button type="dashed" icon={<Plus size={14} />} onClick={addHeader} style={{ width: '100%', height: 32, marginTop: 4 }}>
                         添加请求头
                     </Button>
                 </div>
@@ -157,11 +175,10 @@ export function ConfigBody({ state }: { state: ApiState }) {
 
             {configTab === 'body' && (
                 <div className={a.bodyEditor}>
-                    <div className={a.bodyTypeRow} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                        <span className={a.label} style={{ fontSize: 12, color: 'var(--text-dim)' }}>类型</span>
+                    <div className={a.bodyTypeRow}>
+                        <span className={a.label}>数据类型</span>
                         <Select
-                            size="small"
-                            style={{ width: 110 }}
+                            style={{ width: 130, height: 32 }}
                             value={bodyType}
                             onChange={(val) => setBodyType(val)}
                             options={[
@@ -173,60 +190,63 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         />
                         {bodyType !== 'none' && (
                             <Button
-                                size="small"
+                                style={{ height: 32 }}
                                 disabled={!allowBody}
                                 title={allowBody ? '格式化 JSON' : '当前方法不支持请求体'}
                                 onClick={formatJsonBody}
                             >
-                                格式化
+                                格式化 JSON
                             </Button>
                         )}
-                        {!allowBody && <span className={a.warnText} style={{ fontSize: 12, color: 'var(--text-dim)' }}>该方法通常不含请求体</span>}
+                        {!allowBody && <span className={a.warnText}>GET / HEAD 方法通常不携带请求体</span>}
                     </div>
-                    <CodeEditor
-                        value={body}
-                        onChange={setBody}
-                        lang={bodyType === 'json' ? 'json' : 'plain'}
-                        height="200px"
-                        readOnly={bodyType === 'none'}
-                        placeholder={bodyType === 'none' ? '请先选择请求体类型' : '在此输入请求体内容'}
-                        onModEnter={() => doSend()}
-                    />
+                    {bodyType !== 'none' && (
+                        <div style={{ height: 180, borderRadius: 4, overflow: 'hidden' }}>
+                            <CodeEditor
+                                value={body}
+                                onChange={setBody}
+                                lang={bodyType === 'json' ? 'json' : 'plain'}
+                                height="100%"
+                                readOnly={bodyType === 'none'}
+                                placeholder="在此输入请求体内容..."
+                                onModEnter={() => doSend()}
+                            />
+                        </div>
+                    )}
                 </div>
             )}
 
             {configTab === 'auth' && (
                 <div className={a.authEditor}>
-                    <div className={a.authRow} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                        <span className={a.label} style={{ fontSize: 12, color: 'var(--text-dim)', width: 60 }}>类型</span>
+                    <div className={a.authRow}>
+                        <span className={a.label} style={{ width: 75 }}>鉴权类型</span>
                         <Select
-                            size="small"
-                            style={{ width: 130 }}
+                            style={{ width: 150, height: 32 }}
                             value={auth.type}
                             onChange={(v) => setAuth((x) => ({ ...x, type: v as ApiState['auth']['type'] }))}
                             options={[
-                                { value: 'none', label: '无 (None)' },
+                                { value: 'none', label: '无 (No Auth)' },
                                 { value: 'basic', label: 'Basic Auth' },
                                 { value: 'bearer', label: 'Bearer Token' },
                             ]}
                         />
                     </div>
                     {auth.type === 'basic' && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                            <div className={a.authRow} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <span className={a.label} style={{ fontSize: 12, color: 'var(--text-dim)', width: 60 }}>用户名</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            <div className={a.authRow}>
+                                <span className={a.label} style={{ width: 75 }}>用户名</span>
                                 <Input
-                                    size="small"
-                                    style={{ maxWidth: 300 }}
+                                    style={{ maxWidth: 340, height: 32 }}
+                                    placeholder="Username"
                                     value={auth.username}
                                     onChange={(e) => setAuth((x) => ({ ...x, username: e.target.value }))}
                                 />
                             </div>
-                            <div className={a.authRow} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                                <span className={a.label} style={{ fontSize: 12, color: 'var(--text-dim)', width: 60 }}>密码</span>
+                            <div className={a.authRow}>
+                                <span className={a.label} style={{ width: 75 }}>密码</span>
                                 <Input.Password
-                                    size="small"
-                                    style={{ maxWidth: 300 }}
+                                    style={{ maxWidth: 340, height: 32 }}
+                                    placeholder="Password"
                                     value={auth.password}
                                     onChange={(e) => setAuth((x) => ({ ...x, password: e.target.value }))}
                                 />
@@ -234,11 +254,11 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         </div>
                     )}
                     {auth.type === 'bearer' && (
-                        <div className={a.authRow} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <span className={a.label} style={{ fontSize: 12, color: 'var(--text-dim)', width: 60 }}>Token</span>
+                        <div className={a.authRow}>
+                            <span className={a.label} style={{ width: 75 }}>Token</span>
                             <Input
-                                size="small"
-                                style={{ maxWidth: 400 }}
+                                style={{ maxWidth: 440, height: 32 }}
+                                placeholder="Bearer token string"
                                 value={auth.token}
                                 onChange={(e) => setAuth((x) => ({ ...x, token: e.target.value }))}
                             />
@@ -248,22 +268,21 @@ export function ConfigBody({ state }: { state: ApiState }) {
             )}
 
             {configTab === 'options' && (
-                <div className={a.optionsEditor} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <div className={a.optRow} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <span className={a.label} style={{ fontSize: 12, color: 'var(--text-dim)', width: 70 }}>超时(ms)</span>
+                <div className={a.optionsEditor}>
+                    <div className={a.optRow}>
+                        <span className={a.label} style={{ width: 90 }}>超时时间(ms)</span>
                         <InputNumber
-                            size="small"
                             min={0}
+                            style={{ width: 150, height: 32 }}
                             value={timeoutMs}
                             onChange={(v) => setTimeoutMs(v ?? 0)}
                         />
                     </div>
                     {mode === 'ws' && (
-                        <div className={a.optRow} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <span className={a.label} style={{ fontSize: 12, color: 'var(--text-dim)', width: 70 }}>子协议</span>
+                        <div className={a.optRow}>
+                            <span className={a.label} style={{ width: 90 }}>子协议</span>
                             <Input
-                                size="small"
-                                style={{ maxWidth: 300 }}
+                                style={{ maxWidth: 340, height: 32 }}
                                 placeholder="逗号分隔，如 chat, json"
                                 value={wsProtocols}
                                 spellCheck={false}
@@ -275,13 +294,13 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         checked={followRedirects}
                         onChange={(e) => setFollowRedirects(e.target.checked)}
                     >
-                        自动跟随重定向
+                        自动跟随重定向 (Follow Redirects)
                     </Checkbox>
                     <Checkbox
                         checked={insecureTLS}
                         onChange={(e) => setInsecureTLS(e.target.checked)}
                     >
-                        跳过 TLS 证书校验（不推荐）
+                        跳过 TLS 证书校验 (Insecure TLS)
                     </Checkbox>
                 </div>
             )}

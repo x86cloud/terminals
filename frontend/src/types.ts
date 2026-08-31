@@ -528,13 +528,56 @@ export interface ApiResponse {
 }
 
 export interface ApiHistoryItem {
+    id?: string
+    mode?: ApiMode
     method: ApiMethod
     url: string
+    params?: ApiHeader[]
+    headers?: ApiHeader[]
+    bodyType?: string
+    body?: string
+    auth?: ApiAuth
+    timeoutMs?: number
+    insecureTLS?: boolean
+    followRedirects?: boolean
+    wsProtocols?: string
     statusCode: number
     durationMs: number
     at: number
     error: string
+    response?: ApiResponse
 }
+
+export interface SavedApiItem {
+    id: string
+    name: string
+    isFolder?: false
+    mode?: ApiMode
+    method: ApiMethod
+    url: string
+    params?: ApiHeader[]
+    headers?: ApiHeader[]
+    bodyType?: string
+    body?: string
+    auth?: ApiAuth
+    timeoutMs?: number
+    insecureTLS?: boolean
+    followRedirects?: boolean
+    wsProtocols?: string
+    createdAt: number
+    updatedAt: number
+}
+
+export interface ApiFolderNode {
+    id: string
+    name: string
+    isFolder: true
+    children: (ApiFolderNode | SavedApiItem)[]
+    createdAt: number
+    updatedAt: number
+}
+
+export type ApiTreeNode = ApiFolderNode | SavedApiItem
 
 export type ApiMode = 'http' | 'ws'
 

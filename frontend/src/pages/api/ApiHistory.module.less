@@ -3,7 +3,7 @@
 
 .historyPanel {
     flex: none;
-    width: 250px;
+    width: 290px;
     display: flex;
     flex-direction: column;
     border-right: 1px solid @border;
@@ -25,12 +25,13 @@
     font-weight: 600;
 }
 
-.historyCount {
-    color: @text-dim;
-    font-size: 11px;
-    background: @bg-3;
-    border-radius: 10px;
-    padding: 0 6px;
+.searchBar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
 }
 
 .historyList {
@@ -46,82 +47,79 @@
 .historyItem {
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    align-items: stretch;
-    text-align: left;
-    padding: 7px 8px;
+    gap: 5px;
+    padding: 8px 10px;
     background: @bg-2;
     border: 1px solid @border;
     border-radius: @radius-md;
     color: @text;
     cursor: pointer;
-    font: inherit;
+    transition: all 0.15s ease;
+    position: relative;
 
     &:hover {
         border-color: @accent;
         background: @bg-3;
+
+        .itemActions {
+            opacity: 1;
+        }
     }
+}
+
+.historyItemActive {
+    border-color: @accent !important;
+    background: @bg-3 !important;
 }
 
 .historyTop {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
-    justify-content: flex-start;
 }
 
-.historyDel {
-    margin-left: auto;
+.historyTopLeft {
     display: flex;
     align-items: center;
-    justify-content: center;
-    padding: 2px;
-    background: transparent;
-    border: none;
-    border-radius: 4px;
-    color: @text-dim;
-    cursor: pointer;
-    opacity: 0;
-    flex: none;
-
-    &:hover {
-        background: @bg;
-        color: @danger;
-    }
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow: hidden;
 }
 
-.historyItem:hover .historyDel {
-    opacity: 1;
-}
-
-.historyMethod {
-    flex: none;
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-family: @font-mono;
-    font-size: 11px;
-    font-weight: 700;
-    color: #fff;
-    background: @text-faint;
+.itemActions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0.3;
+    transition: opacity 0.15s ease;
 }
 
 .historyUrl {
     display: block;
     font-size: 12px;
+    font-family: @font-mono;
     color: @text-dim;
     word-break: break-all;
-    overflow-wrap: anywhere;
+    line-height: 1.35;
 }
 
-.historyErr {
-    flex: none;
-    color: @danger;
-    font-size: 12px;
+.historyBottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    color: @text-faint;
+    margin-top: 2px;
 }
 
-.historyCode {
-    flex: none;
+.historyTime {
+    font-size: 11px;
+    color: @text-faint;
+}
+
+.historyDuration {
+    font-size: 11px;
     color: @text-dim;
-    font-size: 12px;
     font-family: @font-mono;
 }

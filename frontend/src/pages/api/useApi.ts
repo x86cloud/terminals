@@ -12,17 +12,26 @@ import {
     ConfigTab,
     WsMessage,
     WsStatus,
+    SavedApiItem,
+    ApiFolderNode,
+    ApiTreeNode,
     BODY_TYPES,
     HISTORY_KEY,
+    SAVED_APIS_KEY,
     METHODS,
     buildRequest,
     emptyAuth,
     looksLikeJson,
     parseUrlParams,
     buildUrlWithParams,
+    sanitizeHistoryItem,
+    findTreeNode,
+    removeTreeNode,
+    updateTreeNode,
+    insertTreeNode,
 } from './apiTypes'
 
-const MAX_HISTORY = 30
+const MAX_HISTORY = 50
 const MAX_WS_MESSAGES = 500
 
 export function useApi() {
@@ -43,6 +52,7 @@ export function useApi() {
     const [sending, setSending] = useState(false)
     const [error, setError] = useState('')
     const [response, setResponse] = useState<ApiResponse | null>(null)
+    const [historicalSnapshotTime, setHistoricalSnapshotTime] = useState<number | null>(null)
     const [respTab, setRespTab] = useState<'body' | 'headers'>('body')
     const [bodyPretty, setBodyPretty] = useState(true)
     const [history, setHistory] = useState<ApiHistoryItem[]>(() => {
@@ -54,6 +64,56 @@ export function useApi() {
         }
     })
     const [showHistory, setShowHistory] = useState(true)
+    const [historyKeyword, setHistoryKeyword] = useState('')
+    const [historyMethodFilter, setHistoryMethodFilter] = useState('ALL')
+    const [drawerHistoryItem, setDrawerHistoryItem] = useState<ApiHistoryItem | null>(null)
+
+    // 接口树与接口管理状态
+    const [apiTree, setApiTree] = useState<ApiTreeNode[]>(() => {
+        try {
+            const raw = localStorage.getItem(SAVED_APIS_KEY)
+            if (raw) {
+                const parsed = JSON.parse(raw)
+                if (Array.isArray(parsed) && parsed.length > 0) return parsed as ApiTreeNode[]
+            }
+        } catch {}
+        return [
+            {
+                id: 'folder_default',
+                name: '默认分组',
+                isFolder: true,
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                children: [
+                    {
+                        id: 'api_example_get',
+                        name: '示例: GET 请求',
+                        isFolder: false,
+                        mode: 'http',
+                        method: 'GET',
+                        url: 'https://httpbin.org/get',
+                        params: [{ name: 'test', value: '123', enabled: true }],
+                        headers: [],
+                        bodyType: 'none',
+                        body: '',
+                        auth: emptyAuth(),
+                        timeoutMs: 30000,
+                        insecureTLS: false,
+                        followRedirects: true,
+                        createdAt: Date.now(),
+                        updatedAt: Date.now(),
+                    },
+                ],
+            },
+        ]
+    })
+    const [currentApiId, setCurrentApiId] = useState<string | null>(null)
+    const [currentApiName, setCurrentApiName] = useState<string | null>(null)
+    const [apiTreeSearch, setApiTreeSearch] = useState('')
+    const [apiTreeExpandedKeys, setApiTreeExpandedKeys] = useState<string[]>(['folder_default'])
+
+    const [saveModalOpen, setSaveModalOpen] = useState(false)
+    const [saveModalMode, setSaveModalMode] = useState<'save' | 'saveAs'>('save')
 
     const [mode, setMode] = useState<ApiMode>('http')
     const [wsConnId, setWsConnId] = useState<string | null>(null)
@@ -76,9 +136,17 @@ export function useApi() {
         try {
             localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
         } catch {
-            /* 忽略写入失败（如隐私模式/容量受限） */
+            /* 忽略写入失败 */
         }
     }, [history])
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(SAVED_APIS_KEY, JSON.stringify(apiTree))
+        } catch {
+            /* 忽略写入失败 */
+        }
+    }, [apiTree])
 
     const allowBody = method !== 'GET' && method !== 'HEAD'
 
@@ -92,22 +160,39 @@ export function useApi() {
         if (target !== url) setUrl(target)
         setError('')
         setSending(true)
+        setHistoricalSnapshotTime(null)
         try {
             const res = await API.apiRequest(
                 buildRequest({method, url: target, headers, bodyType, body, timeoutMs, insecureTLS, followRedirects, auth, bodyTypes: BODY_TYPES})
             )
             setResponse(res)
             setRespTab('body')
-            setHistory((h) => [
-                {method, url: target, statusCode: res.statusCode, durationMs: res.durationMs, at: Date.now(), error: res.error},
-                ...h,
-            ].slice(0, MAX_HISTORY))
+            const histItem: ApiHistoryItem = {
+                id: 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                mode: 'http',
+                method,
+                url: target,
+                params: [...params],
+                headers: [...headers],
+                bodyType,
+                body,
+                auth: {...auth},
+                timeoutMs,
+                insecureTLS,
+                followRedirects,
+                statusCode: res.statusCode,
+                durationMs: res.durationMs,
+                at: Date.now(),
+                error: res.error,
+                response: res,
+            }
+            setHistory((h) => [sanitizeHistoryItem(histItem), ...h].slice(0, MAX_HISTORY))
         } catch (e) {
             setError(errorMessage(e))
         } finally {
             setSending(false)
         }
-    }, [url, method, headers, bodyType, body, timeoutMs, insecureTLS, followRedirects, auth])
+    }, [url, method, params, headers, bodyType, body, timeoutMs, insecureTLS, followRedirects, auth])
 
     const wsSwitchMode = useCallback((next: ApiMode) => {
         setMode(next)
@@ -148,6 +233,22 @@ export function useApi() {
                 auth,
                 wsProtocols.split(',').map((p) => p.trim()).filter(Boolean)
             )
+            const wsHistItem: ApiHistoryItem = {
+                id: 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+                mode: 'ws',
+                method: 'WS' as any,
+                url: target,
+                headers: [...headers],
+                auth: {...auth},
+                insecureTLS,
+                wsProtocols,
+                statusCode: res.error ? 0 : 101,
+                durationMs: 0,
+                at: Date.now(),
+                error: res.error || '',
+            }
+            setHistory((h) => [sanitizeHistoryItem(wsHistItem), ...h].slice(0, MAX_HISTORY))
+
             if (res.error) {
                 setWsStatus('error')
                 setError(res.error)
@@ -183,7 +284,7 @@ export function useApi() {
 
     const wsClear = useCallback(() => setWsMessages([]), [])
 
-    // 销毁组件时释放 WebSocket 连接，防内存/资源泄漏
+    // 销毁组件时释放 WebSocket 连接
     useEffect(() => {
         return () => {
             if (wsConnId) {
@@ -205,7 +306,7 @@ export function useApi() {
     const prettyBody = useMemo(() => {
         if (!response?.body) return ''
         if (bodyPretty) {
-            const ct = Object.entries(response.headers).find(([k]) => k.toLowerCase() === 'content-type')?.[1] ?? ''
+            const ct = Object.entries(response.headers || {}).find(([k]) => k.toLowerCase() === 'content-type')?.[1] ?? ''
             if (ct.includes('json') || looksLikeJson(response.body)) {
                 try {
                     return JSON.stringify(JSON.parse(response.body), null, 2)
@@ -244,14 +345,279 @@ export function useApi() {
     }, [])
 
     const loadHistory = useCallback((item: ApiHistoryItem) => {
-        setMethod(item.method)
-        updateUrl(item.url)
-        setShowConfig(true)
-    }, [updateUrl])
-    const deleteHistory = useCallback((idx: number) => setHistory((h) => h.filter((_, i) => i !== idx)), [])
-    const clearHistory = useCallback(() => setHistory([]), [])
+        const isWs = item.mode === 'ws' || item.method === ('WS' as any)
+        if (isWs) {
+            setMode('ws')
+            setUrl(item.url)
+            if (item.headers) setHeaders(item.headers)
+            if (item.auth) setAuth(item.auth)
+            if (item.insecureTLS !== undefined) setInsecureTLS(item.insecureTLS)
+            if (item.wsProtocols !== undefined) setWsProtocols(item.wsProtocols)
+            setConfigTab('messages')
+            setShowConfig(true)
+            setError(item.error || '')
+        } else {
+            setMode('http')
+            setMethod(item.method || 'GET')
+            setUrl(item.url)
+            if (item.params) {
+                setParams(item.params)
+            } else {
+                const {params: parsed} = parseUrlParams(item.url)
+                setParams(parsed)
+            }
+            if (item.headers) setHeaders(item.headers)
+            if (item.bodyType !== undefined) setBodyType(item.bodyType)
+            if (item.body !== undefined) setBody(item.body)
+            if (item.auth) setAuth(item.auth)
+            if (item.timeoutMs !== undefined) setTimeoutMs(item.timeoutMs)
+            if (item.insecureTLS !== undefined) setInsecureTLS(item.insecureTLS)
+            if (item.followRedirects !== undefined) setFollowRedirects(item.followRedirects)
 
-    const respHeaders = response ? Object.entries(response.headers) : []
+            if (item.response) {
+                setResponse(item.response)
+                setHistoricalSnapshotTime(item.at)
+                setRespTab('body')
+            } else {
+                setResponse({
+                    status: item.statusCode ? String(item.statusCode) : '',
+                    statusCode: item.statusCode || 0,
+                    proto: '',
+                    headers: {},
+                    body: '',
+                    durationMs: item.durationMs || 0,
+                    size: 0,
+                    error: item.error || '',
+                })
+                setHistoricalSnapshotTime(item.at)
+            }
+            setError(item.error || '')
+            setShowConfig(true)
+        }
+    }, [])
+
+    const deleteHistory = useCallback((idxOrId: number | string) => {
+        setHistory((h) => {
+            if (typeof idxOrId === 'number') {
+                return h.filter((_, i) => i !== idxOrId)
+            }
+            return h.filter((item) => item.id !== idxOrId)
+        })
+    }, [])
+
+    const clearHistory = useCallback(() => {
+        setHistory([])
+        try {
+            localStorage.removeItem(HISTORY_KEY)
+        } catch {}
+    }, [])
+
+    // 接口列表 / 树操作方法
+    const loadSavedApi = useCallback((item: SavedApiItem) => {
+        setCurrentApiId(item.id)
+        setCurrentApiName(item.name)
+        if (item.mode === 'ws' || item.method === ('WS' as any)) {
+            setMode('ws')
+            setUrl(item.url || '')
+            setHeaders(item.headers || [])
+            setAuth(item.auth || emptyAuth())
+            setInsecureTLS(item.insecureTLS || false)
+            setWsProtocols(item.wsProtocols || '')
+            setConfigTab('messages')
+        } else {
+            setMode('http')
+            setMethod(item.method || 'GET')
+            setUrl(item.url || '')
+            setParams(item.params || (item.url ? parseUrlParams(item.url).params : []))
+            setHeaders(item.headers || [])
+            setBodyType(item.bodyType || 'none')
+            setBody(item.body || '')
+            setAuth(item.auth || emptyAuth())
+            setTimeoutMs(item.timeoutMs || 30000)
+            setInsecureTLS(item.insecureTLS || false)
+            setFollowRedirects(item.followRedirects ?? true)
+            setConfigTab('params')
+        }
+        setShowConfig(true)
+        setError('')
+    }, [])
+
+    const saveCurrentApi = useCallback((name?: string) => {
+        if (currentApiId) {
+            const existing = findTreeNode(apiTree, currentApiId)
+            if (existing && !existing.isFolder) {
+                setApiTree((prev) =>
+                    updateTreeNode(prev, currentApiId, {
+                        name: name || currentApiName || existing.name,
+                        mode,
+                        method,
+                        url,
+                        params,
+                        headers,
+                        bodyType,
+                        body,
+                        auth,
+                        timeoutMs,
+                        insecureTLS,
+                        followRedirects,
+                        wsProtocols,
+                        updatedAt: Date.now(),
+                    })
+                )
+                if (name) setCurrentApiName(name)
+                return true
+            }
+        }
+        return false
+    }, [currentApiId, currentApiName, apiTree, mode, method, url, params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects, wsProtocols])
+
+    const saveAsNewApi = useCallback((name: string, targetFolderId?: string | null) => {
+        const id = 'api_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+        const apiName = name.trim() || (mode === 'ws' ? 'WebSocket 连接' : `${method} ${url || '新接口'}`)
+        const newItem: SavedApiItem = {
+            id,
+            name: apiName,
+            isFolder: false,
+            mode,
+            method,
+            url,
+            params: [...params],
+            headers: [...headers],
+            bodyType,
+            body,
+            auth: {...auth},
+            timeoutMs,
+            insecureTLS,
+            followRedirects,
+            wsProtocols,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        }
+        setApiTree((prev) => insertTreeNode(prev, targetFolderId || null, newItem))
+        setCurrentApiId(id)
+        setCurrentApiName(apiName)
+        if (targetFolderId) {
+            setApiTreeExpandedKeys((keys) => Array.from(new Set([...keys, targetFolderId])))
+        }
+    }, [mode, method, url, params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects, wsProtocols])
+
+    const createFolder = useCallback((name: string, parentFolderId?: string | null) => {
+        const id = 'folder_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+        const folderName = name.trim() || '新建分组'
+        const newFolder: ApiFolderNode = {
+            id,
+            name: folderName,
+            isFolder: true,
+            children: [],
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        }
+        setApiTree((prev) => insertTreeNode(prev, parentFolderId || null, newFolder))
+        setApiTreeExpandedKeys((keys) => Array.from(new Set([...keys, id, ...(parentFolderId ? [parentFolderId] : [])])))
+    }, [])
+
+    const renameTreeNode = useCallback((id: string, newName: string) => {
+        setApiTree((prev) => updateTreeNode(prev, id, { name: newName.trim() }))
+        if (currentApiId === id) {
+            setCurrentApiName(newName.trim())
+        }
+    }, [currentApiId])
+
+    const deleteTreeNode = useCallback((id: string) => {
+        setApiTree((prev) => {
+            const { newNodes } = removeTreeNode(prev, id)
+            return newNodes
+        })
+        if (currentApiId === id) {
+            setCurrentApiId(null)
+            setCurrentApiName(null)
+        }
+    }, [currentApiId])
+
+    const duplicateApiItem = useCallback((id: string) => {
+        const target = findTreeNode(apiTree, id)
+        if (!target || target.isFolder) return
+        const cloneId = 'api_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
+        const cloneItem: SavedApiItem = {
+            ...(target as SavedApiItem),
+            id: cloneId,
+            name: `${target.name} - 副本`,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        }
+        setApiTree((prev) => insertTreeNode(prev, null, cloneItem))
+    }, [apiTree])
+
+    const moveTreeNode = useCallback((dragKey: string, dropKey: string, dropPosition: number, dropToGap: boolean) => {
+        setApiTree((prev) => {
+            const { newNodes, removed } = removeTreeNode(prev, dragKey)
+            if (!removed) return prev
+
+            if (!dropToGap) {
+                // 拖入分组内部
+                return insertTreeNode(newNodes, dropKey, removed)
+            } else {
+                // 拖到兄弟节点前后
+                const insertAtLevel = (list: ApiTreeNode[]): ApiTreeNode[] => {
+                    const idx = list.findIndex((n) => n.id === dropKey)
+                    if (idx !== -1) {
+                        const copy = [...list]
+                        const insertIdx = dropPosition === -1 ? idx : idx + 1
+                        copy.splice(insertIdx, 0, removed!)
+                        return copy
+                    }
+                    return list.map((n) => {
+                        if (n.isFolder && n.children) {
+                            return {
+                                ...n,
+                                children: insertAtLevel(n.children),
+                            }
+                        }
+                        return n
+                    })
+                }
+                return insertAtLevel(newNodes)
+            }
+        })
+    }, [])
+
+    const newBlankApi = useCallback(() => {
+        setCurrentApiId(null)
+        setCurrentApiName(null)
+        setMode('http')
+        setMethod('GET')
+        setUrl('')
+        setParams([])
+        setHeaders([])
+        setBodyType('none')
+        setBody('')
+        setAuth(emptyAuth())
+        setResponse(null)
+        setHistoricalSnapshotTime(null)
+        setError('')
+    }, [])
+
+    const filteredHistory = useMemo(() => {
+        return history.filter((item) => {
+            const isWs = item.mode === 'ws' || item.method === ('WS' as any)
+            if (historyMethodFilter !== 'ALL') {
+                if (historyMethodFilter === 'WS') {
+                    if (!isWs) return false
+                } else {
+                    if (isWs || item.method !== historyMethodFilter) return false
+                }
+            }
+            if (historyKeyword.trim()) {
+                const kw = historyKeyword.trim().toLowerCase()
+                const matchUrl = item.url.toLowerCase().includes(kw)
+                const matchMethod = (item.method || '').toLowerCase().includes(kw)
+                if (!matchUrl && !matchMethod) return false
+            }
+            return true
+        })
+    }, [history, historyKeyword, historyMethodFilter])
+
+    const respHeaders = response ? Object.entries(response.headers || {}) : []
     const respLang: 'json' | 'plain' = useMemo(() => {
         if (!response) return 'plain'
         const ct = respHeaders.find(([k]) => k.toLowerCase() === 'content-type')?.[1] ?? ''
@@ -264,12 +630,33 @@ export function useApi() {
         headers, setHeaders, bodyType, setBodyType, body, setBody,
         auth, setAuth, timeoutMs, setTimeoutMs, insecureTLS, setInsecureTLS, followRedirects, setFollowRedirects,
         configTab, setConfigTab, showConfig, setShowConfig, sending, error, setError, response, respTab, setRespTab,
-        bodyPretty, setBodyPretty, history, showHistory, setShowHistory, allowBody, doSend, prettyBody,
+        historicalSnapshotTime, setHistoricalSnapshotTime,
+        bodyPretty, setBodyPretty, history, filteredHistory, showHistory, setShowHistory,
+        historyKeyword, setHistoryKeyword, historyMethodFilter, setHistoryMethodFilter,
+        drawerHistoryItem, setDrawerHistoryItem,
+        allowBody, doSend, prettyBody,
         addHeader, updateHeader, removeHeader, copy, loadHistory, deleteHistory, clearHistory, respHeaders, respLang,
         formatJsonBody,
         // WS 状态
         mode, setMode, wsSwitchMode, wsConnId, wsStatus, wsMessages, wsInput, setWsInput, wsProtocols, setWsProtocols,
         wsConnecting, wsConnect, wsDisconnect, wsSendMsg, wsClear,
+        // 接口列表与树管理
+        apiTree, setApiTree,
+        currentApiId, setCurrentApiId,
+        currentApiName, setCurrentApiName,
+        apiTreeSearch, setApiTreeSearch,
+        apiTreeExpandedKeys, setApiTreeExpandedKeys,
+        saveModalOpen, setSaveModalOpen,
+        saveModalMode, setSaveModalMode,
+        loadSavedApi,
+        saveCurrentApi,
+        saveAsNewApi,
+        createFolder,
+        renameTreeNode,
+        deleteTreeNode,
+        duplicateApiItem,
+        moveTreeNode,
+        newBlankApi,
         // 常量
         methods: METHODS,
     }

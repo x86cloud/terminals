@@ -1,0 +1,164 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.treePanel {
+    flex: none;
+    width: 300px;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid @border;
+    background: @bg-1;
+    min-height: 0;
+}
+
+.treeHead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    height: 52px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.treeTitle {
+    color: @text;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.searchBar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 12px;
+    height: 48px;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.treeContent {
+    flex: 1;
+    padding: 8px 6px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+
+    :global {
+        .ant-tree {
+            background: transparent;
+            color: @text;
+            font-size: 13px;
+        }
+
+        .ant-tree .ant-tree-node-content-wrapper {
+            padding: 0 6px;
+            border-radius: @radius-sm;
+            transition: all 0.15s ease;
+            line-height: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+
+            &:hover {
+                background: @bg-2;
+
+                .nodeActions {
+                    opacity: 1;
+                }
+            }
+        }
+
+        .ant-tree .ant-tree-node-selected {
+            background: @bg-3 !important;
+            font-weight: 500;
+        }
+
+        .ant-tree-switcher {
+            line-height: 32px;
+            height: 32px;
+        }
+    }
+}
+
+.nodeTitleWrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 6px;
+    overflow: hidden;
+}
+
+.nodeMain {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.nodeText {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+}
+
+.nodeActive {
+    color: @accent;
+    font-weight: 600;
+}
+
+.nodeActions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    opacity: 0.65;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+
+    &:hover {
+        opacity: 1;
+    }
+}
+
+.actionBtn {
+    padding: 0;
+    height: 24px;
+    width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: @text-dim;
+
+    &:hover {
+        background: @bg-3;
+        color: @text;
+    }
+}
+
+.actionBtnDanger {
+    &:hover {
+        background: @bg-3;
+        color: @danger !important;
+    }
+}
+
+.emptyTree {
+    padding: 36px 16px;
+    text-align: center;
+    color: @text-dim;
+    font-size: 13px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
