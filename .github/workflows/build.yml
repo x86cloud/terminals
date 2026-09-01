@@ -2,17 +2,8 @@ name: Build and Release
 
 on:
   push:
-    branches:
-      - v3
-      - main
-      - master
     tags:
       - 'v*'
-  pull_request:
-    branches:
-      - v3
-      - main
-      - master
   workflow_dispatch:
 
 permissions:
@@ -20,11 +11,13 @@ permissions:
 
 jobs:
   build-windows:
-    name: Build Windows (amd64)
+    name: Build Windows MSI (amd64)
     runs-on: windows-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -57,29 +50,26 @@ jobs:
         run: |
           wails3 build
 
-      - name: Package Windows Artifacts
+      - name: Package Windows MSI Installer (5-Step Wizard)
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Force -Path dist
-          if (Test-Path "bin\terminal-v3.exe") {
-            Compress-Archive -Path "bin\terminal-v3.exe" -DestinationPath "dist/terminal-v3-windows-amd64.zip" -Force
-          } elseif (Test-Path "terminal-v3.exe") {
-            Compress-Archive -Path "terminal-v3.exe" -DestinationPath "dist/terminal-v3-windows-amd64.zip" -Force
-          }
+          ./scripts/build-msi.ps1
 
-      - name: Upload Windows Artifact
+      - name: Upload Windows MSI Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: terminal-v3-windows-amd64
-          path: dist/*
-          if-no-files-found: warn
+          name: terminal-v3-windows-msi
+          path: dist/*.msi
+          if-no-files-found: error
 
   build-macos:
-    name: Build macOS (Universal)
+    name: Build macOS DMG (Universal)
     runs-on: macos-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Go
         uses: actions/setup-go@v5
@@ -99,10 +89,11 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: 'frontend/pnpm-lock.yaml'
 
-      - name: Install Wails v3 CLI and Task
+      - name: Install Wails v3 CLI, Task, and create-dmg
         run: |
           go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.10
           go install github.com/go-task/task/v3/cmd/task@latest
+          brew install create-dmg || true
 
       - name: Install Frontend Dependencies
         working-directory: frontend
@@ -113,21 +104,17 @@ jobs:
           wails3 build
           wails3 task darwin:package || wails3 package
 
-      - name: Compress macOS Bundle
+      - name: Package macOS DMG Image
         run: |
-          mkdir -p dist
-          if [ -d "bin/terminal-v3.app" ]; then
-            cd bin && zip -r ../dist/terminal-v3-macos.app.zip terminal-v3.app && cd ..
-          elif [ -f "bin/terminal-v3" ]; then
-            cd bin && zip ../dist/terminal-v3-macos.zip terminal-v3 && cd ..
-          fi
+          chmod +x ./scripts/build-dmg.sh
+          ./scripts/build-dmg.sh
 
-      - name: Upload macOS Artifact
+      - name: Upload macOS DMG Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: terminal-v3-macos
-          path: dist/*
-          if-no-files-found: warn
+          name: terminal-v3-macos-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
 
   release:
     name: Create GitHub Release
@@ -138,15 +125,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Download Artifacts
+      - name: Download Windows MSI Artifact
         uses: actions/download-artifact@v4
         with:
-          path: release-artifacts
+          name: terminal-v3-windows-msi
+          path: release-assets
 
-      - name: Publish Release
+      - name: Download macOS DMG Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: terminal-v3-macos-dmg
+          path: release-assets
+
+      - name: Publish Release Assets to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: release-artifacts/**/*
+          files: release-assets/*
           draft: false
           prerelease: false
           generate_release_notes: true

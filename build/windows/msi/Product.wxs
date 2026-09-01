@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi"
+     xmlns:util="http://schemas.microsoft.com/wix/UtilExtension">
+
+  <!-- ============================================================ -->
+  <!-- 产品定义与全局配置                                           -->
+  <!-- ============================================================ -->
+  <?ifndef ProductVersion ?>
+    <?define ProductVersion = "1.0.0" ?>
+  <?endif?>
+  <?ifndef BinaryPath ?>
+    <?define BinaryPath = "..\..\..\bin\terminal-v3.exe" ?>
+  <?endif?>
+
+  <Product Id="*"
+           Name="Terminal v3"
+           Language="2052"
+           Codepage="936"
+           Version="$(var.ProductVersion)"
+           Manufacturer="Terminal"
+           UpgradeCode="4B80E621-3F7A-4D78-90A7-0E0C49F308A5">
+
+    <Package InstallerVersion="405"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Description="Terminal v3 安装包"
+             Comments="多协议终端管理平台"
+             Platform="x64" />
+
+    <!-- ============================================================ -->
+    <!-- 步骤 2：旧版本检查与平滑升级策略                             -->
+    <!-- ============================================================ -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  Schedule="afterInstallInitialize"
+                  DowngradeErrorMessage="计算机上已安装更高版本的 Terminal，安装程序已终止。" />
+
+    <!-- 介质封装：压缩到单个 MSI 文件内 -->
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- 产品图标配置 -->
+    <Icon Id="AppIcon.ico" SourceFile="..\icon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/x86cloud/terminals" />
+    <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+
+    <!-- ============================================================ -->
+    <!-- 步骤 3：安装位置定义（默认 C:\Program Files\Terminal）       -->
+    <!-- ============================================================ -->
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <!-- 64位系统 Program Files 目录 -->
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Terminal" />
+      </Directory>
+
+      <!-- 开始菜单程序目录 -->
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Terminal" />
+      </Directory>
+    </Directory>
+
+    <!-- ============================================================ -->
+    <!-- 步骤 4：主程序组件与快捷方式配置                             -->
+    <!-- ============================================================ -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="MainExecutable" Guid="3E4D69B4-9F8C-4B1C-B647-9CF6318E2789" Win64="yes">
+        <File Id="TerminalExe"
+              Source="$(var.BinaryPath)"
+              KeyPath="yes"
+              Vital="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <!-- 开始菜单快捷方式 -->
+    <DirectoryRef Id="ApplicationProgramsFolder">
+      <Component Id="ApplicationShortcut" Guid="7B9F1A2C-5D3E-4A6B-9871-0CF491A235D6">
+        <Shortcut Id="ApplicationStartMenuShortcut"
+                  Name="Terminal"
+                  Description="Terminal v3 多协议终端管理工具"
+                  Target="[INSTALLFOLDER]terminal-v3.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon.ico" />
+        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Terminal\terminal_v3"
+                       Name="installed"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <Feature Id="ProductFeature" Title="Terminal v3" Level="1">
+      <ComponentRef Id="MainExecutable" />
+      <ComponentRef Id="ApplicationShortcut" />
+    </Feature>
+
+    <!-- ============================================================ -->
+    <!-- 步骤 1 & 3 & 5：安装向导交互界面（WixUI_InstallDir）          -->
+    <!-- 1. 协议许可 (License)                                        -->
+    <!-- 2. 旧版本检查 (MajorUpgrade 自动执行)                        -->
+    <!-- 3. 安装位置选择 (InstallDir)                                  -->
+    <!-- 4. 安装进度 (Progress)                                       -->
+    <!-- 5. 结束 (ExitDialog，不自动运行)                             -->
+    <!-- ============================================================ -->
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
+
+    <UIRef Id="WixUI_InstallDir" />
+    <UIRef Id="WixUI_ErrorProgressText" />
+
+  </Product>
+</Wix>
