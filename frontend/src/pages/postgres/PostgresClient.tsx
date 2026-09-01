@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Tree, Input, Button, Tag, Dropdown, MenuProps, message, Tooltip, Space, Popconfirm } from 'antd'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { Tree, Button, Tag, Dropdown, MenuProps, message, Tooltip, Space, Popconfirm } from 'antd'
 import {
     Database,
     Folder,
     Table,
     Plus,
     RotateCw,
-    Search,
     Play,
     Activity,
     Users,
@@ -51,7 +50,6 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
     const [schemasMap, setSchemasMap] = useState<Record<string, PgSchema[]>>({})
     const [tablesMap, setTablesMap] = useState<Record<string, PgTable[]>>({})
     const [expandedKeys, setExpandedKeys] = useState<string[]>([])
-    const [searchKeyword, setSearchKeyword] = useState('')
     const [loadingTree, setLoadingTree] = useState(false)
     const [loadingDbs, setLoadingDbs] = useState<Record<string, boolean>>({})
     const [loadingSchemas, setLoadingSchemas] = useState<Record<string, boolean>>({})
@@ -271,69 +269,46 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
 
     // 树结构构建
     const treeData = useMemo(() => {
-        const kw = searchKeyword.trim().toLowerCase()
+        return databases.map((db) => {
+            const dbKey = `db_${db.name}`
+            const schemas = schemasMap[db.name] || []
 
-        return databases
-            .filter((db) => {
-                if (!kw) return true
-                if (db.name.toLowerCase().includes(kw)) return true
-                const schemas = schemasMap[db.name] || []
-                return schemas.some((s) => {
-                    if (s.name.toLowerCase().includes(kw)) return true
-                    const tables = tablesMap[`${db.name}:${s.name}`] || []
-                    return tables.some((t) => t.name.toLowerCase().includes(kw))
+            const schemaChildren = schemas.map((s) => {
+                const schemaKey = `schema_${db.name}_${s.name}`
+                const tableListKey = `${db.name}:${s.name}`
+                const rawTables = tablesMap[tableListKey] || []
+                const isLoadingSchema = !!loadingSchemas[tableListKey]
+
+                const tableChildren = rawTables.map((t) => {
+                    const tableKey = `table_${db.name}_${s.name}_${t.name}`
+                    return {
+                        key: tableKey,
+                        title: t.name,
+                        raw: { type: 'table', db: db.name, schema: s.name, table: t },
+                        isLeaf: true,
+                    }
                 })
-            })
-            .map((db) => {
-                const dbKey = `db_${db.name}`
-                const schemas = schemasMap[db.name] || []
-
-                const schemaChildren = schemas
-                    .filter((s) => {
-                        if (!kw) return true
-                        if (s.name.toLowerCase().includes(kw)) return true
-                        const tables = tablesMap[`${db.name}:${s.name}`] || []
-                        return tables.some((t) => t.name.toLowerCase().includes(kw))
-                    })
-                    .map((s) => {
-                        const schemaKey = `schema_${db.name}_${s.name}`
-                        const tableListKey = `${db.name}:${s.name}`
-                        const rawTables = tablesMap[tableListKey] || []
-                        const isLoadingSchema = !!loadingSchemas[tableListKey]
-                        const filteredTables = rawTables.filter((t) =>
-                            !kw ? true : t.name.toLowerCase().includes(kw)
-                        )
-
-                        const tableChildren = filteredTables.map((t) => {
-                            const tableKey = `table_${db.name}_${s.name}_${t.name}`
-                            return {
-                                key: tableKey,
-                                title: t.name,
-                                raw: { type: 'table', db: db.name, schema: s.name, table: t },
-                                isLeaf: true,
-                            }
-                        })
-
-                        return {
-                            key: schemaKey,
-                            title: isLoadingSchema ? `${s.name} (加载中...)` : s.name,
-                            raw: { type: 'schema', db: db.name, schema: s },
-                            isLeaf: false,
-                            children: tableChildren,
-                        }
-                    })
-
-                const isLoadingDb = !!loadingDbs[db.name]
 
                 return {
-                    key: dbKey,
-                    title: isLoadingDb ? `${db.name} (加载中...)` : db.name,
-                    raw: { type: 'db', db },
+                    key: schemaKey,
+                    title: isLoadingSchema ? `${s.name} (加载中...)` : s.name,
+                    raw: { type: 'schema', db: db.name, schema: s },
                     isLeaf: false,
-                    children: schemaChildren,
+                    children: tableChildren,
                 }
             })
-    }, [databases, schemasMap, tablesMap, loadingDbs, loadingSchemas, searchKeyword])
+
+            const isLoadingDb = !!loadingDbs[db.name]
+
+            return {
+                key: dbKey,
+                title: isLoadingDb ? `${db.name} (加载中...)` : db.name,
+                raw: { type: 'db', db },
+                isLeaf: false,
+                children: schemaChildren,
+            }
+        })
+    }, [databases, schemasMap, tablesMap, loadingDbs, loadingSchemas])
 
     // 渲染数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
@@ -497,17 +472,6 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
                             />
                         </Tooltip>
                     </Space>
-                </div>
-
-                <div className={pg.sideSearch}>
-                    <Input
-                        size="small"
-                        placeholder="搜索数据库 / Schema / 表..."
-                        prefix={<Search size={13} style={{ color: 'var(--text-faint)' }} />}
-                        value={searchKeyword}
-                        allowClear
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                    />
                 </div>
 
                 <Dropdown menu={{ items: blankMenuItems }} trigger={['contextMenu']}>

@@ -551,11 +551,11 @@ func (m *PostgresManager) PostgresDatabases(serverID string) ([]PgDatabase, erro
 	query := `
 		SELECT 
 			d.datname,
-			pg_catalog.pg_get_userbyid(d.datdba) AS owner,
-			pg_catalog.pg_encoding_to_char(d.encoding) AS encoding,
-			d.datcollate AS collate,
-			pg_catalog.pg_size_pretty(pg_catalog.pg_database_size(d.datname)) AS size,
-			pg_catalog.pg_database_size(d.datname) AS size_bytes
+			COALESCE(pg_catalog.pg_get_userbyid(d.datdba), '') AS owner,
+			COALESCE(pg_catalog.pg_encoding_to_char(d.encoding), '') AS encoding,
+			COALESCE(d.datcollate, '') AS collate,
+			'' AS size,
+			0::bigint AS size_bytes
 		FROM pg_catalog.pg_database d
 		WHERE d.datistemplate = false
 		ORDER BY d.datname ASC;

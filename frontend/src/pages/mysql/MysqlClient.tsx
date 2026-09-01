@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Tree, Input, Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { Tree, Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
 import {
     Database,
     Folder,
     Table as TableIcon,
     Plus,
     RotateCw,
-    Search,
     Play,
     Activity,
     Users,
@@ -55,7 +54,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const [databases, setDatabases] = useState<string[]>([])
     const [tablesMap, setTablesMap] = useState<Record<string, TableStatusItem[]>>({})
     const [expandedKeys, setExpandedKeys] = useState<string[]>([])
-    const [searchKeyword, setSearchKeyword] = useState('')
     const [loadingTree, setLoadingTree] = useState(false)
     const [loadingDbs, setLoadingDbs] = useState<Record<string, boolean>>({})
 
@@ -436,34 +434,20 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
     // 构造左侧树数据
     const treeData = useMemo(() => {
-        const filteredDbs = databases.filter((d) => {
-            if (!searchKeyword.trim()) return true
-            if (d.toLowerCase().includes(searchKeyword.toLowerCase())) return true
-            const tbls = tablesMap[d] || []
-            return tbls.some((t) => t.name.toLowerCase().includes(searchKeyword.toLowerCase()))
-        })
-
-        return filteredDbs.map((dbName) => {
+        return databases.map((dbName) => {
             const dbKey = `db_${dbName}`
             const rawTables = tablesMap[dbName] || []
             const tbls = rawTables.filter((t) => !t.isView)
             const views = rawTables.filter((t) => t.isView)
 
-            const filteredTbls = tbls.filter((t) =>
-                !searchKeyword.trim() ? true : t.name.toLowerCase().includes(searchKeyword.toLowerCase())
-            )
-            const filteredViews = views.filter((v) =>
-                !searchKeyword.trim() ? true : v.name.toLowerCase().includes(searchKeyword.toLowerCase())
-            )
-
-            const tableChildren = filteredTbls.map((t) => ({
+            const tableChildren = tbls.map((t) => ({
                 key: `table_${dbName}_${t.name}`,
                 title: t.name,
                 raw: { type: 'table', db: dbName, table: t },
                 isLeaf: true,
             }))
 
-            const viewChildren = filteredViews.map((v) => ({
+            const viewChildren = views.map((v) => ({
                 key: `view_${dbName}_${v.name}`,
                 title: v.name,
                 raw: { type: 'view', db: dbName, table: v },
@@ -484,7 +468,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             })
 
             // 视图分组节点
-            if (views.length > 0 || !searchKeyword) {
+            if (views.length > 0) {
                 dbChildren.push({
                     key: `views_${dbName}`,
                     title: isLoadingDb ? '视图 (加载中...)' : `视图 (${views.length})`,
@@ -510,7 +494,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 children: dbChildren,
             }
         })
-    }, [databases, tablesMap, loadingDbs, searchKeyword])
+    }, [databases, tablesMap, loadingDbs])
 
     // 数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
@@ -661,18 +645,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             />
                         </Tooltip>
                     </Space>
-                </div>
-
-                {/* 搜索框 */}
-                <div className={my.sideSearch}>
-                    <Input
-                        size="small"
-                        prefix={<Search size={13} color="var(--text-dim)" />}
-                        placeholder="搜索数据库或数据表..."
-                        value={searchKeyword}
-                        onChange={(e) => setSearchKeyword(e.target.value)}
-                        allowClear
-                    />
                 </div>
 
                 {/* 树容器 */}
