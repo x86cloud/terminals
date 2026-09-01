@@ -117,36 +117,33 @@ if ($candle -and $light) {
     Write-Host "检测到 WiX v3 工具链，正在编译与链接 MSI..." -ForegroundColor Cyan
     Set-Location $MsiSourceDir
 
-    & $candle -nologo -arch x64 `
-        -dProductVersion="$MsiVersion" `
-        -dBinaryPath="$ResolvedBinary" `
-        -ext WixUIExtension `
-        -ext WixUtilExtension `
-        -out "$WixObjFile" `
+    $candleArgs = @(
+        "-nologo",
+        "-arch", "x64",
+        "-dProductVersion=$MsiVersion",
+        "-dBinaryPath=$ResolvedBinary",
+        "-ext", "WixUIExtension",
+        "-ext", "WixUtilExtension",
+        "-out", "$WixObjFile",
         "$WxsFile"
+    )
+    Write-Host "执行: candle $($candleArgs -join ' ')" -ForegroundColor DarkGray
+    & $candle @candleArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "WiX candle 编译失败，退出码: $LASTEXITCODE"
     }
 
-    & $light -nologo `
-        -cultures:zh-CN;en-US `
-        -ext WixUIExtension `
-        -ext WixUtilExtension `
-        -sval `
-        -out "$OutputFile" `
+    $lightArgs = @(
+        "-nologo",
+        "-ext", "WixUIExtension",
+        "-ext", "WixUtilExtension",
+        "-sval",
+        "-out", "$OutputFile",
         "$WixObjFile"
-
-    if ($LASTEXITCODE -ne 0) {
-        # 如果 zh-CN 语言包不可用，退回中立文化编译
-        Write-Host "重试采用标准语言环境链接..." -ForegroundColor Yellow
-        & $light -nologo `
-            -ext WixUIExtension `
-            -ext WixUtilExtension `
-            -sval `
-            -out "$OutputFile" `
-            "$WixObjFile"
-    }
+    )
+    Write-Host "执行: light $($lightArgs -join ' ')" -ForegroundColor DarkGray
+    & $light @lightArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "WiX light 链接失败，退出码: $LASTEXITCODE"

@@ -14,8 +14,8 @@
 
   <Product Id="*"
            Name="Terminal v3"
-           Language="2052"
-           Codepage="936"
+           Language="1033"
+           Codepage="1252"
            Version="$(var.ProductVersion)"
            Manufacturer="Terminal"
            UpgradeCode="4B80E621-3F7A-4D78-90A7-0E0C49F308A5">
