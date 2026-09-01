@@ -1,4 +1,4 @@
-﻿@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/variables.less';
 @import (reference) '../../styles/mixins.less';
 
 .client {
@@ -52,35 +52,10 @@
 
 .treeWrap {
     flex: 1;
-    overflow: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
     padding: 6px;
     min-height: 0;
-
-    :global {
-        .ant-tree {
-            background: transparent;
-            color: @text;
-
-            .ant-tree-node-content-wrapper {
-                border-radius: @radius-sm;
-                transition: background 0.15s ease;
-
-                &:hover {
-                    background: @bg-1;
-                }
-
-                &.ant-tree-node-selected {
-                    background: @accent-soft !important;
-                    color: @accent !important;
-                    font-weight: 600;
-                }
-            }
-
-            .ant-tree-switcher {
-                background: transparent;
-            }
-        }
-    }
 }
 
 .mainArea {
@@ -94,17 +69,17 @@
 }
 
 .tabBar {
-    height: 38px;
-    min-height: 38px;
+    height: 36px;
+    min-height: 36px;
     background: @bg-2;
     border-bottom: 1px solid color-mix(in srgb, @border 70%, transparent);
     display: flex;
-    align-items: flex-end;
-    padding: 0 8px;
+    align-items: stretch;
+    padding: 0;
     overflow-x: auto;
     overflow-y: hidden;
     flex-shrink: 0;
-    gap: 4px;
+    gap: 0;
     box-sizing: border-box;
 
     &::-webkit-scrollbar {
@@ -116,31 +91,30 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 0 12px;
+    padding: 0 14px;
     font-size: 12.5px;
     font-weight: 500;
     color: @text-dim;
-    background: color-mix(in srgb, @bg-1 40%, transparent);
-    border: 1px solid color-mix(in srgb, @border 60%, transparent);
-    border-bottom: none;
-    border-radius: 6px 6px 0 0;
+    background: transparent;
+    border: none;
+    border-right: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-radius: 0;
     cursor: pointer;
     user-select: none;
     transition: all 0.15s ease;
     white-space: nowrap;
-    height: 32px;
+    height: 100%;
     box-sizing: border-box;
 
     &:hover {
         color: @text;
-        background: @bg-1;
+        background: color-mix(in srgb, @bg-1 50%, transparent);
     }
 
     &.active {
         color: @accent;
         background: @bg-1;
         font-weight: 600;
-        border-color: color-mix(in srgb, @border 80%, transparent);
         box-shadow: 0 -2px 0 @accent inset;
     }
 }
@@ -171,6 +145,7 @@
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    min-width: 0;
     padding: 2px 4px;
     border-radius: @radius-sm;
     user-select: none;
@@ -184,10 +159,15 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     font-size: 12.5px;
+    min-width: 0;
+    flex: 1;
 }
 
 .nodeText {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+    display: block;
 }

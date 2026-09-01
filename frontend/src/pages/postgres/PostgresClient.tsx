@@ -53,6 +53,8 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
     const [expandedKeys, setExpandedKeys] = useState<string[]>([])
     const [searchKeyword, setSearchKeyword] = useState('')
     const [loadingTree, setLoadingTree] = useState(false)
+    const [loadingDbs, setLoadingDbs] = useState<Record<string, boolean>>({})
+    const [loadingSchemas, setLoadingSchemas] = useState<Record<string, boolean>>({})
 
     // 工作区标签栏管理
     const [tabs, setTabs] = useState<PostgresTabItem[]>([
@@ -90,8 +92,8 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
             if (dbs && dbs.length > 0) {
                 const targetDb = session.database || dbs[0].name
                 setCurrentDb(targetDb)
-                loadSchemas(targetDb)
-                setExpandedKeys([`db_${targetDb}`])
+                await loadSchemas(targetDb)
+                setExpandedKeys([`db_${targetDb}`, `schema_${targetDb}_public`])
             }
         } catch (e: any) {
             message.error(`连接 PostgreSQL 失败: ${e.message || e}`)
@@ -106,23 +108,30 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
 
     // 加载指定数据库下的 Schemas
     const loadSchemas = async (dbName: string) => {
+        setLoadingDbs((prev) => ({ ...prev, [dbName]: true }))
         try {
             const list = await API.postgresSchemas(serverId, dbName)
             setSchemasMap((prev) => ({ ...prev, [dbName]: list || [] }))
-            // 自动加载默认 public schema 下的表
-            loadTables(dbName, 'public')
+            // 自动预加载默认 public schema 下的表
+            await loadTables(dbName, 'public')
         } catch (e: any) {
             console.error('加载 Schemas 失败:', e)
+        } finally {
+            setLoadingDbs((prev) => ({ ...prev, [dbName]: false }))
         }
     }
 
     // 加载指定 Schema 下的表
     const loadTables = async (dbName: string, schemaName: string) => {
+        const key = `${dbName}:${schemaName}`
+        setLoadingSchemas((prev) => ({ ...prev, [key]: true }))
         try {
             const list = await API.postgresTables(serverId, dbName, schemaName)
-            setTablesMap((prev) => ({ ...prev, [`${dbName}:${schemaName}`]: list || [] }))
+            setTablesMap((prev) => ({ ...prev, [key]: list || [] }))
         } catch (e: any) {
             console.error('加载 Tables 失败:', e)
+        } finally {
+            setLoadingSchemas((prev) => ({ ...prev, [key]: false }))
         }
     }
 
@@ -262,42 +271,69 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
 
     // 树结构构建
     const treeData = useMemo(() => {
-        return databases.map((db) => {
-            const dbKey = `db_${db.name}`
-            const schemas = schemasMap[db.name] || []
+        const kw = searchKeyword.trim().toLowerCase()
 
-            const schemaChildren = schemas.map((s) => {
-                const schemaKey = `schema_${db.name}_${s.name}`
-                const tables = tablesMap[`${db.name}:${s.name}`] || []
-
-                const tableChildren = tables.map((t) => {
-                    const tableKey = `table_${db.name}_${s.name}_${t.name}`
-                    return {
-                        key: tableKey,
-                        title: t.name,
-                        raw: { type: 'table', db: db.name, schema: s.name, table: t },
-                        isLeaf: true,
-                    }
+        return databases
+            .filter((db) => {
+                if (!kw) return true
+                if (db.name.toLowerCase().includes(kw)) return true
+                const schemas = schemasMap[db.name] || []
+                return schemas.some((s) => {
+                    if (s.name.toLowerCase().includes(kw)) return true
+                    const tables = tablesMap[`${db.name}:${s.name}`] || []
+                    return tables.some((t) => t.name.toLowerCase().includes(kw))
                 })
+            })
+            .map((db) => {
+                const dbKey = `db_${db.name}`
+                const schemas = schemasMap[db.name] || []
+
+                const schemaChildren = schemas
+                    .filter((s) => {
+                        if (!kw) return true
+                        if (s.name.toLowerCase().includes(kw)) return true
+                        const tables = tablesMap[`${db.name}:${s.name}`] || []
+                        return tables.some((t) => t.name.toLowerCase().includes(kw))
+                    })
+                    .map((s) => {
+                        const schemaKey = `schema_${db.name}_${s.name}`
+                        const tableListKey = `${db.name}:${s.name}`
+                        const rawTables = tablesMap[tableListKey] || []
+                        const isLoadingSchema = !!loadingSchemas[tableListKey]
+                        const filteredTables = rawTables.filter((t) =>
+                            !kw ? true : t.name.toLowerCase().includes(kw)
+                        )
+
+                        const tableChildren = filteredTables.map((t) => {
+                            const tableKey = `table_${db.name}_${s.name}_${t.name}`
+                            return {
+                                key: tableKey,
+                                title: t.name,
+                                raw: { type: 'table', db: db.name, schema: s.name, table: t },
+                                isLeaf: true,
+                            }
+                        })
+
+                        return {
+                            key: schemaKey,
+                            title: isLoadingSchema ? `${s.name} (加载中...)` : s.name,
+                            raw: { type: 'schema', db: db.name, schema: s },
+                            isLeaf: false,
+                            children: tableChildren,
+                        }
+                    })
+
+                const isLoadingDb = !!loadingDbs[db.name]
 
                 return {
-                    key: schemaKey,
-                    title: s.name,
-                    raw: { type: 'schema', db: db.name, schema: s },
+                    key: dbKey,
+                    title: isLoadingDb ? `${db.name} (加载中...)` : db.name,
+                    raw: { type: 'db', db },
                     isLeaf: false,
-                    children: tableChildren,
+                    children: schemaChildren,
                 }
             })
-
-            return {
-                key: dbKey,
-                title: db.name,
-                raw: { type: 'db', db },
-                isLeaf: false,
-                children: schemaChildren,
-            }
-        })
-    }, [databases, schemasMap, tablesMap])
+    }, [databases, schemasMap, tablesMap, loadingDbs, loadingSchemas, searchKeyword])
 
     // 渲染数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
@@ -481,17 +517,57 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
                             showIcon={false}
                             treeData={treeData}
                             expandedKeys={expandedKeys}
-                            onExpand={(keys) => setExpandedKeys(keys as string[])}
-                            onSelect={(_, info: any) => {
-                                const raw = info.node?.raw
+                            loadData={async (node: any) => {
+                                const raw = node.raw
                                 if (!raw) return
                                 if (raw.type === 'db') {
+                                    if (!schemasMap[raw.db.name]) {
+                                        await loadSchemas(raw.db.name)
+                                    }
+                                } else if (raw.type === 'schema') {
+                                    if (!tablesMap[`${raw.db}:${raw.schema.name}`]) {
+                                        await loadTables(raw.db, raw.schema.name)
+                                    }
+                                }
+                            }}
+                            onExpand={async (keys, info: any) => {
+                                setExpandedKeys(keys as string[])
+                                if (info.expanded && info.node?.raw) {
+                                    const raw = info.node.raw
+                                    if (raw.type === 'db') {
+                                        if (!schemasMap[raw.db.name]) {
+                                            await loadSchemas(raw.db.name)
+                                        }
+                                    } else if (raw.type === 'schema') {
+                                        if (!tablesMap[`${raw.db}:${raw.schema.name}`]) {
+                                            await loadTables(raw.db, raw.schema.name)
+                                        }
+                                    }
+                                }
+                            }}
+                            onSelect={async (_, info: any) => {
+                                const raw = info.node?.raw
+                                if (!raw) return
+                                const nodeKey = String(info.node.key)
+                                if (raw.type === 'db') {
                                     setCurrentDb(raw.db.name)
-                                    loadSchemas(raw.db.name)
+                                    const willExpand = !expandedKeys.includes(nodeKey)
+                                    if (willExpand && !schemasMap[raw.db.name]) {
+                                        await loadSchemas(raw.db.name)
+                                    }
+                                    setExpandedKeys((prev) =>
+                                        prev.includes(nodeKey) ? prev.filter((k) => k !== nodeKey) : [...prev, nodeKey]
+                                    )
                                 } else if (raw.type === 'schema') {
                                     setCurrentDb(raw.db)
                                     setCurrentSchema(raw.schema.name)
-                                    loadTables(raw.db, raw.schema.name)
+                                    const willExpand = !expandedKeys.includes(nodeKey)
+                                    if (willExpand && !tablesMap[`${raw.db}:${raw.schema.name}`]) {
+                                        await loadTables(raw.db, raw.schema.name)
+                                    }
+                                    setExpandedKeys((prev) =>
+                                        prev.includes(nodeKey) ? prev.filter((k) => k !== nodeKey) : [...prev, nodeKey]
+                                    )
                                 } else if (raw.type === 'table') {
                                     openTableTab(raw.db, raw.schema, raw.table.name)
                                 }
@@ -532,15 +608,15 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
 
                                 if (raw.type === 'table') {
                                     return (
-                                        <div onContextMenu={(e) => e.stopPropagation()}>
+                                        <div onContextMenu={(e) => e.stopPropagation()} style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
                                             <Dropdown menu={{ items: getTableMenuItems(raw.db, raw.schema, raw.table.name) }} trigger={['contextMenu']}>
-                                                <div className={pg.nodeTitleWrap}>
+                                                <div className={pg.nodeTitleWrap} title={raw.table.name}>
                                                     <div className={pg.nodeMain}>
                                                         <Table size={13} style={{ color: '#52c41a', flexShrink: 0 }} />
                                                         <span className={pg.nodeText}>{raw.table.name}</span>
                                                     </div>
                                                     {raw.table.rowCount > 0 && (
-                                                        <span style={{ fontSize: 10, color: 'var(--text-faint)' }}>
+                                                        <span style={{ fontSize: 10, color: 'var(--text-faint)', marginLeft: 4, flexShrink: 0 }}>
                                                             {raw.table.rowCount}
                                                         </span>
                                                     )}
@@ -550,7 +626,7 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
                                     )
                                 }
 
-                                return <span>{nodeData.title}</span>
+                                return <div onContextMenu={(e) => e.stopPropagation()} style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>{nodeData.title}</div>
                             }}
                         />
                     </div>

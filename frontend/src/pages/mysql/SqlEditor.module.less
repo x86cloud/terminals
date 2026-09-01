@@ -2,110 +2,142 @@
 @import (reference) '../../styles/mixins.less';
 
 .sqlWrap {
-    .fill();
     display: flex;
     flex-direction: column;
-
-    :global(.cm-editor) {
-        border: none !important;
-        border-radius: 0 !important;
-    }
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: @bg-1;
 }
 
-.sqlTabBar {
+.tabBar {
     display: flex;
-    align-items: center;
-    gap: 3px;
-    padding: 4px 8px;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
     background: @bg-2;
-    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
-    flex-shrink: 0;
+    border-bottom: 1px solid color-mix(in srgb, @border 70%, transparent);
     overflow-x: auto;
+    overflow-y: hidden;
+    flex-shrink: 0;
+    height: 36px;
+    min-height: 36px;
+    box-sizing: border-box;
+
+    &::-webkit-scrollbar {
+        height: 3px;
+    }
 }
 
 .sqlTab {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
+    padding: 0 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: @text-dim;
     background: transparent;
     border: none;
-    border-radius: @radius-md;
-    color: @text-dim;
+    border-right: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-radius: 0;
     cursor: pointer;
-    font-size: 12px;
-    white-space: nowrap;
+    user-select: none;
     transition: all 0.15s ease;
+    height: 100%;
+    box-sizing: border-box;
 
     &:hover {
-        background: color-mix(in srgb, @bg-1 70%, transparent);
         color: @text;
+        background: color-mix(in srgb, @bg-1 50%, transparent);
     }
 
     &.active {
-        background: @bg-1;
         color: @accent;
         font-weight: 600;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        background: @bg-1;
+        box-shadow: 0 -2px 0 @accent inset;
     }
 }
 
-.sqlTabClose {
-    border: none;
-    background: transparent;
-    color: @text-faint;
-    cursor: pointer;
-    display: flex;
-    padding: 0;
-    transition: color 0.15s ease;
-
-    &:hover {
-        color: @danger;
-    }
-}
-
-.sqlTabAdd {
-    border: none;
-    background: transparent;
-    color: @text-dim;
-    cursor: pointer;
-    padding: 4px 6px;
+.runBar {
     display: flex;
     align-items: center;
-    border-radius: @radius-sm;
-    transition: all 0.15s ease;
-
-    &:hover {
-        background: color-mix(in srgb, @bg-1 70%, transparent);
-        color: @accent;
-    }
-}
-
-.sqlRunBar {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    justify-content: space-between;
     padding: 6px 12px;
     border-top: 1px solid color-mix(in srgb, @border 50%, transparent);
-    background: @bg-1;
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
+    background: @bg-2;
     flex-shrink: 0;
 }
 
-.sqlResultArea {
+.resultArea {
     flex: 1;
-    .fill();
+    min-height: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    padding: 0;
-    min-height: 0;
+    background: @bg-1;
 }
 
-.sqlResultMeta {
-    padding: 5px 12px;
-    font-size: 12px;
-    color: @text-dim;
+.resultHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 12px;
     background: @bg-2;
     border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
     flex-shrink: 0;
+    min-height: 34px;
+}
+
+.metaTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: @text-dim;
+    background: @bg-1;
+    padding: 2px 8px;
+    border-radius: @radius-sm;
+    border: 1px solid color-mix(in srgb, @border 50%, transparent);
+}
+
+.tableWrap {
+    flex: 1;
+    overflow: auto;
+    min-height: 0;
+    background: @bg-1;
+}
+
+.emptyTip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: @text-dim;
+    gap: 8px;
+    font-size: 13px;
+}
+
+.errorBanner {
+    margin: 12px;
+    padding: 10px 14px;
+    background: color-mix(in srgb, @danger 12%, transparent);
+    color: @danger;
+    border-radius: @radius-sm;
+    border: 1px solid color-mix(in srgb, @danger 30%, transparent);
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.5;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+.explainTreeWrap {
+    flex: 1;
+    overflow: auto;
+    padding: 12px;
+    background: @bg-1;
 }

@@ -394,12 +394,23 @@ export default function ApiTreeList({ state }: Props) {
 
     const treeData = useMemo(() => convertNodes(filteredTree), [filteredTree])
 
-    const handleSelect = (selectedKeys: any[]) => {
-        if (!Array.isArray(selectedKeys) || selectedKeys.length === 0) return
-        const key = String(selectedKeys[0])
-        const found = findTreeNode(apiTree || [], key)
-        if (found && !found.isFolder) {
-            safeLoadApi(found as SavedApiItem)
+    const handleSelect = (_: any[], info: any) => {
+        if (!info || !info.node) return
+        const key = String(info.node.key)
+        const raw = info.node.rawNode
+        if (raw && raw.isFolder) {
+            // 单击分组节点时切换展开/收缩状态
+            setExpandedKeys((prev) => {
+                const isExpanded = prev.includes(key)
+                if (isExpanded) {
+                    return prev.filter((k) => k !== key)
+                } else {
+                    return [...prev, key]
+                }
+            })
+            setAutoExpandParent(false)
+        } else if (raw && !raw.isFolder) {
+            safeLoadApi(raw as SavedApiItem)
         }
     }
 
@@ -551,7 +562,6 @@ export default function ApiTreeList({ state }: Props) {
                     ) : (
                         <Tree
                             draggable={{ icon: false }}
-                            blockNode
                             treeData={treeData}
                             selectedKeys={currentApiId ? [currentApiId] : []}
                             expandedKeys={effectiveExpandedKeys}

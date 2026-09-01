@@ -591,11 +591,27 @@ func (m *PostgresManager) PostgresSchemas(serverID, dbName string) ([]PgSchema, 
 	query := `
 		SELECT 
 			n.nspname AS schema_name,
-			pg_catalog.pg_get_userbyid(n.nspowner) AS owner,
-			(SELECT count(1) FROM pg_catalog.pg_class c WHERE c.relnamespace = n.oid AND c.relkind = 'r') AS table_count,
-			(SELECT count(1) FROM pg_catalog.pg_class c WHERE c.relnamespace = n.oid AND c.relkind IN ('v', 'm')) AS view_count,
-			(SELECT count(1) FROM pg_catalog.pg_proc p WHERE p.pronamespace = n.oid) AS function_count
+			COALESCE(r.rolname, '') AS owner,
+			COALESCE(t.table_count, 0) AS table_count,
+			COALESCE(t.view_count, 0) AS view_count,
+			COALESCE(p.function_count, 0) AS function_count
 		FROM pg_catalog.pg_namespace n
+		LEFT JOIN pg_catalog.pg_roles r ON r.oid = n.nspowner
+		LEFT JOIN (
+			SELECT 
+				relnamespace,
+				count(1) FILTER (WHERE relkind IN ('r', 'p', 'f')) AS table_count,
+				count(1) FILTER (WHERE relkind IN ('v', 'm')) AS view_count
+			FROM pg_catalog.pg_class
+			GROUP BY relnamespace
+		) t ON t.relnamespace = n.oid
+		LEFT JOIN (
+			SELECT 
+				pronamespace,
+				count(1) AS function_count
+			FROM pg_catalog.pg_proc
+			GROUP BY pronamespace
+		) p ON p.pronamespace = n.oid
 		WHERE n.nspname NOT LIKE 'pg_toast%'
 		ORDER BY 
 			CASE WHEN n.nspname = 'public' THEN 0 ELSE 1 END,
@@ -644,11 +660,11 @@ func (m *PostgresManager) PostgresTables(serverID, dbName, schema string) ([]PgT
 				WHEN 'p' THEN 'PARTITIONED TABLE'
 				ELSE 'OTHER'
 			END AS table_type,
-			c.reltuples::bigint AS row_count,
-			pg_size_pretty(pg_total_relation_size(c.oid)) AS total_size,
-			pg_size_pretty(pg_relation_size(c.oid)) AS table_size,
-			pg_size_pretty(pg_indexes_size(c.oid)) AS index_size,
-			COALESCE(pg_catalog.obj_description(c.oid, 'pg_class'), '') AS comment
+			GREATEST(0, c.reltuples::bigint) AS row_count,
+			'' AS total_size,
+			'' AS table_size,
+			'' AS index_size,
+			'' AS comment
 		FROM pg_catalog.pg_class c
 		JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
 		WHERE n.nspname = $1

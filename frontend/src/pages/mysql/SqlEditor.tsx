@@ -1,121 +1,405 @@
-import React from 'react'
-import { Button, Tooltip } from 'antd'
-import { X, Plus, Play } from 'lucide-react'
+import React, { useState } from 'react'
+import { Button, Tooltip, Segmented, Tag, message, Space, Table, Tree } from 'antd'
+import { Play, Sparkles, Plus, X, RotateCw, FileCode, CheckCircle2, AlertCircle, Clock, Zap, Download } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
-import my from '@/pages/mysql/SqlEditor.module.less'
-import sh from '@/pages/mysql/mysqlShared.module.less'
-import dbStyle from '@/pages/mysql/dbTable.module.less'
-import { SqlTab } from '@/pages/mysql/mysqlTypes'
+import { API } from '@/api'
+import { MysqlQueryResult } from '@/types'
+import { SqlTab } from './mysqlTypes'
+import my from './SqlEditor.module.less'
+import db from '@/pages/mysql/dbTable.module.less'
+
+interface QueryTab {
+    id: string
+    title: string
+    sql: string
+    result: MysqlQueryResult | null
+    durationMs?: number
+    error?: string
+    explainResult: any | null
+    resultMode: 'table' | 'explain' | 'raw'
+}
 
 export default function SqlEditor({
-    sqlTabs,
-    activeSqlTab,
-    activeTabObj,
-    busy,
-    db,
-    onSelectTab,
-    onAddTab,
-    onCloseTab,
-    onContentChange,
-    onRun,
+    serverId,
+    dbName,
+    initialSql,
 }: {
-    sqlTabs: SqlTab[]
-    activeSqlTab: string
-    activeTabObj: SqlTab
-    busy: boolean
-    db: string
-    onSelectTab: (id: string) => void
-    onAddTab: () => void
-    onCloseTab: (id: string) => void
-    onContentChange: (val: string) => void
-    onRun: () => void
+    serverId: string
+    dbName: string
+    initialSql?: string
 }) {
+    const [tabs, setTabs] = useState<QueryTab[]>([
+        {
+            id: 'tab_1',
+            title: '查询 1',
+            sql: initialSql || `SELECT table_name, table_rows, data_length, create_time FROM information_schema.tables WHERE table_schema = '${dbName}' LIMIT 20;`,
+            result: null,
+            explainResult: null,
+            resultMode: 'table',
+        },
+    ])
+    const [activeTabId, setActiveTabId] = useState('tab_1')
+    const [running, setRunning] = useState(false)
+
+    const activeTab = tabs.find((t) => t.id === activeTabId) || tabs[0]
+
+    const updateActiveTab = (patch: Partial<QueryTab>) => {
+        setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, ...patch } : t)))
+    }
+
+    const handleAddTab = () => {
+        const id = 'tab_' + Date.now()
+        const newTab: QueryTab = {
+            id,
+            title: `查询 ${tabs.length + 1}`,
+            sql: '',
+            result: null,
+            explainResult: null,
+            resultMode: 'table',
+        }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabId(id)
+    }
+
+    const handleCloseTab = (id: string) => {
+        if (tabs.length <= 1) return
+        const nextTabs = tabs.filter((t) => t.id !== id)
+        setTabs(nextTabs)
+        if (activeTabId === id) {
+            setActiveTabId(nextTabs[nextTabs.length - 1].id)
+        }
+    }
+
+    // 执行 SQL
+    const handleRunSql = async () => {
+        const sqlText = activeTab.sql.trim()
+        if (!sqlText) {
+            message.warning('请输入要执行的 SQL 语句')
+            return
+        }
+
+        setRunning(true)
+        const t0 = performance.now()
+        try {
+            const res = await API.mysqlRun(serverId, dbName, sqlText)
+            const durationMs = Math.round(performance.now() - t0)
+            updateActiveTab({
+                result: res,
+                durationMs,
+                error: '',
+                resultMode: 'table',
+            })
+            message.success(`执行完成 (${durationMs} ms, 影响/返回 ${res.rows?.length ?? res.affected ?? 0} 行)`)
+        } catch (e: any) {
+            const durationMs = Math.round(performance.now() - t0)
+            const errStr = e.message || String(e)
+            updateActiveTab({
+                result: { columns: [], rows: [], affected: 0, rowCount: 0 },
+                durationMs,
+                error: errStr,
+                resultMode: 'table',
+            })
+            message.error(`执行失败: ${errStr}`)
+        } finally {
+            setRunning(false)
+        }
+    }
+
+    // 执行 EXPLAIN 分析
+    const handleExplain = async () => {
+        const sqlText = activeTab.sql.trim()
+        if (!sqlText) {
+            message.warning('请输入要分析的 SQL 语句')
+            return
+        }
+
+        setRunning(true)
+        try {
+            // 尝试 EXPLAIN FORMAT=JSON
+            let jsonParsed: any = null
+            try {
+                const jsonRes = await API.mysqlRun(serverId, dbName, `EXPLAIN FORMAT=JSON ${sqlText}`)
+                if (jsonRes && jsonRes.rows && jsonRes.rows[0]) {
+                    const rawVal = jsonRes.rows[0]['EXPLAIN'] || Object.values(jsonRes.rows[0])[0]
+                    if (typeof rawVal === 'string') {
+                        jsonParsed = JSON.parse(rawVal)
+                    } else {
+                        jsonParsed = rawVal
+                    }
+                }
+            } catch {
+                // 如果不支持 JSON，退回到传统 EXPLAIN
+                const tabRes = await API.mysqlRun(serverId, dbName, `EXPLAIN ${sqlText}`)
+                jsonParsed = tabRes
+            }
+
+            updateActiveTab({
+                explainResult: jsonParsed,
+                resultMode: 'explain',
+            })
+            message.success('EXPLAIN 执行计划分析完成！')
+        } catch (e: any) {
+            message.error(`执行 EXPLAIN 失败: ${e.message || e}`)
+        } finally {
+            setRunning(false)
+        }
+    }
+
+    // 格式化解析 MySQL EXPLAIN 树节点
+    const renderPlanNode = (node: any): any => {
+        if (!node) return null
+
+        if (node.query_block) {
+            const qb = node.query_block
+            const costInfo = qb.cost_info?.query_cost ? ` (Cost: ${qb.cost_info.query_cost})` : ''
+            const children: any[] = []
+            if (qb.table) children.push(renderPlanNode({ table: qb.table }))
+            if (qb.nested_loop) {
+                qb.nested_loop.forEach((nl: any) => children.push(renderPlanNode(nl)))
+            }
+            if (qb.grouping_operation) {
+                children.push(renderPlanNode(qb.grouping_operation))
+            }
+            if (qb.ordering_operation) {
+                children.push(renderPlanNode(qb.ordering_operation))
+            }
+
+            return {
+                key: Math.random().toString(),
+                title: (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
+                        <Tag color="geekblue" style={{ fontWeight: 700, marginInlineEnd: 0 }}>
+                            Query Block #{qb.select_id || 1}
+                        </Tag>
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{costInfo}</span>
+                    </div>
+                ),
+                children: children.filter(Boolean),
+            }
+        }
+
+        if (node.table) {
+            const t = node.table
+            return {
+                key: Math.random().toString(),
+                title: (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
+                        <Tag color="blue" style={{ fontWeight: 600, marginInlineEnd: 0 }}>
+                            Table: {t.table_name}
+                        </Tag>
+                        <Tag color={t.access_type === 'ALL' ? 'red' : t.access_type === 'index' ? 'orange' : 'green'} style={{ marginInlineEnd: 0 }}>
+                            {t.access_type || 'Scan'}
+                        </Tag>
+                        {t.key && (
+                            <Tag color="purple" style={{ marginInlineEnd: 0 }}>
+                                Key: {t.key}
+                            </Tag>
+                        )}
+                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
+                            扫描行数: {t.rows_examined_per_scan ?? t.rows ?? '-'}
+                            {t.filtered && ` | 过滤率: ${t.filtered}%`}
+                        </span>
+                    </div>
+                ),
+            }
+        }
+
+        return {
+            key: Math.random().toString(),
+            title: <span>{JSON.stringify(node)}</span>,
+        }
+    }
+
+    const planTreeData = React.useMemo(() => {
+        if (!activeTab.explainResult) return []
+        if (activeTab.explainResult.query_block) {
+            return [renderPlanNode(activeTab.explainResult)]
+        }
+        return []
+    }, [activeTab.explainResult])
+
     return (
         <div className={my.sqlWrap}>
-            <div className={my.sqlTabBar}>
-                {sqlTabs.map((t) => (
+            {/* 多查询 Tab 栏 */}
+            <div className={my.tabBar}>
+                {tabs.map((t) => (
                     <div
                         key={t.id}
-                        className={`${my.sqlTab}${t.id === activeSqlTab ? ' ' + my.active : ''}`}
-                        onClick={() => onSelectTab(t.id)}
+                        className={`${my.sqlTab} ${t.id === activeTabId ? my.active : ''}`}
+                        onClick={() => setActiveTabId(t.id)}
                     >
                         <span>{t.title}</span>
-                        {sqlTabs.length > 1 && (
+                        {tabs.length > 1 && (
                             <Button
-                                size="small"
                                 type="text"
-                                className={my.sqlTabClose}
+                                size="small"
+                                style={{ width: 16, height: 16, padding: 0 }}
                                 icon={<X size={11} />}
-                                onClick={(e) => { e.stopPropagation(); onCloseTab(t.id) }}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleCloseTab(t.id)
+                                }}
                             />
                         )}
                     </div>
                 ))}
+
                 <Tooltip title="新建查询标签">
                     <Button
-                        size="small"
                         type="text"
-                        icon={<Plus size={13} />}
-                        onClick={onAddTab}
+                        size="small"
+                        style={{ height: '100%', width: 36, borderRadius: 0, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                        icon={<Plus size={14} />}
+                        onClick={handleAddTab}
                     />
                 </Tooltip>
             </div>
-            <CodeEditor
-                value={activeTabObj.content}
-                height="180px"
-                lang="sql"
-                lineNumbers={false}
-                bordered={false}
-                onChange={(val) => onContentChange(val)}
-                onModEnter={() => onRun()}
-            />
-            <div className={my.sqlRunBar} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px' }}>
-                <Button
-                    size="small"
-                    type="primary"
-                    icon={<Play size={12} />}
-                    disabled={busy}
-                    onClick={onRun}
-                >
-                    执行
-                </Button>
-                <span className={sh.mysqlCount} style={{ fontSize: 12, color: 'var(--text-dim)' }}>库：{db || '（未选）'}</span>
-                {activeTabObj.error && <span className={sh.mysqlError}>{activeTabObj.error}</span>}
+
+            {/* SQL 编辑区 */}
+            <div style={{ minHeight: 160, maxHeight: '40vh', borderBottom: '1px solid var(--border-color)' }}>
+                <CodeEditor
+                    value={activeTab.sql}
+                    lang="sql"
+                    bordered={false}
+                    height="180px"
+                    placeholder="-- 输入 MySQL SQL 语句，按 Ctrl+Enter 快速执行"
+                    onChange={(val) => updateActiveTab({ sql: val })}
+                    onModEnter={handleRunSql}
+                />
             </div>
-            <div className={my.sqlResultArea}>
-                {activeTabObj.result && activeTabObj.result.columns.length > 0 ? (
-                    <>
-                        <div className={my.sqlResultMeta}>共 {activeTabObj.result.rowCount} 行</div>
-                        <GridInline columns={activeTabObj.result.columns} rows={activeTabObj.result.rows} />
-                    </>
-                ) : activeTabObj.result ? (
-                    <div className={`${sh.mysqlEmpty} ${my.small}`}>影响行数：{activeTabObj.result.affected}</div>
-                ) : activeTabObj.error ? (
-                    <div className={`${sh.mysqlEmpty} ${my.small}`}>{activeTabObj.error}</div>
-                ) : (
-                    <div className={`${sh.mysqlEmpty} ${my.small}`}>执行结果将在此显示</div>
+
+            {/* 快捷操作栏 */}
+            <div className={my.runBar}>
+                <Space size={8}>
+                    <Button
+                        type="primary"
+                        icon={<Play size={14} />}
+                        loading={running}
+                        onClick={handleRunSql}
+                    >
+                        运行 (Ctrl+Enter)
+                    </Button>
+                    <Button
+                        icon={<Sparkles size={14} />}
+                        disabled={running}
+                        onClick={handleExplain}
+                    >
+                        EXPLAIN 分析
+                    </Button>
+                </Space>
+
+                {activeTab.result && (
+                    <Segmented
+                        size="small"
+                        value={activeTab.resultMode}
+                        onChange={(v) => updateActiveTab({ resultMode: v as any })}
+                        options={[
+                            { label: `结果集 (${activeTab.result.rows?.length ?? 0})`, value: 'table' },
+                            { label: '执行计划树', value: 'explain', disabled: !activeTab.explainResult },
+                        ]}
+                    />
                 )}
             </div>
-        </div>
-    )
-}
 
-function GridInline({ columns, rows }: { columns: string[]; rows: Record<string, any>[] }) {
-    if (!columns.length) return <div className={sh.mysqlEmpty}>无结果</div>
-    return (
-        <div className={dbStyle.dbTableScroll} style={{ border: 'none', borderRadius: 0 }}>
-            <table className={dbStyle.dbTable}>
-                <thead><tr>{columns.map((c) => <th key={c}>{c}</th>)}</tr></thead>
-                <tbody>
-                    {rows.map((r, i) => (
-                        <tr key={i}>
-                            {columns.map((c) => (
-                                <td key={c}>{r[c] === null || r[c] === undefined ? <span className={sh.mysqlNull}>NULL</span> : String(r[c])}</td>
-                            ))}
-                        </tr>
-                    ))}
-                </tbody>
-            </table>
+            {/* 结果显示区 */}
+            <div className={my.resultArea}>
+                {activeTab.error && (
+                    <div className={my.errorBanner}>
+                        <AlertCircle size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                        {activeTab.error}
+                    </div>
+                )}
+
+                {activeTab.resultMode === 'table' && activeTab.result && (
+                    <>
+                        <div className={my.resultHead}>
+                            <Space size={12}>
+                                <span className={my.metaTag}>
+                                    <Clock size={12} /> 耗时: {activeTab.durationMs || 0} ms
+                                </span>
+                                <span className={my.metaTag}>
+                                    <Zap size={12} /> 返回: {activeTab.result.rows?.length ?? activeTab.result.affected ?? 0} 行
+                                </span>
+                            </Space>
+
+                            <Button
+                                size="small"
+                                icon={<Download size={13} />}
+                                onClick={() => {
+                                    if (!activeTab.result?.rows?.length) {
+                                        message.info('无结果可导出')
+                                        return
+                                    }
+                                    const cols = activeTab.result.columns || []
+                                    const csv = [
+                                        cols.join(','),
+                                        ...activeTab.result.rows.map((r) => cols.map((c) => JSON.stringify(r[c] ?? '')).join(',')),
+                                    ].join('\n')
+                                    navigator.clipboard.writeText(csv)
+                                    message.success('已复制 CSV 到剪贴板！')
+                                }}
+                            >
+                                导出 CSV
+                            </Button>
+                        </div>
+
+                        <div className={my.tableWrap}>
+                            <Table
+                                size="small"
+                                pagination={{ pageSize: 50, showSizeChanger: true }}
+                                dataSource={activeTab.result.rows || []}
+                                rowKey={(_, idx) => idx!}
+                                scroll={{ x: 'max-content', y: 'calc(100vh - 420px)' }}
+                                columns={(activeTab.result.columns || []).map((col) => ({
+                                    title: col,
+                                    dataIndex: col,
+                                    key: col,
+                                    render: (val) => {
+                                        if (val === null || val === undefined) return <span style={{ color: 'var(--text-faint)', fontStyle: 'italic' }}>NULL</span>
+                                        if (typeof val === 'object') return JSON.stringify(val)
+                                        return String(val)
+                                    },
+                                }))}
+                            />
+                        </div>
+                    </>
+                )}
+
+                {activeTab.resultMode === 'explain' && (
+                    <div className={my.explainTreeWrap}>
+                        {planTreeData.length > 0 ? (
+                            <Tree
+                                defaultExpandAll
+                                showLine
+                                treeData={planTreeData}
+                            />
+                        ) : activeTab.explainResult?.rows ? (
+                            <Table
+                                size="small"
+                                pagination={false}
+                                dataSource={activeTab.explainResult.rows}
+                                rowKey={(_, idx) => idx!}
+                                columns={(activeTab.explainResult.columns || []).map((col: string) => ({
+                                    title: col,
+                                    dataIndex: col,
+                                    key: col,
+                                }))}
+                            />
+                        ) : (
+                            <pre style={{ padding: 12, fontFamily: 'monospace', fontSize: 12 }}>
+                                {JSON.stringify(activeTab.explainResult, null, 2)}
+                            </pre>
+                        )}
+                    </div>
+                )}
+
+                {!activeTab.result && !activeTab.error && !activeTab.explainResult && (
+                    <div className={my.emptyTip}>
+                        <FileCode size={36} opacity={0.3} />
+                        <span>输入 SQL 语句并点击「运行」查看执行结果</span>
+                    </div>
+                )}
+            </div>
         </div>
     )
 }

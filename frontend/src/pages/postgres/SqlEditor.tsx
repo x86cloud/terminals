@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Button, Tooltip, Segmented, Tag, message, Space, Table, Tree } from 'antd'
-import { Play, Sparkles, Plus, X, RotateCw, FileCode, CheckCircle2, AlertCircle, Clock, Zap } from 'lucide-react'
+import { Play, Plus, X, Zap } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { PgQueryResult } from './postgresTypes'
@@ -202,7 +202,7 @@ export default function SqlEditor({
                     <Button
                         type="text"
                         size="small"
-                        style={{ height: 26, width: 26, padding: 0, marginBottom: 3 }}
+                        style={{ height: '100%', width: 36, borderRadius: 0, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
                         icon={<Plus size={14} />}
                         onClick={handleAddTab}
                     />
@@ -214,6 +214,7 @@ export default function SqlEditor({
                 <CodeEditor
                     value={activeTab.sql}
                     lang="sql"
+                    bordered={false}
                     height="180px"
                     placeholder="-- 输入 PostgreSQL SQL 语句，按 Ctrl+Enter 快速执行"
                     onChange={(val) => updateActiveTab({ sql: val })}

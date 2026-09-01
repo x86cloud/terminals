@@ -632,7 +632,7 @@ export interface WsMessage {
 export interface MysqlQueryResult {
     columns: string[]
     rows: Record<string, any>[]
-    rowCount: number
+    rowCount?: number
     affected: number
 }
 

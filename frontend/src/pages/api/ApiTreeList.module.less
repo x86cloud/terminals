@@ -47,42 +47,6 @@
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;
-
-    :global {
-        .ant-tree {
-            background: transparent;
-            color: @text;
-            font-size: 13px;
-        }
-
-        .ant-tree .ant-tree-node-content-wrapper {
-            padding: 0 6px;
-            border-radius: @radius-sm;
-            transition: all 0.15s ease;
-            line-height: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-
-            &:hover {
-                background: @bg-2;
-
-                .nodeActions {
-                    opacity: 1;
-                }
-            }
-        }
-
-        .ant-tree .ant-tree-node-selected {
-            background: @bg-3 !important;
-            font-weight: 500;
-        }
-
-        .ant-tree-switcher {
-            line-height: 32px;
-            height: 32px;
-        }
-    }
 }
 
 .nodeTitleWrap {

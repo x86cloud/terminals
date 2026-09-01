@@ -1,931 +1,937 @@
-import React, { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import { Select, Button, Space, Tooltip, Tabs } from 'antd'
-import { RotateCw, Plus, Table, Trash2, X, Download, Upload, Copy, Eraser } from 'lucide-react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { Tree, Input, Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
+import {
+    Database,
+    Folder,
+    Table as TableIcon,
+    Plus,
+    RotateCw,
+    Search,
+    Play,
+    Activity,
+    Users,
+    Network,
+    Trash2,
+    Download,
+    Upload,
+    Copy,
+    X,
+    Eraser,
+    Layers,
+    Eye,
+} from 'lucide-react'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
+import ClientIcon from '@/components/ClientIcon'
 import { MysqlSessionInfo } from '@/types'
-import g from '@/styles/global.module.less'
-import my from '@/pages/mysql/MysqlClient.module.less'
-import sh from '@/pages/mysql/mysqlShared.module.less'
-import { SqlTab, RowDrafts, NewRow, Schema, TabKey } from '@/pages/mysql/mysqlTypes'
-import DataTab from '@/pages/mysql/DataTab'
-import SqlEditor from '@/pages/mysql/SqlEditor'
-import UsersPanel from '@/pages/mysql/UsersPanel'
-import StatusPanel from '@/pages/mysql/StatusPanel'
-import ErDiagram from '@/pages/mysql/ErDiagram'
+import { MysqlTabItem, Schema } from './mysqlTypes'
+import DataTab from './DataTab'
+import SqlEditor from './SqlEditor'
+import StatusPanel from './StatusPanel'
+import UsersPanel from './UsersPanel'
+import ErDiagram from './ErDiagram'
+import ObjModal, { ObjModalKind } from './ObjModal'
+import IoModal, { ExportOptions, ImportOptions } from './IoModal'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
-import ObjModal, { ObjModalKind } from '@/pages/mysql/ObjModal'
-import IoModal from '@/pages/mysql/IoModal'
+import my from './MysqlClient.module.less'
 
 interface Props {
     session: MysqlSessionInfo
     onClose: () => void
-    onChange: (id: string, database: string) => void
+    onChange?: (id: string, database: string) => void
 }
 
-let tabSeq = 0
-const newTab = (): SqlTab => ({
-    id: `sql-${++tabSeq}`,
-    title: `查询 ${tabSeq}`,
-    content: '',
-    result: null,
-    error: '',
-})
-
-function notify(msg: string) {
-    // 轻量提示：复用全局 toast（若无可忽略）
-    if (typeof (window as any).__toast === 'function') (window as any).__toast(msg)
-    else console.log(msg)
+interface TableStatusItem {
+    name: string
+    rows: number
+    dataSize: string
+    isView: boolean
 }
 
 export default function MysqlClient({ session, onClose, onChange }: Props) {
+    const serverId = session.serverId || session.id
+    const [currentDb, setCurrentDb] = useState<string>(session.database || '')
+
+    // 树与元数据状态
     const [databases, setDatabases] = useState<string[]>([])
-    const [db, setDb] = useState<string>(session.database || '')
-    const [tables, setTables] = useState<string[]>([])
-    const [selected, setSelected] = useState<string | null>(null)
-    const [dataView, setDataView] = useState<'data' | 'struct' | 'index'>('data')
-    const [tab, setTab] = useState<TabKey>('data')
-    const [tableData, setTableData] = useState<any>(null)
-    const [structData, setStructData] = useState<any>(null)
-    const [busy, setBusy] = useState(false)
-    const [error, setError] = useState('')
-    const [saving, setSaving] = useState(false)
-    const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
-    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
+    const [tablesMap, setTablesMap] = useState<Record<string, TableStatusItem[]>>({})
+    const [expandedKeys, setExpandedKeys] = useState<string[]>([])
+    const [searchKeyword, setSearchKeyword] = useState('')
+    const [loadingTree, setLoadingTree] = useState(false)
+    const [loadingDbs, setLoadingDbs] = useState<Record<string, boolean>>({})
 
-    // 数据库对象管理弹窗
-    const [objModal, setObjModal] = useState<ObjModalKind | null>(null)
-    const [objName, setObjName] = useState('')
-    const [objExtra, setObjExtra] = useState('')
-    const [objUnique, setObjUnique] = useState(false)
-    const [objBusy, setObjBusy] = useState(false)
-    const [objMsg, setObjMsg] = useState('')
+    // 工作区标签栏管理
+    const [tabs, setTabs] = useState<MysqlTabItem[]>([
+        {
+            key: 'status',
+            label: '监控仪表盘',
+            type: 'status',
+            dbName: currentDb,
+            closable: false,
+        },
+        {
+            key: 'sql_1',
+            label: 'SQL 编辑器',
+            type: 'sql',
+            dbName: currentDb,
+            closable: false,
+        },
+    ])
+    const [activeTabKey, setActiveTabKey] = useState<string>('status')
 
-    // 行数据（查）与编辑态（改/增）
-    const [rows, setRows] = useState<Record<string, any>[]>([])
-    const [drafts, setDrafts] = useState<RowDrafts>({})
-    const [newRows, setNewRows] = useState<NewRow[]>([])
-    const [editing, setEditing] = useState<{ row: number; col: string } | null>(null)
-
-    // 分页状态
-    const [page, setPage] = useState(1)
-    const [pageSize, setPageSize] = useState(50)
-    const [totalRows, setTotalRows] = useState(0)
-    const [countingRows, setCountingRows] = useState(false)
-
-    // SQL 多标签编辑
-    const [sqlTabs, setSqlTabs] = useState<SqlTab[]>(() => [newTab()])
-    const [activeSqlTab, setActiveSqlTab] = useState<string>(sqlTabs[0].id)
-
-    // 结构/索引
-    const [indexData, setIndexData] = useState<Record<string, any>[]>([])
+    // 状态监控数据
+    const [status, setStatus] = useState<Record<string, any>>({})
+    const [variables, setVariables] = useState<Record<string, any>>({})
+    const [processList, setProcessList] = useState<Record<string, any>[]>([])
+    const [slowLog, setSlowLog] = useState<Record<string, any>[]>([])
+    const [statusBusy, setStatusBusy] = useState(false)
 
     // 用户权限
     const [users, setUsers] = useState<Record<string, any>[]>([])
     const [selUser, setSelUser] = useState<{ user: string; host: string } | null>(null)
     const [grants, setGrants] = useState('')
 
-    // 服务器状态监控
-    const [status, setStatus] = useState<Record<string, any>>({})
-    const [variables, setVariables] = useState<Record<string, any>>({})
-    const [processList, setProcessList] = useState<Record<string, any>[]>([])
-    const [slowLog, setSlowLog] = useState<Record<string, any>[]>([])
+    // 弹窗状态
+    const [objModal, setObjModal] = useState<ObjModalKind | null>(null)
+    const [objName, setObjName] = useState('')
+    const [objExtra, setObjExtra] = useState('')
+    const [objUnique, setObjUnique] = useState(false)
+    const [objBusy, setObjBusy] = useState(false)
+    const [objMsg, setObjMsg] = useState('')
+    const [createTableOpen, setCreateTableOpen] = useState(false)
 
-    // 导入/导出弹窗
     const [ioModal, setIoModal] = useState<null | 'export' | 'import'>(null)
+    const [ioTable, setIoTable] = useState('')
     const [ioBusy, setIoBusy] = useState(false)
-    const [ioMsg, setIoMsg] = useState<string>('')
+    const [ioMsg, setIoMsg] = useState('')
 
-    // ER 图
-    const [schema, setSchema] = useState<Schema>({ tables: [], foreignKeys: [] })
-    const [erZoom, setErZoom] = useState(1)
+    const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
 
-    const columns = tableData?.columns ?? []
-    const pkCols = useMemo(() => {
-        if (!structData) return []
-        return structData.rows
-            .filter((r: any) => r['Key'] === 'PRI')
-            .map((r: any) => r['Field'] as string)
-    }, [structData])
+    // ER 图缓存
+    const [schemaMap, setSchemaMap] = useState<Record<string, Schema>>({})
 
-    const activeTabObj = sqlTabs.find((t) => t.id === activeSqlTab) || sqlTabs[0]
-
-    const loadDatabases = useCallback(async () => {
-        setBusy(true)
-        setError('')
+    // 连接初始化
+    const initConnection = useCallback(async () => {
+        setLoadingTree(true)
         try {
-            const dbs = await API.mysqlDatabases(session.id)
-            setDatabases(dbs)
-            const cur = session.database || dbs[0] || ''
-            if (cur) setDb(cur)
-        } catch (e) {
-            setError(errorMessage(e))
+            await API.mysqlConnect(serverId)
+            const dbs = await API.mysqlDatabases(serverId)
+            setDatabases(dbs || [])
+            if (dbs && dbs.length > 0) {
+                const targetDb = session.database && dbs.includes(session.database) ? session.database : dbs[0]
+                setCurrentDb(targetDb)
+                await loadTables(targetDb)
+                setExpandedKeys([`db_${targetDb}`, `tbls_${targetDb}`])
+            }
+        } catch (e: any) {
+            message.error(`连接 MySQL 失败: ${e.message || e}`)
         } finally {
-            setBusy(false)
+            setLoadingTree(false)
         }
-    }, [session.id, session.database])
-
-    const loadTables = useCallback(async (database: string) => {
-        if (!database) {
-            setTables([])
-            return
-        }
-        setBusy(true)
-        setError('')
-        try {
-            const list = await API.mysqlTables(session.id, database)
-            setTables(list)
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
-    }, [session.id])
+    }, [serverId, session.database])
 
     useEffect(() => {
-        loadDatabases()
-    }, [loadDatabases])
+        initConnection()
+    }, [initConnection])
 
-    useEffect(() => {
-        if (db) {
-            loadTables(db)
-            setSelected(null)
-            setTableData(null)
-            setStructData(null)
-            setRows([])
-            setDrafts({})
-            setNewRows([])
-        }
-    }, [db, loadTables])
-
-    const switchDb = (value: string) => {
-        setDb(value)
-        onChange(session.id, value)
-    }
-
-    const selectedRef = useRef<string | null>(null)
-
-    const openTable = useCallback(async (table: string, toPage = 1, size?: number, forceRefresh = false) => {
-        const ps = size ?? pageSize
-        const isSwitchingTable = selected !== table || forceRefresh
-
-        setSelected(table)
-        selectedRef.current = table
-        setBusy(true)
-        setError('')
-
-        if (isSwitchingTable) {
-            setDataView('data')
-            setTab('data')
-            setDrafts({})
-            setNewRows([])
-            setEditing(null)
-            setIndexData([])
-        }
-
+    // 加载指定数据库下的表与视图
+    const loadTables = async (dbName: string) => {
+        setLoadingDbs((prev) => ({ ...prev, [dbName]: true }))
         try {
-            // 1. 核心优先：仅请求行数据接口，立即渲染首屏
-            const data = await API.mysqlSelect(session.id, db, table, ps, (toPage - 1) * ps)
-            if (selectedRef.current !== table) return
+            const [tblNames, statusList] = await Promise.all([
+                API.mysqlTables(serverId, dbName).catch(() => []),
+                API.mysqlTableStatus(serverId, dbName).catch(() => []),
+            ])
 
-            if (data.rows.length === 0 && toPage > 1) {
-                setBusy(false)
-                await openTable(table, toPage - 1, ps, forceRefresh)
-                return
+            const statusMap: Record<string, any> = {}
+            if (Array.isArray(statusList)) {
+                statusList.forEach((s: any) => {
+                    const name = s.Name || s.TABLE_NAME || ''
+                    if (name) statusMap[name] = s
+                })
             }
 
-            setTableData(data)
-            setRows(data.rows)
-            setPage(toPage)
+            const items: TableStatusItem[] = (tblNames || []).map((name) => {
+                const s = statusMap[name] || {}
+                const rows = Number(s.Rows ?? s.TABLE_ROWS ?? 0)
+                const isView = s.Comment === 'VIEW' || s.Engine === null
+                return {
+                    name,
+                    rows,
+                    dataSize: '',
+                    isView,
+                }
+            })
 
-            // 即时初始化/保底总行数，防止 Count 延迟返回时分页器显示 0 行
-            const fetchedCount = (toPage - 1) * ps + (data.rows?.length || 0)
-            setTotalRows((prev) => Math.max(prev, fetchedCount))
-
-            // 2. 异步解耦：切表或强制刷新时，后台静默拉取总行数与表结构，不阻塞主数据渲染
-            if (isSwitchingTable) {
-                // 后台异步刷新总行数，展示微动画
-                setCountingRows(true)
-                API.mysqlCount(session.id, db, table)
-                    .then((cnt) => {
-                        if (selectedRef.current === table) {
-                            setTotalRows(Math.max(cnt, fetchedCount))
-                        }
-                    })
-                    .catch((e) => console.warn('mysqlCount error:', e))
-                    .finally(() => {
-                        if (selectedRef.current === table) {
-                            setCountingRows(false)
-                        }
-                    })
-
-                // 后台异步预加载结构（供 PK 徽标/编辑主键识别）
-                API.mysqlDescribe(session.id, db, table)
-                    .then((struct) => {
-                        if (selectedRef.current === table) {
-                            setStructData(struct)
-                        }
-                    })
-                    .catch((e) => console.warn('mysqlDescribe error:', e))
-            }
-        } catch (e) {
-            if (selectedRef.current === table) {
-                setError(errorMessage(e))
-            }
+            setTablesMap((prev) => ({ ...prev, [dbName]: items }))
+        } catch (e: any) {
+            console.error('加载 MySQL 数据表失败:', e)
         } finally {
-            if (selectedRef.current === table) {
-                setBusy(false)
-            }
+            setLoadingDbs((prev) => ({ ...prev, [dbName]: false }))
         }
-    }, [session.id, db, pageSize, selected])
-
-    const handleSetDataView = useCallback((view: 'data' | 'struct' | 'index') => {
-        setDataView(view)
-        if (!selected) return
-        if (view === 'struct' && !structData) {
-            API.mysqlDescribe(session.id, db, selected)
-                .then((struct) => {
-                    if (selectedRef.current === selected) setStructData(struct)
-                })
-                .catch((e) => console.warn('mysqlDescribe error:', e))
-        } else if (view === 'index' && indexData.length === 0) {
-            API.mysqlIndexes(session.id, db, selected)
-                .then((idx) => {
-                    if (selectedRef.current === selected) setIndexData(idx)
-                })
-                .catch((e) => console.warn('mysqlIndexes error:', e))
-        }
-    }, [selected, structData, indexData.length, session.id, db])
-
-    const totalPages = Math.max(1, Math.ceil(totalRows / pageSize))
-
-    const goPage = (p: number) => {
-        if (!selected || busy) return
-        const target = Math.max(1, p)
-        if (target === page) return
-        void openTable(selected, target)
     }
 
-    const changePageSize = (size: number) => {
-        setPageSize(size)
-        if (selected) void openTable(selected, 1, size)
-    }
-
-    /* ----------------- SQL 编辑器（多标签 + 历史） ----------------- */
-
-    const updateActiveTab = (patch: Partial<SqlTab>) => {
-        setSqlTabs((prev) => prev.map((t) => (t.id === activeSqlTab ? { ...t, ...patch } : t)))
-    }
-
-    const runSqlTab = async () => {
-        const stmt = activeTabObj.content.trim()
-        if (!stmt) {
-            updateActiveTab({ error: '请输入要执行的 SQL' })
+    // 打开数据表 Tab
+    const openTableTab = (dbName: string, table: string) => {
+        const tabKey = `tbl_${dbName}_${table}`
+        const existing = tabs.find((t) => t.key === tabKey)
+        if (existing) {
+            setActiveTabKey(tabKey)
             return
         }
-        setBusy(true)
-        setError('')
-        try {
-            const res = await API.mysqlRun(session.id, db, stmt)
-            updateActiveTab({ result: res, error: '' })
-            // 若切换了数据库（USE xxx）则刷新左侧列表
-            if (/^\s*use\s+/i.test(stmt)) {
-                await loadDatabases()
-            }
-        } catch (e) {
-            updateActiveTab({ error: errorMessage(e), result: null })
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
+
+        const newTab: MysqlTabItem = {
+            key: tabKey,
+            label: `${table}`,
+            type: 'data',
+            dbName,
+            table,
+            closable: true,
         }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabKey(tabKey)
     }
 
-    const addSqlTab = () => {
-        const t = newTab()
-        setSqlTabs((prev) => [...prev, t])
-        setActiveSqlTab(t.id)
-    }
+    // 打开 ER 关系图 Tab
+    const openErTab = async (dbName: string) => {
+        const tabKey = `er_${dbName}`
+        const existing = tabs.find((t) => t.key === tabKey)
+        if (existing) {
+            setActiveTabKey(tabKey)
+            return
+        }
 
-    const closeSqlTab = (id: string) => {
-        setSqlTabs((prev) => {
-            const next = prev.filter((t) => t.id !== id)
-            if (id === activeSqlTab && next.length) setActiveSqlTab(next[next.length - 1].id)
-            return next.length ? next : [newTab()]
-        })
-    }
-
-    /* ----------------- 改 / 增 / 删 ----------------- */
-
-    const cellDisplay = (row: number, col: string): { text: string; isNull: boolean } => {
-        const d = drafts[row]?.[col]
-        if (d) return { text: d.isNull ? 'NULL' : d.value, isNull: d.isNull }
-        const orig = rows[row]?.[col]
-        const isn = orig === null || orig === undefined
-        return { text: isn ? 'NULL' : String(orig), isNull: isn }
-    }
-
-    const commitEdit = (row: number, col: string, value: string, isNull: boolean) => {
-        const orig = rows[row]?.[col]
-        const origIsNull = orig === null || orig === undefined
-        const origValue = origIsNull ? '' : String(orig)
-
-        let isSame = false
-        if (origIsNull) {
-            if (isNull || value === '') {
-                isSame = true
-            }
-        } else {
-            if (!isNull && value === origValue) {
-                isSame = true
+        // 异步预加载 ER 图数据
+        if (!schemaMap[dbName]) {
+            try {
+                const s: any = await API.mysqlSchema(serverId, dbName)
+                if (s) {
+                    setSchemaMap((prev) => ({ ...prev, [dbName]: s }))
+                }
+            } catch (e) {
+                console.warn('获取 ER 结构失败:', e)
             }
         }
 
-        setDrafts((prev) => {
-            const rowDraft = { ...(prev[row] || {}) }
-            if (isSame) {
-                delete rowDraft[col]
-            } else {
-                rowDraft[col] = { value, isNull }
-            }
-
-            const next = { ...prev }
-            if (Object.keys(rowDraft).length === 0) {
-                delete next[row]
-            } else {
-                next[row] = rowDraft
-            }
-            return next
-        })
-        setEditing(null)
+        const newTab: MysqlTabItem = {
+            key: tabKey,
+            label: `ER 图 (${dbName})`,
+            type: 'er',
+            dbName,
+            closable: true,
+        }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabKey(tabKey)
     }
 
-    const addRow = () => {
-        const blank: NewRow = {}
-        for (const c of columns) blank[c] = { value: '', isNull: false }
-        setNewRows((prev) => [...prev, blank])
+    // 打开用户权限 Tab
+    const openUsersTab = () => {
+        const tabKey = 'users'
+        const existing = tabs.find((t) => t.key === tabKey)
+        if (existing) {
+            setActiveTabKey(tabKey)
+            return
+        }
+        const newTab: MysqlTabItem = {
+            key: tabKey,
+            label: '用户与权限',
+            type: 'users',
+            dbName: currentDb,
+            closable: true,
+        }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabKey(tabKey)
     }
 
-    const updateNewCell = (idx: number, col: string, value: string, isNull: boolean) => {
-        setNewRows((prev) =>
-            prev.map((r, i) => (i === idx ? { ...r, [col]: { value, isNull } } : r))
-        )
+    // 关闭 Tab
+    const handleCloseTab = (key: string) => {
+        const nextTabs = tabs.filter((t) => t.key !== key)
+        setTabs(nextTabs)
+        if (activeTabKey === key && nextTabs.length > 0) {
+            setActiveTabKey(nextTabs[nextTabs.length - 1].key)
+        }
     }
 
-    const deleteNewRow = (idx: number) => {
-        setNewRows((prev) => prev.filter((_, i) => i !== idx))
-    }
-
-    const deleteRow = async (row: number) => {
-        if (!selected) return
-        const wCols = pkCols.length ? pkCols : columns
-        const wVals = wCols.map((c: string) => rows[row]?.[c] ?? null)
-        const hint = pkCols.length ? '' : '（该表无主键，将按整行匹配，请谨慎操作）'
+    // 删除数据库
+    const handleDropDb = async (dbName: string) => {
         setConfirm({
             open: true,
-            title: '删除行数据',
+            title: '删除数据库',
             danger: true,
-            message: `确认删除该行？${hint}`,
+            message: `确认删除数据库「${dbName}」？库中所有表和数据将被永久清除。`,
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
-                setBusy(true)
-                setError('')
                 try {
-                    await API.mysqlDelete(session.id, db, selected, wCols, wVals)
-                    setError('')
-                    await openTable(selected, page)
-                } catch (e) {
-                    setError(errorMessage(e))
-                } finally {
-                    setBusy(false)
+                    await API.mysqlDropDatabase(serverId, dbName)
+                    message.success(`数据库「${dbName}」已成功删除！`)
+                    initConnection()
+                } catch (e: any) {
+                    message.error(`删除数据库失败: ${e.message || e}`)
                 }
             },
         })
     }
 
-    const saveAll = async () => {
-        if (!selected) return
-        setSaving(true)
-        setError('')
-        let total = 0
-        try {
-            for (const [idxStr, cells] of Object.entries(drafts)) {
-                const idx = Number(idxStr)
-                const setCols: string[] = []
-                const setVals: any[] = []
-                for (const [c, cell] of Object.entries(cells)) {
-                    const orig = rows[idx]?.[c]
-                    const origEff = orig === null || orig === undefined ? null : String(orig)
-                    const newEff = cell.isNull ? null : cell.value
-                    if (origEff !== newEff) {
-                        setCols.push(c)
-                        setVals.push(cell.isNull ? null : cell.value)
-                    }
+    // 删除表
+    const handleDropTable = async (dbName: string, table: string) => {
+        setConfirm({
+            open: true,
+            title: '删除数据表',
+            danger: true,
+            message: `确认删除表「${table}」？表中数据将无法找回。`,
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    await API.mysqlDropTable(serverId, dbName, table)
+                    message.success(`表「${table}」已删除！`)
+                    loadTables(dbName)
+                    // 如果该表的 Tab 正打开，自动关闭
+                    handleCloseTab(`tbl_${dbName}_${table}`)
+                } catch (e: any) {
+                    message.error(`删除表失败: ${e.message || e}`)
                 }
-                if (!setCols.length) continue
-                const wCols = pkCols.length ? pkCols : columns
-                const wVals = wCols.map((c: string) => rows[idx]?.[c] ?? null)
-                const aff = await API.mysqlUpdate(session.id, db, selected, setCols, setVals, wCols, wVals)
-                total += aff
-            }
-            for (const nr of newRows) {
-                const insCols: string[] = []
-                const insVals: any[] = []
-                for (const c of columns) {
-                    const cell = nr[c]
-                    if (!cell) continue
-                    if (cell.isNull) {
-                        insCols.push(c)
-                        insVals.push(null)
-                    } else if (cell.value.trim() !== '') {
-                        insCols.push(c)
-                        insVals.push(cell.value)
-                    }
-                }
-                if (!insCols.length) continue
-                const aff = await API.mysqlInsert(session.id, db, selected, insCols, insVals)
-                total += aff
-            }
-            setDrafts({})
-            setNewRows([])
-            await openTable(selected, page)
-            setError('')
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setSaving(false)
-        }
-        void total
+            },
+        })
     }
 
-    const dirtyCount = Object.keys(drafts).length + newRows.length
+    // 清空表
+    const handleTruncateTable = async (dbName: string, table: string) => {
+        setConfirm({
+            open: true,
+            title: '清空表数据',
+            danger: true,
+            message: `确认清空表「${table}」的所有数据 (TRUNCATE)？`,
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    await API.mysqlTruncateTable(serverId, dbName, table)
+                    message.success(`表「${table}」数据已清空！`)
+                    loadTables(dbName)
+                } catch (e: any) {
+                    message.error(`清空表失败: ${e.message || e}`)
+                }
+            },
+        })
+    }
 
-    /* ----------------- 数据库对象管理 ----------------- */
+    // 备份数据库
+    const handleBackupDb = async (dbName: string) => {
+        try {
+            message.loading({ content: `正在导出并备份数据库 ${dbName}...`, key: 'backup' })
+            const path = await API.mysqlBackupToFile(serverId, dbName)
+            if (path) {
+                message.success({ content: `已成功保存备份文件至: ${path}`, key: 'backup', duration: 5 })
+            } else {
+                message.info({ content: '已取消备份', key: 'backup' })
+            }
+        } catch (e: any) {
+            message.error({ content: `备份失败: ${e.message || e}`, key: 'backup' })
+        }
+    }
 
+    // 弹窗确认操作 (创建库/表等)
     const doObjAction = async () => {
+        if (!objModal) return
         setObjBusy(true)
         setObjMsg('')
         try {
             switch (objModal) {
                 case 'createdb':
-                    await API.mysqlCreateDatabase(session.id, objName, objExtra || 'utf8mb4')
-                    setObjMsg(`已创建数据库 ${objName}`)
-                    await loadDatabases()
+                    await API.mysqlCreateDatabase(serverId, objName, 'utf8mb4')
+                    message.success(`已创建数据库 ${objName}`)
+                    await initConnection()
                     break
-                case 'dropdb':
-                    setObjBusy(false)
-                    setConfirm({
-                        open: true,
-                        title: '删除数据库',
-                        danger: true,
-                        message: `确认删除数据库 ${objName}？该操作不可恢复！`,
-                        onConfirm: async () => {
-                            setConfirm(emptyConfirm)
-                            setObjBusy(true)
-                            try {
-                                await API.mysqlDropDatabase(session.id, objName)
-                                setObjMsg(`已删除数据库 ${objName}`)
-                                await loadDatabases()
-                                setTimeout(() => setObjModal(null), 700)
-                            } catch (e) {
-                                setObjMsg(errorMessage(e))
-                            } finally {
-                                setObjBusy(false)
-                            }
-                        },
-                    })
-                    return
                 case 'createtable':
-                    await API.mysqlCreateTable(session.id, db, objName, objExtra)
-                    setObjMsg(`已创建表 ${objName}`)
-                    await loadTables(db)
-                    break
-                case 'droptable':
-                    setObjBusy(false)
-                    setConfirm({
-                        open: true,
-                        title: '删除表',
-                        danger: true,
-                        message: `确认删除表 ${objName}？`,
-                        onConfirm: async () => {
-                            setConfirm(emptyConfirm)
-                            setObjBusy(true)
-                            try {
-                                await API.mysqlDropTable(session.id, db, objName)
-                                setObjMsg(`已删除表 ${objName}`)
-                                await loadTables(db)
-                                if (selected === objName) setSelected(null)
-                                setTimeout(() => setObjModal(null), 700)
-                            } catch (e) {
-                                setObjMsg(errorMessage(e))
-                            } finally {
-                                setObjBusy(false)
-                            }
-                        },
-                    })
-                    return
-                case 'truncate':
-                    setObjBusy(false)
-                    setConfirm({
-                        open: true,
-                        title: '清空表数据',
-                        danger: true,
-                        message: `确认清空表 ${objName} 的所有数据？`,
-                        onConfirm: async () => {
-                            setConfirm(emptyConfirm)
-                            setObjBusy(true)
-                            try {
-                                await API.mysqlTruncateTable(session.id, db, objName)
-                                setObjMsg(`已清空表 ${objName}`)
-                                if (selected === objName) await openTable(objName, 1)
-                                setTimeout(() => setObjModal(null), 700)
-                            } catch (e) {
-                                setObjMsg(errorMessage(e))
-                            } finally {
-                                setObjBusy(false)
-                            }
-                        },
-                    })
-                    return
-                case 'createindex':
-                    await API.mysqlCreateIndex(session.id, db, selected || objName, objName, objExtra, objUnique)
-                    setObjMsg(`已创建索引 ${objName}`)
-                    if (selected) setIndexData(await API.mysqlIndexes(session.id, db, selected))
-                    break
-                case 'dropindex':
-                    await API.mysqlDropIndex(session.id, db, selected || objName, objName)
-                    setObjMsg(`已删除索引 ${objName}`)
-                    if (selected) setIndexData(await API.mysqlIndexes(session.id, db, selected))
+                    await API.mysqlCreateTable(serverId, currentDb, objName, objExtra)
+                    message.success(`已创建表 ${objName}`)
+                    await loadTables(currentDb)
+                    openTableTab(currentDb, objName)
                     break
             }
-            setTimeout(() => setObjModal(null), 700)
-        } catch (e) {
-            setObjMsg(errorMessage(e))
+            setObjModal(null)
+        } catch (e: any) {
+            setObjMsg(e.message || String(e))
         } finally {
             setObjBusy(false)
         }
     }
 
-    /* ----------------- 用户权限 ----------------- */
+    // 导入 / 导出
+    const doExport = async (o: ExportOptions) => {
+        setIoBusy(true)
+        setIoMsg('')
+        try {
+            const path = await API.mysqlExportToFile(serverId, currentDb, o.mode, o.source, o.table, o.sqlText, o.limit)
+            if (path) {
+                message.success(`数据已成功导出到：${path}`)
+                setIoModal(null)
+            }
+        } catch (e: any) {
+            setIoMsg(e.message || String(e))
+        } finally {
+            setIoBusy(false)
+        }
+    }
 
+    const doImport = async (o: ImportOptions) => {
+        setIoBusy(true)
+        setIoMsg('')
+        try {
+            const res = await API.mysqlImportFromFile(serverId, currentDb, o.mode, o.table)
+            message.success(res || '导入完成')
+            setIoModal(null)
+            if (currentDb) loadTables(currentDb)
+        } catch (e: any) {
+            setIoMsg(e.message || String(e))
+        } finally {
+            setIoBusy(false)
+        }
+    }
+
+    // 监控面板刷新
+    const loadStatus = useCallback(async () => {
+        setStatusBusy(true)
+        try {
+            const [st, va, pl, sl] = await Promise.all([
+                API.mysqlStatus(serverId).catch(() => ({})),
+                API.mysqlVariables(serverId).catch(() => ({})),
+                API.mysqlProcessList(serverId).catch(() => []),
+                API.mysqlSlowLog(serverId, 50).catch(() => []),
+            ])
+            setStatus(st || {})
+            setVariables(va || {})
+            setProcessList(pl || [])
+            setSlowLog(sl || [])
+        } catch (e: any) {
+            message.error(`获取监控状态失败: ${e.message || e}`)
+        } finally {
+            setStatusBusy(false)
+        }
+    }, [serverId])
+
+    // 用户列表刷新
     const loadUsers = useCallback(async () => {
         try {
-            const list = await API.mysqlUsers(session.id)
-            setUsers(list)
-        } catch (e) {
-            setError(errorMessage(e))
+            const list = await API.mysqlUsers(serverId)
+            setUsers(list || [])
+        } catch (e: any) {
+            console.error('加载 MySQL 用户失败:', e)
         }
-    }, [session.id])
-
-    useEffect(() => {
-        if (tab === 'users') loadUsers()
-    }, [tab, loadUsers])
+    }, [serverId])
 
     const viewGrants = async (user: string, host: string) => {
         setSelUser({ user, host })
         try {
-            const gr = await API.mysqlGrants(session.id, user, host)
+            const gr = await API.mysqlGrants(serverId, user, host)
             setGrants(gr)
-        } catch (e) {
-            setGrants('查询失败：' + errorMessage(e))
+        } catch (e: any) {
+            setGrants('查询权限失败：' + (e.message || e))
         }
     }
 
-    /* ----------------- 服务器状态监控 ----------------- */
-
-    const loadStatus = useCallback(async () => {
-        setBusy(true)
-        try {
-            const [st, va, pl, sl] = await Promise.all([
-                API.mysqlStatus(session.id),
-                API.mysqlVariables(session.id),
-                API.mysqlProcessList(session.id),
-                API.mysqlSlowLog(session.id, 50),
-            ])
-            setStatus(st)
-            setVariables(va)
-            setProcessList(pl)
-            setSlowLog(sl)
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
-    }, [session.id])
-
     useEffect(() => {
-        if (tab === 'status') loadStatus()
-    }, [tab, loadStatus])
+        if (activeTabKey === 'status') loadStatus()
+        if (activeTabKey === 'users') loadUsers()
+    }, [activeTabKey, loadStatus, loadUsers])
 
-    /* ----------------- ER 图 ----------------- */
+    // 构造左侧树数据
+    const treeData = useMemo(() => {
+        const filteredDbs = databases.filter((d) => {
+            if (!searchKeyword.trim()) return true
+            if (d.toLowerCase().includes(searchKeyword.toLowerCase())) return true
+            const tbls = tablesMap[d] || []
+            return tbls.some((t) => t.name.toLowerCase().includes(searchKeyword.toLowerCase()))
+        })
 
-    const loadSchema = useCallback(async () => {
-        if (!db) return
-        setBusy(true)
-        try {
-            const s = await API.mysqlSchema(session.id, db)
-            setSchema({
-                tables: (s.tables as any[]) || [],
-                foreignKeys: (s.foreignKeys as any[]) || [],
-            })
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
-    }, [session.id, db])
+        return filteredDbs.map((dbName) => {
+            const dbKey = `db_${dbName}`
+            const rawTables = tablesMap[dbName] || []
+            const tbls = rawTables.filter((t) => !t.isView)
+            const views = rawTables.filter((t) => t.isView)
 
-    useEffect(() => {
-        if (tab === 'er' && db) loadSchema()
-    }, [tab, db, loadSchema])
-
-    /* ----------------- 导入/导出 ----------------- */
-
-    const doExport = useCallback(async (opts: {
-        mode: 'sql' | 'csv' | 'json'
-        source: 'table' | 'query'
-        table: string
-        sqlText: string
-        limit: number
-    }) => {
-        try {
-            setIoBusy(true)
-            setIoMsg('')
-            const filePath = await API.mysqlExportToFileEx(
-                session.id, db, opts.mode, opts.source, opts.table, opts.sqlText, opts.limit
+            const filteredTbls = tbls.filter((t) =>
+                !searchKeyword.trim() ? true : t.name.toLowerCase().includes(searchKeyword.toLowerCase())
             )
-            if (!filePath) return
-            setIoMsg(`已导出到：${filePath}`)
-            setTimeout(() => setIoModal(null), 800)
-        } catch (e) {
-            setIoMsg('导出失败：' + errorMessage(e))
-        } finally {
-            setIoBusy(false)
-        }
-    }, [session.id, db])
+            const filteredViews = views.filter((v) =>
+                !searchKeyword.trim() ? true : v.name.toLowerCase().includes(searchKeyword.toLowerCase())
+            )
 
-    const doImport = useCallback(async (opts: {
-        mode: 'sql' | 'csv' | 'json'
-        table: string
-    }) => {
-        try {
-            setIoBusy(true)
-            setIoMsg('')
-            const msg = await API.mysqlImportFromFileEx(session.id, db, opts.mode, opts.table)
-            if (!msg) return
-            setIoMsg(msg)
-            if (selected && (opts.mode === 'sql' || opts.table === selected)) {
-                await openTable(selected)
+            const tableChildren = filteredTbls.map((t) => ({
+                key: `table_${dbName}_${t.name}`,
+                title: t.name,
+                raw: { type: 'table', db: dbName, table: t },
+                isLeaf: true,
+            }))
+
+            const viewChildren = filteredViews.map((v) => ({
+                key: `view_${dbName}_${v.name}`,
+                title: v.name,
+                raw: { type: 'view', db: dbName, table: v },
+                isLeaf: true,
+            }))
+
+            const dbChildren: any[] = []
+
+            const isLoadingDb = !!loadingDbs[dbName]
+
+            // 数据表分组节点
+            dbChildren.push({
+                key: `tbls_${dbName}`,
+                title: isLoadingDb ? '数据表 (加载中...)' : `数据表 (${tbls.length})`,
+                raw: { type: 'folder_tables', db: dbName },
+                isLeaf: false,
+                children: tableChildren,
+            })
+
+            // 视图分组节点
+            if (views.length > 0 || !searchKeyword) {
+                dbChildren.push({
+                    key: `views_${dbName}`,
+                    title: isLoadingDb ? '视图 (加载中...)' : `视图 (${views.length})`,
+                    raw: { type: 'folder_views', db: dbName },
+                    isLeaf: false,
+                    children: viewChildren,
+                })
             }
-            await loadTables(db)
-            onChange(session.id, db)
-        } catch (e) {
-            setIoMsg('导入失败：' + errorMessage(e))
-        } finally {
-            setIoBusy(false)
-        }
-    }, [session.id, db, selected, onChange, loadTables, openTable])
 
-    const tabs: { key: TabKey; label: string }[] = [
-        { key: 'data', label: '数据 / 结构' },
-        { key: 'sql', label: 'SQL 编辑器' },
-        { key: 'users', label: '用户权限' },
-        { key: 'status', label: '状态监控' },
-        { key: 'er', label: 'ER 图' },
+            // ER 关系图入口节点
+            dbChildren.push({
+                key: `er_node_${dbName}`,
+                title: 'ER 关系图',
+                raw: { type: 'er_node', db: dbName },
+                isLeaf: true,
+            })
+
+            return {
+                key: dbKey,
+                title: dbName,
+                raw: { type: 'db', dbName },
+                isLeaf: false,
+                children: dbChildren,
+            }
+        })
+    }, [databases, tablesMap, loadingDbs, searchKeyword])
+
+    // 数据库右键菜单
+    const getDbMenuItems = (dbName: string): MenuProps['items'] => [
+        {
+            key: 'new-table',
+            icon: <Plus size={14} />,
+            label: '新建数据表',
+            onClick: () => {
+                setCurrentDb(dbName)
+                setObjName('')
+                setObjExtra('(\n  `id` INT AUTO_INCREMENT PRIMARY KEY,\n  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;')
+                setObjModal('createtable')
+            },
+        },
+        {
+            key: 'er-diagram',
+            icon: <Network size={14} />,
+            label: '查看 ER 关系图',
+            onClick: () => openErTab(dbName),
+        },
+        {
+            key: 'backup',
+            icon: <Copy size={14} />,
+            label: '备份数据库 (SQL)',
+            onClick: () => handleBackupDb(dbName),
+        },
+        {
+            key: 'refresh',
+            icon: <RotateCw size={14} />,
+            label: '刷新元数据',
+            onClick: () => loadTables(dbName),
+        },
+        { type: 'divider' },
+        {
+            key: 'drop-db',
+            icon: <Trash2 size={14} />,
+            danger: true,
+            label: '删除数据库 (DROP)',
+            onClick: () => handleDropDb(dbName),
+        },
+    ]
+
+    // 表右键菜单
+    const getTableMenuItems = (dbName: string, tableName: string): MenuProps['items'] => [
+        {
+            key: 'open-data',
+            icon: <TableIcon size={14} />,
+            label: '查看 / 编辑数据',
+            onClick: () => openTableTab(dbName, tableName),
+        },
+        {
+            key: 'export',
+            icon: <Download size={14} />,
+            label: '导出数据 (CSV/JSON/SQL)',
+            onClick: () => {
+                setCurrentDb(dbName)
+                setIoTable(tableName)
+                setIoModal('export')
+            },
+        },
+        {
+            key: 'import',
+            icon: <Upload size={14} />,
+            label: '导入数据 (CSV/SQL)',
+            onClick: () => {
+                setCurrentDb(dbName)
+                setIoTable(tableName)
+                setIoModal('import')
+            },
+        },
+        { type: 'divider' },
+        {
+            key: 'truncate',
+            icon: <Eraser size={14} />,
+            danger: true,
+            label: '清空表数据 (TRUNCATE)',
+            onClick: () => handleTruncateTable(dbName, tableName),
+        },
+        {
+            key: 'drop-table',
+            icon: <Trash2 size={14} />,
+            danger: true,
+            label: '删除表 (DROP)',
+            onClick: () => handleDropTable(dbName, tableName),
+        },
+    ]
+
+    // 空白区域右键菜单
+    const blankMenuItems: MenuProps['items'] = [
+        {
+            key: 'new-db',
+            icon: <Plus size={14} />,
+            label: '新建数据库',
+            onClick: () => {
+                setObjName('')
+                setObjModal('createdb')
+            },
+        },
+        {
+            key: 'users',
+            icon: <Users size={14} />,
+            label: '用户与权限管理',
+            onClick: openUsersTab,
+        },
+        {
+            key: 'refresh-all',
+            icon: <RotateCw size={14} />,
+            label: '刷新全部',
+            onClick: initConnection,
+        },
     ]
 
     return (
-        <div className={my.mysqlPane}>
-            <div className={my.mysqlSide}>
-                <div className={my.mysqlDbHead} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                    <Select
+        <div className={my.client}>
+            {/* 左侧对象导航树 */}
+            <aside className={my.sideTree}>
+                <div className={my.sideHead}>
+                    <span className={my.sideTitle}>
+                        <ClientIcon kind="mysql" size={18} />
+                        MySQL
+                    </span>
+                    <Space size={4}>
+                        <Tooltip title="新建数据库">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<Plus size={15} />}
+                                onClick={() => {
+                                    setObjName('')
+                                    setObjModal('createdb')
+                                }}
+                            />
+                        </Tooltip>
+                        <Tooltip title="用户与权限">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<Users size={15} />}
+                                onClick={openUsersTab}
+                            />
+                        </Tooltip>
+                        <Tooltip title="刷新元数据">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<RotateCw size={14} className={loadingTree ? my.spinning : ''} />}
+                                onClick={initConnection}
+                            />
+                        </Tooltip>
+                    </Space>
+                </div>
+
+                {/* 搜索框 */}
+                <div className={my.sideSearch}>
+                    <Input
                         size="small"
-                        showSearch
-                        placeholder="选择数据库"
-                        style={{ flex: 1, minWidth: 0 }}
-                        value={db || undefined}
-                        disabled={busy || databases.length === 0}
-                        onChange={(val) => switchDb(val)}
-                        options={databases.map((d) => ({ label: d, value: d }))}
-                        popupMatchSelectWidth={false}
-                    />
-                    <Button
-                        size="small"
-                        type="text"
-                        icon={<RotateCw size={13} />}
-                        title="刷新数据库列表"
-                        disabled={busy}
-                        onClick={() => loadDatabases()}
+                        prefix={<Search size={13} color="var(--text-dim)" />}
+                        placeholder="搜索数据库或数据表..."
+                        value={searchKeyword}
+                        onChange={(e) => setSearchKeyword(e.target.value)}
+                        allowClear
                     />
                 </div>
-                <div className={my.mysqlDbActions} >
-                    <Button
-                        size="small"
-                        type='primary'
-                        icon={<Plus size={12} />}
-                        onClick={() => { setObjName(''); setObjExtra(''); setObjMsg(''); setObjModal('createdb') }}
-                    >
-                        建库
-                    </Button>
-                    <Button
-                        size="small"
-                        type='primary'
-                        icon={<Table size={12} />}
-                        onClick={() => { setObjName(''); setObjExtra('`id` INT PRIMARY KEY AUTO_INCREMENT, `name` VARCHAR(64)'); setObjMsg(''); setObjModal('createtable') }}
-                    >
-                        建表
-                    </Button>
-                </div>
-                <div className={my.mysqlTables}>
-                    {tables.length === 0 && !busy && (
-                        <div className={`${sh.mysqlEmpty} ${sh.small}`}>暂无表</div>
-                    )}
-                    {tables.map((t) => (
+
+                {/* 树容器 */}
+                <Dropdown menu={{ items: blankMenuItems }} trigger={['contextMenu']}>
+                    <div className={my.treeWrap}>
+                        <Tree
+                            showIcon
+                            blockNode
+                            expandedKeys={expandedKeys}
+                            loadData={async (node: any) => {
+                                const raw = node.raw
+                                if (!raw) return
+                                if (raw.type === 'db') {
+                                    if (!tablesMap[raw.dbName]) {
+                                        await loadTables(raw.dbName)
+                                    }
+                                }
+                            }}
+                            onExpand={async (keys, info: any) => {
+                                setExpandedKeys(keys as string[])
+                                if (info.expanded && info.node?.raw) {
+                                    const raw = info.node.raw
+                                    if (raw.type === 'db') {
+                                        if (!tablesMap[raw.dbName]) {
+                                            await loadTables(raw.dbName)
+                                        }
+                                    }
+                                }
+                            }}
+                            onSelect={async (_, info: any) => {
+                                const raw = info.node?.raw
+                                if (!raw) return
+                                const nodeKey = String(info.node.key)
+                                if (raw.type === 'table' || raw.type === 'view') {
+                                    openTableTab(raw.db, raw.table.name)
+                                } else if (raw.type === 'er_node') {
+                                    openErTab(raw.db)
+                                } else if (raw.type === 'db') {
+                                    setCurrentDb(raw.dbName)
+                                    const willExpand = !expandedKeys.includes(nodeKey)
+                                    if (willExpand && !tablesMap[raw.dbName]) {
+                                        await loadTables(raw.dbName)
+                                    }
+                                    setExpandedKeys((prev) =>
+                                        prev.includes(nodeKey) ? prev.filter((k) => k !== nodeKey) : [...prev, nodeKey]
+                                    )
+                                } else if (raw.type === 'folder_tables' || raw.type === 'folder_views') {
+                                    setExpandedKeys((prev) =>
+                                        prev.includes(nodeKey) ? prev.filter((k) => k !== nodeKey) : [...prev, nodeKey]
+                                    )
+                                }
+                            }}
+                            treeData={treeData}
+                            titleRender={(nodeData: any) => {
+                                const raw = nodeData.raw
+                                if (!raw) return <span>{nodeData.title}</span>
+
+                                if (raw.type === 'db') {
+                                    return (
+                                        <div onContextMenu={(e) => e.stopPropagation()}>
+                                            <Dropdown menu={{ items: getDbMenuItems(raw.dbName) }} trigger={['contextMenu']}>
+                                                <div className={my.nodeTitleWrap}>
+                                                    <span className={my.nodeMain}>
+                                                        <Database size={14} color="var(--accent)" />
+                                                        <span className={my.nodeText} style={{ fontWeight: 600 }}>{raw.dbName}</span>
+                                                    </span>
+                                                </div>
+                                            </Dropdown>
+                                        </div>
+                                    )
+                                }
+
+                                if (raw.type === 'folder_tables') {
+                                    return (
+                                        <div onContextMenu={(e) => e.stopPropagation()} className={my.nodeTitleWrap}>
+                                            <span className={my.nodeMain}>
+                                                <Layers size={13} color="var(--text-dim)" />
+                                                <span className={my.nodeText}>{nodeData.title}</span>
+                                            </span>
+                                        </div>
+                                    )
+                                }
+
+                                if (raw.type === 'folder_views') {
+                                    return (
+                                        <div onContextMenu={(e) => e.stopPropagation()} className={my.nodeTitleWrap}>
+                                            <span className={my.nodeMain}>
+                                                <Eye size={13} color="var(--text-dim)" />
+                                                <span className={my.nodeText}>{nodeData.title}</span>
+                                            </span>
+                                        </div>
+                                    )
+                                }
+
+                                if (raw.type === 'er_node') {
+                                    return (
+                                        <div onContextMenu={(e) => e.stopPropagation()} className={my.nodeTitleWrap}>
+                                            <span className={my.nodeMain}>
+                                                <Network size={13} color="#722ed1" />
+                                                <span className={my.nodeText}>ER 关系图</span>
+                                            </span>
+                                        </div>
+                                    )
+                                }
+
+                                if (raw.type === 'table' || raw.type === 'view') {
+                                    return (
+                                        <div onContextMenu={(e) => e.stopPropagation()} style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                                            <Dropdown menu={{ items: getTableMenuItems(raw.db, raw.table.name) }} trigger={['contextMenu']}>
+                                                <div className={my.nodeTitleWrap} title={raw.table.name}>
+                                                    <span className={my.nodeMain}>
+                                                        {raw.type === 'view' ? (
+                                                            <Eye size={13} color="#13c2c2" />
+                                                        ) : (
+                                                            <TableIcon size={13} color="var(--text-secondary)" />
+                                                        )}
+                                                        <span className={my.nodeText}>{raw.table.name}</span>
+                                                    </span>
+                                                    {raw.table.rows > 0 && (
+                                                        <span className={my.nodeMeta}>{raw.table.rows} 行</span>
+                                                    )}
+                                                </div>
+                                            </Dropdown>
+                                        </div>
+                                    )
+                                }
+
+                                return <div onContextMenu={(e) => e.stopPropagation()} style={{ width: '100%', minWidth: 0, overflow: 'hidden' }}>{nodeData.title}</div>
+                            }}
+                        />
+                    </div>
+                </Dropdown>
+            </aside>
+
+            {/* 右侧主工作区 */}
+            <main className={my.mainArea}>
+                {/* 顶部标签栏 */}
+                <div className={my.tabBar}>
+                    {tabs.map((t) => (
                         <div
-                            key={t}
-                            className={`${my.mysqlTableRow}${selected === t ? ' ' + my.active : ''}`}
-                            onClick={() => openTable(t)}
+                            key={t.key}
+                            className={`${my.tabItem} ${t.key === activeTabKey ? my.active : ''}`}
+                            onClick={() => setActiveTabKey(t.key)}
                         >
-                            <Table size={13} className={my.tableIcon} />
-
-                            <span className={my.tableName}>
-                                <Tooltip title={t}>
-                                    {t}
-                                </Tooltip>
-                            </span>
-
-                            <div className={my.mysqlTableMenu} onClick={(e) => e.stopPropagation()}>
-                                <Tooltip title="清空表数据">
-                                    <Button
-                                        size="small"
-                                        type="text"
-                                        icon={<Eraser size={12} />}
-                                        onClick={() => { setObjName(t); setObjMsg(''); setObjModal('truncate') }}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="删除表">
-                                    <Button
-                                        size="small"
-                                        type="text"
-                                        danger
-                                        icon={<Trash2 size={12} />}
-                                        onClick={() => { setObjName(t); setObjMsg(''); setObjModal('droptable') }}
-                                    />
-                                </Tooltip>
-                            </div>
+                            {t.type === 'status' && <Activity size={13} />}
+                            {t.type === 'sql' && <Play size={13} />}
+                            {t.type === 'data' && <TableIcon size={13} />}
+                            {t.type === 'users' && <Users size={13} />}
+                            {t.type === 'er' && <Network size={13} />}
+                            <span>{t.label}</span>
+                            {t.closable && (
+                                <Button
+                                    type="text"
+                                    size="small"
+                                    style={{ width: 14, height: 14, padding: 0 }}
+                                    icon={<X size={10} />}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleCloseTab(t.key)
+                                    }}
+                                />
+                            )}
                         </div>
                     ))}
                 </div>
-            </div>
 
-            <div className={my.mysqlMain}>
-                <div className={my.mysqlToolbar}>
-                    <span className={my.mysqlConnTitle}>MySQL · {session.host}:{session.port}</span>
-                    <span className={g.spacer} />
-                    {error && <span className={my.mysqlError}>{error}</span>}
-                    <Button
-                        size="small"
-                        icon={<Download size={13} />}
-                        disabled={busy}
-                        onClick={() => { setIoMsg(''); setIoModal('import') }}
-                    >
-                        导入
-                    </Button>
-                    <Button
-                        size="small"
-                        icon={<Upload size={13} />}
-                        disabled={busy || !selected}
-                        onClick={() => { setIoMsg(''); setIoModal('export') }}
-                    >
-                        导出
-                    </Button>
-                    <Button
-                        size="small"
-                        icon={<Copy size={13} />}
-                        disabled={busy || !db}
-                        onClick={async () => {
-                            try {
-                                setBusy(true)
-                                setError('')
-                                const path = await API.mysqlBackupToFile(session.id, db)
-                                if (path) notify(`已成功备份数据库到：${path}`)
-                            } catch (e) { setError(errorMessage(e)) } finally { setBusy(false) }
-                        }}
-                    >
-                        备份
-                    </Button>
-                    <Tooltip title="关闭">
-                        <Button
-                            size="small"
-                            type="text"
-                            icon={<X size={15} />}
-                            onClick={onClose}
-                        />
-                    </Tooltip>
+                {/* 标签页内容渲染 */}
+                <div className={my.tabContent}>
+                    {tabs.map((t) => {
+                        const isVisible = t.key === activeTabKey
+                        if (!isVisible) return null
+
+                        if (t.type === 'data' && t.table) {
+                            return (
+                                <DataTab
+                                    key={t.key}
+                                    serverId={serverId}
+                                    dbName={t.dbName}
+                                    tableName={t.table}
+                                    onClose={() => handleCloseTab(t.key)}
+                                />
+                            )
+                        }
+
+                        if (t.type === 'sql') {
+                            return (
+                                <SqlEditor
+                                    key={t.key}
+                                    serverId={serverId}
+                                    dbName={t.dbName || currentDb || 'mysql'}
+                                />
+                            )
+                        }
+
+                        if (t.type === 'status') {
+                            return (
+                                <StatusPanel
+                                    key={t.key}
+                                    sessionId={serverId}
+                                    status={status}
+                                    variables={variables}
+                                    processList={processList}
+                                    slowLog={slowLog}
+                                    busy={statusBusy}
+                                    onRefresh={loadStatus}
+                                    onNotify={(msg) => message.info(msg)}
+                                />
+                            )
+                        }
+
+                        if (t.type === 'users') {
+                            return (
+                                <UsersPanel
+                                    key={t.key}
+                                    sessionId={serverId}
+                                    databases={databases}
+                                    users={users}
+                                    selUser={selUser}
+                                    grants={grants}
+                                    onSelect={viewGrants}
+                                    onRefreshUsers={loadUsers}
+                                    onRefreshGrants={() => {
+                                        if (selUser) viewGrants(selUser.user, selUser.host)
+                                    }}
+                                    onNotify={(msg) => message.info(msg)}
+                                />
+                            )
+                        }
+
+                        if (t.type === 'er') {
+                            return (
+                                <ErDiagram
+                                    key={t.key}
+                                    schema={schemaMap[t.dbName] || { tables: [], foreignKeys: [] }}
+                                    busy={false}
+                                />
+                            )
+                        }
+
+                        return null
+                    })}
                 </div>
 
-                <div className={my.mysqlTabs}>
-                    <Tabs
-                        size="small"
-                        activeKey={tab}
-                        onChange={(v) => setTab(v as TabKey)}
-                        items={tabs.map((t) => ({ key: t.key, label: t.label }))}
-                        tabBarStyle={{ marginBottom: 0 }}
-                    />
-                </div>
+                {/* 底部状态栏 */}
+                <footer className={my.statusBar}>
+                    <span>
+                        MySQL · {session.host}:{session.port} | 当前库: <strong>{currentDb || '(未选择)'}</strong>
+                    </span>
+                    <span>
+                        共 {databases.length} 个数据库 | 运行状态正常
+                    </span>
+                </footer>
+            </main>
 
-                <div className={`${my.mysqlContent} ${tab === 'er' ? my.mysqlContentEr : ''}`}>
-                    {tab === 'data' && (
-                        <DataTab
-                            busy={busy}
-                            selected={selected}
-                            dataView={dataView}
-                            setDataView={handleSetDataView}
-                            columns={columns}
-                            structData={structData}
-                            pkCols={pkCols}
-                            rows={rows}
-                            newRows={newRows}
-                            drafts={drafts}
-                            editing={editing}
-                            page={page}
-                            pageSize={pageSize}
-                            totalRows={totalRows}
-                            totalPages={totalPages}
-                            indexData={indexData}
-                            countingRows={countingRows}
-                            onOpenTable={openTable}
-                            onCloseTable={() => setSelected(null)}
-                            onAddRow={addRow}
-                            onDeleteRow={deleteRow}
-                            onSaveAll={saveAll}
-                            onCommitEdit={commitEdit}
-                            onUpdateNewCell={updateNewCell}
-                            onDeleteNewRow={deleteNewRow}
-                            onCellDisplay={cellDisplay}
-                            onSetEditing={setEditing}
-                            saving={saving}
-                            dirtyCount={dirtyCount}
-                            onGoPage={goPage}
-                            onChangePageSize={changePageSize}
-                            onAddIndex={() => { setObjName(''); setObjExtra(''); setObjUnique(false); setObjMsg(''); setObjModal('createindex') }}
-                            onDropIndex={(name: string) => { setObjName(name); setObjMsg(''); setObjModal('dropindex') }}
-                        />
-                    )}
-
-                    {tab === 'sql' && (
-                        <SqlEditor
-                            sqlTabs={sqlTabs}
-                            activeSqlTab={activeSqlTab}
-                            activeTabObj={activeTabObj}
-                            busy={busy}
-                            db={db}
-                            onSelectTab={setActiveSqlTab}
-                            onAddTab={addSqlTab}
-                            onCloseTab={closeSqlTab}
-                            onContentChange={(val) => updateActiveTab({ content: val })}
-                            onRun={runSqlTab}
-                        />
-                    )}
-
-                    {tab === 'users' && (
-                        <UsersPanel
-                            sessionId={session.id}
-                            databases={databases}
-                            users={users}
-                            selUser={selUser}
-                            grants={grants}
-                            onSelect={viewGrants}
-                            onRefreshUsers={loadUsers}
-                            onRefreshGrants={() => {
-                                if (selUser) viewGrants(selUser.user, selUser.host)
-                            }}
-                            onNotify={notify}
-                        />
-                    )}
-
-                    {tab === 'status' && (
-                        <StatusPanel
-                            sessionId={session.id}
-                            status={status}
-                            variables={variables}
-                            processList={processList}
-                            slowLog={slowLog}
-                            busy={busy}
-                            onRefresh={loadStatus}
-                            onNotify={notify}
-                        />
-                    )}
-
-                    {tab === 'er' && (
-                        <ErDiagram schema={schema} busy={busy} />
-                    )}
-                </div>
-            </div>
-
+            {/* 数据库对象管理弹窗 (创建库/创建表) */}
             {objModal && (
                 <ObjModal
                     kind={objModal}
-                    db={db}
+                    db={currentDb}
                     busy={objBusy}
                     msg={objMsg}
                     name={objName}
@@ -939,11 +945,12 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 />
             )}
 
+            {/* 导入 / 导出弹窗 */}
             {ioModal && (
                 <IoModal
                     kind={ioModal}
-                    table={selected || ''}
-                    sqlText={activeTabObj.content}
+                    table={ioTable}
+                    sqlText=""
                     busy={ioBusy}
                     msg={ioMsg}
                     onClose={() => setIoModal(null)}
@@ -951,6 +958,8 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                     onImport={doImport}
                 />
             )}
+
+            {/* 确认删除对话框 */}
             <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
         </div>
     )
