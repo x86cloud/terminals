@@ -621,31 +621,223 @@ func (m *SessionManager) RemoveRemotePath(sessionID, target string) error {
 	return m.removeRemote(client, target)
 }
 
+func (s *Session) ResolveRemotePath(remotePath string) string {
+	target := NormalizeRemote(remotePath)
+	if strings.HasPrefix(target, "~") && s.homeDir != "" {
+		target = NormalizeRemote(path.Join(s.homeDir, strings.TrimPrefix(target, "~")))
+	}
+	return target
+}
+
+func (m *SessionManager) UploadFileDirect(sessionID, localPath, remotePath string) error {
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return err
+	}
+	localFile, err := os.Open(localPath)
+	if err != nil {
+		return fmt.Errorf("读取本地文件失败: %w", err)
+	}
+	defer localFile.Close()
+
+	info, err := localFile.Stat()
+	if err != nil {
+		return fmt.Errorf("获取本地文件信息失败: %w", err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("指定的本地路径是目录，非文件: %s", localPath)
+	}
+
+	target := session.ResolveRemotePath(remotePath)
+	targetDir := path.Dir(target)
+
+	// 1. 优先尝试 SFTP 传输
+	client, sftpErr := session.sftpConn()
+	if sftpErr == nil {
+		if err := mkdirAllRemote(client, targetDir); err != nil {
+			return fmt.Errorf("创建远程目录 %s 失败: %w", targetDir, err)
+		}
+		dst, err := client.Create(target)
+		if err != nil {
+			return fmt.Errorf("创建远程文件 %s 失败: %w", target, err)
+		}
+		defer dst.Close()
+
+		buf := make([]byte, 256*1024)
+		if _, err := io.CopyBuffer(dst, localFile, buf); err != nil {
+			return fmt.Errorf("传输文件数据失败: %w", err)
+		}
+		_ = client.Chmod(target, info.Mode().Perm())
+		m.NotifyDirChanged(sessionID, targetDir)
+		return nil
+	}
+
+	// 2. 优雅降级：若 SFTP 不可用，使用 SSH Stdin 管道流进行二进制安全传输
+	if session.isClosed() || session.client == nil {
+		return errors.New("会话已断开")
+	}
+	mkdirCmd := fmt.Sprintf("mkdir -p %q", targetDir)
+	_, _ = session.ExecCombined(mkdirCmd)
+
+	sshSess, err := session.client.NewSession()
+	if err != nil {
+		return fmt.Errorf("建立 SSH 会话通道失败: %w (SFTP 错误: %v)", err, sftpErr)
+	}
+	defer sshSess.Close()
+
+	stdinPipe, err := sshSess.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("打开远程 Stdin 管道失败: %w", err)
+	}
+
+	catCmd := fmt.Sprintf("cat > %q", target)
+	if err := sshSess.Start(catCmd); err != nil {
+		_ = stdinPipe.Close()
+		return fmt.Errorf("启动远程接收进程失败: %w", err)
+	}
+
+	buf := make([]byte, 256*1024)
+	if _, err := io.CopyBuffer(stdinPipe, localFile, buf); err != nil {
+		_ = stdinPipe.Close()
+		return fmt.Errorf("流式写入远程文件失败: %w", err)
+	}
+	_ = stdinPipe.Close()
+
+	if err := sshSess.Wait(); err != nil {
+		return fmt.Errorf("远程写入完成等待失败: %w", err)
+	}
+
+	m.NotifyDirChanged(sessionID, targetDir)
+	return nil
+}
+
+func (m *SessionManager) DownloadFileDirect(sessionID, remotePath, localPath string) error {
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return err
+	}
+
+	target := session.ResolveRemotePath(remotePath)
+
+	if err := os.MkdirAll(filepath.Dir(localPath), 0o755); err != nil {
+		return fmt.Errorf("创建本地目录失败: %w", err)
+	}
+	localFile, err := os.Create(localPath)
+	if err != nil {
+		return fmt.Errorf("创建本地文件失败: %w", err)
+	}
+	defer localFile.Close()
+
+	// 1. 优先尝试 SFTP 传输
+	client, sftpErr := session.sftpConn()
+	if sftpErr == nil {
+		src, err := client.Open(target)
+		if err != nil {
+			return fmt.Errorf("打开远程文件 %s 失败: %w", target, err)
+		}
+		defer src.Close()
+
+		buf := make([]byte, 256*1024)
+		if _, err := io.CopyBuffer(localFile, src, buf); err != nil {
+			return fmt.Errorf("下载文件数据失败: %w", err)
+		}
+		return nil
+	}
+
+	// 2. 优雅降级：若 SFTP 不可用，使用 SSH Stdout 管道流读取
+	if session.isClosed() || session.client == nil {
+		return errors.New("会话已断开")
+	}
+
+	sshSess, err := session.client.NewSession()
+	if err != nil {
+		return fmt.Errorf("建立 SSH 会话通道失败: %w (SFTP 错误: %v)", err, sftpErr)
+	}
+	defer sshSess.Close()
+
+	stdoutPipe, err := sshSess.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("打开远程 Stdout 管道失败: %w", err)
+	}
+
+	catCmd := fmt.Sprintf("cat %q", target)
+	if err := sshSess.Start(catCmd); err != nil {
+		return fmt.Errorf("启动远程读取进程失败: %w", err)
+	}
+
+	buf := make([]byte, 256*1024)
+	if _, err := io.CopyBuffer(localFile, stdoutPipe, buf); err != nil {
+		return fmt.Errorf("流式读取远程文件失败: %w", err)
+	}
+
+	if err := sshSess.Wait(); err != nil {
+		return fmt.Errorf("远程读取完成等待失败: %w", err)
+	}
+
+	return nil
+}
+
 func (m *SessionManager) WriteFileContent(sessionID, remotePath string, data []byte) error {
 	session, err := m.Get(sessionID)
 	if err != nil {
 		return err
 	}
-	client, err := session.sftpConn()
-	if err != nil {
-		return err
-	}
-	remotePath = NormalizeRemote(remotePath)
-	remoteDir := path.Dir(remotePath)
-	if err := mkdirAllRemote(client, remoteDir); err != nil {
-		return fmt.Errorf("创建远程目录失败: %w", err)
+	target := session.ResolveRemotePath(remotePath)
+	targetDir := path.Dir(target)
+
+	// 1. 尝试 SFTP
+	client, sftpErr := session.sftpConn()
+	if sftpErr == nil {
+		if err := mkdirAllRemote(client, targetDir); err != nil {
+			return fmt.Errorf("创建远程目录失败: %w", err)
+		}
+		f, err := client.Create(target)
+		if err != nil {
+			return fmt.Errorf("创建远程文件失败: %w", err)
+		}
+		defer f.Close()
+
+		if _, err := f.Write(data); err != nil {
+			return fmt.Errorf("写入远程文件内容失败: %w", err)
+		}
+		m.NotifyDirChanged(sessionID, targetDir)
+		return nil
 	}
 
-	f, err := client.Create(remotePath)
-	if err != nil {
-		return fmt.Errorf("创建远程文件失败: %w", err)
+	// 2. 降级为 SSH Stdin 流写入
+	if session.isClosed() || session.client == nil {
+		return errors.New("会话已断开")
 	}
-	defer f.Close()
+	mkdirCmd := fmt.Sprintf("mkdir -p %q", targetDir)
+	_, _ = session.ExecCombined(mkdirCmd)
 
-	if _, err := f.Write(data); err != nil {
-		return fmt.Errorf("写入远程文件内容失败: %w", err)
+	sshSess, err := session.client.NewSession()
+	if err != nil {
+		return fmt.Errorf("建立 SSH 会话通道失败: %w (SFTP 错误: %v)", err, sftpErr)
 	}
-	m.NotifyDirChanged(sessionID, remoteDir)
+	defer sshSess.Close()
+
+	stdinPipe, err := sshSess.StdinPipe()
+	if err != nil {
+		return fmt.Errorf("打开远程 Stdin 管道失败: %w", err)
+	}
+
+	catCmd := fmt.Sprintf("cat > %q", target)
+	if err := sshSess.Start(catCmd); err != nil {
+		_ = stdinPipe.Close()
+		return fmt.Errorf("启动远程写入进程失败: %w", err)
+	}
+
+	if _, err := stdinPipe.Write(data); err != nil {
+		_ = stdinPipe.Close()
+		return fmt.Errorf("写入远程文件流失败: %w", err)
+	}
+	_ = stdinPipe.Close()
+
+	if err := sshSess.Wait(); err != nil {
+		return fmt.Errorf("远程写入完成等待失败: %w", err)
+	}
+	m.NotifyDirChanged(sessionID, targetDir)
 	return nil
 }
 
@@ -654,20 +846,51 @@ func (m *SessionManager) ReadFileContent(sessionID, remotePath string) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
-	client, err := session.sftpConn()
-	if err != nil {
-		return nil, err
-	}
-	remotePath = NormalizeRemote(remotePath)
-	f, err := client.Open(remotePath)
-	if err != nil {
-		return nil, fmt.Errorf("打开远程文件失败: %w", err)
-	}
-	defer f.Close()
+	target := session.ResolveRemotePath(remotePath)
 
-	data, err := io.ReadAll(io.LimitReader(f, 10*1024*1024))
+	// 1. 尝试 SFTP
+	client, sftpErr := session.sftpConn()
+	if sftpErr == nil {
+		f, err := client.Open(target)
+		if err != nil {
+			return nil, fmt.Errorf("打开远程文件失败: %w", err)
+		}
+		defer f.Close()
+
+		data, err := io.ReadAll(io.LimitReader(f, 10*1024*1024))
+		if err != nil {
+			return nil, fmt.Errorf("读取远程文件内容失败: %w", err)
+		}
+		return data, nil
+	}
+
+	// 2. 降级为 SSH Stdout 流读取
+	if session.isClosed() || session.client == nil {
+		return nil, errors.New("会话已断开")
+	}
+	sshSess, err := session.client.NewSession()
 	if err != nil {
-		return nil, fmt.Errorf("读取远程文件内容失败: %w", err)
+		return nil, fmt.Errorf("建立 SSH 会话通道失败: %w (SFTP 错误: %v)", err, sftpErr)
+	}
+	defer sshSess.Close()
+
+	stdoutPipe, err := sshSess.StdoutPipe()
+	if err != nil {
+		return nil, fmt.Errorf("打开远程 Stdout 管道失败: %w", err)
+	}
+
+	catCmd := fmt.Sprintf("cat %q", target)
+	if err := sshSess.Start(catCmd); err != nil {
+		return nil, fmt.Errorf("启动远程读取进程失败: %w", err)
+	}
+
+	data, err := io.ReadAll(io.LimitReader(stdoutPipe, 10*1024*1024))
+	if err != nil {
+		return nil, fmt.Errorf("读取远程文件流失败: %w", err)
+	}
+
+	if err := sshSess.Wait(); err != nil {
+		return nil, fmt.Errorf("远程读取完成等待失败: %w", err)
 	}
 	return data, nil
 }

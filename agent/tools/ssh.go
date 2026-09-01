@@ -2,9 +2,7 @@ package tools
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 	"terminal/agent/guard"
@@ -205,11 +203,11 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			if err != nil {
 				return "", err
 			}
-			cmd := fmt.Sprintf("cat %s", ssh.NormalizeRemote(input.Path))
-			content, err := sess.ExecCombined(cmd)
+			data, err := sm.ReadFileContent(sess.Info().ID, input.Path)
 			if err != nil {
 				return "", err
 			}
+			content := string(data)
 			if len(content) > 200000 {
 				content = content[:200000] + "\n...(远程文件内容过长，已被截断)"
 			}
@@ -231,9 +229,7 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			if err != nil {
 				return "", err
 			}
-			encoded := base64.StdEncoding.EncodeToString([]byte(input.Content))
-			cmd := fmt.Sprintf("echo %s | base64 -d > %s", encoded, ssh.NormalizeRemote(input.Path))
-			if _, err := sess.ExecCombined(cmd); err != nil {
+			if err := sm.WriteFileContent(sess.Info().ID, input.Path, []byte(input.Content)); err != nil {
 				return "", fmt.Errorf("写入远程文件失败: %w", err)
 			}
 			return fmt.Sprintf("成功向远程文件 [%s] 写入 %d 字节", input.Path, len(input.Content)), nil
@@ -275,11 +271,6 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			if err != nil {
 				return "", err
 			}
-			cmd := fmt.Sprintf("cat %s", ssh.NormalizeRemote(input.RemotePath))
-			content, err := sess.ExecCombined(cmd)
-			if err != nil {
-				return "", fmt.Errorf("读取远程文件失败: %w", err)
-			}
 			fileName := input.LocalName
 			if fileName == "" {
 				fileName = filepath.Base(input.RemotePath)
@@ -288,8 +279,8 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			if err != nil {
 				return "", err
 			}
-			if err := os.WriteFile(localFullPath, []byte(content), 0o644); err != nil {
-				return "", fmt.Errorf("保存本地文件失败: %w", err)
+			if err := sm.DownloadFileDirect(sess.Info().ID, input.RemotePath, localFullPath); err != nil {
+				return "", fmt.Errorf("下载远程文件失败: %w", err)
 			}
 			return fmt.Sprintf("成功将远程文件 [%s] 下载至本地 [%s]", input.RemotePath, fileName), nil
 		})
@@ -313,13 +304,7 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			if err != nil {
 				return "", err
 			}
-			data, err := os.ReadFile(localFullPath)
-			if err != nil {
-				return "", fmt.Errorf("读取本地文件失败: %w", err)
-			}
-			encoded := base64.StdEncoding.EncodeToString(data)
-			cmd := fmt.Sprintf("echo %s | base64 -d > %s", encoded, ssh.NormalizeRemote(input.RemotePath))
-			if _, err := sess.ExecCombined(cmd); err != nil {
+			if err := sm.UploadFileDirect(sess.Info().ID, localFullPath, input.RemotePath); err != nil {
 				return "", fmt.Errorf("上传远程文件失败: %w", err)
 			}
 			return fmt.Sprintf("成功将本地文件 [%s] 上传至远程服务器 [%s]", input.LocalPath, input.RemotePath), nil
