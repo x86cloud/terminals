@@ -23,8 +23,8 @@
     <Package InstallerVersion="405"
              Compressed="yes"
              InstallScope="perMachine"
-             Description="Terminal v3 安装包"
-             Comments="多协议终端管理平台"
+             Description="Terminal v3 Installer"
+             Comments="Terminal v3 Application"
              Platform="x64" />
 
     <!-- ============================================================ -->
@@ -32,7 +32,7 @@
     <!-- ============================================================ -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   Schedule="afterInstallInitialize"
-                  DowngradeErrorMessage="计算机上已安装更高版本的 Terminal，安装程序已终止。" />
+                  DowngradeErrorMessage="A newer version of Terminal is already installed." />
 
     <!-- 介质封装：压缩到单个 MSI 文件内 -->
     <MediaTemplate EmbedCab="yes" />
@@ -75,7 +75,7 @@
       <Component Id="ApplicationShortcut" Guid="7B9F1A2C-5D3E-4A6B-9871-0CF491A235D6">
         <Shortcut Id="ApplicationStartMenuShortcut"
                   Name="Terminal"
-                  Description="Terminal v3 多协议终端管理工具"
+                  Description="Terminal v3"
                   Target="[INSTALLFOLDER]terminal-v3.exe"
                   WorkingDirectory="INSTALLFOLDER"
                   Icon="AppIcon.ico" />

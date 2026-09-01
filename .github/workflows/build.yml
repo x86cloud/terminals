@@ -39,7 +39,7 @@ jobs:
 
       - name: Install Wails v3 CLI and Task
         run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.10
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
           go install github.com/go-task/task/v3/cmd/task@latest
 
       - name: Install Frontend Dependencies
@@ -91,7 +91,7 @@ jobs:
 
       - name: Install Wails v3 CLI, Task, and create-dmg
         run: |
-          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.10
+          go install github.com/wailsapp/wails/v3/cmd/wails3@latest
           go install github.com/go-task/task/v3/cmd/task@latest
           brew install create-dmg || true
 
