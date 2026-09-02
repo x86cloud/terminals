@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -517,6 +518,62 @@ func (m *PostgresManager) PostgresCloseEx(serverID string) {
 	}
 
 	m.configs.Delete(serverID)
+}
+
+// ListConnections 列出当前所有已建立连接的 PostgreSQL 数据库实例。
+func (m *PostgresManager) ListConnections() []map[string]any {
+	list := make([]map[string]any, 0)
+	m.configs.Range(func(key, value any) bool {
+		if cfg, ok := value.(core.ServerConfig); ok {
+			list = append(list, map[string]any{
+				"id":       cfg.ID,
+				"name":     cfg.Name,
+				"host":     cfg.Host,
+				"port":     cfg.Port,
+				"database": cfg.PostgresDatabase,
+				"user":     cfg.Username,
+			})
+		}
+		return true
+	})
+	return list
+}
+
+// ResolveID 根据 serverID 或别名解析目标 PostgreSQL 连接 ID。
+func (m *PostgresManager) ResolveID(idOrName string) (string, error) {
+	trimmed := strings.TrimSpace(idOrName)
+	if trimmed != "" {
+		if _, ok := m.configs.Load(trimmed); ok {
+			return trimmed, nil
+		}
+		var foundID string
+		m.configs.Range(func(key, value any) bool {
+			if cfg, ok := value.(core.ServerConfig); ok {
+				if strings.EqualFold(cfg.Name, trimmed) || strings.EqualFold(cfg.Host, trimmed) || strings.EqualFold(cfg.ID, trimmed) {
+					foundID = cfg.ID
+					return false
+				}
+			}
+			return true
+		})
+		if foundID != "" {
+			return foundID, nil
+		}
+	}
+	var ids []string
+	m.configs.Range(func(key, value any) bool {
+		if id, ok := key.(string); ok {
+			ids = append(ids, id)
+		}
+		return true
+	})
+	if len(ids) == 1 {
+		return ids[0], nil
+	}
+	if len(ids) == 0 {
+		return "", errors.New("当前暂无已连通的 PostgreSQL 数据库连接，请先在 PostgreSQL 界面中连接数据库")
+	}
+	return "", fmt.Errorf("存在多个活跃的 PostgreSQL 连接，请指定明确的 server_id (当前活跃连接数: %d)", len(ids))
 }
 
 // normalizePgVal 转换 PostgreSQL 数据值为前端 JSON 安全格式。

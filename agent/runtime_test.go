@@ -24,6 +24,8 @@ import (
 	"terminal/agent/workflow"
 	"terminal/core"
 	"terminal/db"
+	"terminal/docker"
+	"terminal/k8s"
 
 	"github.com/cloudwego/eino/components/tool"
 )
@@ -1078,6 +1080,164 @@ func TestSqliteToolsFullSuite(t *testing.T) {
 	resStr = fmt.Sprintf("%v", res.Data)
 	if !strings.Contains(resStr, "Alice") || !strings.Contains(resStr, "Bob") {
 		t.Fatalf("db_sqlite_query 输出未包含查询记录: %s", resStr)
+	}
+}
+
+func TestPostgresToolsRegistration(t *testing.T) {
+	st, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	pgMgr := db.NewPostgresManager()
+	eb := events.NewEventBus()
+	g := guard.NewPolicyGuard(true, true, st)
+	bus := tools.NewToolBus(g, eb)
+
+	err := tools.RegisterDatabaseTools(bus, tools.DatabaseManagers{
+		PostgresMgr: pgMgr,
+	})
+	if err != nil {
+		t.Fatalf("注册 PostgreSQL 数据库工具失败: %v", err)
+	}
+
+	toolList := bus.List()
+	expectedTools := []string{
+		"db_postgres_list_connections",
+		"db_postgres_databases",
+		"db_postgres_tables",
+		"db_postgres_query",
+	}
+
+	for _, expected := range expectedTools {
+		found := false
+		for _, tool := range toolList {
+			if tool.Name == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("预期工具 [%s] 未成功注册到 ToolBus", expected)
+		}
+	}
+
+	// Test calling db_postgres_list_connections when empty
+	res := bus.Invoke(context.Background(), "t1", "s1", "db_postgres_list_connections", "{}")
+	if !res.OK {
+		t.Fatalf("调用 db_postgres_list_connections 失败: %v", res.Error)
+	}
+}
+
+func TestDockerAndK8sToolsRegistrationAndGuard(t *testing.T) {
+	st, cleanup := setupTestStore(t)
+	defer cleanup()
+
+	dkm := docker.NewDockerManager()
+	km := k8s.NewK8sManager()
+	eb := events.NewEventBus()
+	g := guard.NewPolicyGuard(true, true, st)
+	bus := tools.NewToolBus(g, eb)
+
+	err := tools.RegisterDockerTools(bus, dkm)
+	if err != nil {
+		t.Fatalf("注册 Docker 工具失败: %v", err)
+	}
+	err = tools.RegisterK8sTools(bus, km)
+	if err != nil {
+		t.Fatalf("注册 K8s 工具失败: %v", err)
+	}
+
+	toolList := bus.List()
+	expectedTools := []string{
+		"docker_list_connections",
+		"docker_execute",
+		"docker_exec",
+		"k8s_list_connections",
+		"k8s_kubectl_execute",
+		"kubectl_exec",
+		"k8s_exec",
+	}
+
+	for _, expected := range expectedTools {
+		found := false
+		for _, tool := range toolList {
+			if tool.Name == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Fatalf("预期工具 [%s] 未成功注册到 ToolBus", expected)
+		}
+	}
+
+	// 1. Test empty connections
+	res := bus.Invoke(context.Background(), "t1", "s1", "docker_list_connections", "{}")
+	if !res.OK {
+		t.Fatalf("调用 docker_list_connections 失败: %v", res.Error)
+	}
+	res = bus.Invoke(context.Background(), "t2", "s1", "k8s_list_connections", "{}")
+	if !res.OK {
+		t.Fatalf("调用 k8s_list_connections 失败: %v", res.Error)
+	}
+
+	// 2. Test PolicyGuard for Docker commands
+	lvl, _ := g.Audit(context.Background(), "s1", "docker_execute", `{"command": "docker ps -a"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 docker ps 为 LevelAllow，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_execute", `{"command": "docker logs -n 50 app"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 docker logs 为 LevelAllow，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_execute", `{"command": "docker stop my-container"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 docker stop 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_execute", `{"command": "docker rm -f $(docker ps -a -q)"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期高危 docker rm 批处理为 LevelForbidden，实际: %s", lvl)
+	}
+
+	// 3. Test PolicyGuard for Docker Exec
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_exec", `{"command": "docker exec -it web ls -la /app"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 docker exec ls 为 LevelAllow，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_exec", `{"command": "docker exec -it web apt update"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 docker exec apt update 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_exec", `{"command": "docker exec -it web rm -rf /"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期 docker exec rm -rf / 为 LevelForbidden，实际: %s", lvl)
+	}
+
+	// 4. Test PolicyGuard for Kubectl commands
+	lvl, _ = g.Audit(context.Background(), "s1", "k8s_kubectl_execute", `{"command": "kubectl get pods -n default"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 kubectl get pods 为 LevelAllow，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "k8s_kubectl_execute", `{"command": "kubectl scale deployment app --replicas=3 -n default"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 kubectl scale 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "k8s_kubectl_execute", `{"command": "kubectl delete namespace kube-system"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期 kubectl delete namespace kube-system 为 LevelForbidden，实际: %s", lvl)
+	}
+
+	// 5. Test PolicyGuard for Kubectl Exec
+	lvl, _ = g.Audit(context.Background(), "s1", "kubectl_exec", `{"command": "kubectl exec my-pod -n default -- cat /etc/hosts"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 kubectl exec cat 为 LevelAllow，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "kubectl_exec", `{"command": "kubectl exec my-pod -n default -- rm /tmp/test"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 kubectl exec rm 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "kubectl_exec", `{"command": "kubectl exec my-pod -n default -- rm -rf /"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期 kubectl exec rm -rf / 为 LevelForbidden，实际: %s", lvl)
 	}
 }
 

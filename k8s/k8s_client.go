@@ -26,10 +26,12 @@ import (
 	"k8s.io/client-go/discovery/cached/memory"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/remotecommand"
 )
 
 // K8sClient 封装基于 client-go 的 Kubernetes 客户端。
@@ -1283,4 +1285,59 @@ func (c *K8sClient) ApplyYAML(ctx context.Context, yamlContent string) ([]K8sApp
 	}
 
 	return results, nil
+}
+
+type k8sStreamWriter struct {
+	onChunk func(chunk string)
+}
+
+func (w *k8sStreamWriter) Write(p []byte) (n int, err error) {
+	if len(p) > 0 && w.onChunk != nil {
+		w.onChunk(string(p))
+	}
+	return len(p), nil
+}
+
+// ExecStream 在指定的 Pod / Container 内部执行命令并实时流式回调输出，返回 (exitCode, error)。
+func (c *K8sClient) ExecStream(ctx context.Context, namespace, podName, containerName string, cmd []string, onChunk func(chunk string)) (int, error) {
+	if c == nil || c.clientset == nil || c.restConfig == nil {
+		return -1, fmt.Errorf("Kubernetes 客户端未就绪")
+	}
+	if namespace == "" {
+		namespace = "default"
+	}
+	if len(cmd) == 0 {
+		return -1, fmt.Errorf("命令不能为空")
+	}
+
+	req := c.clientset.CoreV1().RESTClient().Post().
+		Resource("pods").
+		Name(podName).
+		Namespace(namespace).
+		SubResource("exec").
+		VersionedParams(&corev1.PodExecOptions{
+			Container: containerName,
+			Command:   cmd,
+			Stdin:     false,
+			Stdout:    true,
+			Stderr:    true,
+			TTY:       false,
+		}, scheme.ParameterCodec)
+
+	executor, err := remotecommand.NewSPDYExecutor(c.restConfig, "POST", req.URL())
+	if err != nil {
+		return -1, fmt.Errorf("创建 SPDY Executor 失败: %w", err)
+	}
+
+	writer := &k8sStreamWriter{onChunk: onChunk}
+	execErr := executor.StreamWithContext(ctx, remotecommand.StreamOptions{
+		Stdout: writer,
+		Stderr: writer,
+		Tty:    false,
+	})
+
+	if execErr != nil {
+		return 1, execErr
+	}
+	return 0, nil
 }

@@ -579,11 +579,6 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
                                                         <Table size={13} style={{ color: '#52c41a', flexShrink: 0 }} />
                                                         <span className={pg.nodeText}>{raw.table.name}</span>
                                                     </div>
-                                                    {raw.table.rowCount > 0 && (
-                                                        <span style={{ fontSize: 10, color: 'var(--text-faint)', marginLeft: 4, flexShrink: 0 }}>
-                                                            {raw.table.rowCount}
-                                                        </span>
-                                                    )}
                                                 </div>
                                             </Dropdown>
                                         </div>

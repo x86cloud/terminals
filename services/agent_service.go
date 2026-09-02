@@ -41,7 +41,7 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 	c := GetContainer()
 	cfg := c.Store.GetSettings()
 	agent.DefaultManager.SetSSHManager(c.Sessions)
-	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr)
+	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 	_ = agent.DefaultManager.InitOrUpdate(cfg)
 	_ = agent.DefaultRuntime.InitOrUpdate(cfg)
 
@@ -155,7 +155,7 @@ func (s *AgentService) AgentProposePlan(sessionID, objective string) (*planner.P
 		sessionID = "ai_agent_default"
 	}
 	c := GetContainer()
-	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr)
+	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 	toolsList := agent.DefaultRuntime.ToolBus.List()
 	var descBuilder strings.Builder
 	for _, t := range toolsList {
@@ -183,7 +183,7 @@ func (s *AgentService) AgentApprovePlan(planID string) (bool, error) {
 
 	traceID := fmt.Sprintf("trace_%d", time.Now().UnixNano())
 	c := GetContainer()
-	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr)
+	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 
 	planCtx, planCancel := context.WithCancel(context.Background())
 	s.planCancelMap.Store(planID, planCancel)
@@ -314,7 +314,7 @@ func (s *AgentService) AgentRetryPlanStep(planID, stepID string) (*planner.PlanS
 	}
 
 	c := GetContainer()
-	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr)
+	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 	traceID := fmt.Sprintf("retry_%d", time.Now().UnixNano())
 
 	stepOutputs := make(map[string]any)
@@ -472,7 +472,7 @@ func (s *AgentService) AgentListSubagents(sessionID string) ([]store.SubagentIte
 
 func (s *AgentService) AgentSendSubagent(subID, message string) (string, error) {
 	c := GetContainer()
-	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr)
+	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 	return agent.DefaultRuntime.SubagentM.Send(context.Background(), subID, message)
 }
 

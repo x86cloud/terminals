@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
-import { Button, Radio, Tag, Tooltip, Space } from 'antd'
-import { Folder, Square, Send, X } from 'lucide-react'
-import CodeEditor from '@/components/CodeEditor'
+import { Button, Radio, Tooltip, Input } from 'antd'
+import { Folder, Square, X } from 'lucide-react'
 import s from './Composer.module.less'
+
+const { TextArea } = Input
 
 interface ComposerProps {
     input: string
@@ -43,6 +44,7 @@ const getRingColor = (pct: number): string => {
 export const Composer: React.FC<ComposerProps> = ({
     input,
     setInput,
+    textareaRef,
     activeMode,
     setActiveMode,
     workspaceDir,
@@ -56,8 +58,24 @@ export const Composer: React.FC<ComposerProps> = ({
     images,
     onStop,
     onSend,
+    onKeyDown,
 }) => {
+    const [isComposing, setIsComposing] = useState(false)
     const strokeDashoffset = 43.98 * (1 - Math.min(100, Math.max(0, percent)) / 100)
+
+    const handleInternalKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            if (isComposing || (e.nativeEvent as any).isComposing) {
+                return
+            }
+            e.preventDefault()
+            if (input.trim() || images.length > 0) {
+                onSend()
+            }
+        } else if (onKeyDown) {
+            onKeyDown(e)
+        }
+    }
 
     const tokenTooltipContent = (
         <div>
@@ -75,15 +93,17 @@ export const Composer: React.FC<ComposerProps> = ({
     return (
         <div className={s.composerBox}>
             <div className={s.editorWrapper}>
-                <CodeEditor
+                <TextArea
+                    ref={textareaRef}
+                    className={s.textareaInput}
                     value={input}
-                    onChange={setInput}
-                    lang="plain"
-                    lineNumbers={false}
-                    bordered={false}
-                    minHeight="84px"
-                    onEnter={() => onSend()}
-                    onModEnter={() => onSend()}
+                    onChange={(e) => setInput(e.target.value)}
+                    onCompositionStart={() => setIsComposing(true)}
+                    onCompositionEnd={() => setIsComposing(false)}
+                    onKeyDown={handleInternalKeyDown}
+                    placeholder="输入消息，Enter 发送，Shift + Enter 换行..."
+                    autoSize={{ minRows: 2, maxRows: 8 }}
+                    variant="borderless"
                 />
             </div>
 

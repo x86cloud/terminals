@@ -10,9 +10,9 @@
 }
 
 .sideTree {
-    width: 270px;
-    min-width: 220px;
-    max-width: 480px;
+    width: 320px;
+    min-width: 260px;
+    max-width: 520px;
     border-right: 1px solid color-mix(in srgb, @border 70%, transparent);
     background: @bg-2;
     display: flex;
@@ -47,6 +47,31 @@
     overflow-x: hidden;
     padding: 6px;
     min-height: 0;
+
+    :global {
+        .ant-tree {
+            background: transparent;
+            width: 100%;
+        }
+        .ant-tree-treenode {
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+        .ant-tree-node-content-wrapper {
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+        }
+        .ant-tree-title {
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+            display: block;
+        }
+    }
 }
 
 .mainArea {
@@ -140,6 +165,7 @@
     padding: 2px 4px;
     border-radius: @radius-sm;
     user-select: none;
+    overflow: hidden;
 }
 
 .nodeMain {

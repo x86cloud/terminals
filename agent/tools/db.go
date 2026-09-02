@@ -13,10 +13,11 @@ import (
 )
 
 type DatabaseManagers struct {
-	RedisMgr  *redis.RedisManager
-	MysqlMgr  *db.MysqlManagerEx
-	MongoMgr  *mongo.MongoManager
-	SqliteMgr *db.SqliteManager
+	RedisMgr    *redis.RedisManager
+	MysqlMgr    *db.MysqlManagerEx
+	PostgresMgr *db.PostgresManager
+	MongoMgr    *mongo.MongoManager
+	SqliteMgr   *db.SqliteManager
 }
 
 type EmptyInput struct{}
@@ -119,6 +120,22 @@ type SqliteTablesInput struct {
 
 type SqliteSchemaInput struct {
 	FileID string `json:"file_id" jsonschema:"description=已打开的 SQLite 文件会话 ID 或路径，若只有一个连接可留空"`
+}
+
+type PostgresDatabasesInput struct {
+	ServerID string `json:"server_id" jsonschema:"description=PostgreSQL 服务器连接 ID 或名称，若只有单一连接可留空"`
+}
+
+type PostgresTablesInput struct {
+	ServerID string `json:"server_id" jsonschema:"description=PostgreSQL 服务器连接 ID 或名称，若只有单一连接可留空"`
+	Database string `json:"database" jsonschema:"description=目标数据库名称，例如 postgres"`
+	Schema   string `json:"schema" jsonschema:"description=目标 Schema 命名空间，默认为 public"`
+}
+
+type PostgresQueryInput struct {
+	ServerID string `json:"server_id" jsonschema:"description=PostgreSQL 服务器连接 ID 或名称，若只有单一连接可留空"`
+	Database string `json:"database" jsonschema:"description=目标数据库名称，若未指定默认连接当前配置库或 postgres"`
+	SQL      string `json:"sql" jsonschema:"description=要执行的 SQL 语句 (支持 SELECT / INSERT / UPDATE / DELETE / DDL / EXPLAIN 等读写操作)"`
 }
 
 func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
@@ -586,6 +603,89 @@ func RegisterDatabaseTools(bus *ToolBus, mgrs DatabaseManagers) error {
 				Name:        "db_sqlite_query",
 				Description: "执行 SQLite 数据库 SQL 语句 (支持 SELECT/PRAGMA/INSERT/UPDATE/DELETE/DDL 等读写操作)",
 				BaseTool:    sqliteTool,
+				Level:       guard.LevelAllow,
+			})
+		}
+	}
+
+	// ---------- 5. PostgreSQL Tools ----------
+	if mgrs.PostgresMgr != nil {
+		listPgConnsTool, err := utils.InferTool("db_postgres_list_connections", "列出当前所有已建立连接的 PostgreSQL 数据库实例与会话信息",
+			func(ctx context.Context, input *EmptyInput) (any, error) {
+				return mgrs.PostgresMgr.ListConnections(), nil
+			})
+		if err == nil {
+			bus.Register(&RegisteredTool{
+				Name:        "db_postgres_list_connections",
+				Description: "列出当前所有已建立连接的 PostgreSQL 数据库实例与会话信息",
+				BaseTool:    listPgConnsTool,
+				Level:       guard.LevelAllow,
+			})
+		}
+
+		pgDatabasesTool, err := utils.InferTool("db_postgres_databases", "列出 PostgreSQL 服务器上的所有数据库名称",
+			func(ctx context.Context, input *PostgresDatabasesInput) (any, error) {
+				serverID, err := mgrs.PostgresMgr.ResolveID(input.ServerID)
+				if err != nil {
+					return nil, err
+				}
+				return mgrs.PostgresMgr.PostgresDatabases(serverID)
+			})
+		if err == nil {
+			bus.Register(&RegisteredTool{
+				Name:        "db_postgres_databases",
+				Description: "列出 PostgreSQL 服务器上的所有数据库名称",
+				BaseTool:    pgDatabasesTool,
+				Level:       guard.LevelAllow,
+			})
+		}
+
+		pgTablesTool, err := utils.InferTool("db_postgres_tables", "列出 PostgreSQL 指定数据库和 Schema (默认 public) 中的所有数据表与视图列表",
+			func(ctx context.Context, input *PostgresTablesInput) (any, error) {
+				serverID, err := mgrs.PostgresMgr.ResolveID(input.ServerID)
+				if err != nil {
+					return nil, err
+				}
+				dbName := strings.TrimSpace(input.Database)
+				if dbName == "" {
+					dbName = "postgres"
+				}
+				schema := strings.TrimSpace(input.Schema)
+				if schema == "" {
+					schema = "public"
+				}
+				return mgrs.PostgresMgr.PostgresTables(serverID, dbName, schema)
+			})
+		if err == nil {
+			bus.Register(&RegisteredTool{
+				Name:        "db_postgres_tables",
+				Description: "列出 PostgreSQL 指定数据库和 Schema (默认 public) 中的所有数据表与视图列表",
+				BaseTool:    pgTablesTool,
+				Level:       guard.LevelAllow,
+			})
+		}
+
+		pgQueryTool, err := utils.InferTool("db_postgres_query", "执行 PostgreSQL 数据库 SQL 语句 (支持 SELECT / INSERT / UPDATE / DELETE / DDL / EXPLAIN 等读写操作)",
+			func(ctx context.Context, input *PostgresQueryInput) (any, error) {
+				serverID, err := mgrs.PostgresMgr.ResolveID(input.ServerID)
+				if err != nil {
+					return nil, err
+				}
+				cleanSQL := strings.TrimSpace(input.SQL)
+				if cleanSQL == "" {
+					return nil, fmt.Errorf("SQL 语句不能为空")
+				}
+				dbName := strings.TrimSpace(input.Database)
+				if dbName == "" {
+					dbName = "postgres"
+				}
+				return mgrs.PostgresMgr.PostgresRun(serverID, dbName, cleanSQL)
+			})
+		if err == nil {
+			bus.Register(&RegisteredTool{
+				Name:        "db_postgres_query",
+				Description: "执行 PostgreSQL 数据库 SQL 语句 (支持 SELECT / INSERT / UPDATE / DELETE / DDL / EXPLAIN 等读写操作)",
+				BaseTool:    pgQueryTool,
 				Level:       guard.LevelAllow,
 			})
 		}

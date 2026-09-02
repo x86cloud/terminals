@@ -158,50 +158,37 @@ export default function Sidebar({
         setExpanded((prev) => ({ ...prev, ...autoExpanded }))
     }, [keyword, groups, servers])
 
-    const kindOf = (s: ServerConfig): ConnType =>
-        s.type === 'redis'
-            ? 'redis'
-            : s.type === 'mysql'
-                ? 'mysql'
-                : s.type === 'postgres'
-                    ? 'postgres'
-                    : s.type === 'mqtt'
-                        ? 'mqtt'
-                        : s.type === 'mongo'
-                            ? 'mongo'
-                            : s.type === 'sqlite'
-                                ? 'sqlite'
-                                : s.type === 'docker'
-                                    ? 'docker'
-                                    : s.type === 'k8s'
-                                        ? 'k8s'
-                                        : 'ssh'
+    const kindOf = (s: ServerConfig): ConnType => s.type || 'ssh'
 
-    const sessionsOf = (server: ServerConfig) => {
-        const kind = kindOf(server)
-        if (kind === 'redis') return redisSessions.filter((s) => s.serverId === server.id)
-        if (kind === 'mysql') return mysqlSessions.filter((s) => s.serverId === server.id)
-        if (kind === 'postgres') return postgresSessions.filter((s) => s.serverId === server.id)
-        if (kind === 'mqtt') return mqttSessions.filter((s) => s.serverId === server.id)
-        if (kind === 'mongo') return mongoSessions.filter((s) => s.serverId === server.id)
-        if (kind === 'sqlite') return sqliteSessions.filter((s) => s.serverId === server.id)
-        if (kind === 'docker') return dockerSessions.filter((s) => s.serverId === server.id)
-        if (kind === 'k8s') return (k8sSessions || []).filter((s) => s.serverId === server.id)
-        return sessions.filter((s) => s.serverId === server.id)
+    const sessionMap: Record<ConnType, Array<{ id: string; serverId?: string; connected?: boolean; [key: string]: any }>> = {
+        redis: redisSessions,
+        mysql: mysqlSessions,
+        postgres: postgresSessions,
+        mqtt: mqttSessions,
+        mongo: mongoSessions,
+        sqlite: sqliteSessions,
+        docker: dockerSessions,
+        k8s: k8sSessions || [],
+        ssh: sessions,
     }
 
-    const activeIdOf = (server: ServerConfig) => {
-        const kind = kindOf(server)
-        if (kind === 'redis') return activeRedisId
-        if (kind === 'mysql') return activeMysqlId
-        if (kind === 'postgres') return activePostgresId
-        if (kind === 'mqtt') return activeMqttId
-        if (kind === 'mongo') return activeMongoId
-        if (kind === 'sqlite') return activeSqliteId
-        if (kind === 'docker') return activeDockerId
-        if (kind === 'k8s') return activeK8sId
-        return activeSessionId
+    const activeIdMap: Record<ConnType, string | null | undefined> = {
+        redis: activeRedisId,
+        mysql: activeMysqlId,
+        postgres: activePostgresId,
+        mqtt: activeMqttId,
+        mongo: activeMongoId,
+        sqlite: activeSqliteId,
+        docker: activeDockerId,
+        k8s: activeK8sId,
+        ssh: activeSessionId,
     }
+
+    const sessionsOf = (server: ServerConfig) =>
+        (sessionMap[kindOf(server)] || sessions).filter((s) => s.serverId === server.id)
+
+    const activeIdOf = (server: ServerConfig) =>
+        activeIdMap[kindOf(server)] ?? activeSessionId
 
     const serversOfGroup = (groupId: string) =>
         filtered.filter((s) => (s.groupId || '') === groupId)

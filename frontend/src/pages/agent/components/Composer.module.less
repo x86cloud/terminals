@@ -12,58 +12,31 @@
 
     .editorWrapper {
         width: 100%;
-        min-height: 54px;
-        max-height: 200px;
+        min-height: 48px;
+    }
 
-        :global(.cm-editor) {
-            background: transparent !important;
-            border: none !important;
-            border-radius: 0;
+    .textareaInput {
+        width: 100%;
+        background: transparent !important;
+        border: none !important;
+        outline: none !important;
+        box-shadow: none !important;
+        padding: 4px 4px !important;
+        font-size: 13.5px !important;
+        line-height: 1.55 !important;
+        color: @text !important;
+        font-family: inherit !important;
+        resize: none !important;
+
+        &::placeholder {
+            color: @text-dim !important;
+        }
+
+        &:focus,
+        &:focus-visible {
             outline: none !important;
             box-shadow: none !important;
-            font-size: 13px;
-            line-height: 1.5;
-            min-height: 54px;
-            max-height: 200px;
-
-            &.cm-focused {
-                border: none !important;
-                outline: none !important;
-            }
-
-            .cm-scroller {
-                overflow-y: auto;
-                font-family: inherit;
-                min-height: 54px;
-                max-height: 200px;
-            }
-
-            .cm-content {
-                padding: 0;
-                color: @text;
-                font-family: inherit;
-            }
-
-            .cm-line {
-                padding: 0 2px;
-            }
-
-            .cm-placeholder {
-                color: @text-dim;
-                font-family: inherit;
-            }
-
-            .cm-activeLine {
-                background: transparent !important;
-            }
-
-            .cm-activeLineGutter {
-                background: transparent !important;
-            }
-
-            .cm-gutters {
-                display: none;
-            }
+            border: none !important;
         }
     }
 }

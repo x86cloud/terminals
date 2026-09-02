@@ -6,6 +6,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -23,6 +24,7 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/api/types/volume"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"golang.org/x/crypto/ssh"
 	"terminal/core"
 )
@@ -889,4 +891,55 @@ func dialRemoteDocker(sshClient *ssh.Client, remoteSocket string) (net.Conn, err
 	}
 
 	return nil, fmt.Errorf("无法连接远程 Docker Socket (streamlocal 错误: %w)", err)
+}
+
+type streamChunkWriter struct {
+	onChunk func(chunk string)
+}
+
+func (w *streamChunkWriter) Write(p []byte) (n int, err error) {
+	if len(p) > 0 && w.onChunk != nil {
+		w.onChunk(string(p))
+	}
+	return len(p), nil
+}
+
+// ExecStream 在指定容器内部执行命令并实时流式回调输出，返回 (exitCode, error)。
+func (d *DockerClient) ExecStream(ctx context.Context, containerID string, cmd []string, workingDir, user string, onChunk func(chunk string)) (int, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	if d.closed || d.cli == nil {
+		return -1, errors.New("Docker 客户端已关闭")
+	}
+
+	execConfig := container.ExecOptions{
+		AttachStdout: true,
+		AttachStderr: true,
+		Cmd:          cmd,
+		WorkingDir:   workingDir,
+		User:         user,
+		Tty:          false,
+	}
+
+	execCreateResp, err := d.cli.ContainerExecCreate(ctx, containerID, execConfig)
+	if err != nil {
+		return -1, fmt.Errorf("创建容器 Exec 任务失败: %w", err)
+	}
+
+	attachResp, err := d.cli.ContainerExecAttach(ctx, execCreateResp.ID, container.ExecAttachOptions{
+		Tty: false,
+	})
+	if err != nil {
+		return -1, fmt.Errorf("附加容器 Exec 输出流失败: %w", err)
+	}
+	defer attachResp.Close()
+
+	writer := &streamChunkWriter{onChunk: onChunk}
+	_, _ = stdcopy.StdCopy(writer, writer, attachResp.Reader)
+
+	inspectResp, err := d.cli.ContainerExecInspect(ctx, execCreateResp.ID)
+	if err != nil {
+		return 0, nil
+	}
+	return inspectResp.ExitCode, nil
 }

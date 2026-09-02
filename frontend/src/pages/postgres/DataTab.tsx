@@ -150,7 +150,7 @@ export default function DataTab({
             setCountingRows(true)
             API.postgresCount(serverId, dbName, schema, tableName, where)
                 .then((cnt) => setTotalRows(cnt))
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => setCountingRows(false))
         } catch (e: any) {
             message.error('查询失败: ' + (e.message || e))
@@ -501,12 +501,6 @@ export default function DataTab({
                             </Button>
                         )}
                     </div>
-
-                    {pkList.length === 0 && (
-                        <div className={pg.warnBanner}>
-                            <span>该表无主键，删除/更新将受到限制，请谨慎操作。</span>
-                        </div>
-                    )}
 
                     {/* 表格主体：使用 ResizableTable 渲染 */}
                     <ResizableTable

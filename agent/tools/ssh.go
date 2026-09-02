@@ -318,23 +318,5 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 		})
 	}
 
-	// 10. ssh_list_processes
-	processesTool, err := utils.InferTool("ssh_list_processes", "查看远程服务器上运行的进程列表",
-		func(ctx context.Context, input *SSHGetSystemInfoInput) (any, error) {
-			sess, err := resolveSession(input.SessionID)
-			if err != nil {
-				return nil, err
-			}
-			return sm.GetProcessList(sess.Info().ID)
-		})
-	if err == nil {
-		bus.Register(&RegisteredTool{
-			Name:        "ssh_list_processes",
-			Description: "查看远程服务器上运行的进程列表",
-			BaseTool:    processesTool,
-			Level:       guard.LevelAllow,
-		})
-	}
-
 	return nil
 }

@@ -215,7 +215,6 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["ssh_list_dir"] = ToolRule{ToolName: "ssh_list_dir", Level: LevelAllow, Description: "查看远程服务器文件目录"}
 	g.rules["ssh_read_file"] = ToolRule{ToolName: "ssh_read_file", Level: LevelAllow, Description: "读取远程服务器文件内容"}
 	g.rules["ssh_download_file"] = ToolRule{ToolName: "ssh_download_file", Level: LevelAllow, Description: "下载远程服务器文件至本地工作目录"}
-	g.rules["ssh_list_processes"] = ToolRule{ToolName: "ssh_list_processes", Level: LevelAllow, Description: "查看远程服务器运行进程"}
 	g.rules["ssh_list_containers"] = ToolRule{ToolName: "ssh_list_containers", Level: LevelAllow, Description: "查看远程服务器 Docker 容器"}
 	// 写操作类：需人工审批 (HITL)
 	g.rules["ssh_write_file"] = ToolRule{ToolName: "ssh_write_file", Level: LevelConfirm, Description: "在远程服务器写入或修改文件"}
@@ -263,7 +262,52 @@ func (g *PolicyGuard) initDefaultRules() {
 		AuditFunc:   g.auditSQLQuery,
 	}
 
-	// 5. Protocol & Orchestration tools
+	g.rules["db_postgres_list_connections"] = ToolRule{ToolName: "db_postgres_list_connections", Level: LevelAllow, Description: "查看 PostgreSQL 实例"}
+	g.rules["db_postgres_databases"] = ToolRule{ToolName: "db_postgres_databases", Level: LevelAllow, Description: "查看 PostgreSQL 数据库"}
+	g.rules["db_postgres_tables"] = ToolRule{ToolName: "db_postgres_tables", Level: LevelAllow, Description: "查看 PostgreSQL 数据表"}
+	g.rules["db_postgres_query"] = ToolRule{
+		ToolName:    "db_postgres_query",
+		Level:       LevelAllow,
+		Description: "执行 PostgreSQL 数据库 SQL 语句",
+		AuditFunc:   g.auditSQLQuery,
+	}
+
+	// 5. Docker & Kubernetes tools
+	g.rules["docker_list_connections"] = ToolRule{ToolName: "docker_list_connections", Level: LevelAllow, Description: "查看 Docker 实例连接"}
+	g.rules["docker_execute"] = ToolRule{
+		ToolName:    "docker_execute",
+		Level:       LevelAllow,
+		Description: "执行 Docker CLI 容器与镜像管理指令",
+		AuditFunc:   g.auditDockerCommand,
+	}
+	g.rules["docker_exec"] = ToolRule{
+		ToolName:    "docker_exec",
+		Level:       LevelAllow,
+		Description: "在 Docker 容器内部流式执行命令",
+		AuditFunc:   g.auditContainerExecCommand,
+	}
+
+	g.rules["k8s_list_connections"] = ToolRule{ToolName: "k8s_list_connections", Level: LevelAllow, Description: "查看 Kubernetes 集群连接"}
+	g.rules["k8s_kubectl_execute"] = ToolRule{
+		ToolName:    "k8s_kubectl_execute",
+		Level:       LevelAllow,
+		Description: "执行 Kubectl CLI 资源查询与控制指令",
+		AuditFunc:   g.auditKubectlCommand,
+	}
+	g.rules["kubectl_exec"] = ToolRule{
+		ToolName:    "kubectl_exec",
+		Level:       LevelAllow,
+		Description: "在 Kubernetes Pod 容器内部流式执行命令",
+		AuditFunc:   g.auditContainerExecCommand,
+	}
+	g.rules["k8s_exec"] = ToolRule{
+		ToolName:    "k8s_exec",
+		Level:       LevelAllow,
+		Description: "在 Kubernetes Pod 容器内部流式执行命令",
+		AuditFunc:   g.auditContainerExecCommand,
+	}
+
+	// 6. Protocol & Orchestration tools
 	g.rules["mqtt_publish"] = ToolRule{ToolName: "mqtt_publish", Level: LevelAllow, Description: "发布 MQTT 消息"}
 	g.rules["mqtt_subscribe_once"] = ToolRule{ToolName: "mqtt_subscribe_once", Level: LevelAllow, Description: "单次订阅 MQTT 消息"}
 	g.rules["http_request_readonly"] = ToolRule{ToolName: "http_request_readonly", Level: LevelAllow, Description: "发送 HTTP GET 请求"}
@@ -376,6 +420,215 @@ func (g *PolicyGuard) auditSQLQuery(ctx context.Context, input string) (Permissi
 	}
 
 	return LevelConfirm, "执行非只读 SQL 语句具有潜在数据风险，需人工审批确认"
+}
+
+func (g *PolicyGuard) auditDockerCommand(ctx context.Context, inputJSON string) (PermissionLevel, string) {
+	clean := strings.TrimSpace(inputJSON)
+	if clean == "" || clean == "{}" {
+		return LevelAllow, ""
+	}
+
+	var obj struct {
+		Command string `json:"command"`
+	}
+	cmdText := clean
+	if err := json.Unmarshal([]byte(clean), &obj); err == nil && obj.Command != "" {
+		cmdText = obj.Command
+	}
+
+	parts := strings.Fields(cmdText)
+	if len(parts) > 0 && strings.EqualFold(parts[0], "docker") {
+		parts = parts[1:]
+	}
+	if len(parts) == 0 {
+		return LevelAllow, ""
+	}
+
+	sub := strings.ToLower(parts[0])
+
+	g.mu.RLock()
+	blockHighRisk := g.blockHighRiskCommands
+	g.mu.RUnlock()
+
+	if blockHighRisk {
+		fullCmdUpper := strings.ToUpper(cmdText)
+		if strings.Contains(fullCmdUpper, "SYSTEM PRUNE -A") || strings.Contains(fullCmdUpper, "SYSTEM PRUNE --ALL") || strings.Contains(fullCmdUpper, "RM -F $(DOCKER PS") {
+			return LevelForbidden, "禁止执行高风险批量破坏性 Docker 指令"
+		}
+	}
+
+	// 只读命令直接放行
+	readCmds := []string{"ps", "logs", "inspect", "images", "image", "volume", "network", "info", "version", "compose"}
+	for _, rc := range readCmds {
+		if sub == rc {
+			if sub == "compose" && len(parts) > 1 && (parts[1] == "up" || parts[1] == "down" || parts[1] == "restart") {
+				return LevelConfirm, fmt.Sprintf("执行 Docker Compose %s 操作需人工审批确认", parts[1])
+			}
+			if sub == "image" && len(parts) > 1 && parts[1] == "rm" {
+				return LevelConfirm, "删除 Docker 镜像操作需人工审批确认"
+			}
+			return LevelAllow, ""
+		}
+	}
+
+	// 容器与镜像变更操作需确认
+	confirmCmds := []string{"start", "stop", "restart", "pause", "unpause", "rm", "rmi", "kill"}
+	for _, cc := range confirmCmds {
+		if sub == cc {
+			return LevelConfirm, fmt.Sprintf("执行 Docker 容器/镜像状态变更 (%s) 需人工审批确认", cc)
+		}
+	}
+
+	return LevelConfirm, "执行该 Docker 命令具有潜在状态变更风险，需人工审批确认"
+}
+
+func (g *PolicyGuard) auditKubectlCommand(ctx context.Context, inputJSON string) (PermissionLevel, string) {
+	clean := strings.TrimSpace(inputJSON)
+	if clean == "" || clean == "{}" {
+		return LevelAllow, ""
+	}
+
+	var obj struct {
+		Command string `json:"command"`
+	}
+	cmdText := clean
+	if err := json.Unmarshal([]byte(clean), &obj); err == nil && obj.Command != "" {
+		cmdText = obj.Command
+	}
+
+	parts := strings.Fields(cmdText)
+	if len(parts) > 0 && strings.EqualFold(parts[0], "kubectl") {
+		parts = parts[1:]
+	}
+	if len(parts) == 0 {
+		return LevelAllow, ""
+	}
+
+	sub := strings.ToLower(parts[0])
+
+	g.mu.RLock()
+	blockHighRisk := g.blockHighRiskCommands
+	g.mu.RUnlock()
+
+	if blockHighRisk {
+		fullCmdUpper := strings.ToUpper(cmdText)
+		if strings.Contains(fullCmdUpper, "DELETE NAMESPACE KUBE-SYSTEM") || strings.Contains(fullCmdUpper, "DELETE NS KUBE-SYSTEM") ||
+			strings.Contains(fullCmdUpper, "DELETE NAMESPACE DEFAULT") || strings.Contains(fullCmdUpper, "DELETE NODE") {
+			return LevelForbidden, "禁止删除核心系统命名空间或物理节点"
+		}
+	}
+
+	// 只读命令直接放行
+	readCmds := []string{"get", "logs", "describe", "cluster-info", "version", "top", "explain"}
+	for _, rc := range readCmds {
+		if sub == rc {
+			return LevelAllow, ""
+		}
+	}
+
+	// 变更操作需确认
+	confirmCmds := []string{"scale", "rollout", "delete", "apply", "create", "patch", "cordon", "drain"}
+	for _, cc := range confirmCmds {
+		if sub == cc {
+			return LevelConfirm, fmt.Sprintf("执行 Kubernetes 集群资源变更 (%s) 需人工审批确认", cc)
+		}
+	}
+
+	return LevelConfirm, "执行该 Kubernetes 变更命令需人工审批确认"
+}
+
+func (g *PolicyGuard) auditContainerExecCommand(ctx context.Context, inputJSON string) (PermissionLevel, string) {
+	clean := strings.TrimSpace(inputJSON)
+	if clean == "" || clean == "{}" {
+		return LevelAllow, ""
+	}
+
+	var obj struct {
+		Command string `json:"command"`
+	}
+	cmdText := clean
+	if err := json.Unmarshal([]byte(clean), &obj); err == nil && obj.Command != "" {
+		cmdText = obj.Command
+	}
+
+	// 去除开头的 docker exec 或 kubectl exec 包装
+	parts := strings.Fields(cmdText)
+	if len(parts) > 0 && (strings.EqualFold(parts[0], "docker") || strings.EqualFold(parts[0], "kubectl")) {
+		if len(parts) > 1 && strings.EqualFold(parts[1], "exec") {
+			parts = parts[2:]
+		}
+	} else if len(parts) > 0 && strings.EqualFold(parts[0], "exec") {
+		parts = parts[1:]
+	}
+
+	// 提取实际在容器内执行的命令
+	var innerCmdParts []string
+	dashDashIdx := -1
+	for idx, p := range parts {
+		if p == "--" {
+			dashDashIdx = idx
+			break
+		}
+	}
+	if dashDashIdx != -1 && dashDashIdx+1 < len(parts) {
+		innerCmdParts = parts[dashDashIdx+1:]
+	} else {
+		for i := 0; i < len(parts); i++ {
+			p := parts[i]
+			if p == "-it" || p == "-i" || p == "-t" || p == "-d" || p == "--detach" {
+				continue
+			}
+			if (p == "-n" || p == "--namespace" || p == "-c" || p == "--container" || p == "-w" || p == "--workdir" || p == "-u" || p == "--user") && i+1 < len(parts) {
+				i++
+				continue
+			}
+			if strings.HasPrefix(p, "--namespace=") || strings.HasPrefix(p, "--container=") || strings.HasPrefix(p, "--workdir=") || strings.HasPrefix(p, "--user=") {
+				continue
+			}
+			if strings.HasPrefix(p, "-") {
+				continue
+			}
+			// 遇到第一个非 flag 参数即容器名/Pod名，之后的所有参数均视为容器内部指令
+			if i+1 < len(parts) {
+				innerCmdParts = parts[i+1:]
+			}
+			break
+		}
+	}
+	if len(innerCmdParts) == 0 {
+		innerCmdParts = parts
+	}
+
+	innerCmd := strings.Join(innerCmdParts, " ")
+	upperCmd := strings.ToUpper(innerCmd)
+
+	g.mu.RLock()
+	blockHighRisk := g.blockHighRiskCommands
+	g.mu.RUnlock()
+
+	// 1. 高危拦截检查
+	if blockHighRisk {
+		highRisk := []string{"RM -RF /", "RM -FR /", "MKFS", ":(){ :|:& };:", "DD IF=/DEV", "SHUTDOWN", "REBOOT", "INIT 0"}
+		for _, hr := range highRisk {
+			if strings.Contains(upperCmd, hr) {
+				return LevelForbidden, fmt.Sprintf("容器内 Exec 命令包含高危破坏性指令: %s", hr)
+			}
+		}
+	}
+
+	// 2. 只读命令直接放行
+	readPrefixes := []string{"LS", "LL", "CAT", "HEAD", "TAIL", "MORE", "LESS", "GREP", "FIND", "PS", "TOP", "FREE", "DF", "DU", "ENV", "PRINTENV", "PWD", "ECHO", "WHICH", "WHEREIS", "UNAME", "HOSTNAME", "UPTIME", "PING", "CURL", "WGET", "NETSTAT", "SS", "IP", "IFCONFIG", "DATE", "WHOAMI", "ID"}
+	if len(innerCmdParts) > 0 {
+		firstWord := strings.ToUpper(innerCmdParts[0])
+		for _, rp := range readPrefixes {
+			if firstWord == rp {
+				return LevelAllow, ""
+			}
+		}
+	}
+
+	// 3. 其它带有修改/写倾向的命令要求确认
+	return LevelConfirm, fmt.Sprintf("执行容器内 Exec 命令 (%s) 具有状态变更潜在风险，需人工审批确认", strings.TrimSpace(innerCmd))
 }
 
 func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input string, defaultLevel PermissionLevel) (PermissionLevel, string) {

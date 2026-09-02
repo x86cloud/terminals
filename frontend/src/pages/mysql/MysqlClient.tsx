@@ -763,9 +763,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                                         )}
                                                         <span className={my.nodeText}>{raw.table.name}</span>
                                                     </span>
-                                                    {raw.table.rows > 0 && (
-                                                        <span className={my.nodeMeta}>{raw.table.rows} 行</span>
-                                                    )}
                                                 </div>
                                             </Dropdown>
                                         </div>

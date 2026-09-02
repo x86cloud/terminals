@@ -23,6 +23,8 @@ import (
 	"terminal/agent/workflow"
 	"terminal/core"
 	"terminal/db"
+	"terminal/docker"
+	"terminal/k8s"
 	"terminal/mongo"
 	"terminal/proto"
 	"terminal/redis"
@@ -57,12 +59,15 @@ type AgentRuntime struct {
 	AskMgr       *ask.AskManager
 	HitlMgr      *guard.HitlManager
 
-	sshMgr    *ssh.SessionManager
-	redisMgr  *redis.RedisManager
-	mysqlMgr  *db.MysqlManagerEx
-	mongoMgr  *mongo.MongoManager
-	sqliteMgr *db.SqliteManager
-	mqttMgr   *proto.MqttManager
+	sshMgr      *ssh.SessionManager
+	redisMgr    *redis.RedisManager
+	mysqlMgr    *db.MysqlManagerEx
+	postgresMgr *db.PostgresManager
+	mongoMgr    *mongo.MongoManager
+	sqliteMgr   *db.SqliteManager
+	mqttMgr     *proto.MqttManager
+	dockerMgr   *docker.DockerManager
+	k8sMgr      *k8s.K8sManager
 }
 
 var DefaultRuntime = NewAgentRuntime()
@@ -220,18 +225,24 @@ func (rt *AgentRuntime) SetManagers(
 	sm *ssh.SessionManager,
 	rm *redis.RedisManager,
 	mm *db.MysqlManagerEx,
+	pgm *db.PostgresManager,
 	mgm *mongo.MongoManager,
 	sq *db.SqliteManager,
 	mq *proto.MqttManager,
+	dkm *docker.DockerManager,
+	km *k8s.K8sManager,
 ) {
 	rt.mu.Lock()
 	defer rt.mu.Unlock()
 	rt.sshMgr = sm
 	rt.redisMgr = rm
 	rt.mysqlMgr = mm
+	rt.postgresMgr = pgm
 	rt.mongoMgr = mgm
 	rt.sqliteMgr = sq
 	rt.mqttMgr = mq
+	rt.dockerMgr = dkm
+	rt.k8sMgr = km
 
 	// Register job execution engines (Local & SSH)
 	rt.JobMgr.RegisterExecutor("local", job.NewLocalExecutor(rt.WorkspaceMgr))
@@ -245,11 +256,14 @@ func (rt *AgentRuntime) SetManagers(
 	}
 	_ = tools.RegisterSSHTools(rt.ToolBus, sm, rt.WorkspaceMgr)
 	_ = tools.RegisterDatabaseTools(rt.ToolBus, tools.DatabaseManagers{
-		RedisMgr:  rm,
-		MysqlMgr:  mm,
-		MongoMgr:  mgm,
-		SqliteMgr: sq,
+		RedisMgr:    rm,
+		MysqlMgr:    mm,
+		PostgresMgr: pgm,
+		MongoMgr:    mgm,
+		SqliteMgr:   sq,
 	})
+	_ = tools.RegisterDockerTools(rt.ToolBus, dkm)
+	_ = tools.RegisterK8sTools(rt.ToolBus, km)
 	_ = tools.RegisterMqttTools(rt.ToolBus, mq)
 	_ = tools.RegisterHttpTools(rt.ToolBus)
 	_ = tools.RegisterOrchestrationTools(rt.ToolBus, tools.OrchestrationManagers{
