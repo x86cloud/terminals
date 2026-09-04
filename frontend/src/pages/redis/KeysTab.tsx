@@ -79,7 +79,6 @@ export default function KeysTab({
         try {
             const obj = JSON.parse(editor)
             setEditor(JSON.stringify(obj, null, 2))
-            message.success('已美化 JSON')
         } catch {
             message.warning('当前内容不是合法的 JSON 格式')
         }
@@ -89,7 +88,6 @@ export default function KeysTab({
         try {
             const obj = JSON.parse(editor)
             setEditor(JSON.stringify(obj))
-            message.success('已压缩 JSON')
         } catch {
             message.warning('当前内容不是合法的 JSON 格式')
         }

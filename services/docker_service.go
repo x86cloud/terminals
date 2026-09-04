@@ -9,6 +9,8 @@ import (
 
 	"terminal/core"
 	"terminal/docker"
+
+	"github.com/google/uuid"
 )
 
 // DockerService 导出给 Wails 的 Docker 管理服务接口。
@@ -195,6 +197,67 @@ func (s *DockerService) DockerRemoveImage(id string, imageID string, force bool)
 	return cli.RemoveImage(ctx, imageID, force)
 }
 
+// DockerSaveImage 弹出保存文件对话框并将镜像导出保存为本地 tar 压缩包。
+func (s *DockerService) DockerSaveImage(id string, imageIDOrTag string, defaultFilename string) (string, error) {
+	cli, err := GetContainer().DockerMgr.GetClient(id)
+	if err != nil {
+		return "", err
+	}
+
+	cleanName := defaultFilename
+	if cleanName == "" {
+		cleanName = strings.ReplaceAll(imageIDOrTag, "/", "_")
+		cleanName = strings.ReplaceAll(cleanName, ":", "_") + ".tar"
+	}
+	if !strings.HasSuffix(strings.ToLower(cleanName), ".tar") {
+		cleanName += ".tar"
+	}
+
+	savePath, err := core.SaveFileDialog("导出保存 Docker 镜像 (.tar)", cleanName)
+	if err != nil {
+		return "", err
+	}
+	if savePath == "" {
+		return "", nil // 用户取消选择
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	err = cli.SaveImage(ctx, []string{imageIDOrTag}, savePath)
+	if err != nil {
+		return "", err
+	}
+
+	return savePath, nil
+}
+
+// DockerLoadImage 弹出选择文件对话框并从本地 tar 包导入镜像。
+func (s *DockerService) DockerLoadImage(id string) (string, error) {
+	cli, err := GetContainer().DockerMgr.GetClient(id)
+	if err != nil {
+		return "", err
+	}
+
+	filePath, err := core.OpenFileDialog("选择要导入的 Docker 镜像包 (.tar)")
+	if err != nil {
+		return "", err
+	}
+	if filePath == "" {
+		return "", nil // 用户取消选择
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	res, err := cli.LoadImage(ctx, filePath, false)
+	if err != nil {
+		return "", err
+	}
+
+	return res, nil
+}
+
 // DockerListVolumes 获取数据卷列表。
 func (s *DockerService) DockerListVolumes(id string) ([]docker.DockerVolumeInfo, error) {
 	cli, err := GetContainer().DockerMgr.GetClient(id)
@@ -325,5 +388,143 @@ func (s *DockerService) DockerGetComposeStackLogs(id string, projectName string,
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	return cli.GetComposeStackLogs(ctx, projectName, tail)
+}
+
+// DockerListComposeRecords 获取指定 Docker 服务器的本地 Compose 记录。
+func (s *DockerService) DockerListComposeRecords(serverId string) ([]core.DockerComposeRecord, error) {
+	c := GetContainer()
+	if c.Store == nil {
+		return []core.DockerComposeRecord{}, nil
+	}
+	return c.Store.ListComposeRecords(serverId), nil
+}
+
+// DockerGetComposeRecord 获取特定 Compose 记录详情。
+func (s *DockerService) DockerGetComposeRecord(id string) (*core.DockerComposeRecord, error) {
+	c := GetContainer()
+	if c.Store == nil {
+		return nil, errors.New("存储服务不可用")
+	}
+	return c.Store.GetComposeRecord(id)
+}
+
+// DockerSaveComposeRecord 保存/创建本地 Compose 记录。
+func (s *DockerService) DockerSaveComposeRecord(record core.DockerComposeRecord) (*core.DockerComposeRecord, error) {
+	c := GetContainer()
+	if c.Store == nil {
+		return nil, errors.New("存储服务不可用")
+	}
+	return c.Store.SaveComposeRecord(record)
+}
+
+// DockerDeleteComposeRecord 强力联动删除 Compose 记录（同时清理关联容器和网络）。
+func (s *DockerService) DockerDeleteComposeRecord(serverId string, id string) error {
+	c := GetContainer()
+	if c.Store == nil {
+		return errors.New("存储服务不可用")
+	}
+
+	record, err := c.Store.GetComposeRecord(id)
+	if err == nil && record != nil && serverId != "" {
+		cli, clientErr := c.DockerMgr.GetClient(serverId)
+		if clientErr == nil {
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			defer cancel()
+			// 按项目名和 UUID 执行 down
+			if record.ProjectName != "" {
+				_ = cli.ControlComposeStack(ctx, record.ProjectName, "down")
+			}
+			_ = cli.ControlComposeStack(ctx, record.ID, "down")
+		}
+	}
+
+	return c.Store.DeleteComposeRecord(id)
+}
+
+// DockerUpComposeStack 执行类似 docker compose up 的智能增量更新，仅在实例创建/启动成功后才同步保存本地 YAML。
+func (s *DockerService) DockerUpComposeStack(serverId string, record core.DockerComposeRecord, forcePull bool, recreate bool) (*core.DockerComposeRecord, error) {
+	c := GetContainer()
+	if c.Store == nil {
+		return nil, errors.New("存储服务不可用")
+	}
+
+	record.ServerID = serverId
+	if record.ID == "" {
+		record.ID = uuid.New().String()
+	}
+
+	cli, err := c.DockerMgr.GetClient(serverId)
+	if err != nil {
+		return nil, fmt.Errorf("获取 Docker 客户端失败: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 180*time.Second)
+	defer cancel()
+
+	req := docker.DockerComposeDeployReq{
+		ID:          record.ID,
+		ProjectName: record.ProjectName,
+		YamlContent: record.YamlContent,
+		EnvVars:     record.EnvVars,
+		ForcePull:   forcePull,
+		Recreate:    recreate,
+	}
+
+	// 1. 先部署容器实例：若失败，绝不落盘保存，直接返回错误（容器已由 UpComposeStack 自动回滚清理）
+	if err := cli.UpComposeStack(ctx, req); err != nil {
+		return nil, fmt.Errorf("执行 Compose 部署更新失败: %w", err)
+	}
+
+	// 2. 仅当实例全部创建并启动成功后，才保存到本地存储 composes.json
+	saved, err := c.Store.SaveComposeRecord(record)
+	if err != nil {
+		return nil, fmt.Errorf("实例已部署成功，但持久化本地配置记录失败: %w", err)
+	}
+
+	return saved, nil
+}
+
+// DockerExecStart 启动指定 Docker 容器的交互式终端会话。
+func (s *DockerService) DockerExecStart(serverId string, containerId string, command string, cols int, rows int) (string, error) {
+	c := GetContainer()
+	cli, err := c.DockerMgr.GetClient(serverId)
+	if err != nil {
+		return "", err
+	}
+	if c.DockerMgr.ExecMgr == nil {
+		return "", errors.New("Docker 终端执行管理器未初始化")
+	}
+	return c.DockerMgr.ExecMgr.StartExec(cli, containerId, command, cols, rows)
+}
+
+// DockerExecWrite 写入数据到指定 Docker 容器终端会话。
+func (s *DockerService) DockerExecWrite(execId string, data string) error {
+	c := GetContainer()
+	if c.DockerMgr.ExecMgr == nil {
+		return errors.New("Docker 终端执行管理器未初始化")
+	}
+	return c.DockerMgr.ExecMgr.Write(execId, data)
+}
+
+// DockerExecResize 调整 Docker 容器终端会话行列尺寸。
+func (s *DockerService) DockerExecResize(serverId string, execId string, cols int, rows int) error {
+	c := GetContainer()
+	cli, err := c.DockerMgr.GetClient(serverId)
+	if err != nil {
+		return err
+	}
+	if c.DockerMgr.ExecMgr == nil {
+		return errors.New("Docker 终端执行管理器未初始化")
+	}
+	return c.DockerMgr.ExecMgr.Resize(cli, execId, cols, rows)
+}
+
+// DockerExecClose 关闭指定 Docker 容器终端会话。
+func (s *DockerService) DockerExecClose(execId string) error {
+	c := GetContainer()
+	if c.DockerMgr.ExecMgr == nil {
+		return nil
+	}
+	return c.DockerMgr.ExecMgr.Close(execId)
 }
 

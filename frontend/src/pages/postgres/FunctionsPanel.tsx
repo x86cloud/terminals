@@ -41,7 +41,6 @@ export default function FunctionsPanel({
         setSaving(true)
         try {
             await API.postgresRun(serverId, dbName, defContent.trim())
-            message.success('函数/存储过程已更新！')
             setEditingFunc(null)
             loadFunctions()
         } catch (e: any) {

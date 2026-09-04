@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useTransition } from 'react'
 import { Button, Input, Switch, Segmented, Tooltip } from 'antd'
 import { Copy, Download } from 'lucide-react'
 import { md5 } from '@/utils/md5'
@@ -283,35 +283,33 @@ function locate(str: string, pos: number) {
 function JsonTool() {
     const [input, setInput] = useState('')
     const [error, setError] = useState('')
-    const [busy, setBusy] = useState(false)
+    const [isPending, startTransition] = useTransition()
 
-    const run = async (mode: 'format' | 'minify') => {
+    const run = (mode: 'format' | 'minify') => {
         if (!input.trim()) {
             setError('')
             return
         }
-        setBusy(true)
-        await new Promise((r) => setTimeout(r, 0))
-        try {
-            const parsed = JSON.parse(input)
-            const text =
-                mode === 'format'
-                    ? JSON.stringify(parsed, null, 2)
-                    : JSON.stringify(parsed)
-            setInput(text)
-            setError('')
-        } catch (e: any) {
-            const msg = e?.message || String(e)
-            const pos = findPos(msg)
-            let detail = msg
-            if (pos != null) {
-                const { line, col } = locate(input, pos)
-                detail = `${msg}（出错位置 ${pos}，第 ${line} 行第 ${col} 列）`
+        startTransition(() => {
+            try {
+                const parsed = JSON.parse(input)
+                const text =
+                    mode === 'format'
+                        ? JSON.stringify(parsed, null, 2)
+                        : JSON.stringify(parsed)
+                setInput(text)
+                setError('')
+            } catch (e: any) {
+                const msg = e?.message || String(e)
+                const pos = findPos(msg)
+                let detail = msg
+                if (pos != null) {
+                    const { line, col } = locate(input, pos)
+                    detail = `${msg}（出错位置 ${pos}，第 ${line} 行第 ${col} 列）`
+                }
+                setError(detail)
             }
-            setError(detail)
-        } finally {
-            setBusy(false)
-        }
+        })
     }
 
     return (
@@ -324,8 +322,8 @@ function JsonTool() {
             <div className={dt.editorWrap}>
                 <CodeEditor
                     value={input}
-                    onChange={(v) => {
-                        setInput(v)
+                    onChange={(val) => {
+                        setInput(val)
                         if (error) setError('')
                     }}
                     lang="json"
@@ -336,10 +334,10 @@ function JsonTool() {
             </div>
 
             <div className={dt.jsonActions} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-                <Button type="primary" size="small" disabled={busy || !input.trim()} onClick={() => run('format')}>
+                <Button type="primary" size="small" loading={isPending} disabled={isPending || !input.trim()} onClick={() => run('format')}>
                     格式化
                 </Button>
-                <Button size="small" disabled={busy || !input.trim()} onClick={() => run('minify')}>
+                <Button size="small" loading={isPending} disabled={isPending || !input.trim()} onClick={() => run('minify')}>
                     压缩
                 </Button>
                 <span className={g.spacer} />

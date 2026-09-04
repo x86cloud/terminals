@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
-import { Select, Button, Space, Tag } from 'antd'
+import { Select, Button, Space, Tag, message } from 'antd'
 import {Play, X} from 'lucide-react'
 import {API, subscribe} from '@/api'
 import {errorMessage} from '@/utils'
@@ -12,7 +12,6 @@ interface Props {
     session: MongoSessionInfo
     db: string
     collection: string | null
-    onNotify: (msg: string, kind?: 'info' | 'error') => void
 }
 
 function pretty(text: string): string {
@@ -23,7 +22,7 @@ function pretty(text: string): string {
     }
 }
 
-export default function ChangeStreamTab({session, db, collection, onNotify}: Props) {
+export default function ChangeStreamTab({session, db, collection}: Props) {
     const [scope, setScope] = useState<'deployment' | 'database' | 'collection'>('collection')
     const [pipeline, setPipeline] = useState('[]')
     const [fullDoc, setFullDoc] = useState('default')
@@ -44,13 +43,13 @@ export default function ChangeStreamTab({session, db, collection, onNotify}: Pro
     useEffect(() => {
         subRef.current = subscribe('mongo:change:' + id, (evt: MongoChangeEvent) => {
             if (evt.error) {
-                onNotify('变更流错误：' + evt.error, 'error')
+                message.error('变更流错误：' + evt.error)
                 return
             }
             setEvents((prev) => [evt, ...prev].slice(0, 200))
         })
         return () => clearSub()
-    }, [id, onNotify])
+    }, [id])
 
     // 切换库时清空上一个库的事件列表
     useEffect(() => {
@@ -65,13 +64,13 @@ export default function ChangeStreamTab({session, db, collection, onNotify}: Pro
             setWatchKey(key)
             setWatching(true)
             setEvents([])
-            onNotify('已开启变更流监听：' + key)
+            message.success('已开启变更流监听：' + key)
         } catch (e) {
-            onNotify(errorMessage(e), 'error')
+            message.error(errorMessage(e))
         } finally {
             setBusy(false)
         }
-    }, [id, scope, db, collection, pipeline, fullDoc, onNotify])
+    }, [id, scope, db, collection, pipeline, fullDoc])
 
     const stop = useCallback(async () => {
         try {

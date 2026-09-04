@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Button, Tooltip, Segmented, Tag, message, Space, Table, Tree } from 'antd'
 import { Play, Sparkles, Plus, X, RotateCw, FileCode, CheckCircle2, AlertCircle, Clock, Zap, Download } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
+import TabBar, { TabItem } from '@/components/common/TabBar'
 import { API } from '@/api'
 import { MysqlQueryResult } from '@/types'
 import { SqlTab } from './mysqlTypes'
@@ -47,6 +48,15 @@ export default function SqlEditor({
         setTabs((prev) => prev.map((t) => (t.id === activeTabId ? { ...t, ...patch } : t)))
     }
 
+    const tabItems: TabItem[] = useMemo(() => {
+        return tabs.map((t) => ({
+            key: t.id,
+            label: t.title,
+            icon: <Play size={12} />,
+            closable: tabs.length > 1,
+        }))
+    }, [tabs])
+
     const handleAddTab = () => {
         const id = 'tab_' + Date.now()
         const newTab: QueryTab = {
@@ -65,9 +75,34 @@ export default function SqlEditor({
         if (tabs.length <= 1) return
         const nextTabs = tabs.filter((t) => t.id !== id)
         setTabs(nextTabs)
-        if (activeTabId === id) {
-            setActiveTabId(nextTabs[nextTabs.length - 1].id)
+        if (activeTabId === id && nextTabs.length > 0) {
+            const closedIdx = tabs.findIndex((t) => t.id === id)
+            const nextActive = nextTabs[Math.min(closedIdx, nextTabs.length - 1)]
+            if (nextActive) setActiveTabId(nextActive.id)
         }
+    }
+
+    const handleCloseAllTabs = () => {
+        if (tabs.length <= 1) return
+        const first = tabs[0]
+        setTabs([first])
+        setActiveTabId(first.id)
+    }
+
+    const handleCloseLeftTabs = (targetId: string) => {
+        const idx = tabs.findIndex((t) => t.id === targetId)
+        if (idx <= 0) return
+        const nextTabs = tabs.slice(idx)
+        setTabs(nextTabs)
+        setActiveTabId(targetId)
+    }
+
+    const handleCloseRightTabs = (targetId: string) => {
+        const idx = tabs.findIndex((t) => t.id === targetId)
+        if (idx < 0 || idx >= tabs.length - 1) return
+        const nextTabs = tabs.slice(0, idx + 1)
+        setTabs(nextTabs)
+        setActiveTabId(targetId)
     }
 
     // 执行 SQL
@@ -89,7 +124,6 @@ export default function SqlEditor({
                 error: '',
                 resultMode: 'table',
             })
-            message.success(`执行完成 (${durationMs} ms, 影响/返回 ${res.rows?.length ?? res.affected ?? 0} 行)`)
         } catch (e: any) {
             const durationMs = Math.round(performance.now() - t0)
             const errStr = e.message || String(e)
@@ -137,7 +171,6 @@ export default function SqlEditor({
                 explainResult: jsonParsed,
                 resultMode: 'explain',
             })
-            message.success('EXPLAIN 执行计划分析完成！')
         } catch (e: any) {
             message.error(`执行 EXPLAIN 失败: ${e.message || e}`)
         } finally {
@@ -221,39 +254,35 @@ export default function SqlEditor({
     return (
         <div className={my.sqlWrap}>
             {/* 多查询 Tab 栏 */}
-            <div className={my.tabBar}>
-                {tabs.map((t) => (
-                    <div
-                        key={t.id}
-                        className={`${my.sqlTab} ${t.id === activeTabId ? my.active : ''}`}
-                        onClick={() => setActiveTabId(t.id)}
-                    >
-                        <span>{t.title}</span>
-                        {tabs.length > 1 && (
-                            <Button
-                                type="text"
-                                size="small"
-                                style={{ width: 16, height: 16, padding: 0 }}
-                                icon={<X size={11} />}
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleCloseTab(t.id)
-                                }}
-                            />
-                        )}
-                    </div>
-                ))}
-
-                <Tooltip title="新建查询标签">
-                    <Button
-                        type="text"
-                        size="small"
-                        style={{ height: '100%', width: 36, borderRadius: 0, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
-                        icon={<Plus size={14} />}
-                        onClick={handleAddTab}
-                    />
-                </Tooltip>
-            </div>
+            <TabBar
+                items={tabItems}
+                activeKey={activeTabId}
+                onChange={setActiveTabId}
+                onClose={handleCloseTab}
+                onCloseAll={handleCloseAllTabs}
+                onCloseLeft={handleCloseLeftTabs}
+                onCloseRight={handleCloseRightTabs}
+                size="small"
+                className={my.tabBar}
+                extraRight={
+                    <Tooltip title="新建查询标签">
+                        <Button
+                            type="text"
+                            size="small"
+                            style={{
+                                width: 26,
+                                height: 26,
+                                padding: 0,
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                            icon={<Plus size={13} />}
+                            onClick={handleAddTab}
+                        />
+                    </Tooltip>
+                }
+            />
 
             {/* SQL 编辑区 */}
             <div style={{ minHeight: 160, maxHeight: '40vh', borderBottom: '1px solid var(--border-color)' }}>
@@ -336,7 +365,6 @@ export default function SqlEditor({
                                         ...activeTab.result.rows.map((r) => cols.map((c) => JSON.stringify(r[c] ?? '')).join(',')),
                                     ].join('\n')
                                     navigator.clipboard.writeText(csv)
-                                    message.success('已复制 CSV 到剪贴板！')
                                 }}
                             >
                                 导出 CSV

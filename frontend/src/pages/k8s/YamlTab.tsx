@@ -109,7 +109,6 @@ export default function YamlTab({ serverId, currentNamespace }: Props) {
                 return
               }
               navigator.clipboard.writeText(yamlText)
-              message.success('YAML 内容已复制到剪贴板')
             }}
           >
             复制

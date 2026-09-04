@@ -111,7 +111,6 @@ export default function NetworkTab({ serverId, currentNamespace }: Props) {
     const handleDeleteService = async (record: K8sServiceInfo) => {
         try {
             await API.k8sDeleteService(serverId, record.namespace, record.name)
-            message.success(`Service [${record.name}] 已删除`)
             fetchData()
         } catch (err: any) {
             message.error(`删除 Service 失败: ${err.message || String(err)}`)
@@ -121,7 +120,6 @@ export default function NetworkTab({ serverId, currentNamespace }: Props) {
     const handleDeleteIngress = async (record: K8sIngressInfo) => {
         try {
             await API.k8sDeleteIngress(serverId, record.namespace, record.name)
-            message.success(`Ingress [${record.name}] 已删除`)
             fetchData()
         } catch (err: any) {
             message.error(`删除 Ingress 失败: ${err.message || String(err)}`)
@@ -179,7 +177,6 @@ export default function NetworkTab({ serverId, currentNamespace }: Props) {
                             icon={<Copy size={11} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(name)
-                                message.success('服务名已复制')
                             }}
                         />
                     </Tooltip>
@@ -283,7 +280,6 @@ export default function NetworkTab({ serverId, currentNamespace }: Props) {
                             icon={<Copy size={11} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(name)
-                                message.success('路由名已复制')
                             }}
                         />
                     </Tooltip>

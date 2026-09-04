@@ -331,6 +331,8 @@ export type {
     DockerComposeDeployReq,
 } from '../bindings/terminal/docker/models'
 
+export type { DockerComposeRecord } from '../bindings/terminal/core/models'
+
 /* ---------------- Kubernetes (K8s) ---------------- */
 
 export interface K8sSessionInfo {

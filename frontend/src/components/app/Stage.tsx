@@ -16,7 +16,8 @@ import AiAgentPanel from '@/pages/agent/AiAgentPanel'
 import DevTools from '@/components/DevTools'
 import g from '@/styles/global.module.less'
 import a from '@/components/app/Stage.module.less'
-import { SessionInfo, RedisSessionInfo, MysqlSessionInfo, PostgresSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, AppSettings } from '@/types'
+import { AppSettings } from '@/types'
+import { useSession } from '@/contexts/SessionContext'
 
 const hiddenPane = { display: 'none' as const }
 const shownPane = {
@@ -30,94 +31,70 @@ const shownPane = {
 }
 
 export interface StageProps {
-    sessions: SessionInfo[]
-    activeId: string | null
     nativeDrop: boolean
-    redisSessions: RedisSessionInfo[]
-    activeRedisId: string | null
-    mysqlSessions: MysqlSessionInfo[]
-    activeMysqlId: string | null
-    postgresSessions?: PostgresSessionInfo[]
-    activePostgresId?: string | null
-    mqttSessions: MqttSessionInfo[]
-    activeMqttId: string | null
-    mongoSessions: MongoSessionInfo[]
-    activeMongoId: string | null
-    sqliteSessions: SqliteSessionInfo[]
-    activeSqliteId: string | null
-    dockerSessions?: DockerSessionInfo[]
-    activeDockerId?: string | null
-    k8sSessions?: K8sSessionInfo[]
-    activeK8sId?: string | null
-    aiAgentOpen: boolean
-    aiAgentActive: boolean
-    devToolsOpen: boolean
-    devToolsActive: boolean
-    apiOpen: boolean
-    apiActive: boolean
     settings: AppSettings
     onPathChange: (sessionId: string, p: string) => void
-    onNotify: (msg: string, kind?: 'info' | 'error') => void
-    onCloseRedis: (id: string) => void
-    onRedisDbChange: (id: string, db: number, dbSize: number) => void
-    onCloseMysql: (id: string) => void
-    onMysqlChange: (id: string, database: string) => void
-    onClosePostgres?: (id: string) => void
-    onPostgresChange?: (id: string, database: string) => void
-    onCloseMqtt: (id: string) => void
-    onCloseMongo: (id: string) => void
-    onMongoChange: (id: string, database: string) => void
-    onCloseSqlite: (id: string) => void
-    onCloseDocker?: (id: string) => void
-    onCloseK8s?: (id: string) => void
-    onCloseAiAgent: () => void
-    onCloseDevTools: () => void
-    onCloseApi: () => void
     onNewServer: () => void
 }
 
-export default function Stage(props: StageProps) {
-    const {
-        sessions, activeId, nativeDrop, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        postgresSessions = [], activePostgresId = null,
-        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId,
-        dockerSessions = [], activeDockerId = null,
-        k8sSessions = [], activeK8sId = null,
-        aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive, settings,
-        onPathChange, onNotify, onCloseRedis, onRedisDbChange, onCloseMysql, onMysqlChange,
-        onClosePostgres = () => {}, onPostgresChange = () => {},
-        onCloseMqtt, onCloseMongo, onMongoChange, onCloseSqlite, onCloseDocker, onCloseK8s, onCloseAiAgent, onCloseDevTools, onCloseApi, onNewServer,
-    } = props
+export default function Stage({
+    nativeDrop,
+    settings,
+    onPathChange,
+    onNewServer,
+}: StageProps) {
+    const { sessions, tools, activeTarget, closeSession, closeTool, updateSession } = useSession()
 
-    const empty = sessions.length === 0 && dockerSessions.length === 0 && k8sSessions.length === 0 && redisSessions.length === 0 && mysqlSessions.length === 0 && postgresSessions.length === 0 && mqttSessions.length === 0 && mongoSessions.length === 0 && sqliteSessions.length === 0 && !devToolsOpen && !apiOpen && !aiAgentOpen
+    const activeId = activeTarget?.kind === 'ssh' ? activeTarget.id : null
+    const activeDockerId = activeTarget?.kind === 'docker' ? activeTarget.id : null
+    const activeK8sId = activeTarget?.kind === 'k8s' ? activeTarget.id : null
+    const activeRedisId = activeTarget?.kind === 'redis' ? activeTarget.id : null
+    const activeMysqlId = activeTarget?.kind === 'mysql' ? activeTarget.id : null
+    const activePostgresId = activeTarget?.kind === 'postgres' ? activeTarget.id : null
+    const activeMqttId = activeTarget?.kind === 'mqtt' ? activeTarget.id : null
+    const activeMongoId = activeTarget?.kind === 'mongo' ? activeTarget.id : null
+    const activeSqliteId = activeTarget?.kind === 'sqlite' ? activeTarget.id : null
+
+    const empty =
+        sessions.ssh.length === 0 &&
+        sessions.docker.length === 0 &&
+        sessions.k8s.length === 0 &&
+        sessions.redis.length === 0 &&
+        sessions.mysql.length === 0 &&
+        sessions.postgres.length === 0 &&
+        sessions.mqtt.length === 0 &&
+        sessions.mongo.length === 0 &&
+        sessions.sqlite.length === 0 &&
+        !tools.devtools.open &&
+        !tools.api.open &&
+        !tools.aiAgent.open
 
     return (
         <div className={a.stage}>
-            {sessions.map((s) => (
+            {sessions.ssh.map((s) => (
                 <SessionWorkspace
                     key={s.id}
                     session={s}
                     active={s.id === activeId}
                     nativeDrop={nativeDrop}
                     onPathChange={onPathChange}
-                    onNotify={onNotify}
                 />
             ))}
 
-            {dockerSessions.map((s) => (
+            {sessions.docker.map((s) => (
                 <div key={s.id} style={s.id === activeDockerId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="Docker 页面渲染异常" onClose={() => onCloseDocker?.(s.id)}>
+                    <ErrorBoundary title="Docker 页面渲染异常" onClose={() => void closeSession('docker', s.id)}>
                         <DockerClient
                             session={s}
-                            onClose={() => onCloseDocker?.(s.id)}
+                            onClose={() => void closeSession('docker', s.id)}
                         />
                     </ErrorBoundary>
                 </div>
             ))}
 
-            {k8sSessions.map((s) => (
+            {sessions.k8s.map((s) => (
                 <div key={s.id} style={s.id === activeK8sId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="Kubernetes 页面渲染异常" onClose={() => onCloseK8s?.(s.id)}>
+                    <ErrorBoundary title="Kubernetes 页面渲染异常" onClose={() => void closeSession('k8s', s.id)}>
                         <K8sClient
                             session={s}
                         />
@@ -125,96 +102,96 @@ export default function Stage(props: StageProps) {
                 </div>
             ))}
 
-            {redisSessions.map((s) => (
+            {sessions.redis.map((s) => (
                 <div key={s.id} style={s.id === activeRedisId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="Redis 页面渲染异常" onClose={() => onCloseRedis(s.id)}>
+                    <ErrorBoundary title="Redis 页面渲染异常" onClose={() => void closeSession('redis', s.id)}>
                         <RedisClient
                             session={s}
-                            onClose={() => onCloseRedis(s.id)}
-                            onDbChange={(id, db, dbSize) => onRedisDbChange(id, db, dbSize)}
+                            onClose={() => void closeSession('redis', s.id)}
+                            onDbChange={(id, db, dbSize) => updateSession('redis', id, { db, dbSize })}
                         />
                     </ErrorBoundary>
                 </div>
             ))}
 
-            {mysqlSessions.map((s) => (
+            {sessions.mysql.map((s) => (
                 <div key={s.id} style={s.id === activeMysqlId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="MySQL 页面渲染异常" onClose={() => onCloseMysql(s.id)}>
+                    <ErrorBoundary title="MySQL 页面渲染异常" onClose={() => void closeSession('mysql', s.id)}>
                         <MysqlClient
                             session={s}
-                            onClose={() => onCloseMysql(s.id)}
-                            onChange={(id, database) => onMysqlChange(id, database)}
+                            onClose={() => void closeSession('mysql', s.id)}
+                            onChange={(id, database) => updateSession('mysql', id, { database })}
                         />
                     </ErrorBoundary>
                 </div>
             ))}
 
-            {postgresSessions.map((s) => (
+            {sessions.postgres.map((s) => (
                 <div key={s.id} style={s.id === activePostgresId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="PostgreSQL 页面渲染异常" onClose={() => onClosePostgres(s.id)}>
+                    <ErrorBoundary title="PostgreSQL 页面渲染异常" onClose={() => void closeSession('postgres', s.id)}>
                         <PostgresClient
                             session={s}
-                            onClose={() => onClosePostgres(s.id)}
-                            onChange={(id, database) => onPostgresChange(id, database)}
+                            onClose={() => void closeSession('postgres', s.id)}
+                            onChange={(id, database) => updateSession('postgres', id, { database })}
                         />
                     </ErrorBoundary>
                 </div>
             ))}
 
-            {mqttSessions.map((s) => (
+            {sessions.mqtt.map((s) => (
                 <div key={s.id} style={s.id === activeMqttId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="MQTT 页面渲染异常" onClose={() => onCloseMqtt(s.id)}>
+                    <ErrorBoundary title="MQTT 页面渲染异常" onClose={() => void closeSession('mqtt', s.id)}>
                         <MqttClient
                             session={s}
-                            onClose={() => onCloseMqtt(s.id)}
+                            onClose={() => void closeSession('mqtt', s.id)}
                         />
                     </ErrorBoundary>
                 </div>
             ))}
 
-            {mongoSessions.map((s) => (
+            {sessions.mongo.map((s) => (
                 <div key={s.id} style={s.id === activeMongoId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="MongoDB 页面渲染异常" onClose={() => onCloseMongo(s.id)}>
+                    <ErrorBoundary title="MongoDB 页面渲染异常" onClose={() => void closeSession('mongo', s.id)}>
                         <MongoClient
                             session={s}
-                            onClose={() => onCloseMongo(s.id)}
-                            onChange={(id, database) => onMongoChange(id, database)}
+                            onClose={() => void closeSession('mongo', s.id)}
+                            onChange={(id, database) => updateSession('mongo', id, { database })}
                         />
                     </ErrorBoundary>
                 </div>
             ))}
 
-            {sqliteSessions.map((s) => (
+            {sessions.sqlite.map((s) => (
                 <div key={s.id} style={s.id === activeSqliteId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="SQLite 页面渲染异常" onClose={() => onCloseSqlite(s.id)}>
+                    <ErrorBoundary title="SQLite 页面渲染异常" onClose={() => void closeSession('sqlite', s.id)}>
                         <SqliteClient
                             session={s}
-                            onClose={() => onCloseSqlite(s.id)}
+                            onClose={() => void closeSession('sqlite', s.id)}
                         />
                     </ErrorBoundary>
                 </div>
             ))}
 
-            {aiAgentOpen && (
-                <div style={aiAgentActive ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="AI 智能体渲染异常" onClose={onCloseAiAgent}>
+            {tools.aiAgent.open && (
+                <div style={tools.aiAgent.active ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="AI 智能体渲染异常" onClose={() => closeTool('aiAgent')}>
                         <AiAgentPanel settings={settings} />
                     </ErrorBoundary>
                 </div>
             )}
 
-            {devToolsOpen && (
-                <div style={devToolsActive ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="DevTools 页面渲染异常" onClose={onCloseDevTools}>
-                        <DevTools onClose={() => onCloseDevTools()} />
+            {tools.devtools.open && (
+                <div style={tools.devtools.active ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="DevTools 页面渲染异常" onClose={() => closeTool('devtools')}>
+                        <DevTools onClose={() => closeTool('devtools')} />
                     </ErrorBoundary>
                 </div>
             )}
 
-            {apiOpen && (
-                <div style={apiActive ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="API 页面渲染异常" onClose={onCloseApi}>
-                        <ApiClient onClose={onCloseApi} />
+            {tools.api.open && (
+                <div style={tools.api.active ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="API 页面渲染异常" onClose={() => closeTool('api')}>
+                        <ApiClient onClose={() => closeTool('api')} />
                     </ErrorBoundary>
                 </div>
             )}

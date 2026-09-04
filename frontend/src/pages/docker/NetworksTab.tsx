@@ -59,7 +59,6 @@ export default function NetworksTab({ serverId }: Props) {
         setCreating(true)
         try {
             await API.dockerCreateNetwork(serverId, netName.trim(), netDriver.trim() || 'bridge')
-            message.success(`网络 ${netName.trim()} 创建成功`)
             setCreateModal(false)
             setNetName('')
             fetchNetworks()
@@ -73,7 +72,6 @@ export default function NetworksTab({ serverId }: Props) {
     const handleDelete = async (id: string) => {
         try {
             await API.dockerRemoveNetwork(serverId, id)
-            message.success('网络已删除')
             fetchNetworks()
         } catch (err: any) {
             message.error(`删除网络失败: ${err.message || String(err)}`)
@@ -115,10 +113,10 @@ export default function NetworksTab({ serverId }: Props) {
                     driver === 'bridge'
                         ? 'blue'
                         : driver === 'host'
-                        ? 'purple'
-                        : driver === 'null'
-                        ? 'default'
-                        : 'cyan'
+                            ? 'purple'
+                            : driver === 'null'
+                                ? 'default'
+                                : 'cyan'
                 return <Tag color={color}>{driver}</Tag>
             },
         },

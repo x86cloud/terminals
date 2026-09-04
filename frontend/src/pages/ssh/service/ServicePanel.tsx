@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Segmented, Input, Button, Table, Badge, Modal, Alert, Space, Spin, Tooltip } from 'antd'
+import { Segmented, Input, Button, Table, Badge, Modal, Alert, Space, Spin, Tooltip, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Play, Power, FileText } from 'lucide-react'
 import { API } from '@/api'
@@ -10,12 +10,11 @@ import s from '@/pages/ssh/service/ServicePanel.module.less'
 interface Props {
     sessionId: string
     active: boolean
-    onNotify?: (message: string, kind?: 'info' | 'error') => void
 }
 
 type FilterTab = 'all' | 'active' | 'inactive' | 'failed'
 
-export default function ServicePanel({ sessionId, active, onNotify }: Props) {
+export default function ServicePanel({ sessionId, active }: Props) {
     const [services, setServices] = useState<SSHServiceInfo[]>([])
     const [busy, setBusy] = useState(false)
     const [actionBusy, setActionBusy] = useState<string>('')
@@ -45,11 +44,11 @@ export default function ServicePanel({ sessionId, active, onNotify }: Props) {
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
-            if (onNotify) onNotify(`读取 Systemd 服务列表失败: ${msg}`, 'error')
+            message.error(`读取 Systemd 服务列表失败: ${msg}`)
         } finally {
             setBusy(false)
         }
-    }, [sessionId, onNotify])
+    }, [sessionId])
 
     useEffect(() => {
         if (active && services.length === 0 && !busy) {
@@ -96,11 +95,11 @@ export default function ServicePanel({ sessionId, active, onNotify }: Props) {
         setActionBusy(`${svc.name}-${action}`)
         try {
             await API.sshControlService(sessionId, svc.name, action)
-            if (onNotify) onNotify(`已成功${actionText}服务 ${svc.name}`)
+            message.success(`已成功${actionText}服务 ${svc.name}`)
             await fetchServices()
         } catch (e) {
             const msg = errorMessage(e)
-            if (onNotify) onNotify(`执行 ${actionText} 失败: ${msg}`, 'error')
+            message.error(`执行 ${actionText} 失败: ${msg}`)
         } finally {
             setActionBusy('')
         }

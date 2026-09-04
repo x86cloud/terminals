@@ -76,7 +76,6 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                             icon={<Copy size={11} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(name)
-                                message.success('节点名已复制')
                             }}
                         />
                     </Tooltip>

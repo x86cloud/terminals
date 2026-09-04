@@ -9,6 +9,7 @@ import '@xterm/xterm/css/xterm.css'
 import { API, emitEvent, subscribe } from '@/api'
 import { base64ToBytes } from '@/utils'
 import ContextMenu, { closedMenu, MenuState } from '@/components/ContextMenu'
+import { useTheme } from '@/contexts/ThemeContext'
 import t from '@/pages/ssh/terminal/Terminal.module.less'
 
 interface Props {
@@ -63,6 +64,7 @@ const DARK_TERM_THEME = {
 }
 
 export default function TerminalView({ sessionId, active }: Props) {
+    const { isDark } = useTheme()
     const hostRef = useRef<HTMLDivElement>(null)
     const termRef = useRef<Terminal | null>(null)
     const fitRef = useRef<FitAddon | null>(null)
@@ -127,32 +129,15 @@ export default function TerminalView({ sessionId, active }: Props) {
 
     // 动态跟从主题模式变动设置 xterm 主题
     useEffect(() => {
-        const applyTermTheme = () => {
-            const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
-            if (termRef.current) {
-                termRef.current.options.theme = isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME
-            }
+        if (termRef.current) {
+            termRef.current.options.theme = isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME
         }
-
-        applyTermTheme()
-
-        const observer = new MutationObserver((mutations) => {
-            for (const m of mutations) {
-                if (m.attributeName === 'data-theme') {
-                    applyTermTheme()
-                }
-            }
-        })
-
-        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] })
-        return () => observer.disconnect()
-    }, [])
+    }, [isDark])
 
     useEffect(() => {
         const host = hostRef.current
         if (!host) return
 
-        const isDark = document.documentElement.getAttribute('data-theme') === 'dark'
         const term = new Terminal({
             fontFamily: 'Consolas, "Courier New", monospace, "Cascadia Mono", "JetBrains Mono"',
             fontSize: 13.5,

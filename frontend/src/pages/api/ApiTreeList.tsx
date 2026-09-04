@@ -221,7 +221,6 @@ export default function ApiTreeList({ state }: Props) {
                         onConfirm: () => {
                             setConfirm({ open: false, title: '', message: '' })
                             deleteTreeNode(folder.id)
-                            message.success('分组已删除')
                         },
                     })
                 },
@@ -273,11 +272,8 @@ export default function ApiTreeList({ state }: Props) {
                 label: '复制为 cURL 命令',
                 onClick: () => {
                     const cmd = buildCurlCommand(item)
-                    navigator.clipboard.writeText(cmd).then(() => {
-                        message.success('已复制 cURL 命令')
-                    }).catch(() => {
+                    navigator.clipboard.writeText(cmd).catch(() => {
                         state.copy(cmd)
-                        message.success('已复制 cURL 命令')
                     })
                 },
             },
@@ -302,7 +298,6 @@ export default function ApiTreeList({ state }: Props) {
                 label: '创建副本',
                 onClick: () => {
                     duplicateApiItem(item.id)
-                    message.success('已复制接口副本')
                 },
             },
             {
@@ -322,7 +317,6 @@ export default function ApiTreeList({ state }: Props) {
                         onConfirm: () => {
                             setConfirm({ open: false, title: '', message: '' })
                             deleteTreeNode(item.id)
-                            message.success('接口已删除')
                         },
                     })
                 },
@@ -431,10 +425,8 @@ export default function ApiTreeList({ state }: Props) {
         }
         if (nameModal.type === 'folder') {
             createFolder(val, nameModal.parentId)
-            message.success('分组创建成功')
         } else if (nameModal.type === 'rename' && nameModal.id) {
             renameTreeNode(nameModal.id, val)
-            message.success('重命名成功')
         }
         setNameModal({ open: false, title: '', type: 'folder', initialValue: '' })
     }

@@ -60,7 +60,6 @@ export default function RolesPanel({
                 !!vals.createRole,
                 vals.connLimit || -1
             )
-            message.success(`角色「${vals.name}」创建成功！`)
             setCreateModalOpen(false)
             createForm.resetFields()
             loadRoles()
@@ -76,7 +75,6 @@ export default function RolesPanel({
         }
         try {
             await API.postgresUpdateRolePassword(serverId, selectedRole, newPassword.trim())
-            message.success(`角色「${selectedRole}」密码修改成功！`)
             setPwdModalOpen(false)
             setNewPassword('')
         } catch (e: any) {
@@ -87,7 +85,6 @@ export default function RolesPanel({
     const handleDropRole = async (roleName: string) => {
         try {
             await API.postgresDropRole(serverId, roleName)
-            message.success(`角色「${roleName}」已删除！`)
             loadRoles()
         } catch (e: any) {
             message.error(`删除失败: ${e.message || e}`)
@@ -109,7 +106,6 @@ export default function RolesPanel({
                 grantPrivs.join(', '),
                 isGrant
             )
-            message.success(`${isGrant ? '授权' : '撤权'}成功！`)
             setGrantModalOpen(false)
         } catch (e: any) {
             message.error(`操作失败: ${e.message || e}`)

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Button, Input, InputNumber, Checkbox, Tag, Tooltip, Space, Alert } from 'antd'
+import { Button, Input, InputNumber, Checkbox, Tag, Tooltip, Space, Alert, message } from 'antd'
 import { RotateCw, Plus, Trash2 } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
@@ -12,10 +12,9 @@ interface Props {
     session: MongoSessionInfo
     db: string
     collection: string | null
-    onNotify: (msg: string, kind?: 'info' | 'error') => void
 }
 
-export default function IndexesTab({ session, db, collection, onNotify }: Props) {
+export default function IndexesTab({ session, db, collection }: Props) {
     const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [indexes, setIndexes] = useState<MongoIndexInfo[]>([])
@@ -62,7 +61,7 @@ export default function IndexesTab({ session, db, collection, onNotify }: Props)
 
     const drop = (idxName: string) => {
         if (idxName === '_id_') {
-            onNotify('默认 _id 索引不可删除', 'error')
+            message.error('默认 _id 索引不可删除')
             return
         }
         setConfirm({
@@ -74,10 +73,10 @@ export default function IndexesTab({ session, db, collection, onNotify }: Props)
                 setConfirm(emptyConfirm)
                 try {
                     await API.mongoDropIndex(id, db, collection!, idxName)
-                    onNotify(`已删除索引 ${idxName}`)
+                    message.success(`已删除索引 ${idxName}`)
                     await load()
                 } catch (e) {
-                    onNotify(errorMessage(e), 'error')
+                    message.error(errorMessage(e))
                 }
             },
         })

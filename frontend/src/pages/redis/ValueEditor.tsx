@@ -35,7 +35,6 @@ export default function ValueEditor({
         setBusy(true)
         try {
             await fn()
-            message.success(successMsg)
             if (onReload) await onReload()
         } catch (e: any) {
             message.error('操作失败: ' + (e.message || String(e)))

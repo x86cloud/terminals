@@ -44,10 +44,8 @@ export default function SaveApiModal({ state }: Props) {
 
             if (saveModalMode === 'save' && currentApiId) {
                 saveCurrentApi(name)
-                message.success('接口保存成功')
             } else {
                 saveAsNewApi(name, folderId)
-                message.success('已保存为新接口')
             }
             setSaveModalOpen(false)
         } catch {

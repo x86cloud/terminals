@@ -3,7 +3,7 @@ import { Button, Segmented, Space, Tooltip, Pagination, Tag, Input } from 'antd'
 import { Database, Plus, Folder, FileText, PanelLeft, Table, RotateCw, Trash2, X, Eraser } from 'lucide-react'
 import ResizableTable, { ColDef } from '@/components/ResizableTable'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
+import { errorMessage, isSameCellValue } from '@/utils'
 import { SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteIndexInfo } from '@/types'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import ObjModal from '@/pages/mysql/ObjModal'
@@ -233,10 +233,9 @@ export default function SqliteClient({ session, onClose }: Props) {
 
     const updateDraft = (rowIdx: number, col: string, rawVal: string) => {
         const orig = rows[rowIdx]?.[col]
-        const origStr = orig === null || orig === undefined ? '' : String(orig)
         setDrafts((prev) => {
             const rowDraft = { ...(prev[rowIdx] || {}) }
-            if (rawVal === origStr) {
+            if (isSameCellValue(orig, rawVal)) {
                 delete rowDraft[col]
             } else {
                 rowDraft[col] = rawVal

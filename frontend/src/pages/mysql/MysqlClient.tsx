@@ -23,6 +23,7 @@ import { API } from '@/api'
 import ClientIcon from '@/components/ClientIcon'
 import { MysqlSessionInfo } from '@/types'
 import { MysqlTabItem, Schema } from './mysqlTypes'
+import TabBar, { TabItem } from '@/components/common/TabBar'
 import DataTab from './DataTab'
 import SqlEditor from './SqlEditor'
 import StatusPanel from './StatusPanel'
@@ -241,12 +242,66 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         setActiveTabKey(tabKey)
     }
 
-    // 关闭 Tab
+    const tabItems: TabItem[] = useMemo(() => {
+        return tabs.map((t) => {
+            let icon: React.ReactNode = null
+            if (t.type === 'status') icon = <Activity size={13} />
+            else if (t.type === 'sql') icon = <Play size={13} />
+            else if (t.type === 'data') icon = <TableIcon size={13} />
+            else if (t.type === 'users') icon = <Users size={13} />
+            else if (t.type === 'er') icon = <Network size={13} />
+
+            return {
+                key: t.key,
+                label: t.label,
+                icon,
+                closable: t.closable,
+            }
+        })
+    }, [tabs])
+
+    // 关闭单个 Tab
     const handleCloseTab = (key: string) => {
-        const nextTabs = tabs.filter((t) => t.key !== key)
+        const targetTab = tabs.find((t) => t.key === key)
+        if (targetTab && !targetTab.closable) return
+
+        const nextTabs = tabs.filter((t) => t.key !== key || !t.closable)
         setTabs(nextTabs)
         if (activeTabKey === key && nextTabs.length > 0) {
-            setActiveTabKey(nextTabs[nextTabs.length - 1].key)
+            const closedIdx = tabs.findIndex((t) => t.key === key)
+            const nextActive = nextTabs[Math.min(closedIdx, nextTabs.length - 1)]
+            if (nextActive) setActiveTabKey(nextActive.key)
+        }
+    }
+
+    // 全部关闭
+    const handleCloseAllTabs = () => {
+        const nextTabs = tabs.filter((t) => !t.closable)
+        setTabs(nextTabs)
+        if (nextTabs.length > 0) {
+            setActiveTabKey(nextTabs[0].key)
+        }
+    }
+
+    // 关闭左侧
+    const handleCloseLeftTabs = (targetKey: string) => {
+        const idx = tabs.findIndex((t) => t.key === targetKey)
+        if (idx <= 0) return
+        const nextTabs = tabs.filter((t, i) => i >= idx || !t.closable)
+        setTabs(nextTabs)
+        if (!nextTabs.some((t) => t.key === activeTabKey) && nextTabs.length > 0) {
+            setActiveTabKey(targetKey)
+        }
+    }
+
+    // 关闭右侧
+    const handleCloseRightTabs = (targetKey: string) => {
+        const idx = tabs.findIndex((t) => t.key === targetKey)
+        if (idx < 0 || idx >= tabs.length - 1) return
+        const nextTabs = tabs.filter((t, i) => i <= idx || !t.closable)
+        setTabs(nextTabs)
+        if (!nextTabs.some((t) => t.key === activeTabKey) && nextTabs.length > 0) {
+            setActiveTabKey(targetKey)
         }
     }
 
@@ -261,7 +316,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 setConfirm(emptyConfirm)
                 try {
                     await API.mysqlDropDatabase(serverId, dbName)
-                    message.success(`数据库「${dbName}」已成功删除！`)
                     initConnection()
                 } catch (e: any) {
                     message.error(`删除数据库失败: ${e.message || e}`)
@@ -281,7 +335,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 setConfirm(emptyConfirm)
                 try {
                     await API.mysqlDropTable(serverId, dbName, table)
-                    message.success(`表「${table}」已删除！`)
                     loadTables(dbName)
                     // 如果该表的 Tab 正打开，自动关闭
                     handleCloseTab(`tbl_${dbName}_${table}`)
@@ -303,7 +356,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 setConfirm(emptyConfirm)
                 try {
                     await API.mysqlTruncateTable(serverId, dbName, table)
-                    message.success(`表「${table}」数据已清空！`)
                     loadTables(dbName)
                 } catch (e: any) {
                     message.error(`清空表失败: ${e.message || e}`)
@@ -336,12 +388,10 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             switch (objModal) {
                 case 'createdb':
                     await API.mysqlCreateDatabase(serverId, objName, 'utf8mb4')
-                    message.success(`已创建数据库 ${objName}`)
                     await initConnection()
                     break
                 case 'createtable':
                     await API.mysqlCreateTable(serverId, currentDb, objName, objExtra)
-                    message.success(`已创建表 ${objName}`)
                     await loadTables(currentDb)
                     openTableTab(currentDb, objName)
                     break
@@ -779,34 +829,17 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             {/* 右侧主工作区 */}
             <main className={my.mainArea}>
                 {/* 顶部标签栏 */}
-                <div className={my.tabBar}>
-                    {tabs.map((t) => (
-                        <div
-                            key={t.key}
-                            className={`${my.tabItem} ${t.key === activeTabKey ? my.active : ''}`}
-                            onClick={() => setActiveTabKey(t.key)}
-                        >
-                            {t.type === 'status' && <Activity size={13} />}
-                            {t.type === 'sql' && <Play size={13} />}
-                            {t.type === 'data' && <TableIcon size={13} />}
-                            {t.type === 'users' && <Users size={13} />}
-                            {t.type === 'er' && <Network size={13} />}
-                            <span>{t.label}</span>
-                            {t.closable && (
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    style={{ width: 14, height: 14, padding: 0 }}
-                                    icon={<X size={10} />}
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleCloseTab(t.key)
-                                    }}
-                                />
-                            )}
-                        </div>
-                    ))}
-                </div>
+                <TabBar
+                    items={tabItems}
+                    activeKey={activeTabKey}
+                    onChange={setActiveTabKey}
+                    onClose={handleCloseTab}
+                    onCloseAll={handleCloseAllTabs}
+                    onCloseLeft={handleCloseLeftTabs}
+                    onCloseRight={handleCloseRightTabs}
+                    size="middle"
+                    className={my.tabBar}
+                />
 
                 {/* 标签页内容渲染 */}
                 <div className={my.tabContent}>
@@ -847,7 +880,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                     slowLog={slowLog}
                                     busy={statusBusy}
                                     onRefresh={loadStatus}
-                                    onNotify={(msg) => message.info(msg)}
                                 />
                             )
                         }
@@ -866,7 +898,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                     onRefreshGrants={() => {
                                         if (selUser) viewGrants(selUser.user, selUser.host)
                                     }}
-                                    onNotify={(msg) => message.info(msg)}
                                 />
                             )
                         }

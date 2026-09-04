@@ -82,21 +82,17 @@ export default function ApiHistoryDrawer({ state, open, item, onClose }: Props) 
         if (type === 'curl') {
             setCopiedCurl(true)
             setTimeout(() => setCopiedCurl(false), 2000)
-            message.success('已复制 cURL 命令')
         } else if (type === 'body') {
             setCopiedBody(true)
             setTimeout(() => setCopiedBody(false), 2000)
-            message.success('已复制请求体')
         } else {
             setCopiedRespBody(true)
             setTimeout(() => setCopiedRespBody(false), 2000)
-            message.success('已复制响应体')
         }
     }
 
     const handleRestore = () => {
         state.loadHistory(item)
-        message.success('已加载到当前调试界面')
         onClose()
     }
 
@@ -184,7 +180,6 @@ export default function ApiHistoryDrawer({ state, open, item, onClose }: Props) 
                                 icon={<Copy size={12} />}
                                 onClick={() => {
                                     state.copy(item.url)
-                                    message.success('已复制 URL')
                                 }}
                             />
                         </Tooltip>

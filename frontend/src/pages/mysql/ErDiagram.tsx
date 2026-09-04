@@ -103,21 +103,7 @@ export default function ErDiagram({
         setPan({ x: fitX, y: fitY })
     }, [ER.svgW, ER.svgH])
 
-    useEffect(() => {
-        autoFit()
-        const timer1 = setTimeout(autoFit, 50)
-        const timer2 = setTimeout(autoFit, 150)
-        return () => {
-            clearTimeout(timer1)
-            clearTimeout(timer2)
-        }
-    }, [autoFit])
-
-    // 切换全屏或容器 Resizing 时触发重新适应
-    useEffect(() => {
-        const timer = setTimeout(() => autoFit(), 60)
-        return () => clearTimeout(timer)
-    }, [isFullscreen, autoFit])
+    // 初始渲染或尺寸变动由 ResizeObserver 负责精确自适应
 
     // 按 Esc 键退出全屏
     useEffect(() => {

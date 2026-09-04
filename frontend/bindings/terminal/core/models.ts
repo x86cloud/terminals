@@ -49,6 +49,46 @@ export interface AppSettings {
 }
 
 /**
+ * DockerComposeRecord 描述在客户端本地保存的一个 Compose 配置文件记录。
+ */
+export interface DockerComposeRecord {
+    /**
+     * 唯一主键 UUID
+     */
+    "id": string;
+
+    /**
+     * 所属 Docker 实例 ID
+     */
+    "serverId": string;
+
+    /**
+     * Docker 项目名 (标准化小写)
+     */
+    "projectName": string;
+
+    /**
+     * 完整的 YAML 编排内容
+     */
+    "yamlContent": string;
+
+    /**
+     * 环境变量键值对
+     */
+    "envVars": { [_ in string]?: string } | null;
+
+    /**
+     * 创建时间
+     */
+    "createdAt": string;
+
+    /**
+     * 最近更新/部署时间
+     */
+    "updatedAt": string;
+}
+
+/**
  * ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker / Postgres。
  */
 export interface ServerConfig {

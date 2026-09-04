@@ -311,6 +311,7 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["mqtt_publish"] = ToolRule{ToolName: "mqtt_publish", Level: LevelAllow, Description: "发布 MQTT 消息"}
 	g.rules["mqtt_subscribe_once"] = ToolRule{ToolName: "mqtt_subscribe_once", Level: LevelAllow, Description: "单次订阅 MQTT 消息"}
 	g.rules["http_request_readonly"] = ToolRule{ToolName: "http_request_readonly", Level: LevelAllow, Description: "发送 HTTP GET 请求"}
+	g.rules["http_request"] = ToolRule{ToolName: "http_request", Level: LevelAllow, Description: "发送全功能 HTTP/HTTPS 网络请求 (支持全方法、请求体与 Header)"}
 
 	g.rules["job_submit"] = ToolRule{ToolName: "job_submit", Level: LevelAllow, Description: "提交后台作业"}
 	g.rules["job_status"] = ToolRule{ToolName: "job_status", Level: LevelAllow, Description: "查询后台作业状态"}
@@ -457,8 +458,8 @@ func (g *PolicyGuard) auditDockerCommand(ctx context.Context, inputJSON string) 
 		}
 	}
 
-	// 只读命令直接放行
-	readCmds := []string{"ps", "logs", "inspect", "images", "image", "volume", "network", "info", "version", "compose"}
+	// 只读/导出命令直接放行
+	readCmds := []string{"ps", "logs", "inspect", "images", "image", "save", "volume", "network", "info", "version", "compose"}
 	for _, rc := range readCmds {
 		if sub == rc {
 			if sub == "compose" && len(parts) > 1 && (parts[1] == "up" || parts[1] == "down" || parts[1] == "restart") {
@@ -472,7 +473,7 @@ func (g *PolicyGuard) auditDockerCommand(ctx context.Context, inputJSON string) 
 	}
 
 	// 容器与镜像变更操作需确认
-	confirmCmds := []string{"start", "stop", "restart", "pause", "unpause", "rm", "rmi", "kill"}
+	confirmCmds := []string{"start", "stop", "restart", "pause", "unpause", "rm", "rmi", "kill", "pull", "load"}
 	for _, cc := range confirmCmds {
 		if sub == cc {
 			return LevelConfirm, fmt.Sprintf("执行 Docker 容器/镜像状态变更 (%s) 需人工审批确认", cc)

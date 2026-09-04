@@ -656,6 +656,61 @@ func (d *DockerClient) RemoveImage(ctx context.Context, id string, force bool) e
 	return err
 }
 
+// SaveImage 导出/下载指定镜像为本地 tar 文件。
+func (d *DockerClient) SaveImage(ctx context.Context, imageIDs []string, destFilePath string) error {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	if d.closed || d.cli == nil {
+		return errors.New("Docker 客户端已关闭")
+	}
+
+	reader, err := d.cli.ImageSave(ctx, imageIDs)
+	if err != nil {
+		return fmt.Errorf("导出镜像失败: %w", err)
+	}
+	defer reader.Close()
+
+	outFile, err := os.Create(destFilePath)
+	if err != nil {
+		return fmt.Errorf("创建导出目标文件失败 (%s): %w", destFilePath, err)
+	}
+	defer outFile.Close()
+
+	if _, err := io.Copy(outFile, reader); err != nil {
+		return fmt.Errorf("写入镜像数据到本地文件失败: %w", err)
+	}
+
+	return nil
+}
+
+// LoadImage 从本地 tar 文件导入/加载镜像。
+func (d *DockerClient) LoadImage(ctx context.Context, srcFilePath string, quiet bool) (string, error) {
+	d.mu.RLock()
+	defer d.mu.RUnlock()
+	if d.closed || d.cli == nil {
+		return "", errors.New("Docker 客户端已关闭")
+	}
+
+	file, err := os.Open(srcFilePath)
+	if err != nil {
+		return "", fmt.Errorf("打开镜像文件失败 (%s): %w", srcFilePath, err)
+	}
+	defer file.Close()
+
+	resp, err := d.cli.ImageLoad(ctx, file, client.ImageLoadWithQuiet(quiet))
+	if err != nil {
+		return "", fmt.Errorf("导入镜像失败: %w", err)
+	}
+	defer resp.Body.Close()
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("读取导入响应失败: %w", err)
+	}
+
+	return string(data), nil
+}
+
 // ListVolumes 获取数据卷列表。
 func (d *DockerClient) ListVolumes(ctx context.Context) ([]DockerVolumeInfo, error) {
 	volResp, err := d.cli.VolumeList(ctx, volume.ListOptions{})

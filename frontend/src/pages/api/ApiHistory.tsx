@@ -73,7 +73,6 @@ export default function ApiHistory({ state }: { state: ApiState }) {
                                     onConfirm: () => {
                                         setConfirm({ open: false, title: '', message: '' })
                                         clearHistory()
-                                        message.success('历史记录已清空')
                                     },
                                 })
                             }}

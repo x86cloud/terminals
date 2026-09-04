@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Table,
     Space,
@@ -28,8 +28,9 @@ import {
 } from 'lucide-react'
 import { API } from '@/api'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
-import K8sContainerTerminalModal from './K8sContainerTerminalModal'
+import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
 import type { K8sPodInfo, K8sContainerSummary } from '@/types'
+import { errorMessage } from '@/utils'
 import s from './K8sClient.module.less'
 
 interface Props {
@@ -77,37 +78,49 @@ export default function PodsTab({ serverId, currentNamespace }: Props) {
 
     // 容器交互式终端模态框
     const [termModalOpen, setTermModalOpen] = useState(false)
-    const [termTarget, setTermTarget] = useState<{
-        podName: string
-        namespace: string
-        containerName: string
-        image?: string
-    } | null>(null)
+    const [termTarget, setTermTarget] = useState<ContainerExecTarget | null>(null)
 
     const openTerminalModal = (pod: K8sPodInfo, container: K8sContainerSummary) => {
         setTermTarget({
-            podName: pod.name,
+            type: 'k8s',
+            serverId,
             namespace: pod.namespace,
+            podName: pod.name,
             containerName: container.name,
+            title: `${pod.name} (${container.name})`,
             image: container.image,
         })
         setTermModalOpen(true)
     }
 
-    const fetchPods = async () => {
+    const fetchPods = useCallback(async () => {
         setLoading(true)
         try {
             const list = await API.k8sListPods(serverId, currentNamespace)
-            setPods(list)
-        } catch (err: any) {
-            message.error(`获取 Pod 列表失败: ${err.message || String(err)}`)
+            setPods(list || [])
+        } catch (err: unknown) {
+            message.error(`获取 Pod 列表失败: ${errorMessage(err)}`)
         } finally {
             setLoading(false)
         }
-    }
+    }, [serverId, currentNamespace])
 
     useEffect(() => {
-        fetchPods()
+        let active = true
+        setLoading(true)
+        API.k8sListPods(serverId, currentNamespace)
+            .then((list) => {
+                if (active) setPods(list || [])
+            })
+            .catch((err: unknown) => {
+                if (active) message.error(`获取 Pod 列表失败: ${errorMessage(err)}`)
+            })
+            .finally(() => {
+                if (active) setLoading(false)
+            })
+        return () => {
+            active = false
+        }
     }, [serverId, currentNamespace])
 
     const fetchLogs = async (pod: K8sPodInfo, container?: string) => {
@@ -154,7 +167,6 @@ export default function PodsTab({ serverId, currentNamespace }: Props) {
     const handleDeletePod = async (pod: K8sPodInfo) => {
         try {
             await API.k8sDeletePod(serverId, pod.namespace, pod.name)
-            message.success(`Pod [${pod.name}] 已发送删除指令`)
             fetchPods()
         } catch (err: any) {
             message.error(`删除 Pod 失败: ${err.message || String(err)}`)
@@ -197,7 +209,6 @@ export default function PodsTab({ serverId, currentNamespace }: Props) {
                                 style={{ marginLeft: 4 }}
                                 onClick={() => {
                                     navigator.clipboard.writeText(name)
-                                    message.success('Pod 名称已复制')
                                 }}
                             />
                         </Tooltip>
@@ -454,7 +465,6 @@ export default function PodsTab({ serverId, currentNamespace }: Props) {
                                                             icon={<Copy size={11} />}
                                                             onClick={() => {
                                                                 navigator.clipboard.writeText(img)
-                                                                message.success('镜像名已复制')
                                                             }}
                                                         />
                                                     </Tooltip>
@@ -619,7 +629,6 @@ export default function PodsTab({ serverId, currentNamespace }: Props) {
                             icon={<Copy size={12} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(logsContent)
-                                message.success('日志已复制到剪贴板')
                             }}
                         >
                             复制
@@ -663,21 +672,15 @@ export default function PodsTab({ serverId, currentNamespace }: Props) {
                 onSuccess={fetchPods}
             />
 
-            {/* 容器交互式终端模态框 */}
-            {termTarget && (
-                <K8sContainerTerminalModal
-                    open={termModalOpen}
-                    onClose={() => {
-                        setTermModalOpen(false)
-                        setTermTarget(null)
-                    }}
-                    serverId={serverId}
-                    namespace={termTarget.namespace}
-                    podName={termTarget.podName}
-                    containerName={termTarget.containerName}
-                    image={termTarget.image}
-                />
-            )}
+            {/* 统一容器交互式终端模态框 */}
+            <ContainerTerminalModal
+                open={termModalOpen}
+                onClose={() => {
+                    setTermModalOpen(false)
+                    setTermTarget(null)
+                }}
+                target={termTarget}
+            />
         </div>
     )
 }

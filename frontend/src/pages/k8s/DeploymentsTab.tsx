@@ -102,7 +102,6 @@ export default function DeploymentsTab({ serverId, currentNamespace }: Props) {
         setScaleLoading(true)
         try {
             await API.k8sScaleDeployment(serverId, activeDeploy.namespace, activeDeploy.name, targetReplicas)
-            message.success(`Deployment [${activeDeploy.name}] 副本数已调整为 ${targetReplicas}`)
             setScaleModalOpen(false)
             fetchDeployments()
         } catch (err: any) {
@@ -115,7 +114,6 @@ export default function DeploymentsTab({ serverId, currentNamespace }: Props) {
     const handleRestart = async (record: K8sDeploymentInfo) => {
         try {
             await API.k8sRestartDeployment(serverId, record.namespace, record.name)
-            message.success(`Deployment [${record.name}] 已触发滚动重启`)
             fetchDeployments()
         } catch (err: any) {
             message.error(`重启 Deployment 失败: ${err.message || String(err)}`)
@@ -125,7 +123,6 @@ export default function DeploymentsTab({ serverId, currentNamespace }: Props) {
     const handleDeleteDeployment = async (record: K8sDeploymentInfo) => {
         try {
             await API.k8sDeleteDeployment(serverId, record.namespace, record.name)
-            message.success(`Deployment [${record.name}] 已成功删除`)
             fetchDeployments()
         } catch (err: any) {
             message.error(`删除 Deployment 失败: ${err.message || String(err)}`)

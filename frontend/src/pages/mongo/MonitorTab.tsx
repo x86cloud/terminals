@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Button, Tag, Space } from 'antd'
+import { Button, Tag, Space, message } from 'antd'
 import { RotateCw } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
@@ -8,7 +8,6 @@ import sh from '@/pages/mongo/mongoShared.module.less'
 
 interface Props {
     session: MongoSessionInfo
-    onNotify: (msg: string, kind?: 'info' | 'error') => void
 }
 
 function fmt(v: any): string {
@@ -41,7 +40,7 @@ function KVTable({ title, obj }: { title: string; obj: any }) {
     )
 }
 
-export default function MonitorTab({ session, onNotify }: Props) {
+export default function MonitorTab({ session }: Props) {
     const [health, setHealth] = useState<MongoHealthInfo | null>(null)
     const [status, setStatus] = useState<MongoServerStatus | null>(null)
     const [client, setClient] = useState<Record<string, any>>({})
@@ -67,11 +66,11 @@ export default function MonitorTab({ session, onNotify }: Props) {
             setOps(op)
         } catch (e) {
             setError(errorMessage(e))
-            onNotify(errorMessage(e), 'error')
+            message.error(errorMessage(e))
         } finally {
             setBusy(false)
         }
-    }, [id, onNotify])
+    }, [id])
 
     useEffect(() => {
         void load()

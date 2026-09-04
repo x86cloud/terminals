@@ -2,6 +2,7 @@ package docker
 
 // DockerComposeStackInfo 表示一个 Compose 项目（Stack）的聚合状态信息。
 type DockerComposeStackInfo struct {
+	UUID            string                     `json:"uuid,omitempty"` // 客户端关联的本地 UUID
 	Name            string                     `json:"name"`
 	Status          string                     `json:"status"` // running, partially_running, stopped
 	RunningServices int                        `json:"runningServices"`
@@ -27,6 +28,7 @@ type DockerComposeServiceInfo struct {
 
 // DockerComposeDeployReq 用于创建或更新 Compose 项目。
 type DockerComposeDeployReq struct {
+	ID          string            `json:"id,omitempty"` // 客户端生成的 UUID
 	ProjectName string            `json:"projectName"`
 	YamlContent string            `json:"yamlContent"`
 	EnvVars     map[string]string `json:"envVars"`

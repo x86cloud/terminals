@@ -33,7 +33,6 @@ interface Props {
     onSelect: (user: string, host: string) => void
     onRefreshUsers: () => Promise<void> | void
     onRefreshGrants?: () => Promise<void> | void
-    onNotify?: (msg: string) => void
 }
 
 export default function UsersPanel({
@@ -45,7 +44,6 @@ export default function UsersPanel({
     onSelect,
     onRefreshUsers,
     onRefreshGrants,
-    onNotify,
 }: Props) {
     const [copied, setCopied] = useState(false)
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
@@ -58,8 +56,7 @@ export default function UsersPanel({
     const [changePwdUser, setChangePwdUser] = useState<{ user: string; host: string } | null>(null)
 
     const notify = (msg: string) => {
-        if (onNotify) onNotify(msg)
-        else message.success(msg)
+        message.success(msg)
     }
 
     const notifyError = (msg: string) => {

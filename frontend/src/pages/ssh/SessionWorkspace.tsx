@@ -16,7 +16,6 @@ export interface SessionWorkspaceProps {
     active: boolean
     nativeDrop: boolean
     onPathChange: (sessionId: string, p: string) => void
-    onNotify: (msg: string, kind?: 'info' | 'error') => void
 }
 
 export default function SessionWorkspace({
@@ -24,7 +23,6 @@ export default function SessionWorkspace({
     active,
     nativeDrop,
     onPathChange,
-    onNotify,
 }: SessionWorkspaceProps) {
     const rootRef = useRef<HTMLDivElement | null>(null)
     const [panelWidth, setPanelWidth] = useState<number>(() => {
@@ -38,7 +36,7 @@ export default function SessionWorkspace({
     const [showPanel, setShowPanel] = useState<boolean>(true)
     const [isMaximized, setIsMaximized] = useState<boolean>(false)
     const [activeTab, setActiveTab] = useState<'files' | 'process' | 'service' | 'cron' | 'dashboard'>('files')
-
+    const [isDragging, setIsDragging] = useState(false)
     const draggingRef = useRef(false)
     const panelWidthRef = useRef(panelWidth)
     panelWidthRef.current = panelWidth
@@ -60,7 +58,7 @@ export default function SessionWorkspace({
         const onMouseUp = () => {
             if (draggingRef.current) {
                 draggingRef.current = false
-                document.body.classList.remove('resizing')
+                setIsDragging(false)
                 localStorage.setItem('ssh_file_panel_width', String(panelWidthRef.current))
             }
         }
@@ -98,12 +96,23 @@ export default function SessionWorkspace({
 
             {showPanel && (
                 <>
+                    {isDragging && (
+                        <div
+                            style={{
+                                position: 'fixed',
+                                inset: 0,
+                                zIndex: 99999,
+                                cursor: 'col-resize',
+                                userSelect: 'none',
+                            }}
+                        />
+                    )}
                     {!isMaximized && (
                         <div
                             className={w.splitter}
                             onMouseDown={() => {
                                 draggingRef.current = true
-                                document.body.classList.add('resizing')
+                                setIsDragging(true)
                             }}
                         />
                     )}
@@ -150,28 +159,23 @@ export default function SessionWorkspace({
                                     homeDir={session.homeDir}
                                     nativeDrop={nativeDrop}
                                     onPathChange={handlePath}
-                                    onNotify={onNotify}
                                 />
                             </div>
                             <DashboardPanel
                                 sessionId={session.id}
                                 active={activeTab === 'dashboard'}
-                                onNotify={onNotify}
                             />
                             <ProcessPanel
                                 sessionId={session.id}
                                 active={activeTab === 'process'}
-                                onNotify={onNotify}
                             />
                             <ServicePanel
                                 sessionId={session.id}
                                 active={activeTab === 'service'}
-                                onNotify={onNotify}
                             />
                             <CronPanel
                                 sessionId={session.id}
                                 active={activeTab === 'cron'}
-                                onNotify={onNotify}
                             />
                         </div>
                     </div>

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
-import { Button, Input, Checkbox, Tooltip } from 'antd'
+import { Button, Input, Checkbox, Tooltip, message } from 'antd'
 import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload } from 'lucide-react'
 import ContextMenu, {closedMenu, MenuItem, MenuState} from '@/components/ContextMenu'
 import {ConfirmModal, ConfirmState, PromptModal, PromptState} from '@/components/Modal'
@@ -15,13 +15,12 @@ interface Props {
     homeDir: string
     nativeDrop: boolean
     onPathChange: (path: string) => void
-    onNotify: (message: string, kind?: 'info' | 'error') => void
 }
 
 const emptyPrompt: PromptState = {open: false, title: '', value: ''}
 const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
 
-export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange, onNotify}: Props) {
+export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange}: Props) {
     const [path, setPath] = useState(homeDir || '/')
     const [pathInput, setPathInput] = useState(homeDir || '/')
     const [items, setItems] = useState<FileItem[]>([])
@@ -56,12 +55,12 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                 setSelected([])
                 onPathChange(listing.path)
             } catch (err) {
-                onNotify(errorMessage(err), 'error')
+                message.error(errorMessage(err))
             } finally {
                 setLoading(false)
             }
         },
-        [sessionId, onPathChange, onNotify]
+        [sessionId, onPathChange]
     )
 
     useEffect(() => {
@@ -125,7 +124,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
         try {
             await API.downloadPaths(sessionId, paths)
         } catch (err) {
-            onNotify(errorMessage(err), 'error')
+            message.error(errorMessage(err))
         }
     }
 
@@ -136,7 +135,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                 await API.uploadPaths(sessionId, path, files)
             }
         } catch (err) {
-            onNotify(errorMessage(err), 'error')
+            message.error(errorMessage(err))
         }
     }
 
@@ -145,7 +144,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
             const dir = await API.chooseLocalFolder()
             if (dir) await API.uploadPaths(sessionId, path, [dir])
         } catch (err) {
-            onNotify(errorMessage(err), 'error')
+            message.error(errorMessage(err))
         }
     }
 
@@ -162,7 +161,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     await API.writeRemoteFile(sessionId, fullPath, '')
                     await load(path, true)
                 } catch (err) {
-                    onNotify(errorMessage(err), 'error')
+                    message.error(errorMessage(err))
                 }
             },
         })
@@ -180,7 +179,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     await API.makeDir(sessionId, path, value)
                     await load(path, true)
                 } catch (err) {
-                    onNotify(errorMessage(err), 'error')
+                    message.error(errorMessage(err))
                 }
             },
         })
@@ -198,7 +197,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     await API.rename(sessionId, item.path, value)
                     await load(path, true)
                 } catch (err) {
-                    onNotify(errorMessage(err), 'error')
+                    message.error(errorMessage(err))
                 }
             },
         })
@@ -219,7 +218,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                     await API.removePaths(sessionId, paths)
                     await load(path, true)
                 } catch (err) {
-                    onNotify(errorMessage(err), 'error')
+                    message.error(errorMessage(err))
                 }
             },
         })
@@ -228,9 +227,9 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
     const copyText = async (text: string) => {
         try {
             await navigator.clipboard.writeText(text)
-            onNotify('已复制到剪贴板')
+            message.success('已复制到剪贴板')
         } catch {
-            onNotify('复制失败', 'error')
+            message.error('复制失败')
         }
     }
 
@@ -271,7 +270,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                 const buffer = await file.arrayBuffer()
                 await API.uploadData(sessionId, path, file.name, bytesToBase64(buffer))
             } catch (err) {
-                onNotify(errorMessage(err), 'error')
+                message.error(errorMessage(err))
             }
         }
     }
@@ -424,7 +423,6 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange,
                 sessionId={sessionId}
                 filePath={editFilePath}
                 onClose={() => setEditFilePath('')}
-                onNotify={onNotify}
             />
         </section>
     )

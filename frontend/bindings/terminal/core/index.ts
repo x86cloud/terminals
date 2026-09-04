@@ -3,6 +3,7 @@
 
 export type {
     AppSettings,
+    DockerComposeRecord,
     ServerConfig,
     ServerGroup
 } from "./models.js";

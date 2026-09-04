@@ -24,6 +24,7 @@ import { API } from '@/api'
 import ClientIcon from '@/components/ClientIcon'
 import { PostgresSessionInfo } from '@/types'
 import { PgDatabase, PgSchema, PgTable, PgFunction, PostgresTabItem } from './postgresTypes'
+import TabBar, { TabItem } from '@/components/common/TabBar'
 import DataTab from './DataTab'
 import SqlEditor from './SqlEditor'
 import StatusPanel from './StatusPanel'
@@ -214,12 +215,67 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
         setActiveTabKey(tabKey)
     }
 
-    // 关闭 Tab
+    const tabItems: TabItem[] = useMemo(() => {
+        return tabs.map((t) => {
+            let icon: React.ReactNode = null
+            if (t.type === 'status') icon = <Activity size={13} />
+            else if (t.type === 'sql') icon = <Play size={13} />
+            else if (t.type === 'data') icon = <Table size={13} />
+            else if (t.type === 'roles') icon = <Users size={13} />
+            else if (t.type === 'functions') icon = <Code2 size={13} />
+            else if (t.type === 'er') icon = <Network size={13} />
+
+            return {
+                key: t.key,
+                label: t.label,
+                icon,
+                closable: t.closable,
+            }
+        })
+    }, [tabs])
+
+    // 关闭单个 Tab
     const handleCloseTab = (key: string) => {
-        const nextTabs = tabs.filter((t) => t.key !== key)
+        const targetTab = tabs.find((t) => t.key === key)
+        if (targetTab && !targetTab.closable) return
+
+        const nextTabs = tabs.filter((t) => t.key !== key || !t.closable)
         setTabs(nextTabs)
         if (activeTabKey === key && nextTabs.length > 0) {
-            setActiveTabKey(nextTabs[nextTabs.length - 1].key)
+            const closedIdx = tabs.findIndex((t) => t.key === key)
+            const nextActive = nextTabs[Math.min(closedIdx, nextTabs.length - 1)]
+            if (nextActive) setActiveTabKey(nextActive.key)
+        }
+    }
+
+    // 全部关闭
+    const handleCloseAllTabs = () => {
+        const nextTabs = tabs.filter((t) => !t.closable)
+        setTabs(nextTabs)
+        if (nextTabs.length > 0) {
+            setActiveTabKey(nextTabs[0].key)
+        }
+    }
+
+    // 关闭左侧
+    const handleCloseLeftTabs = (targetKey: string) => {
+        const idx = tabs.findIndex((t) => t.key === targetKey)
+        if (idx <= 0) return
+        const nextTabs = tabs.filter((t, i) => i >= idx || !t.closable)
+        setTabs(nextTabs)
+        if (!nextTabs.some((t) => t.key === activeTabKey) && nextTabs.length > 0) {
+            setActiveTabKey(targetKey)
+        }
+    }
+
+    // 关闭右侧
+    const handleCloseRightTabs = (targetKey: string) => {
+        const idx = tabs.findIndex((t) => t.key === targetKey)
+        if (idx < 0 || idx >= tabs.length - 1) return
+        const nextTabs = tabs.filter((t, i) => i <= idx || !t.closable)
+        setTabs(nextTabs)
+        if (!nextTabs.some((t) => t.key === activeTabKey) && nextTabs.length > 0) {
+            setActiveTabKey(targetKey)
         }
     }
 
@@ -227,7 +283,6 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
     const handleDropDb = async (dbName: string) => {
         try {
             await API.postgresDropDatabase(serverId, dbName)
-            message.success(`数据库「${dbName}」已删除！`)
             initConnection()
         } catch (e: any) {
             message.error(`删除失败: ${e.message || e}`)
@@ -238,7 +293,6 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
     const handleDropSchema = async (dbName: string, schema: string) => {
         try {
             await API.postgresDropSchema(serverId, dbName, schema, true)
-            message.success(`Schema「${schema}」已删除！`)
             loadSchemas(dbName)
         } catch (e: any) {
             message.error(`删除失败: ${e.message || e}`)
@@ -249,7 +303,6 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
     const handleDropTable = async (dbName: string, schema: string, table: string) => {
         try {
             await API.postgresDropTable(serverId, dbName, schema, table, true)
-            message.success(`表「${table}」已删除！`)
             loadTables(dbName, schema)
         } catch (e: any) {
             message.error(`删除失败: ${e.message || e}`)
@@ -260,7 +313,6 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
     const handleTruncateTable = async (dbName: string, schema: string, table: string) => {
         try {
             await API.postgresTruncateTable(serverId, dbName, schema, table, true, false)
-            message.success(`表「${table}」已清空！`)
             loadTables(dbName, schema)
         } catch (e: any) {
             message.error(`清空失败: ${e.message || e}`)
@@ -595,35 +647,17 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
             {/* 右侧主工作区 */}
             <main className={pg.mainArea}>
                 {/* 标签栏 */}
-                <div className={pg.tabBar}>
-                    {tabs.map((t) => (
-                        <div
-                            key={t.key}
-                            className={`${pg.tabItem} ${t.key === activeTabKey ? pg.active : ''}`}
-                            onClick={() => setActiveTabKey(t.key)}
-                        >
-                            {t.type === 'status' && <Activity size={13} />}
-                            {t.type === 'sql' && <Play size={13} />}
-                            {t.type === 'data' && <Table size={13} />}
-                            {t.type === 'roles' && <Users size={13} />}
-                            {t.type === 'functions' && <Code2 size={13} />}
-                            {t.type === 'er' && <Network size={13} />}
-                            <span>{t.label}</span>
-                            {t.closable && (
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    style={{ width: 14, height: 14, padding: 0 }}
-                                    icon={<X size={10} />}
-                                    onClick={(e) => {
-                                        e.stopPropagation()
-                                        handleCloseTab(t.key)
-                                    }}
-                                />
-                            )}
-                        </div>
-                    ))}
-                </div>
+                <TabBar
+                    items={tabItems}
+                    activeKey={activeTabKey}
+                    onChange={setActiveTabKey}
+                    onClose={handleCloseTab}
+                    onCloseAll={handleCloseAllTabs}
+                    onCloseLeft={handleCloseLeftTabs}
+                    onCloseRight={handleCloseRightTabs}
+                    size="middle"
+                    className={pg.tabBar}
+                />
 
                 {/* 标签内容展示区 */}
                 <div className={pg.tabContent}>

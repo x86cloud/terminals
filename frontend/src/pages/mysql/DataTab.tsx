@@ -20,6 +20,7 @@ import {
     Check,
 } from 'lucide-react'
 import { API } from '@/api'
+import { isSameCellValue, coerceCellValue } from '@/utils'
 import ResizableTable, { ColDef } from '@/components/ResizableTable'
 import { MysqlColumn, MysqlIndex, MysqlConstraint } from './mysqlTypes'
 import CellEditorInline from './CellEditorInline'
@@ -245,7 +246,7 @@ export default function DataTab({
         setEditingCell(null)
         const origVal = rows[rowIdx]?.[col]
         const newVal = isNull ? null : val
-        if (origVal === newVal) {
+        if (isSameCellValue(origVal, newVal)) {
             setRowDrafts((prev) => {
                 const next = { ...prev }
                 if (next[rowIdx]) {
@@ -259,11 +260,12 @@ export default function DataTab({
             return
         }
 
+        const coerced = coerceCellValue(origVal, val, isNull)
         setRowDrafts((prev) => ({
             ...prev,
             [rowIdx]: {
                 ...(prev[rowIdx] || {}),
-                [col]: newVal,
+                [col]: coerced,
             },
         }))
     }
@@ -320,7 +322,6 @@ export default function DataTab({
                 }
             }
 
-            message.success('已成功保存所有数据变更！')
             loadData(page, pageSize, activeWhere)
         } catch (e: any) {
             message.error('保存失败: ' + (e.message || e))
@@ -350,7 +351,6 @@ export default function DataTab({
 
         try {
             await API.mysqlDelete(serverId, dbName, tableName, whereCols, whereVals)
-            message.success('已成功删除行！')
             loadData(page, pageSize, activeWhere)
         } catch (e: any) {
             message.error('删除失败: ' + (e.message || e))
@@ -807,7 +807,6 @@ export default function DataTab({
                             icon={<Copy size={13} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(ddlText)
-                                message.success('已复制 DDL 脚本到剪贴板！')
                             }}
                         >
                             复制 DDL

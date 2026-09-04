@@ -57,7 +57,6 @@ export default function VolumesTab({ serverId }: Props) {
         setCreating(true)
         try {
             await API.dockerCreateVolume(serverId, volName.trim(), volDriver.trim() || 'local', {})
-            message.success(`数据卷 ${volName.trim()} 创建成功`)
             setCreateModal(false)
             setVolName('')
             fetchVolumes()
@@ -71,7 +70,6 @@ export default function VolumesTab({ serverId }: Props) {
     const handleDelete = async (name: string) => {
         try {
             await API.dockerRemoveVolume(serverId, name, true)
-            message.success('数据卷已删除')
             fetchVolumes()
         } catch (err: any) {
             message.error(`删除数据卷失败: ${err.message || String(err)}`)
@@ -120,7 +118,6 @@ export default function VolumesTab({ serverId }: Props) {
                             icon={<Copy size={11} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(mountpoint)
-                                message.success('路径已复制')
                             }}
                         />
                     </Tooltip>

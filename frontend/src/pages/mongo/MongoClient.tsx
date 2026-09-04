@@ -209,11 +209,6 @@ export default function MongoClient({session, onClose, onChange}: Props) {
         {key: 'stream', label: '变更流'},
     ]
 
-    const notify = (msg: string, kind?: 'info' | 'error') => {
-        if (typeof (window as any).__toast === 'function') (window as any).__toast(msg, kind)
-        else console.log(msg)
-    }
-
     return (
         <div className={m.mongoPane}>
             <div className={m.mongoSide}>
@@ -338,22 +333,22 @@ export default function MongoClient({session, onClose, onChange}: Props) {
 
                 <div className={m.mongoContent}>
                     {tab === 'documents' && (
-                        <DocumentsTab session={session} db={db} collection={selected} onNotify={notify} />
+                        <DocumentsTab session={session} db={db} collection={selected} />
                     )}
                     {tab === 'aggregate' && (
                         <AggregateTab session={session} db={db} collection={selected} />
                     )}
                     {tab === 'indexes' && (
-                        <IndexesTab session={session} db={db} collection={selected} onNotify={notify} />
+                        <IndexesTab session={session} db={db} collection={selected} />
                     )}
                     {tab === 'schema' && (
-                        <SchemaTab session={session} db={db} collection={selected} onNotify={notify} />
+                        <SchemaTab session={session} db={db} collection={selected} />
                     )}
                     {tab === 'monitor' && (
-                        <MonitorTab session={session} onNotify={notify} />
+                        <MonitorTab session={session} />
                     )}
                     {tab === 'stream' && (
-                        <ChangeStreamTab session={session} db={db} collection={selected} onNotify={notify} />
+                        <ChangeStreamTab session={session} db={db} collection={selected} />
                     )}
                 </div>
             </div>

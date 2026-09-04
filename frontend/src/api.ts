@@ -66,6 +66,7 @@ import type {
     FrontendMessage,
     DockerComposeStackInfo,
     DockerComposeDeployReq,
+    DockerComposeRecord,
     KubeconfigContextInfo,
     K8sApplyResult,
 } from './types'
@@ -684,6 +685,10 @@ export const API = {
         DockerService.DockerInspectImage(id, imageId),
     dockerPullImage: (id: string, imageName: string): Promise<string> =>
         DockerService.DockerPullImage(id, imageName),
+    dockerSaveImage: (id: string, imageIdOrTag: string, defaultFilename: string): Promise<string> =>
+        DockerService.DockerSaveImage(id, imageIdOrTag, defaultFilename),
+    dockerLoadImage: (id: string): Promise<string> =>
+        DockerService.DockerLoadImage(id),
     dockerRemoveImage: (id: string, imageId: string, force: boolean): Promise<void> =>
         DockerService.DockerRemoveImage(id, imageId, force),
     dockerListVolumes: (id: string) => DockerService.DockerListVolumes(id).then(r => r || []),
@@ -710,6 +715,24 @@ export const API = {
         DockerService.DockerControlComposeStack(id, projectName, action),
     dockerGetComposeStackLogs: (id: string, projectName: string, tail: number): Promise<string> =>
         DockerService.DockerGetComposeStackLogs(id, projectName, tail),
+    dockerListComposeRecords: (serverId: string): Promise<DockerComposeRecord[]> =>
+        DockerService.DockerListComposeRecords(serverId).then(r => (r || []) as any),
+    dockerGetComposeRecord: (id: string): Promise<DockerComposeRecord | null> =>
+        DockerService.DockerGetComposeRecord(id) as any,
+    dockerSaveComposeRecord: (record: DockerComposeRecord): Promise<DockerComposeRecord | null> =>
+        DockerService.DockerSaveComposeRecord(record as any) as any,
+    dockerDeleteComposeRecord: (serverId: string, id: string): Promise<void> =>
+        DockerService.DockerDeleteComposeRecord(serverId, id),
+    dockerUpComposeStack: (serverId: string, record: DockerComposeRecord, forcePull = false, recreate = false): Promise<DockerComposeRecord | null> =>
+        DockerService.DockerUpComposeStack(serverId, record as any, forcePull, recreate) as any,
+    dockerExecStart: (serverId: string, containerId: string, command: string, cols: number, rows: number): Promise<string> =>
+        (DockerService as any).DockerExecStart(serverId, containerId, command, cols, rows),
+    dockerExecWrite: (execId: string, data: string): Promise<void> =>
+        (DockerService as any).DockerExecWrite(execId, data),
+    dockerExecResize: (serverId: string, execId: string, cols: number, rows: number): Promise<void> =>
+        (DockerService as any).DockerExecResize(serverId, execId, cols, rows),
+    dockerExecClose: (execId: string): Promise<void> =>
+        (DockerService as any).DockerExecClose(execId),
 
     // Kubernetes (K8s) 独立客户端
     k8sConnect: (id: string): Promise<boolean> => K8sService.K8sConnect(id),

@@ -1,5 +1,5 @@
 import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import { Input, Button, Switch, Table, Modal, Alert, Tag, Space, Tooltip } from 'antd'
+import { Input, Button, Switch, Table, Modal, Alert, Tag, Space, Tooltip, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Plus, Search, RotateCw, Play, Edit, Trash2 } from 'lucide-react'
 import {ConfirmModal, ConfirmState} from '@/components/Modal'
@@ -12,10 +12,9 @@ import c from '@/pages/ssh/cron/CronPanel.module.less'
 interface Props {
     sessionId: string
     active: boolean
-    onNotify?: (message: string, kind?: 'info' | 'error') => void
 }
 
-export default function CronPanel({sessionId, active, onNotify}: Props) {
+export default function CronPanel({sessionId, active}: Props) {
     const [items, setItems] = useState<SSHCronItem[]>([])
     const [busy, setBusy] = useState(false)
     const [loaded, setLoaded] = useState(false)
@@ -52,11 +51,11 @@ export default function CronPanel({sessionId, active, onNotify}: Props) {
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
-            if (onNotify) onNotify(`读取 Crontab 任务失败: ${msg}`, 'error')
+            message.error(`读取 Crontab 任务失败: ${msg}`)
         } finally {
             setBusy(false)
         }
-    }, [sessionId, onNotify])
+    }, [sessionId])
 
     useEffect(() => {
         if (active && !loaded && !busy) {
@@ -80,10 +79,10 @@ export default function CronPanel({sessionId, active, onNotify}: Props) {
         try {
             await API.sshSaveCronList(sessionId, nextList)
             setItems(nextList)
-            if (onNotify) onNotify('Crontab 定时任务保存成功')
+            message.success('Crontab 定时任务保存成功')
         } catch (e) {
             const msg = errorMessage(e)
-            if (onNotify) onNotify(`保存失败: ${msg}`, 'error')
+            message.error(`保存失败: ${msg}`)
             await fetchCrons()
         } finally {
             setBusy(false)

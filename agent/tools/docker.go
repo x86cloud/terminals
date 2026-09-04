@@ -374,6 +374,62 @@ func executeDockerCLI(ctx context.Context, cli *docker.DockerClient, rawCmd stri
 		}
 		return fmt.Sprintf("镜像已删除: %s", id), nil
 
+	case "pull":
+		if len(parts) < 2 {
+			return "", fmt.Errorf("用法: docker pull <image_name>")
+		}
+		imgName := parts[1]
+		return cli.PullImage(ctx, imgName)
+
+	case "save":
+		if len(parts) < 2 {
+			return "", fmt.Errorf("用法: docker save -o <output.tar> <image_name>")
+		}
+		var outFile string
+		var imgNames []string
+		for i := 1; i < len(parts); i++ {
+			p := parts[i]
+			if (p == "-o" || p == "--output") && i+1 < len(parts) {
+				outFile = parts[i+1]
+				i++
+			} else if !strings.HasPrefix(p, "-") {
+				imgNames = append(imgNames, p)
+			}
+		}
+		if outFile == "" {
+			return "", fmt.Errorf("未指定导出目标文件路径 (-o <file.tar>)")
+		}
+		if len(imgNames) == 0 {
+			return "", fmt.Errorf("未指定要导出的镜像")
+		}
+		if err := cli.SaveImage(ctx, imgNames, outFile); err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("镜像 %s 已成功导出保存到: %s", strings.Join(imgNames, ", "), outFile), nil
+
+	case "load":
+		if len(parts) < 2 {
+			return "", fmt.Errorf("用法: docker load -i <input.tar>")
+		}
+		var inFile string
+		for i := 1; i < len(parts); i++ {
+			p := parts[i]
+			if (p == "-i" || p == "--input") && i+1 < len(parts) {
+				inFile = parts[i+1]
+				i++
+			} else if !strings.HasPrefix(p, "-") {
+				inFile = p
+			}
+		}
+		if inFile == "" {
+			return "", fmt.Errorf("未指定导入镜像文件路径 (-i <file.tar>)")
+		}
+		res, err := cli.LoadImage(ctx, inFile, false)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("镜像导入结果:\n%s", res), nil
+
 	case "volume":
 		list, err := cli.ListVolumes(ctx)
 		if err != nil {

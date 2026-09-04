@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Select, Button, Segmented, Space, Badge, Tag, Tooltip, Input } from 'antd'
+import { Select, Button, Segmented, Space, Badge, Tag, Tooltip, Input, message } from 'antd'
 import {
     Activity,
     Zap,
@@ -18,7 +18,10 @@ import {
     Info,
     AlertTriangle,
     Shield,
-    Server
+    Server,
+    FileText,
+    Cpu,
+    ExternalLink
 } from 'lucide-react'
 import StatusCard from '@/pages/mysql/StatusCard'
 import { formatSize, errorMessage } from '@/utils'
@@ -34,7 +37,6 @@ interface Props {
     slowLog: Record<string, any>[]
     busy: boolean
     onRefresh: () => void
-    onNotify?: (msg: string, kind?: 'info' | 'error') => void
 }
 
 function formatUptime(seconds: number): string {
@@ -56,7 +58,6 @@ export default function StatusPanel({
     slowLog,
     busy,
     onRefresh,
-    onNotify,
 }: Props) {
     const [subTab, setSubTab] = useState<'process' | 'slow' | 'variables'>('process')
     const [autoRefreshSec, setAutoRefreshSec] = useState<number>(0)
@@ -94,10 +95,10 @@ export default function StatusPanel({
         setKillingId(pid)
         try {
             await API.mysqlRun(sessionId, '', `KILL ${pid}`)
-            onNotify?.(`已终止进程 #${pid}`)
+            message.success(`已终止进程 #${pid}`)
             onRefresh()
         } catch (e) {
-            onNotify?.(`终止进程失败: ${errorMessage(e)}`, 'error')
+            message.error(`终止进程失败: ${errorMessage(e)}`)
         } finally {
             setKillingId(null)
         }

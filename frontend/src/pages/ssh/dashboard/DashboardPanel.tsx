@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Button, Progress, Checkbox, Table, Tag, Alert, Space, Card } from 'antd'
+import { Button, Progress, Checkbox, Table, Tag, Alert, Space, Card, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { RotateCw, Server, Terminal, Database, Plug } from 'lucide-react'
 import { API } from '@/api'
@@ -10,7 +10,6 @@ import d from '@/pages/ssh/dashboard/DashboardPanel.module.less'
 interface Props {
     sessionId: string
     active: boolean
-    onNotify?: (message: string, kind?: 'info' | 'error') => void
 }
 
 function fmtBytes(bytes: number): string {
@@ -44,7 +43,7 @@ function cleanUptime(str: string): string {
     return str
 }
 
-export default function DashboardPanel({ sessionId, active, onNotify }: Props) {
+export default function DashboardPanel({ sessionId, active }: Props) {
     const [data, setData] = useState<SSHDashboardInfo | null>(null)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
@@ -63,11 +62,11 @@ export default function DashboardPanel({ sessionId, active, onNotify }: Props) {
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
-            if (onNotify) onNotify(`获取系统仪表盘失败: ${msg}`, 'error')
+            message.error(`获取系统仪表盘失败: ${msg}`)
         } finally {
             setBusy(false)
         }
-    }, [sessionId, onNotify])
+    }, [sessionId])
 
     useEffect(() => {
         if (active && !data && !busy) {

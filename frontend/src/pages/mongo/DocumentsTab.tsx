@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Button, InputNumber, Space, Tooltip, Pagination, Tag, Modal, Alert } from 'antd'
+import { Button, InputNumber, Space, Tooltip, Pagination, Tag, Modal, Alert, message } from 'antd'
 import { Search, Plus, ChevronDown, ChevronRight, Edit, Copy, Trash2 } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
@@ -12,12 +12,11 @@ interface Props {
     session: MongoSessionInfo
     db: string
     collection: string | null
-    onNotify: (msg: string, kind?: 'info' | 'error') => void
 }
 
 const DEFAULT_LIMIT = 50
 
-export default function DocumentsTab({ session, db, collection, onNotify }: Props) {
+export default function DocumentsTab({ session, db, collection }: Props) {
     const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [docs, setDocs] = useState<string[]>([])
@@ -98,10 +97,10 @@ export default function DocumentsTab({ session, db, collection, onNotify }: Prop
                 try {
                     const filterSpec = idStr ? `{"_id":${idStr}}` : raw
                     const deletedCount = await API.mongoDeleteOne(session.id, db, collection!, filterSpec)
-                    onNotify(`已删除 ${deletedCount} 条文档`)
+                    message.success(`已删除 ${deletedCount} 条文档`)
                     void runQuery(page)
                 } catch (e) {
-                    onNotify(errorMessage(e), 'error')
+                    message.error(errorMessage(e))
                 }
             },
         })
@@ -112,7 +111,7 @@ export default function DocumentsTab({ session, db, collection, onNotify }: Prop
         setEditorError('')
         try {
             await API.mongoInsertOne(session.id, db, collection!, editorText)
-            onNotify('文档插入成功')
+            message.success('文档插入成功')
             setEditOpen(null)
             void runQuery(1)
         } catch (e) {
@@ -136,7 +135,7 @@ export default function DocumentsTab({ session, db, collection, onNotify }: Prop
                 }
             }
             const res = await API.mongoUpdateOne(session.id, db, collection!, filterSpec, editorText, false)
-            onNotify(`已更新文档（匹配 ${res.matchedCount ?? 1} 条）`)
+            message.success(`已更新文档（匹配 ${res.matchedCount ?? 1} 条）`)
             setEditOpen(null)
             void runQuery(page)
         } catch (e) {
@@ -160,7 +159,7 @@ export default function DocumentsTab({ session, db, collection, onNotify }: Prop
                 }
             }
             const res = await API.mongoReplaceOne(session.id, db, collection!, filterSpec, editorText, false)
-            onNotify(`已替换文档（匹配 ${res.matchedCount ?? 1} 条）`)
+            message.success(`已替换文档（匹配 ${res.matchedCount ?? 1} 条）`)
             setEditOpen(null)
             void runQuery(page)
         } catch (e) {

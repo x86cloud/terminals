@@ -116,7 +116,6 @@ export default function ConfigStorageTab({ serverId, currentNamespace }: Props) 
     const handleDeleteConfigMap = async (record: K8sConfigMapInfo) => {
         try {
             await API.k8sDeleteConfigMap(serverId, record.namespace, record.name)
-            message.success(`ConfigMap [${record.name}] 已删除`)
             fetchData()
         } catch (err: any) {
             message.error(`删除 ConfigMap 失败: ${err.message || String(err)}`)
@@ -126,7 +125,6 @@ export default function ConfigStorageTab({ serverId, currentNamespace }: Props) 
     const handleDeleteSecret = async (record: K8sSecretInfo) => {
         try {
             await API.k8sDeleteSecret(serverId, record.namespace, record.name)
-            message.success(`Secret [${record.name}] 已删除`)
             fetchData()
         } catch (err: any) {
             message.error(`删除 Secret 失败: ${err.message || String(err)}`)
@@ -136,7 +134,6 @@ export default function ConfigStorageTab({ serverId, currentNamespace }: Props) 
     const handleDeletePVC = async (record: K8sPVCInfo) => {
         try {
             await API.k8sDeletePVC(serverId, record.namespace, record.name)
-            message.success(`PVC [${record.name}] 已删除`)
             fetchData()
         } catch (err: any) {
             message.error(`删除 PVC 失败: ${err.message || String(err)}`)
@@ -191,7 +188,6 @@ export default function ConfigStorageTab({ serverId, currentNamespace }: Props) 
                             icon={<Copy size={11} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(name)
-                                message.success('配置名已复制')
                             }}
                         />
                     </Tooltip>
@@ -285,7 +281,6 @@ export default function ConfigStorageTab({ serverId, currentNamespace }: Props) 
                             icon={<Copy size={11} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(name)
-                                message.success('密钥名已复制')
                             }}
                         />
                     </Tooltip>
@@ -373,7 +368,6 @@ export default function ConfigStorageTab({ serverId, currentNamespace }: Props) 
                             icon={<Copy size={11} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(name)
-                                message.success('PVC 名已复制')
                             }}
                         />
                     </Tooltip>

@@ -85,7 +85,6 @@ export default function K8sYamlGenerateModal({
                 throw new Error('未获取到生成的 YAML 内容')
             }
             onGenerated(resultYaml)
-            message.success('YAML 已成功生成并载入编辑器')
             onClose()
         } catch (err: any) {
             message.error(`生成 YAML 失败: ${err.message || String(err)}`)

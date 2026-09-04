@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Modal, Button, Tag, Spin, Space } from 'antd'
+import { Modal, Button, Tag, Spin, Space, message } from 'antd'
 import { FileText, Save } from 'lucide-react'
 import CodeEditor, { LangKey } from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -11,10 +11,9 @@ interface Props {
     sessionId: string
     filePath: string
     onClose: () => void
-    onNotify: (message: string, kind?: 'info' | 'error') => void
 }
 
-export default function FileEditorModal({ open, sessionId, filePath, onClose, onNotify }: Props) {
+export default function FileEditorModal({ open, sessionId, filePath, onClose }: Props) {
     const [content, setContent] = useState('')
     const [originalContent, setOriginalContent] = useState('')
     const [loading, setLoading] = useState(false)
@@ -29,11 +28,11 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose, on
                 setOriginalContent(text || '')
             })
             .catch((err) => {
-                onNotify(`读取文件失败: ${errorMessage(err)}`, 'error')
+                message.error(`读取文件失败: ${errorMessage(err)}`)
                 onClose()
             })
             .finally(() => setLoading(false))
-    }, [open, sessionId, filePath, onClose, onNotify])
+    }, [open, sessionId, filePath, onClose])
 
     const isModified = content !== originalContent
 
@@ -43,13 +42,13 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose, on
         try {
             await API.writeRemoteFile(sessionId, filePath, content)
             setOriginalContent(content)
-            onNotify(`已保存文件 ${filePath.split('/').pop()}`)
+            message.success(`已保存文件 ${filePath.split('/').pop()}`)
         } catch (err) {
-            onNotify(`保存文件失败: ${errorMessage(err)}`, 'error')
+            message.error(`保存文件失败: ${errorMessage(err)}`)
         } finally {
             setSaving(false)
         }
-    }, [open, sessionId, filePath, content, saving, onNotify])
+    }, [open, sessionId, filePath, content, saving])
 
     const fileName = filePath.split('/').pop() || filePath
     const lang: LangKey = fileName.endsWith('.json') ? 'json' : 'plain'

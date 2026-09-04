@@ -14,6 +14,7 @@ type DockerManager struct {
 	ctx     context.Context
 	clients map[string]*DockerClient
 	configs map[string]core.ServerConfig
+	ExecMgr *DockerExecManager
 	mu      sync.RWMutex
 }
 
@@ -22,6 +23,7 @@ func NewDockerManager() *DockerManager {
 	return &DockerManager{
 		clients: make(map[string]*DockerClient),
 		configs: make(map[string]core.ServerConfig),
+		ExecMgr: NewDockerExecManager(),
 	}
 }
 
@@ -139,6 +141,10 @@ func (m *DockerManager) Disconnect(serverID string) error {
 func (m *DockerManager) CloseAll() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	if m.ExecMgr != nil {
+		m.ExecMgr.CloseAll()
+	}
 
 	for id, cli := range m.clients {
 		_ = cli.Close()

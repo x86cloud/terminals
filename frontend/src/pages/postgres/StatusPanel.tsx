@@ -65,7 +65,6 @@ export default function StatusPanel({
     const copySql = (pid: number, text: string) => {
         navigator.clipboard.writeText(text).then(() => {
             setCopiedPid(pid)
-            message.success('已复制 SQL 语句')
             setTimeout(() => setCopiedPid(null), 1500)
         })
     }

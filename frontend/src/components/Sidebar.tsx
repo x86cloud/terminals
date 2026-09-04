@@ -19,29 +19,12 @@ import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import { ServerConfig, ServerGroup, SessionInfo, RedisSessionInfo, MysqlSessionInfo, PostgresSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType } from '@/types'
 import g from '@/styles/global.module.less'
 import s from '@/components/Sidebar.module.less'
+import { useSession } from '@/contexts/SessionContext'
 
 interface Props {
     servers: ServerConfig[]
     groups: ServerGroup[]
-    sessions: SessionInfo[]
-    activeSessionId: string | null
     connectingId: string | null
-    redisSessions: RedisSessionInfo[]
-    activeRedisId: string | null
-    mysqlSessions: MysqlSessionInfo[]
-    activeMysqlId: string | null
-    postgresSessions?: PostgresSessionInfo[]
-    activePostgresId?: string | null
-    mqttSessions: MqttSessionInfo[]
-    activeMqttId: string | null
-    mongoSessions: MongoSessionInfo[]
-    activeMongoId: string | null
-    sqliteSessions: SqliteSessionInfo[]
-    activeSqliteId: string | null
-    dockerSessions?: DockerSessionInfo[]
-    activeDockerId?: string | null
-    k8sSessions?: K8sSessionInfo[]
-    activeK8sId?: string | null
     onNew: () => void
     onEdit: (cfg: ServerConfig) => void
     onDelete: (cfg: ServerConfig) => void
@@ -50,35 +33,36 @@ interface Props {
     onRenameGroup: (g: ServerGroup) => void
     onDeleteGroup: (id: string) => void
     onMoveServer: (serverId: string, groupId: string) => void
-    onOpenAiAgent: () => void
-    onOpenApi: () => void
-    onOpenDevTools: () => void
     onOpenSettings: () => void
-    onFocusSession: (id: string, kind: ConnType) => void
+    // 可选参数（兼容旧调用）
+    sessions?: SessionInfo[]
+    activeSessionId?: string | null
+    redisSessions?: RedisSessionInfo[]
+    activeRedisId?: string | null
+    mysqlSessions?: MysqlSessionInfo[]
+    activeMysqlId?: string | null
+    postgresSessions?: PostgresSessionInfo[]
+    activePostgresId?: string | null
+    mqttSessions?: MqttSessionInfo[]
+    activeMqttId?: string | null
+    mongoSessions?: MongoSessionInfo[]
+    activeMongoId?: string | null
+    sqliteSessions?: SqliteSessionInfo[]
+    activeSqliteId?: string | null
+    dockerSessions?: DockerSessionInfo[]
+    activeDockerId?: string | null
+    k8sSessions?: K8sSessionInfo[]
+    activeK8sId?: string | null
+    onOpenAiAgent?: () => void
+    onOpenApi?: () => void
+    onOpenDevTools?: () => void
+    onFocusSession?: (id: string, kind: ConnType) => void
 }
 
 export default function Sidebar({
     servers,
     groups,
-    sessions,
-    activeSessionId,
     connectingId,
-    redisSessions,
-    activeRedisId,
-    mysqlSessions,
-    activeMysqlId,
-    postgresSessions = [],
-    activePostgresId = null,
-    mqttSessions,
-    activeMqttId,
-    mongoSessions,
-    activeMongoId,
-    sqliteSessions,
-    activeSqliteId,
-    dockerSessions = [],
-    activeDockerId = null,
-    k8sSessions = [],
-    activeK8sId = null,
     onNew,
     onEdit,
     onDelete,
@@ -87,16 +71,17 @@ export default function Sidebar({
     onRenameGroup,
     onDeleteGroup,
     onMoveServer,
+    onOpenSettings,
     onOpenAiAgent,
     onOpenApi,
     onOpenDevTools,
-    onOpenSettings,
     onFocusSession,
 }: Props) {
+    const { sessions: ctxSessions, activeTarget, openTool, activateTab } = useSession()
     const [keyword, setKeyword] = useState('')
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     // 默认所有分组为折叠状态（未显式展开即为折叠）
-    const [expanded, setExpanded] = useState<Record<string, boolean>>({})
+    const [userExpanded, setUserExpanded] = useState<Record<string, boolean>>({})
     const [dragId, setDragId] = useState<string | null>(null)
     const [dropGroup, setDropGroup] = useState<string | null>(null)
     const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
@@ -136,70 +121,31 @@ export default function Sidebar({
         })
     }, [servers, keyword])
 
-    // 搜索时自动展开所有包含匹配项的分组
-    useEffect(() => {
-        if (!keyword.trim()) return
-        const kw = keyword.trim().toLowerCase()
-        const autoExpanded: Record<string, boolean> = {}
-        groups.forEach((g) => {
-            const members = servers.filter(
-                (s) =>
-                    (s.groupId || '') === g.id &&
-                    (s.name.toLowerCase().includes(kw) ||
-                        s.host.toLowerCase().includes(kw) ||
-                        s.username.toLowerCase().includes(kw) ||
-                        (s.dockerSocketPath || '').toLowerCase().includes(kw) ||
-                        (s.k8sApiServer || '').toLowerCase().includes(kw))
-            )
-            if (members.length > 0) {
-                autoExpanded[g.id] = true
-            }
-        })
-        setExpanded((prev) => ({ ...prev, ...autoExpanded }))
-    }, [keyword, groups, servers])
+    const isSearching = Boolean(keyword.trim())
 
-    const kindOf = (s: ServerConfig): ConnType => s.type || 'ssh'
+    const kindOf = (s: ServerConfig): ConnType => (s.type || 'ssh') as ConnType
 
-    const sessionMap: Record<ConnType, Array<{ id: string; serverId?: string; connected?: boolean; [key: string]: any }>> = {
-        redis: redisSessions,
-        mysql: mysqlSessions,
-        postgres: postgresSessions,
-        mqtt: mqttSessions,
-        mongo: mongoSessions,
-        sqlite: sqliteSessions,
-        docker: dockerSessions,
-        k8s: k8sSessions || [],
-        ssh: sessions,
+    const sessionsOf = (server: ServerConfig): Array<{ id: string; serverId?: string; connected?: boolean; [key: string]: any }> => {
+        const kind = kindOf(server)
+        const list = (ctxSessions[kind] || []) as Array<{ id: string; serverId?: string; connected?: boolean; [key: string]: any }>
+        return list.filter((s) => s.serverId === server.id)
     }
 
-    const activeIdMap: Record<ConnType, string | null | undefined> = {
-        redis: activeRedisId,
-        mysql: activeMysqlId,
-        postgres: activePostgresId,
-        mqtt: activeMqttId,
-        mongo: activeMongoId,
-        sqlite: activeSqliteId,
-        docker: activeDockerId,
-        k8s: activeK8sId,
-        ssh: activeSessionId,
+    const activeIdOf = (server: ServerConfig) => {
+        const kind = kindOf(server)
+        return activeTarget?.kind === kind ? activeTarget.id : null
     }
-
-    const sessionsOf = (server: ServerConfig) =>
-        (sessionMap[kindOf(server)] || sessions).filter((s) => s.serverId === server.id)
-
-    const activeIdOf = (server: ServerConfig) =>
-        activeIdMap[kindOf(server)] ?? activeSessionId
 
     const serversOfGroup = (groupId: string) =>
         filtered.filter((s) => (s.groupId || '') === groupId)
 
     const toggleGroup = (id: string) =>
-        setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
+        setUserExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
 
     const startCreateGroup = async () => {
         try {
             const g = await onCreateGroup()
-            setExpanded((prev) => ({ ...prev, [g.id]: true }))
+            setUserExpanded((prev) => ({ ...prev, [g.id]: true }))
             setEditingGroup({ id: g.id, name: g.name })
         } catch {
             /* ignore */
@@ -339,7 +285,7 @@ export default function Sidebar({
                         size="small"
                         type={sess.id === activeId ? 'primary' : 'text'}
                         className={s.sessionBtn}
-                        onClick={() => onFocusSession(sess.id, kind)}
+                        onClick={() => (onFocusSession ? onFocusSession(sess.id, kind) : activateTab(kind, sess.id))}
                     >
                         <span className={`${g.dot}${sess.connected !== false ? ' ' + g.on : ''}`} />
                         <span className={s.sessionTitle}>
@@ -425,7 +371,7 @@ export default function Sidebar({
 
                 {groups.map((grp) => {
                     const members = serversOfGroup(grp.id)
-                    const isOpen = !!expanded[grp.id]
+                    const isOpen = isSearching ? members.length > 0 : !!userExpanded[grp.id]
                     const isEditing = editingGroup?.id === grp.id
                     return (
                         <div
@@ -531,7 +477,7 @@ export default function Sidebar({
                 <Button
                     type="text"
                     icon={<Bot size={15} />}
-                    onClick={onOpenAiAgent}
+                    onClick={onOpenAiAgent || (() => openTool('aiAgent'))}
                     className={s.toolBtn}
                 >
                     AI 智能体
@@ -539,7 +485,7 @@ export default function Sidebar({
                 <Button
                     type="text"
                     icon={<BarChart2 size={15} />}
-                    onClick={onOpenDevTools}
+                    onClick={onOpenDevTools || (() => openTool('devtools'))}
                     className={s.toolBtn}
                 >
                     开发工具
@@ -547,7 +493,7 @@ export default function Sidebar({
                 <Button
                     type="text"
                     icon={<LinkIcon size={15} />}
-                    onClick={onOpenApi}
+                    onClick={onOpenApi || (() => openTool('api'))}
                     className={s.toolBtn}
                 >
                     API 调试

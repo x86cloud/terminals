@@ -1,234 +1,203 @@
-import React from 'react'
-import { Button, Tooltip } from 'antd'
-import { X, Bot, BarChart2, Link as LinkIcon } from 'lucide-react'
+import React, { useMemo } from 'react'
+import { Bot, BarChart2, Link as LinkIcon } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
-import g from '@/styles/global.module.less'
-import a from '@/components/app/SessionTabs.module.less'
-import {SessionInfo, RedisSessionInfo, MysqlSessionInfo, PostgresSessionInfo, MqttSessionInfo, MongoSessionInfo, SqliteSessionInfo, DockerSessionInfo, K8sSessionInfo, ConnType} from '@/types'
+import TabBar, { TabItem } from '@/components/common/TabBar'
+import { ConnType } from '@/types'
+import { useSession } from '@/contexts/SessionContext'
 
-export interface SessionTabsProps {
-    sessions: SessionInfo[]
-    activeId: string | null
-    redisSessions: RedisSessionInfo[]
-    activeRedisId: string | null
-    mysqlSessions: MysqlSessionInfo[]
-    activeMysqlId: string | null
-    postgresSessions?: PostgresSessionInfo[]
-    activePostgresId?: string | null
-    mqttSessions: MqttSessionInfo[]
-    activeMqttId: string | null
-    mongoSessions: MongoSessionInfo[]
-    activeMongoId: string | null
-    sqliteSessions: SqliteSessionInfo[]
-    activeSqliteId: string | null
-    dockerSessions?: DockerSessionInfo[]
-    activeDockerId?: string | null
-    k8sSessions?: K8sSessionInfo[]
-    activeK8sId?: string | null
-    aiAgentOpen: boolean
-    aiAgentActive: boolean
-    devToolsOpen: boolean
-    devToolsActive: boolean
-    apiOpen: boolean
-    apiActive: boolean
-    onFocusSession: (id: string, kind: ConnType) => void
-    onCloseSession: (id: string) => void
-    onCloseRedis: (id: string) => void
-    onCloseMysql: (id: string) => void
-    onClosePostgres?: (id: string) => void
-    onCloseMqtt: (id: string) => void
-    onCloseMongo: (id: string) => void
-    onCloseSqlite: (id: string) => void
-    onCloseDocker?: (id: string) => void
-    onCloseK8s?: (id: string) => void
-    onActivateAiAgent: () => void
-    onCloseAiAgent: () => void
-    onActivateDevTools: () => void
-    onCloseDevTools: () => void
-    onActivateApi: () => void
-    onCloseApi: () => void
-}
+export default function SessionTabs() {
+    const { sessions, tools, activeTarget, activateTab, closeSession, closeTool } = useSession()
 
-function Tab({
-    active,
-    onClick,
-    onClose,
-    icon,
-    title,
-    dotOn,
-}: {
-    active: boolean
-    onClick: () => void
-    onClose?: () => void
-    icon: React.ReactNode
-    title: React.ReactNode
-    dotOn?: boolean
-}) {
+    // 计算当前激活的 Tab Key
+    const activeKey = useMemo(() => {
+        if (!activeTarget) return null
+        if (activeTarget.kind === 'aiAgent') return 'ai_agent'
+        if (activeTarget.kind === 'devtools') return 'devtools'
+        if (activeTarget.kind === 'api') return 'api'
+        return `${activeTarget.kind}:${activeTarget.id}`
+    }, [activeTarget])
+
+    // 生成所有 Tab 项
+    const items: TabItem[] = useMemo(() => {
+        const list: TabItem[] = []
+
+        sessions.ssh.forEach((s) => {
+            list.push({
+                key: `ssh:${s.id}`,
+                label: s.title,
+                icon: <ClientIcon kind="ssh" size={14} />,
+                dotOn: s.connected,
+                closable: true,
+            })
+        })
+
+        sessions.docker.forEach((s) => {
+            list.push({
+                key: `docker:${s.id}`,
+                label: s.title,
+                icon: <ClientIcon kind="docker" size={14} />,
+                dotOn: s.connected,
+                closable: true,
+            })
+        })
+
+        sessions.k8s.forEach((s) => {
+            list.push({
+                key: `k8s:${s.id}`,
+                label: s.title,
+                icon: <ClientIcon kind="k8s" size={14} />,
+                dotOn: s.connected,
+                closable: true,
+            })
+        })
+
+        sessions.redis.forEach((s) => {
+            list.push({
+                key: `redis:${s.id}`,
+                label: `${s.title} · DB${s.db}`,
+                icon: <ClientIcon kind="redis" size={14} />,
+                dotOn: true,
+                closable: true,
+            })
+        })
+
+        sessions.mysql.forEach((s) => {
+            list.push({
+                key: `mysql:${s.id}`,
+                label: s.database ? `${s.title} · ${s.database}` : s.title,
+                icon: <ClientIcon kind="mysql" size={14} />,
+                dotOn: true,
+                closable: true,
+            })
+        })
+
+        sessions.postgres.forEach((s) => {
+            list.push({
+                key: `postgres:${s.id}`,
+                label: s.database ? `${s.title} · ${s.database}` : s.title,
+                icon: <ClientIcon kind="postgres" size={14} />,
+                dotOn: true,
+                closable: true,
+            })
+        })
+
+        sessions.mqtt.forEach((s) => {
+            list.push({
+                key: `mqtt:${s.id}`,
+                label: `${s.host}:${s.port}`,
+                icon: <ClientIcon kind="mqtt" size={14} />,
+                dotOn: true,
+                closable: true,
+            })
+        })
+
+        sessions.mongo.forEach((s) => {
+            list.push({
+                key: `mongo:${s.id}`,
+                label: s.database ? `${s.title} · ${s.database}` : s.title,
+                icon: <ClientIcon kind="mongo" size={14} />,
+                dotOn: true,
+                closable: true,
+            })
+        })
+
+        sessions.sqlite.forEach((s) => {
+            list.push({
+                key: `sqlite:${s.id}`,
+                label: s.title,
+                icon: <ClientIcon kind="sqlite" size={14} />,
+                dotOn: true,
+                closable: true,
+            })
+        })
+
+        if (tools.aiAgent.open) {
+            list.push({
+                key: 'ai_agent',
+                label: 'AI 智能体',
+                icon: <Bot size={13} />,
+                closable: true,
+            })
+        }
+
+        if (tools.devtools.open) {
+            list.push({
+                key: 'devtools',
+                label: '开发工具',
+                icon: <BarChart2 size={13} />,
+                closable: true,
+            })
+        }
+
+        if (tools.api.open) {
+            list.push({
+                key: 'api',
+                label: 'API 调试',
+                icon: <LinkIcon size={13} />,
+                closable: true,
+            })
+        }
+
+        return list
+    }, [sessions, tools])
+
+    // 处理 Tab 切换点击
+    const handleChange = (key: string) => {
+        if (key === 'ai_agent') {
+            activateTab('aiAgent')
+            return
+        }
+        if (key === 'devtools') {
+            activateTab('devtools')
+            return
+        }
+        if (key === 'api') {
+            activateTab('api')
+            return
+        }
+
+        const colonIdx = key.indexOf(':')
+        if (colonIdx > 0) {
+            const kind = key.slice(0, colonIdx) as ConnType
+            const id = key.slice(colonIdx + 1)
+            activateTab(kind, id)
+        }
+    }
+
+    // 处理 Tab 关闭
+    const handleClose = (key: string) => {
+        if (key === 'ai_agent') {
+            closeTool('aiAgent')
+            return
+        }
+        if (key === 'devtools') {
+            closeTool('devtools')
+            return
+        }
+        if (key === 'api') {
+            closeTool('api')
+            return
+        }
+
+        const colonIdx = key.indexOf(':')
+        if (colonIdx > 0) {
+            const kind = key.slice(0, colonIdx) as ConnType
+            const id = key.slice(colonIdx + 1)
+            void closeSession(kind, id)
+        }
+    }
+
+    if (items.length === 0) {
+        return null
+    }
+
     return (
-        <div className={`${a.tab}${active ? ' ' + a.active : ''}`} onClick={onClick}>
-            {icon}
-            {dotOn !== undefined && <span className={`${g.dot} ${dotOn ? ' ' + g.on : ''}`}/>}
-            <span className={a.tabTitle}>{title}</span>
-            {onClose && (
-                <Tooltip title="关闭">
-                    <Button
-                        size="small"
-                        type="text"
-                        className={a.tabCloseBtn}
-                        icon={<X size={11}/>}
-                        onClick={(e) => { e.stopPropagation(); onClose() }}
-                    />
-                </Tooltip>
-            )}
-        </div>
-    )
-}
-
-export default function SessionTabs(props: SessionTabsProps) {
-    const {
-        sessions, activeId, redisSessions, activeRedisId, mysqlSessions, activeMysqlId,
-        postgresSessions = [], activePostgresId = null,
-        mqttSessions, activeMqttId, mongoSessions, activeMongoId, sqliteSessions, activeSqliteId,
-        dockerSessions = [], activeDockerId = null,
-        k8sSessions = [], activeK8sId = null,
-        aiAgentOpen, aiAgentActive, devToolsOpen, devToolsActive, apiOpen, apiActive,
-        onFocusSession, onCloseSession, onCloseRedis, onCloseMysql, onClosePostgres, onCloseMqtt, onCloseMongo, onCloseSqlite, onCloseDocker, onCloseK8s,
-        onActivateAiAgent, onCloseAiAgent, onActivateDevTools, onCloseDevTools, onActivateApi, onCloseApi,
-    } = props
-
-    return (
-        <div className={a.tabbar}>
-            {sessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeId}
-                    onClick={() => onFocusSession(s.id, 'ssh')}
-                    onClose={() => onCloseSession(s.id)}
-                    icon={<ClientIcon kind="ssh" size={14}/>}
-                    dotOn={s.connected}
-                    title={s.title}
-                />
-            ))}
-            {dockerSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeDockerId}
-                    onClick={() => onFocusSession(s.id, 'docker')}
-                    onClose={() => onCloseDocker?.(s.id)}
-                    icon={<ClientIcon kind="docker" size={14}/>}
-                    dotOn={s.connected}
-                    title={s.title}
-                />
-            ))}
-            {k8sSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeK8sId}
-                    onClick={() => onFocusSession(s.id, 'k8s')}
-                    onClose={() => onCloseK8s?.(s.id)}
-                    icon={<ClientIcon kind="k8s" size={14}/>}
-                    dotOn={s.connected}
-                    title={s.title}
-                />
-            ))}
-            {redisSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeRedisId}
-                    onClick={() => onFocusSession(s.id, 'redis')}
-                    onClose={() => onCloseRedis(s.id)}
-                    icon={<ClientIcon kind="redis" size={14}/>}
-                    dotOn={true}
-                    title={`${s.title} · DB${s.db}`}
-                />
-            ))}
-            {mysqlSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeMysqlId}
-                    onClick={() => onFocusSession(s.id, 'mysql')}
-                    onClose={() => onCloseMysql(s.id)}
-                    icon={<ClientIcon kind="mysql" size={14}/>}
-                    dotOn={true}
-                    title={s.database ? `${s.title} · ${s.database}` : s.title}
-                />
-            ))}
-            {postgresSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activePostgresId}
-                    onClick={() => onFocusSession(s.id, 'postgres')}
-                    onClose={() => onClosePostgres?.(s.id)}
-                    icon={<ClientIcon kind="postgres" size={14}/>}
-                    dotOn={true}
-                    title={s.database ? `${s.title} · ${s.database}` : s.title}
-                />
-            ))}
-            {mqttSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeMqttId}
-                    onClick={() => onFocusSession(s.id, 'mqtt')}
-                    onClose={() => onCloseMqtt(s.id)}
-                    icon={<ClientIcon kind="mqtt" size={14}/>}
-                    dotOn={true}
-                    title={`${s.host}:${s.port}`}
-                />
-            ))}
-            {mongoSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeMongoId}
-                    onClick={() => onFocusSession(s.id, 'mongo')}
-                    onClose={() => onCloseMongo(s.id)}
-                    icon={<ClientIcon kind="mongo" size={14}/>}
-                    dotOn={true}
-                    title={s.database ? `${s.title} · ${s.database}` : s.title}
-                />
-            ))}
-            {sqliteSessions.map((s) => (
-                <Tab
-                    key={s.id}
-                    active={s.id === activeSqliteId}
-                    onClick={() => onFocusSession(s.id, 'sqlite')}
-                    onClose={() => onCloseSqlite(s.id)}
-                    icon={<ClientIcon kind="sqlite" size={14}/>}
-                    dotOn={true}
-                    title={s.title}
-                />
-            ))}
-
-            {aiAgentOpen && (
-                <Tab
-                    active={aiAgentActive}
-                    onClick={onActivateAiAgent}
-                    onClose={onCloseAiAgent}
-                    icon={<Bot size={12}/>}
-                    title="AI 智能体"
-                />
-            )}
-
-            {devToolsOpen && (
-                <Tab
-                    active={devToolsActive}
-                    onClick={onActivateDevTools}
-                    onClose={onCloseDevTools}
-                    icon={<BarChart2 size={12}/>}
-                    title="开发工具"
-                />
-            )}
-
-            {apiOpen && (
-                <Tab
-                    active={apiActive}
-                    onClick={onActivateApi}
-                    onClose={onCloseApi}
-                    icon={<LinkIcon size={12}/>}
-                    title="API 调试"
-                />
-            )}
-
-            <span className={g.spacer}/>
-        </div>
+        <TabBar
+            items={items}
+            activeKey={activeKey}
+            onChange={handleChange}
+            onClose={handleClose}
+            size="middle"
+        />
     )
 }

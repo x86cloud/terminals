@@ -22,7 +22,6 @@ export function CreateDbModal({
             const vals = await form.validateFields()
             setLoading(true)
             await API.postgresCreateDatabase(serverId, vals.name.trim(), vals.owner || '', vals.encoding || 'UTF8', '')
-            message.success(`数据库「${vals.name}」创建成功！`)
             form.resetFields()
             onSuccess()
             onClose()
@@ -85,7 +84,6 @@ export function CreateSchemaModal({
             const vals = await form.validateFields()
             setLoading(true)
             await API.postgresCreateSchema(serverId, dbName, vals.name.trim(), vals.owner || '')
-            message.success(`Schema「${vals.name}」创建成功！`)
             form.resetFields()
             onSuccess()
             onClose()
@@ -145,7 +143,6 @@ export function CreateTableModal({
         setLoading(true)
         try {
             await API.postgresCreateTable(serverId, dbName, schema, tableName.trim(), defs.trim())
-            message.success(`数据表「${schema}.${tableName}」创建成功！`)
             setTableName('')
             onSuccess()
             onClose()

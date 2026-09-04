@@ -5,6 +5,10 @@
  * DockerComposeDeployReq 用于创建或更新 Compose 项目。
  */
 export interface DockerComposeDeployReq {
+    /**
+     * 客户端生成的 UUID
+     */
+    "id"?: string;
     "projectName": string;
     "yamlContent": string;
     "envVars": { [_ in string]?: string } | null;
@@ -35,6 +39,10 @@ export interface DockerComposeServiceInfo {
  * DockerComposeStackInfo 表示一个 Compose 项目（Stack）的聚合状态信息。
  */
 export interface DockerComposeStackInfo {
+    /**
+     * 客户端关联的本地 UUID
+     */
+    "uuid"?: string;
     "name": string;
 
     /**

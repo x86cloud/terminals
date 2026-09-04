@@ -28,9 +28,11 @@ import {
     RefreshCw,
     Copy,
     Info,
+    Terminal,
 } from 'lucide-react'
 import { API } from '@/api'
 import type { DockerContainerInfo, DockerCreateContainerReq } from '@/types'
+import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
 import s from './DockerClient.module.less'
 
 interface Props {
@@ -44,6 +46,9 @@ export default function ContainersTab({ serverId }: Props) {
     const [searchKw, setSearchKw] = useState('')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    // 终端 Exec 模态框
+    const [execTarget, setExecTarget] = useState<ContainerExecTarget | null>(null)
 
     // 日志抽屉
     const [logDrawer, setLogDrawer] = useState<{ open: boolean; container: DockerContainerInfo | null }>({
@@ -94,7 +99,6 @@ export default function ContainersTab({ serverId }: Props) {
     const handleControl = async (containerId: string, action: string) => {
         try {
             await API.dockerControlContainer(serverId, containerId, action)
-            message.success(`容器操作 [${action}] 执行成功`)
             fetchContainers()
         } catch (err: any) {
             message.error(`操作失败: ${err.message || String(err)}`)
@@ -144,7 +148,6 @@ export default function ContainersTab({ serverId }: Props) {
                 autoRemove: createForm.autoRemove,
             }
             await API.dockerCreateContainer(serverId, req)
-            message.success('容器创建成功')
             setCreateModal(false)
             setCreateForm({
                 name: '',
@@ -188,15 +191,14 @@ export default function ContainersTab({ serverId }: Props) {
                 const isExited = state === 'exited' || state === 'dead'
                 return (
                     <div
-                        className={`${s.statusBadge} ${
-                            isRunning
+                        className={`${s.statusBadge} ${isRunning
                                 ? s.statusRunning
                                 : isPaused
-                                ? s.statusPaused
-                                : isExited
-                                ? s.statusDead
-                                : s.statusStopped
-                        }`}
+                                    ? s.statusPaused
+                                    : isExited
+                                        ? s.statusDead
+                                        : s.statusStopped
+                            }`}
                         title={record.status}
                     >
                         {isRunning && <span className={s.pulseDot} />}
@@ -260,7 +262,7 @@ export default function ContainersTab({ serverId }: Props) {
         {
             title: '快捷操作',
             key: 'actions',
-            width: 220,
+            width: 250,
             fixed: 'right',
             render: (_, record) => {
                 const isRunning = record.state === 'running'
@@ -332,6 +334,24 @@ export default function ContainersTab({ serverId }: Props) {
                                 type="text"
                                 icon={<Code size={13} />}
                                 onClick={() => openInspect(record)}
+                            />
+                        </Tooltip>
+
+                        <Tooltip title="终端 (Exec)">
+                            <Button
+                                size="small"
+                                type="text"
+                                disabled={!isRunning}
+                                icon={<Terminal size={13} />}
+                                onClick={() =>
+                                    setExecTarget({
+                                        type: 'docker',
+                                        serverId,
+                                        containerId: record.id,
+                                        title: record.name || record.shortId || record.id.slice(0, 12),
+                                        image: record.image,
+                                    })
+                                }
                             />
                         </Tooltip>
 
@@ -477,7 +497,6 @@ export default function ContainersTab({ serverId }: Props) {
                                 icon={<Copy size={12} />}
                                 onClick={() => {
                                     navigator.clipboard.writeText(logContent)
-                                    message.success('日志已复制到剪贴板')
                                 }}
                             >
                                 复制
@@ -503,7 +522,6 @@ export default function ContainersTab({ serverId }: Props) {
                         icon={<Copy size={13} />}
                         onClick={() => {
                             navigator.clipboard.writeText(inspectModal.json)
-                            message.success('JSON 已复制')
                         }}
                     >
                         复制 JSON
@@ -618,6 +636,13 @@ export default function ContainersTab({ serverId }: Props) {
                     </div>
                 </Space>
             </AntdModal>
+
+            {/* 统一容器交互式终端 */}
+            <ContainerTerminalModal
+                open={!!execTarget}
+                onClose={() => setExecTarget(null)}
+                target={execTarget}
+            />
         </div>
     )
 }

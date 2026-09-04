@@ -471,13 +471,14 @@ func (s *secretBox) decrypt(value string) string {
 
 // Store 负责服务器列表与分组的持久化。
 type Store struct {
-	mu       sync.RWMutex
-	dir      string
-	file     string
-	box      *secretBox
-	servers  []ServerConfig
-	groups   []ServerGroup
-	settings AppSettings
+	mu           sync.RWMutex
+	dir          string
+	file         string
+	box          *secretBox
+	servers      []ServerConfig
+	groups       []ServerGroup
+	settings     AppSettings
+	composeStore *ComposeStore
 }
 
 func appConfigDir() (string, error) {
@@ -524,11 +525,16 @@ func NewStore() (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs, err := NewComposeStore(dir)
+	if err != nil {
+		return nil, err
+	}
 	s := &Store{
-		dir:      dir,
-		file:     filepath.Join(dir, "servers.json"),
-		box:      box,
-		settings: DefaultAppSettings(),
+		dir:          dir,
+		file:         filepath.Join(dir, "servers.json"),
+		box:          box,
+		settings:     DefaultAppSettings(),
+		composeStore: cs,
 	}
 	if err := s.load(); err != nil {
 		return nil, err
@@ -896,4 +902,36 @@ func (s *Store) MoveServerToGroup(serverID, groupID string) error {
 		return errors.New("服务器不存在")
 	}
 	return s.persist()
+}
+
+// ListComposeRecords 获取指定 serverId 的本地 Compose 记录。
+func (s *Store) ListComposeRecords(serverId string) []DockerComposeRecord {
+	if s.composeStore == nil {
+		return []DockerComposeRecord{}
+	}
+	return s.composeStore.ListRecords(serverId)
+}
+
+// GetComposeRecord 获取单个 Compose 记录。
+func (s *Store) GetComposeRecord(id string) (*DockerComposeRecord, error) {
+	if s.composeStore == nil {
+		return nil, errors.New("存储不可用")
+	}
+	return s.composeStore.GetRecord(id)
+}
+
+// SaveComposeRecord 保存或更新一条 Compose 记录。
+func (s *Store) SaveComposeRecord(r DockerComposeRecord) (*DockerComposeRecord, error) {
+	if s.composeStore == nil {
+		return nil, errors.New("存储不可用")
+	}
+	return s.composeStore.SaveRecord(r)
+}
+
+// DeleteComposeRecord 删除一条 Compose 记录。
+func (s *Store) DeleteComposeRecord(id string) error {
+	if s.composeStore == nil {
+		return errors.New("存储不可用")
+	}
+	return s.composeStore.DeleteRecord(id)
 }

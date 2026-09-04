@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Input, Button, Table, Tag, Tooltip, Space, Alert } from 'antd'
+import { Input, Button, Table, Tag, Tooltip, Space, Alert, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Power } from 'lucide-react'
 import { API } from '@/api'
@@ -11,7 +11,6 @@ import p from '@/pages/ssh/process/ProcessPanel.module.less'
 interface Props {
     sessionId: string
     active: boolean
-    onNotify?: (message: string, kind?: 'info' | 'error') => void
 }
 
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
@@ -28,7 +27,7 @@ function fmtBytes(bytes: number): string {
     return `${val.toFixed(1)} ${units[i]}`
 }
 
-export default function ProcessPanel({ sessionId, active, onNotify }: Props) {
+export default function ProcessPanel({ sessionId, active }: Props) {
     const [procs, setProcs] = useState<SSHProcessInfo[]>([])
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
@@ -52,11 +51,11 @@ export default function ProcessPanel({ sessionId, active, onNotify }: Props) {
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
-            if (onNotify) onNotify(`读取进程列表失败: ${msg}`, 'error')
+            message.error(`读取进程列表失败: ${msg}`)
         } finally {
             setBusy(false)
         }
-    }, [sessionId, onNotify])
+    }, [sessionId])
 
     useEffect(() => {
         if (active && procs.length === 0 && !busy) {
@@ -85,12 +84,12 @@ export default function ProcessPanel({ sessionId, active, onNotify }: Props) {
                 setConfirm(emptyConfirm)
                 try {
                     await API.sshKillProcess(sessionId, proc.pid)
-                    if (onNotify) onNotify(`已成功结束进程 PID ${proc.pid}`)
+                    message.success(`已成功结束进程 PID ${proc.pid}`)
                     await fetchProcesses()
                 } catch (e) {
                     const msg = errorMessage(e)
                     setError(msg)
-                    if (onNotify) onNotify(`结束进程失败: ${msg}`, 'error')
+                    message.error(`结束进程失败: ${msg}`)
                 }
             },
         })

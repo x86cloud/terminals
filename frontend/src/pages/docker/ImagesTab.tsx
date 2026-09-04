@@ -13,6 +13,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import {
     Download,
+    Upload,
     Play,
     Trash2,
     Code,
@@ -21,6 +22,7 @@ import {
     Copy,
     Layers,
     CheckCircle,
+    HardDriveDownload,
 } from 'lucide-react'
 import { API } from '@/api'
 import type { DockerImageInfo } from '@/types'
@@ -37,6 +39,11 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
     const [searchKw, setSearchKw] = useState('')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    // 导出镜像状态
+    const [savingId, setSavingId] = useState<string | null>(null)
+    // 导入镜像状态
+    const [importing, setImporting] = useState(false)
 
     // 拉取镜像模态框
     const [pullModal, setPullModal] = useState(false)
@@ -77,7 +84,6 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         try {
             const logs = await API.dockerPullImage(serverId, pullImageName.trim())
             setPullLogs(logs || '镜像拉取完成！\n')
-            message.success(`镜像 ${pullImageName.trim()} 拉取成功`)
             fetchImages()
         } catch (err: any) {
             setPullLogs((prev) => prev + `\n拉取失败: ${err.message || String(err)}`)
@@ -87,10 +93,51 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         }
     }
 
+    const handleSaveImage = async (img: DockerImageInfo) => {
+        const fullImage = (img.repository && img.tag && img.tag !== '<none>')
+            ? `${img.repository}:${img.tag}`
+            : (img.repository && img.repository !== '<none>')
+                ? img.repository
+                : img.id
+        const repoClean = (img.repository || 'image').replace(/[\/\\:]/g, '_')
+        const tagClean = (img.tag || 'latest').replace(/[\/\\:]/g, '_')
+        const defaultName = `${repoClean}_${tagClean}.tar`
+
+        setSavingId(img.id)
+        const hide = message.loading(`正在准备导出镜像 ${fullImage} ...`, 0)
+        try {
+            const savePath = await API.dockerSaveImage(serverId, fullImage, defaultName)
+            hide()
+            if (savePath) {
+            }
+        } catch (err: any) {
+            hide()
+            message.error(`导出镜像失败: ${err.message || String(err)}`)
+        } finally {
+            setSavingId(null)
+        }
+    }
+
+    const handleLoadImage = async () => {
+        setImporting(true)
+        const hide = message.loading('正在导入镜像文件 (.tar) ...', 0)
+        try {
+            const result = await API.dockerLoadImage(serverId)
+            hide()
+            if (result) {
+                fetchImages()
+            }
+        } catch (err: any) {
+            hide()
+            message.error(`导入镜像失败: ${err.message || String(err)}`)
+        } finally {
+            setImporting(false)
+        }
+    }
+
     const handleDelete = async (imageId: string, force: boolean) => {
         try {
             await API.dockerRemoveImage(serverId, imageId, force)
-            message.success('镜像删除成功')
             fetchImages()
         } catch (err: any) {
             message.error(`删除镜像失败: ${err.message || String(err)}`)
@@ -174,10 +221,11 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         {
             title: '快捷操作',
             key: 'actions',
-            width: 180,
+            width: 210,
             fixed: 'right',
             render: (_, record) => {
                 const fullImage = record.tag ? `${record.repository}:${record.tag}` : record.repository
+                const isSaving = savingId === record.id
                 return (
                     <Space size={4}>
                         {onRunImage && (
@@ -191,6 +239,16 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                                 />
                             </Tooltip>
                         )}
+
+                        <Tooltip title="导出/下载镜像为本地文件 (.tar)">
+                            <Button
+                                size="small"
+                                type="text"
+                                loading={isSaving}
+                                icon={<HardDriveDownload size={13} />}
+                                onClick={() => handleSaveImage(record)}
+                            />
+                        </Tooltip>
 
                         <Tooltip title="查看 Inspect JSON">
                             <Button
@@ -239,6 +297,14 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                 </div>
 
                 <div className={s.toolbarRight}>
+                    <Button
+                        icon={<Upload size={14} />}
+                        size="small"
+                        loading={importing}
+                        onClick={handleLoadImage}
+                    >
+                        导入镜像
+                    </Button>
                     <Button
                         type="primary"
                         icon={<Download size={14} />}
@@ -342,7 +408,6 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                         icon={<Copy size={13} />}
                         onClick={() => {
                             navigator.clipboard.writeText(inspectModal.json)
-                            message.success('JSON 已复制')
                         }}
                     >
                         复制 JSON

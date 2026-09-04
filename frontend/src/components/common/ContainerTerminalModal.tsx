@@ -5,8 +5,6 @@ import {
     RotateCw,
     Eraser,
     X,
-    Maximize2,
-    Minimize2,
     Copy,
 } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
@@ -17,14 +15,23 @@ import { API, subscribe } from '@/api'
 import { base64ToBytes } from '@/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 
+export interface ContainerExecTarget {
+    type: 'docker' | 'k8s'
+    serverId: string
+    title: string
+    // Docker 专属属性
+    containerId?: string
+    // K8s 专属属性
+    namespace?: string
+    podName?: string
+    containerName?: string
+    image?: string
+}
+
 interface Props {
     open: boolean
     onClose: () => void
-    serverId: string
-    namespace: string
-    podName: string
-    containerName: string
-    image?: string
+    target: ContainerExecTarget | null
 }
 
 const LIGHT_TERM_THEME = {
@@ -73,15 +80,7 @@ const DARK_TERM_THEME = {
     brightWhite: '#ffffff',
 }
 
-export default function K8sContainerTerminalModal({
-    open,
-    onClose,
-    serverId,
-    namespace,
-    podName,
-    containerName,
-    image,
-}: Props) {
+export default function ContainerTerminalModal({ open, onClose, target }: Props) {
     const { isDark } = useTheme()
     const hostRef = useRef<HTMLDivElement>(null)
     const termRef = useRef<Terminal | null>(null)
@@ -89,19 +88,23 @@ export default function K8sContainerTerminalModal({
     const execIdRef = useRef<string | null>(null)
 
     const [status, setStatus] = useState<'connecting' | 'connected' | 'closed'>('connecting')
-    const [isMaximized, setIsMaximized] = useState(false)
 
-    // 清理并断开终端连接
+    // 清理并断开终端会话
     const cleanSession = useCallback(() => {
         if (execIdRef.current) {
-            API.k8sExecClose(execIdRef.current).catch(() => undefined)
+            const id = execIdRef.current
             execIdRef.current = null
+            if (target?.type === 'docker') {
+                API.dockerExecClose(id).catch(() => undefined)
+            } else if (target?.type === 'k8s') {
+                API.k8sExecClose(id).catch(() => undefined)
+            }
         }
-    }, [])
+    }, [target])
 
-    // 建立连接
+    // 建立终端连接
     const connectTerminal = useCallback(async () => {
-        if (!open || !serverId || !namespace || !podName || !containerName) return
+        if (!open || !target || !target.serverId) return
 
         cleanSession()
         setStatus('connecting')
@@ -113,15 +116,34 @@ export default function K8sContainerTerminalModal({
         try {
             const cols = termRef.current?.cols || 120
             const rows = termRef.current?.rows || 32
-            const execId = await API.k8sExecStart(
-                serverId,
-                namespace,
-                podName,
-                containerName,
-                '/bin/sh',
-                cols,
-                rows
-            )
+            let execId = ''
+
+            if (target.type === 'docker') {
+                if (!target.containerId) {
+                    throw new Error('未指定 Docker 容器 ID')
+                }
+                execId = await API.dockerExecStart(
+                    target.serverId,
+                    target.containerId,
+                    '/bin/sh',
+                    cols,
+                    rows
+                )
+            } else if (target.type === 'k8s') {
+                if (!target.namespace || !target.podName || !target.containerName) {
+                    throw new Error('缺少 Kubernetes Pod 容器参数')
+                }
+                execId = await API.k8sExecStart(
+                    target.serverId,
+                    target.namespace,
+                    target.podName,
+                    target.containerName,
+                    '/bin/sh',
+                    cols,
+                    rows
+                )
+            }
+
             execIdRef.current = execId
             setStatus('connected')
             if (termRef.current) {
@@ -129,16 +151,14 @@ export default function K8sContainerTerminalModal({
             }
         } catch (err: any) {
             setStatus('closed')
-            termRef.current?.writeln(`\r\n\x1b[31m[连接失败] ${err?.message || err}\x1b[0m\r\n`)
+            termRef.current?.writeln(`\r\n\x1b[31m[连接终端失败] ${err?.message || err}\x1b[0m\r\n`)
         }
-    }, [open, serverId, namespace, podName, containerName, cleanSession])
+    }, [open, target, cleanSession])
 
     // 初始化 Terminal 实例
     useEffect(() => {
-        if (!open) return
+        if (!open || !target) return
 
-        let unsubData: (() => void) | null = null
-        let unsubClose: (() => void) | null = null
         let resizeObserver: ResizeObserver | null = null
 
         const timer = setTimeout(() => {
@@ -167,21 +187,29 @@ export default function K8sContainerTerminalModal({
                 /* ignore */
             }
 
-            // 监听数据输入
+            // 监听用户输入
             term.onData((data) => {
                 if (execIdRef.current) {
-                    API.k8sExecWrite(execIdRef.current, data).catch(() => undefined)
+                    if (target.type === 'docker') {
+                        API.dockerExecWrite(execIdRef.current, data).catch(() => undefined)
+                    } else if (target.type === 'k8s') {
+                        API.k8sExecWrite(execIdRef.current, data).catch(() => undefined)
+                    }
                 }
             })
 
             // 监听尺寸改变
             term.onResize(({ cols, rows }) => {
                 if (execIdRef.current) {
-                    API.k8sExecResize(execIdRef.current, cols, rows).catch(() => undefined)
+                    if (target.type === 'docker') {
+                        API.dockerExecResize(target.serverId, execIdRef.current, cols, rows).catch(() => undefined)
+                    } else if (target.type === 'k8s') {
+                        API.k8sExecResize(execIdRef.current, cols, rows).catch(() => undefined)
+                    }
                 }
             })
 
-            // 快捷键支持
+            // 快捷键复制与粘贴支持
             term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
                 if (e.type !== 'keydown') return true
                 const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
@@ -196,7 +224,11 @@ export default function K8sContainerTerminalModal({
                 if (ctrlOrCmd && (e.key === 'v' || e.key === 'V')) {
                     navigator.clipboard.readText().then((text) => {
                         if (text && execIdRef.current) {
-                            API.k8sExecWrite(execIdRef.current, text).catch(() => undefined)
+                            if (target.type === 'docker') {
+                                API.dockerExecWrite(execIdRef.current, text).catch(() => undefined)
+                            } else if (target.type === 'k8s') {
+                                API.k8sExecWrite(execIdRef.current, text).catch(() => undefined)
+                            }
                         }
                     })
                     return false
@@ -204,7 +236,7 @@ export default function K8sContainerTerminalModal({
                 return true
             })
 
-            // 自适应容器尺寸
+            // 尺寸自适应观察器
             resizeObserver = new ResizeObserver(() => {
                 try {
                     fit.fit()
@@ -214,9 +246,9 @@ export default function K8sContainerTerminalModal({
             })
             resizeObserver.observe(host)
 
-            // 连接
+            // 发起连接
             connectTerminal()
-        }, 50)
+        }, 60)
 
         return () => {
             clearTimeout(timer)
@@ -227,19 +259,21 @@ export default function K8sContainerTerminalModal({
                 termRef.current = null
             }
         }
-    }, [open])
+    }, [open, target?.serverId, target?.containerId, target?.podName, target?.containerName])
 
-    // 单独订阅动态 execId 的输出与退出事件
+    // 订阅当前会话的流式数据与关闭事件
     useEffect(() => {
-        if (!open) return
+        if (!open || !target) return
 
         let unsubData: (() => void) | null = null
         let unsubClosed: (() => void) | null = null
 
+        const eventPrefix = target.type === 'docker' ? 'docker:terminal' : 'k8s:terminal'
+
         const interval = setInterval(() => {
             const execId = execIdRef.current
             if (execId && !unsubData) {
-                unsubData = subscribe(`k8s:terminal:data:${execId}`, (payload: string) => {
+                unsubData = subscribe(`${eventPrefix}:data:${execId}`, (payload: string) => {
                     if (termRef.current && payload) {
                         try {
                             const bytes = base64ToBytes(payload)
@@ -250,9 +284,9 @@ export default function K8sContainerTerminalModal({
                     }
                 })
 
-                unsubClosed = subscribe(`k8s:terminal:closed:${execId}`, (reason: string) => {
+                unsubClosed = subscribe(`${eventPrefix}:closed:${execId}`, (reason: string) => {
                     setStatus('closed')
-                    termRef.current?.writeln(`\r\n\x1b[33m[连接断开] ${reason || '容器终端已关闭'}\x1b[0m\r\n`)
+                    termRef.current?.writeln(`\r\n\x1b[33m[会话已退出] ${reason || '容器终端已关闭'}\x1b[0m\r\n`)
                 })
                 clearInterval(interval)
             }
@@ -263,9 +297,9 @@ export default function K8sContainerTerminalModal({
             if (unsubData) unsubData()
             if (unsubClosed) unsubClosed()
         }
-    }, [open])
+    }, [open, target?.type, status])
 
-    // 跟随主题变化
+    // 动态同步深浅色主题
     useEffect(() => {
         if (termRef.current) {
             termRef.current.options.theme = isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME
@@ -278,23 +312,26 @@ export default function K8sContainerTerminalModal({
     }
 
     const handleCopy = () => {
-        const sel = termRef.current?.getSelection()
-        if (sel) {
-            navigator.clipboard.writeText(sel)
+        if (termRef.current && termRef.current.hasSelection()) {
+            navigator.clipboard.writeText(termRef.current.getSelection())
+            message.success('已复制选中终端内容')
         } else {
-            message.info('请先在终端中选择要复制的文本')
+            message.info('请先用鼠标划选终端文本内容')
         }
     }
 
+    if (!target) return null
+
     return (
         <Modal
-            closeIcon={false}
             open={open}
+            centered
+            closable={false}
             title={
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 8 }}>
-                    <Space size={10}>
+                    <Space size={10} wrap>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span
+                            <div
                                 style={{
                                     width: 8,
                                     height: 8,
@@ -312,14 +349,19 @@ export default function K8sContainerTerminalModal({
                                 }}
                             />
                             <TerminalIcon size={16} color="var(--accent)" />
-                            <span style={{ fontWeight: 600, fontSize: 13.5 }}>容器终端</span>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>容器终端 (Exec)</span>
                         </div>
 
-                        <Tag color="cyan" style={{ fontFamily: 'var(--font-mono)' }}>
-                            Pod: {podName}
+                        <Tag color={target.type === 'docker' ? 'blue' : 'purple'}>
+                            {target.type === 'docker' ? 'Docker' : 'Kubernetes'}
                         </Tag>
-                        <Tag color="blue" style={{ fontFamily: 'var(--font-mono)' }}>
-                            容器: {containerName}
+
+                        <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)' }}>
+                            {target.title}
+                        </span>
+
+                        <Tag color="default" style={{ fontFamily: 'var(--font-mono)' }}>
+                            /bin/sh
                         </Tag>
                     </Space>
 
@@ -333,29 +375,19 @@ export default function K8sContainerTerminalModal({
                         <Tooltip title="重新连接">
                             <Button size="small" icon={<RotateCw size={12} />} onClick={connectTerminal} />
                         </Tooltip>
-                        <Tooltip title={isMaximized ? '还原窗口' : '最大化窗口'}>
-                            <Button
-                                size="small"
-                                icon={isMaximized ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
-                                onClick={() => {
-                                    setIsMaximized(!isMaximized)
-                                    setTimeout(() => fitRef.current?.fit(), 100)
-                                }}
-                            />
-                        </Tooltip>
                         <Tooltip title="关闭终端">
                             <Button size="small" icon={<X size={13} />} onClick={onClose} />
                         </Tooltip>
                     </Space>
                 </div>
             }
-            width={isMaximized ? '96vw' : 920}
-            style={isMaximized ? { top: 16 } : { top: 40 }}
+            width="85vw"
+            style={{ padding: 0 }}
             styles={{
                 body: {
                     padding: 0,
-                    height: isMaximized ? 'calc(90vh - 80px)' : '540px',
-                    backgroundColor: 'var(--bg-1)',
+                    height: '75vh',
+                    backgroundColor: isDark ? '#141619' : '#ffffff',
                     overflow: 'hidden',
                 },
             }}

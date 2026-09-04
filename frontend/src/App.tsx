@@ -1,7 +1,25 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { ConfigProvider, App as AntdApp } from 'antd'
+import { ConfigProvider, App as AntdApp, message } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
+
+// 全局精简消息通知配置：控制显示时长与最大堆叠数，避免干扰
+message.config({
+    duration: 2,
+    maxCount: 2,
+})
 import { getAntdTheme } from './theme'
+import { ThemeContext } from '@/contexts/ThemeContext'
+import { SessionProvider, useSession } from '@/contexts/SessionContext'
+import {
+    connectK8sHelper,
+    connectDockerHelper,
+    connectRedisHelper,
+    connectMysqlHelper,
+    connectPostgresHelper,
+    connectMqttHelper,
+    connectMongoHelper,
+    connectSqliteHelper,
+} from '@/contexts/sessionHelpers'
 import Sidebar from '@/components/Sidebar'
 import TitleBar from '@/components/TitleBar'
 import ServerDialog from '@/components/ServerDialog'
@@ -14,166 +32,14 @@ import { API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNative
 import {
     ServerConfig,
     ServerGroup,
-    SessionInfo,
     Transfer,
-    RedisSessionInfo,
-    MysqlSessionInfo,
-    PostgresSessionInfo,
-    MqttSessionInfo,
-    MongoSessionInfo,
-    SqliteSessionInfo,
-    DockerSessionInfo,
-    K8sSessionInfo,
-    ConnType,
     AppSettings,
 } from '@/types'
 import { errorMessage } from '@/utils'
 import { applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings } from '@/utils/theme'
-import g from '@/styles/global.module.less'
 import a from '@/components/App.module.less'
 
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
-
-/* ========================================================================== */
-/*                              协议连接辅助处理器                              */
-/* ========================================================================== */
-
-async function connectK8sHelper(cfg: ServerConfig): Promise<K8sSessionInfo> {
-    const ok = await API.k8sConnect(cfg.id)
-    if (!ok) throw new Error('Kubernetes 集群连接失败')
-    const target = cfg.k8sContext ? `Context: ${cfg.k8sContext}` : (cfg.k8sApiServer || cfg.host || 'Kubeconfig')
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        title: cfg.name || (cfg.k8sContext ? `K8s (${cfg.k8sContext})` : `K8s (${target})`),
-        apiServer: target,
-        namespace: cfg.k8sNamespace || '_all',
-        connected: true,
-    }
-}
-
-async function connectDockerHelper(cfg: ServerConfig): Promise<DockerSessionInfo> {
-    const ok = await API.dockerConnect(cfg.id)
-    if (!ok) throw new Error('Docker 守护进程连接失败')
-    const epType = cfg.dockerEndpointType || 'unix'
-    let target = cfg.dockerSocketPath || '/var/run/docker.sock'
-    if (epType === 'tcp') {
-        target = `${cfg.host}:${cfg.port || (cfg.dockerTlsEnabled ? 2376 : 2375)}`
-    } else if (epType === 'ssh') {
-        target = `ssh://${cfg.dockerSshUser || 'root'}@${cfg.dockerSshHost || cfg.host}:${cfg.dockerSshPort || 22}`
-    }
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        title: cfg.name || (epType === 'ssh' ? `Docker (${cfg.dockerSshHost || cfg.host})` : epType === 'tcp' ? `Docker (${cfg.host})` : 'Docker (Local Socket)'),
-        endpointType: epType,
-        target,
-        connected: true,
-    }
-}
-
-async function connectRedisHelper(cfg: ServerConfig): Promise<RedisSessionInfo> {
-    const ok = await API.redisConnect(cfg.id)
-    if (!ok) throw new Error('Redis 连接失败')
-    const dbSize = await API.redisDBSize(cfg.id).catch(() => 0)
-    const modeInfo = await API.redisModeInfo(cfg.id).catch(() => ({} as any))
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        title: cfg.name || `${cfg.host}:${cfg.port || 6379}`,
-        host: cfg.host,
-        port: cfg.port || 6379,
-        connected: true,
-        db: cfg.db ?? 0,
-        dbSize,
-        mode: modeInfo?.mode || cfg.redisMode || 'single',
-        breaker: modeInfo?.breaker || 'closed',
-        serialization: modeInfo?.serialization || cfg.redisSerialization || 'none',
-    }
-}
-
-async function connectMysqlHelper(cfg: ServerConfig): Promise<MysqlSessionInfo> {
-    const ok = await API.mysqlConnectEx(cfg.id)
-    if (!ok) throw new Error('MySQL 连接失败')
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        title: cfg.name || `${cfg.host}:${cfg.port || 3306}`,
-        host: cfg.host,
-        port: cfg.port || 3306,
-        connected: true,
-        database: cfg.database || '',
-    }
-}
-
-async function connectPostgresHelper(cfg: ServerConfig): Promise<PostgresSessionInfo> {
-    const ok = await API.postgresConnect(cfg.id)
-    if (!ok) throw new Error('PostgreSQL 连接失败')
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        title: cfg.name || `${cfg.host}:${cfg.port || 5432}`,
-        host: cfg.host,
-        port: cfg.port || 5432,
-        connected: true,
-        database: cfg.postgresDatabase || cfg.database || 'postgres',
-        schema: cfg.postgresSchema || 'public',
-    }
-}
-
-async function connectMqttHelper(cfg: ServerConfig): Promise<MqttSessionInfo> {
-    const ok = await API.mqttConnect(cfg.id)
-    if (!ok) throw new Error('MQTT 连接失败')
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        host: cfg.host,
-        port: cfg.port || 1883,
-        username: cfg.username,
-        clientId: cfg.clientId || '',
-        connected: true,
-    }
-}
-
-async function connectMongoHelper(cfg: ServerConfig): Promise<MongoSessionInfo> {
-    const ok = await API.mongoConnect(cfg.id)
-    if (!ok) throw new Error('MongoDB 连接失败')
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        title: cfg.name || `${cfg.host}:${cfg.port || 27017}`,
-        host: cfg.host,
-        port: cfg.port || 27017,
-        connected: true,
-        database: cfg.mongoDatabase || '',
-        topology: '',
-        version: '',
-    }
-}
-
-async function connectSqliteHelper(cfg: ServerConfig): Promise<SqliteSessionInfo | null> {
-    let path = cfg.sqlitePath || ''
-    if (!path) {
-        path = await API.sqliteOpenFile()
-        if (!path) return null
-    }
-    const ok = await API.sqliteConnect(cfg.id, path)
-    if (!ok) throw new Error('无法打开该 SQLite 文件')
-    const stat = await API.sqliteInfo(cfg.id).catch(() => ({ path, size: 0 }))
-    const finalPath = stat?.path || path
-    const dbName = finalPath.split(/[\\/]/).pop() || finalPath
-    const displayTitle = (cfg.name && !cfg.name.includes('/') && !cfg.name.includes('\\'))
-        ? cfg.name
-        : (cfg.name ? cfg.name.split(/[\\/]/).pop() : dbName)
-    return {
-        id: cfg.id,
-        serverId: cfg.id,
-        title: displayTitle || dbName,
-        path: finalPath,
-        connected: true,
-        size: Number(stat?.size) || 0,
-    }
-}
 
 /* ========================================================================== */
 /*                               App 内部主组件                                */
@@ -186,51 +52,20 @@ interface AppContentProps {
 }
 
 function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentProps) {
-    const { message: antdMessage } = AntdApp.useApp()
+    const {
+        activeTarget,
+        addSession,
+        closeSession,
+        openTool,
+    } = useSession()
 
     // ---- 服务器与分组 ----
     const [servers, setServers] = useState<ServerConfig[]>([])
     const [groups, setGroups] = useState<ServerGroup[]>([])
     const [connectingId, setConnectingId] = useState<string | null>(null)
 
-    // ---- 会话列表与激活态 ----
-    const [sessions, setSessions] = useState<SessionInfo[]>([])
-    const [activeId, setActiveId] = useState<string | null>(null)
-
-    const [redisSessions, setRedisSessions] = useState<RedisSessionInfo[]>([])
-    const [activeRedisId, setActiveRedisId] = useState<string | null>(null)
-
-    const [mysqlSessions, setMysqlSessions] = useState<MysqlSessionInfo[]>([])
-    const [activeMysqlId, setActiveMysqlId] = useState<string | null>(null)
-
-    const [postgresSessions, setPostgresSessions] = useState<PostgresSessionInfo[]>([])
-    const [activePostgresId, setActivePostgresId] = useState<string | null>(null)
-
-    const [mqttSessions, setMqttSessions] = useState<MqttSessionInfo[]>([])
-    const [activeMqttId, setActiveMqttId] = useState<string | null>(null)
-
-    const [mongoSessions, setMongoSessions] = useState<MongoSessionInfo[]>([])
-    const [activeMongoId, setActiveMongoId] = useState<string | null>(null)
-
-    const [sqliteSessions, setSqliteSessions] = useState<SqliteSessionInfo[]>([])
-    const [activeSqliteId, setActiveSqliteId] = useState<string | null>(null)
-
-    const [dockerSessions, setDockerSessions] = useState<DockerSessionInfo[]>([])
-    const [activeDockerId, setActiveDockerId] = useState<string | null>(null)
-
-    const [k8sSessions, setK8sSessions] = useState<K8sSessionInfo[]>([])
-    const [activeK8sId, setActiveK8sId] = useState<string | null>(null)
-
-    // ---- 工具面板 (API 调试 / 开发工具集 / AI 智能体 / 设置) ----
-    const [apiOpen, setApiOpen] = useState(false)
-    const [apiActive, setApiActive] = useState<boolean>(false)
-    const [devToolsOpen, setDevToolsOpen] = useState(false)
-    const [devToolsActive, setDevToolsActive] = useState<boolean>(false)
-    const [aiAgentOpen, setAiAgentOpen] = useState(false)
-    const [aiAgentActive, setAiAgentActive] = useState<boolean>(false)
+    // ---- 设置与弹窗 ----
     const [settingsOpen, setSettingsOpen] = useState(false)
-
-    // ---- 全局 UI 状态 ----
     const [transfers, setTransfers] = useState<Transfer[]>([])
     const [dialog, setDialog] = useState<{ open: boolean; initial: ServerConfig | null }>({
         open: false,
@@ -244,191 +79,132 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     const pathsRef = useRef<Record<string, string>>({})
     const connectingRef = useRef<Set<string>>(new Set())
 
-    // ---- 通知与激活态同步 ----
-    const notify = useCallback((messageText: string, kind: 'info' | 'error' | 'success' | 'warning' = 'info') => {
-        if (kind === 'error') {
-            antdMessage.error(messageText)
-        } else if (kind === 'success') {
-            antdMessage.success(messageText)
-        } else if (kind === 'warning') {
-            antdMessage.warning(messageText)
-        } else {
-            antdMessage.info(messageText)
-        }
-    }, [antdMessage])
-
-    useEffect(() => {
-        ;(window as any).__toast = notify
-        return () => {
-            delete (window as any).__toast
-        }
-    }, [notify])
-
-    const activateTab = useCallback((kind: 'ssh' | 'redis' | 'mysql' | 'postgres' | 'mqtt' | 'mongo' | 'sqlite' | 'docker' | 'k8s' | 'api' | 'devtools' | 'aiAgent' | null, id: string | null = null) => {
-        setActiveId(kind === 'ssh' ? id : null)
-        setActiveRedisId(kind === 'redis' ? id : null)
-        setActiveMysqlId(kind === 'mysql' ? id : null)
-        setActivePostgresId(kind === 'postgres' ? id : null)
-        setActiveMqttId(kind === 'mqtt' ? id : null)
-        setActiveMongoId(kind === 'mongo' ? id : null)
-        setActiveSqliteId(kind === 'sqlite' ? id : null)
-        setActiveDockerId(kind === 'docker' ? id : null)
-        setActiveK8sId(kind === 'k8s' ? id : null)
-        setApiActive(kind === 'api')
-        setDevToolsActive(kind === 'devtools')
-        setAiAgentActive(kind === 'aiAgent')
-    }, [])
-
     /* ---------------- 基础数据加载与事件订阅 ---------------- */
 
     const reloadServers = useCallback(async () => {
         try {
             setServers((await API.listServers()) || [])
         } catch (err) {
-            notify(errorMessage(err), 'error')
+            message.error(errorMessage(err))
         }
-    }, [notify])
+    }, [])
 
     const reloadGroups = useCallback(async () => {
         try {
             setGroups((await API.listGroups()) || [])
         } catch (err) {
-            notify(errorMessage(err), 'error')
+            message.error(errorMessage(err))
         }
-    }, [notify])
+    }, [])
 
     const createGroup = useCallback(async (): Promise<ServerGroup> => {
-        const g = await API.saveGroup({ id: '', name: '新分组' })
+        const g = await API.saveGroup({ id: '', name: '新建分组' })
         await reloadGroups()
         return g
     }, [reloadGroups])
 
-    const renameGroup = useCallback(async (g: ServerGroup) => {
-        try {
-            await API.saveGroup(g)
-            await reloadGroups()
-        } catch (err) {
-            notify(errorMessage(err), 'error')
-        }
-    }, [reloadGroups, notify])
-
-    const deleteGroup = useCallback(async (id: string) => {
-        try {
-            await API.deleteGroup(id)
-            await reloadGroups()
-        } catch (err) {
-            notify(errorMessage(err), 'error')
-        }
-    }, [reloadGroups, notify])
-
-    const moveServer = useCallback(async (serverId: string, groupId: string) => {
-        try {
-            await API.moveServerToGroup(serverId, groupId)
-            await reloadServers()
-        } catch (err) {
-            notify(errorMessage(err), 'error')
-        }
-    }, [reloadServers, notify])
-
-    const reloadSettings = useCallback(async () => {
-        try {
-            const s = await API.getAppSettings()
-            if (s) {
-                await onUpdateSettings(s)
+    const renameGroup = useCallback(
+        async (g: ServerGroup) => {
+            try {
+                await API.saveGroup(g)
+                await reloadGroups()
+            } catch (err) {
+                message.error(errorMessage(err))
             }
-        } catch {
-            // fallback
-        }
-    }, [onUpdateSettings])
+        },
+        [reloadGroups]
+    )
 
-    const handleSaveSettings = useCallback(async (newSettings: AppSettings) => {
-        try {
-            await onUpdateSettings(newSettings)
-        } catch (err) {
-            notify(errorMessage(err), 'error')
-        }
-    }, [onUpdateSettings, notify])
+    const deleteGroup = useCallback(
+        (id: string) => {
+            const grp = groups.find((g) => g.id === id)
+            setConfirm({
+                open: true,
+                title: '删除分组',
+                danger: true,
+                message: `确定要删除分组“${grp?.name || '此分组'}”吗？组内服务器将被移动到未分组。`,
+                onConfirm: async () => {
+                    setConfirm(emptyConfirm)
+                    try {
+                        await API.deleteGroup(id)
+                        await reloadGroups()
+                        await reloadServers()
+                    } catch (err) {
+                        message.error(errorMessage(err))
+                    }
+                },
+            })
+        },
+        [groups, reloadGroups, reloadServers]
+    )
+
+    const moveServer = useCallback(
+        async (serverId: string, groupId: string) => {
+            try {
+                await API.moveServerToGroup(serverId, groupId)
+                await reloadServers()
+            } catch (err) {
+                message.error(errorMessage(err))
+            }
+        },
+        [reloadServers]
+    )
 
     useEffect(() => {
         void reloadServers()
         void reloadGroups()
-        void reloadSettings()
-        API.listTransfers()
-            .then((list) => setTransfers(list || []))
-            .catch(() => undefined)
-    }, [reloadServers, reloadGroups, reloadSettings])
+    }, [reloadServers, reloadGroups])
 
     useEffect(() => {
-        applyThemeMode(settings.themeMode)
-        applyGlobalFont(settings.globalFontFamily)
-        const media = window.matchMedia('(prefers-color-scheme: dark)')
-        const listener = () => {
-            if (settings.themeMode === 'system') {
-                applyThemeMode('system')
-            }
-        }
-        if (media.addEventListener) {
-            media.addEventListener('change', listener)
-        }
-        return () => {
-            if (media.removeEventListener) {
-                media.removeEventListener('change', listener)
-            }
-        }
-    }, [settings.themeMode, settings.globalFontFamily])
-
-    useEffect(() => {
-        const offTransfer = subscribe('transfer:update', (t: Transfer) => {
+        const offTransfer = subscribe('transfer:progress', (t: Transfer) => {
             setTransfers((prev) => {
-                const idx = prev.findIndex((item) => item.id === t.id)
-                if (idx === -1) return [...prev, t]
-                const next = prev.slice()
-                next[idx] = t
-                return next
+                const idx = prev.findIndex((x) => x.id === t.id)
+                if (idx >= 0) {
+                    const next = [...prev]
+                    next[idx] = t
+                    return next
+                }
+                return [...prev, t]
             })
         })
         const offClosed = subscribe('session:closed', (sessionId: string) => {
-            setSessions((prev) =>
-                prev.map((s) => (s.id === sessionId ? { ...s, connected: false } : s))
-            )
+            void closeSession('ssh', sessionId)
         })
-        const offAsk = subscribe('agent:ask', (prompt: string) => {
-            if (prompt) {
-                setPendingAsk(prompt)
-            }
-            setAiAgentOpen(true)
-            activateTab('aiAgent')
+        const offAsk = subscribe('ai_agent:ask', (question: string) => {
+            setPendingAsk(question)
+            openTool('aiAgent')
         })
         return () => {
             offTransfer()
             offClosed()
             offAsk()
         }
-    }, [activateTab])
+    }, [closeSession, openTool])
 
     /* ---------------- 系统级文件拖拽 ---------------- */
+
+    const activeSshId = activeTarget?.kind === 'ssh' ? (activeTarget.id ?? null) : null
+    useEffect(() => {
+        activeIdRef.current = activeSshId
+    }, [activeSshId])
 
     useEffect(() => {
         const ok = registerNativeFileDrop((paths) => {
             const sessionId = activeIdRef.current
             if (!sessionId) {
-                notify('请先连接服务器再拖入文件', 'error')
+                message.warning('请先连接服务器再拖入文件')
                 return
             }
             const remoteDir = pathsRef.current[sessionId] || '/'
             API.uploadPaths(sessionId, remoteDir, paths).catch((err) =>
-                notify(errorMessage(err), 'error')
+                message.error(errorMessage(err))
             )
         })
         setNativeDrop(ok)
         return () => {
             if (ok) unregisterNativeFileDrop()
         }
-    }, [notify])
-
-    useEffect(() => {
-        activeIdRef.current = activeId
-    }, [activeId])
+    }, [])
 
     const handlePathChange = useCallback((sessionId: string, p: string) => {
         pathsRef.current[sessionId] = p
@@ -456,15 +232,15 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                     await API.deleteServer(cfg.id)
                     await reloadServers()
                 } catch (err) {
-                    notify(errorMessage(err), 'error')
+                    message.error(errorMessage(err))
                 }
             },
         })
-    }, [notify, reloadServers])
+    }, [reloadServers])
 
     /* ---------------- 连接逻辑统一分发 ---------------- */
 
-    const connect = useCallback(
+    const handleConnect = useCallback(
         async (cfg: ServerConfig) => {
             if (connectingRef.current.has(cfg.id)) return
             connectingRef.current.add(cfg.id)
@@ -473,257 +249,73 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 switch (cfg.type) {
                     case 'redis': {
                         const info = await connectRedisHelper(cfg)
-                        setRedisSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActiveRedisId(cfg.id)
-                        activateTab('redis', cfg.id)
-                        notify(`已连接 Redis ${info.title}`)
+                        addSession('redis', info)
+                        message.success(`已连接 Redis ${info.title}`)
                         break
                     }
                     case 'mysql': {
                         const info = await connectMysqlHelper(cfg)
-                        setMysqlSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActiveMysqlId(cfg.id)
-                        activateTab('mysql', cfg.id)
-                        notify(`已连接 MySQL ${info.title}`)
+                        addSession('mysql', info)
+                        message.success(`已连接 MySQL ${info.title}`)
                         break
                     }
                     case 'postgres': {
                         const info = await connectPostgresHelper(cfg)
-                        setPostgresSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActivePostgresId(cfg.id)
-                        activateTab('postgres', cfg.id)
-                        notify(`已连接 PostgreSQL ${info.title}`)
+                        addSession('postgres', info)
+                        message.success(`已连接 PostgreSQL ${info.title}`)
                         break
                     }
                     case 'mqtt': {
                         const info = await connectMqttHelper(cfg)
-                        setMqttSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActiveMqttId(cfg.id)
-                        activateTab('mqtt', cfg.id)
-                        notify(`已连接 MQTT ${info.host}:${info.port}`)
+                        addSession('mqtt', info)
+                        message.success(`已连接 MQTT ${info.host}:${info.port}`)
                         break
                     }
                     case 'mongo': {
                         const info = await connectMongoHelper(cfg)
-                        setMongoSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActiveMongoId(cfg.id)
-                        activateTab('mongo', cfg.id)
-                        notify(`已连接 MongoDB ${info.title}`)
+                        addSession('mongo', info)
+                        message.success(`已连接 MongoDB ${info.title}`)
                         break
                     }
                     case 'sqlite': {
                         const info = await connectSqliteHelper(cfg)
                         if (!info) {
-                            notify('未选择文件', 'info')
+                            message.info('未选择文件')
                             return
                         }
-                        setSqliteSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActiveSqliteId(cfg.id)
-                        activateTab('sqlite', cfg.id)
-                        notify(`已打开 SQLite 文件：${info.title}`)
+                        addSession('sqlite', info)
+                        message.success(`已打开 SQLite 文件：${info.title}`)
                         break
                     }
                     case 'docker': {
                         const info = await connectDockerHelper(cfg)
-                        setDockerSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActiveDockerId(cfg.id)
-                        activateTab('docker', cfg.id)
-                        notify(`已连接 Docker ${info.title}`)
+                        addSession('docker', info)
+                        message.success(`已连接 Docker ${info.title}`)
                         break
                     }
                     case 'k8s': {
                         const info = await connectK8sHelper(cfg)
-                        setK8sSessions((prev) => [...prev.filter((s) => s.id !== cfg.id), info])
-                        setActiveK8sId(cfg.id)
-                        activateTab('k8s', cfg.id)
-                        notify(`已连接 Kubernetes ${info.title}`)
+                        addSession('k8s', info)
+                        message.success(`已连接 Kubernetes ${info.title}`)
                         break
                     }
                     default: {
                         const info = await API.connect(cfg.id, 120, 32)
-                        setSessions((prev) => [...prev, info])
-                        setActiveId(info.id)
-                        activateTab('ssh', info.id)
+                        addSession('ssh', info)
                         pathsRef.current[info.id] = info.homeDir || '/'
-                        notify(`已连接 ${info.title}`)
+                        message.success(`已连接 ${info.title}`)
                         break
                     }
                 }
             } catch (err) {
-                notify(errorMessage(err), 'error')
+                message.error(errorMessage(err))
             } finally {
                 connectingRef.current.delete(cfg.id)
                 setConnectingId(null)
             }
         },
-        [notify, activateTab]
+        [addSession]
     )
-
-    /* ---------------- 会话关闭与回退规则 ---------------- */
-
-    const applyActive = useCallback((target: { kind: ConnType; id: string } | null) => {
-        activateTab(target ? target.kind : null, target ? target.id : null)
-    }, [activateTab])
-
-    const pickFallback = useCallback(
-        (kind: ConnType, lists: Record<ConnType, Array<{ id: string }>>): { kind: ConnType; id: string } | null => {
-            const rest = (['ssh', 'docker', 'k8s', 'redis', 'mysql', 'postgres', 'mqtt', 'mongo', 'sqlite'] as ConnType[]).filter((k) => k !== kind)
-            for (const k of [kind, ...rest]) {
-                const list = lists[k]
-                if (list && list.length) return { kind: k, id: list[list.length - 1].id }
-            }
-            return null
-        },
-        []
-    )
-
-    const closeSession = useCallback(
-        async (sessionId: string) => {
-            try {
-                await API.disconnect(sessionId)
-            } catch {
-                /* ignore */
-            }
-            const remaining = sessions.filter((s) => s.id !== sessionId)
-            setSessions(remaining)
-            delete pathsRef.current[sessionId]
-            if (activeId !== sessionId) return
-            applyActive(pickFallback('ssh', { ssh: remaining, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-        },
-        [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeId, applyActive, pickFallback]
-    )
-
-    const closeDockerSession = useCallback(async (id: string) => {
-        try {
-            await API.dockerClose(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = dockerSessions.filter((s) => s.id !== id)
-        setDockerSessions(remaining)
-        if (activeDockerId !== id) return
-        applyActive(pickFallback('docker', { ssh: sessions, docker: remaining, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeDockerId, applyActive, pickFallback])
-
-    const closeK8sSession = useCallback(async (id: string) => {
-        try {
-            await API.k8sClose(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = k8sSessions.filter((s) => s.id !== id)
-        setK8sSessions(remaining)
-        if (activeK8sId !== id) return
-        applyActive(pickFallback('k8s', { ssh: sessions, docker: dockerSessions, k8s: remaining, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeK8sId, applyActive, pickFallback])
-
-    const closeRedisSession = useCallback(async (id: string) => {
-        try {
-            await API.redisClose(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = redisSessions.filter((s) => s.id !== id)
-        setRedisSessions(remaining)
-        if (activeRedisId !== id) return
-        applyActive(pickFallback('redis', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: remaining, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeRedisId, applyActive, pickFallback])
-
-    const closeMysqlSession = useCallback(async (id: string) => {
-        try {
-            await API.mysqlCloseEx(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = mysqlSessions.filter((s) => s.id !== id)
-        setMysqlSessions(remaining)
-        if (activeMysqlId !== id) return
-        applyActive(pickFallback('mysql', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: remaining, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeMysqlId, applyActive, pickFallback])
-
-    const closePostgresSession = useCallback(async (id: string) => {
-        try {
-            await API.postgresClose(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = postgresSessions.filter((s) => s.id !== id)
-        setPostgresSessions(remaining)
-        if (activePostgresId !== id) return
-        applyActive(pickFallback('postgres', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: remaining, mqtt: mqttSessions, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activePostgresId, applyActive, pickFallback])
-
-    const closeMqttSession = useCallback(async (id: string) => {
-        try {
-            await API.mqttClose(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = mqttSessions.filter((s) => s.id !== id)
-        setMqttSessions(remaining)
-        if (activeMqttId !== id) return
-        applyActive(pickFallback('mqtt', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: remaining, mongo: mongoSessions, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeMqttId, applyActive, pickFallback])
-
-    const closeMongoSession = useCallback(async (id: string) => {
-        try {
-            await API.mongoClose(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = mongoSessions.filter((s) => s.id !== id)
-        setMongoSessions(remaining)
-        if (activeMongoId !== id) return
-        applyActive(pickFallback('mongo', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: remaining, sqlite: sqliteSessions }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeMongoId, applyActive, pickFallback])
-
-    const closeSqliteSession = useCallback(async (id: string) => {
-        try {
-            await API.sqliteClose(id)
-        } catch {
-            /* ignore */
-        }
-        const remaining = sqliteSessions.filter((s) => s.id !== id)
-        setSqliteSessions(remaining)
-        if (activeSqliteId !== id) return
-        applyActive(pickFallback('sqlite', { ssh: sessions, docker: dockerSessions, k8s: k8sSessions, redis: redisSessions, mysql: mysqlSessions, postgres: postgresSessions, mqtt: mqttSessions, mongo: mongoSessions, sqlite: remaining }))
-    }, [sessions, dockerSessions, k8sSessions, redisSessions, mysqlSessions, postgresSessions, mqttSessions, mongoSessions, sqliteSessions, activeSqliteId, applyActive, pickFallback])
-
-    /* ---------------- 工具面板与 Tab 激活 ---------------- */
-
-    const openAiAgent = useCallback(() => {
-        setAiAgentOpen(true)
-        activateTab('aiAgent')
-    }, [activateTab])
-
-    const closeAiAgent = useCallback(() => {
-        setAiAgentOpen(false)
-        setAiAgentActive(false)
-    }, [])
-
-    const openApiTool = useCallback(() => {
-        setApiOpen(true)
-        activateTab('api')
-    }, [activateTab])
-
-    const closeApiTool = useCallback(() => {
-        setApiOpen(false)
-        setApiActive(false)
-    }, [])
-
-    const openDevTools = useCallback(() => {
-        setDevToolsOpen(true)
-        activateTab('devtools')
-    }, [activateTab])
-
-    const closeDevTools = useCallback(() => {
-        setDevToolsOpen(false)
-        setDevToolsActive(false)
-    }, [])
-
-    const focusSession = useCallback((id: string, kind: ConnType) => {
-        activateTab(kind, id)
-    }, [activateTab])
 
     /* ---------------- UI 渲染 ---------------- */
 
@@ -739,136 +331,25 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 <Sidebar
                     servers={servers}
                     groups={groups}
-                    sessions={sessions}
-                    activeSessionId={activeId}
                     connectingId={connectingId}
-                    redisSessions={redisSessions}
-                    activeRedisId={activeRedisId}
-                    mysqlSessions={mysqlSessions}
-                    activeMysqlId={activeMysqlId}
-                    postgresSessions={postgresSessions}
-                    activePostgresId={activePostgresId}
-                    mqttSessions={mqttSessions}
-                    activeMqttId={activeMqttId}
-                    mongoSessions={mongoSessions}
-                    activeMongoId={activeMongoId}
-                    sqliteSessions={sqliteSessions}
-                    activeSqliteId={activeSqliteId}
-                    dockerSessions={dockerSessions}
-                    activeDockerId={activeDockerId}
-                    k8sSessions={k8sSessions}
-                    activeK8sId={activeK8sId}
                     onNew={addServer}
                     onEdit={editServer}
                     onDelete={deleteServer}
-                    onConnect={connect}
+                    onConnect={handleConnect}
                     onCreateGroup={createGroup}
                     onRenameGroup={renameGroup}
                     onDeleteGroup={deleteGroup}
                     onMoveServer={moveServer}
-                    onOpenAiAgent={openAiAgent}
-                    onOpenApi={openApiTool}
-                    onOpenDevTools={openDevTools}
                     onOpenSettings={() => setSettingsOpen(true)}
-                    onFocusSession={(id, kind) => focusSession(id, kind)}
                 />
 
                 <main className={a.main}>
-                    <SessionTabs
-                        sessions={sessions}
-                        activeId={activeId}
-                        dockerSessions={dockerSessions}
-                        activeDockerId={activeDockerId}
-                        k8sSessions={k8sSessions}
-                        activeK8sId={activeK8sId}
-                        redisSessions={redisSessions}
-                        activeRedisId={activeRedisId}
-                        mysqlSessions={mysqlSessions}
-                        activeMysqlId={activeMysqlId}
-                        postgresSessions={postgresSessions}
-                        activePostgresId={activePostgresId}
-                        mqttSessions={mqttSessions}
-                        activeMqttId={activeMqttId}
-                        mongoSessions={mongoSessions}
-                        activeMongoId={activeMongoId}
-                        sqliteSessions={sqliteSessions}
-                        activeSqliteId={activeSqliteId}
-                        aiAgentOpen={aiAgentOpen}
-                        aiAgentActive={aiAgentActive}
-                        devToolsOpen={devToolsOpen}
-                        devToolsActive={devToolsActive}
-                        apiOpen={apiOpen}
-                        apiActive={apiActive}
-                        onFocusSession={focusSession}
-                        onCloseSession={(id) => void closeSession(id)}
-                        onCloseDocker={(id) => void closeDockerSession(id)}
-                        onCloseK8s={(id) => void closeK8sSession(id)}
-                        onCloseRedis={(id) => void closeRedisSession(id)}
-                        onCloseMysql={(id) => void closeMysqlSession(id)}
-                        onClosePostgres={(id) => void closePostgresSession(id)}
-                        onCloseMqtt={(id) => void closeMqttSession(id)}
-                        onCloseMongo={(id) => void closeMongoSession(id)}
-                        onCloseSqlite={(id) => void closeSqliteSession(id)}
-                        onActivateAiAgent={openAiAgent}
-                        onCloseAiAgent={closeAiAgent}
-                        onActivateDevTools={openDevTools}
-                        onCloseDevTools={closeDevTools}
-                        onActivateApi={openApiTool}
-                        onCloseApi={closeApiTool}
-                    />
+                    <SessionTabs />
 
                     <Stage
-                        sessions={sessions}
-                        activeId={activeId}
                         nativeDrop={nativeDrop}
-                        dockerSessions={dockerSessions}
-                        activeDockerId={activeDockerId}
-                        k8sSessions={k8sSessions}
-                        activeK8sId={activeK8sId}
-                        redisSessions={redisSessions}
-                        activeRedisId={activeRedisId}
-                        mysqlSessions={mysqlSessions}
-                        activeMysqlId={activeMysqlId}
-                        postgresSessions={postgresSessions}
-                        activePostgresId={activePostgresId}
-                        mqttSessions={mqttSessions}
-                        activeMqttId={activeMqttId}
-                        mongoSessions={mongoSessions}
-                        activeMongoId={activeMongoId}
-                        sqliteSessions={sqliteSessions}
-                        activeSqliteId={activeSqliteId}
-                        aiAgentOpen={aiAgentOpen}
-                        aiAgentActive={aiAgentActive}
-                        devToolsOpen={devToolsOpen}
-                        devToolsActive={devToolsActive}
-                        apiOpen={apiOpen}
-                        apiActive={apiActive}
                         settings={settings}
                         onPathChange={handlePathChange}
-                        onNotify={notify}
-                        onCloseDocker={(id) => void closeDockerSession(id)}
-                        onCloseK8s={(id) => void closeK8sSession(id)}
-                        onCloseRedis={(id) => void closeRedisSession(id)}
-                        onRedisDbChange={(id, db, dbSize) =>
-                            setRedisSessions((prev) => prev.map((x) => (x.id === id ? { ...x, db, dbSize } : x)))
-                        }
-                        onCloseMysql={(id) => void closeMysqlSession(id)}
-                        onMysqlChange={(id, database) =>
-                            setMysqlSessions((prev) => prev.map((x) => (x.id === id ? { ...x, database } : x)))
-                        }
-                        onClosePostgres={(id) => void closePostgresSession(id)}
-                        onPostgresChange={(id, database) =>
-                            setPostgresSessions((prev) => prev.map((x) => (x.id === id ? { ...x, database } : x)))
-                        }
-                        onCloseMqtt={(id) => void closeMqttSession(id)}
-                        onCloseMongo={(id) => void closeMongoSession(id)}
-                        onCloseSqlite={(id) => void closeSqliteSession(id)}
-                        onCloseAiAgent={closeAiAgent}
-                        onMongoChange={(id, database) =>
-                            setMongoSessions((prev) => prev.map((x) => (x.id === id ? { ...x, database } : x)))
-                        }
-                        onCloseDevTools={closeDevTools}
-                        onCloseApi={closeApiTool}
                         onNewServer={addServer}
                     />
 
@@ -889,10 +370,10 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 initial={dialog.initial}
                 groups={groups}
                 onClose={() => setDialog({ open: false, initial: null })}
-                onSaved={() => void reloadServers()}
+                onSaved={reloadServers}
                 onSaveAndConnect={async (cfg: ServerConfig) => {
                     await reloadServers()
-                    void connect(cfg)
+                    void handleConnect(cfg)
                 }}
             />
 
@@ -900,9 +381,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 open={settingsOpen}
                 settings={settings}
                 onClose={() => setSettingsOpen(false)}
-                onSave={(newSettings) => {
-                    void handleSaveSettings(newSettings)
-                }}
+                onSave={onUpdateSettings}
             />
 
             <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
@@ -910,61 +389,54 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     )
 }
 
+/* ========================================================================== */
+/*                                App 顶层容器                                 */
+/* ========================================================================== */
+
 export default function App() {
     const [settings, setSettings] = useState<AppSettings>(() => {
-        const s = getCachedSettings()
-        applyThemeMode(s.themeMode)
-        applyGlobalFont(s.globalFontFamily)
-        return s
+        const cached = getCachedSettings()
+        applyThemeMode(cached.themeMode)
+        applyGlobalFont(cached.fontFamily)
+        return cached
     })
 
-    // 监听系统主题偏好变化（当处于 system 模式时响应）
-    useEffect(() => {
-        if (typeof window === 'undefined' || !window.matchMedia) return
-        const media = window.matchMedia('(prefers-color-scheme: dark)')
-        const listener = () => {
-            if (settings.themeMode === 'system') {
-                applyThemeMode('system')
-                setSettings((prev) => ({ ...prev }))
-            }
-        }
-        media.addEventListener('change', listener)
-        return () => media.removeEventListener('change', listener)
-    }, [settings.themeMode])
-
     const handleUpdateSettings = useCallback(async (newSettings: AppSettings) => {
-        setSettings(newSettings)
         setCachedSettings(newSettings)
+        setSettings(newSettings)
         applyThemeMode(newSettings.themeMode)
-        applyGlobalFont(newSettings.globalFontFamily)
+        applyGlobalFont(newSettings.fontFamily)
         try {
             await API.saveAppSettings(newSettings)
         } catch {
-            // ignore
+            /* 忽略保存失败 */
         }
     }, [])
 
-    const handleToggleTheme = useCallback(() => {
-        const currentIsDark =
-            settings.themeMode === 'dark' ||
-            (settings.themeMode === 'system' &&
-                typeof window !== 'undefined' &&
-                window.matchMedia &&
-                window.matchMedia('(prefers-color-scheme: dark)').matches)
+    const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isDark = settings.themeMode === 'dark' || (settings.themeMode === 'system' && !!prefersDark)
 
-        const nextMode: 'light' | 'dark' = currentIsDark ? 'light' : 'dark'
+    const handleToggleTheme = useCallback(() => {
+        const nextMode: 'light' | 'dark' = isDark ? 'light' : 'dark'
         const nextSettings: AppSettings = { ...settings, themeMode: nextMode }
         void handleUpdateSettings(nextSettings)
-    }, [settings, handleUpdateSettings])
+    }, [isDark, settings, handleUpdateSettings])
 
     return (
         <ConfigProvider locale={zhCN} theme={getAntdTheme(settings.themeMode)}>
             <AntdApp>
-                <AppContent
-                    settings={settings}
-                    onUpdateSettings={handleUpdateSettings}
-                    onToggleTheme={handleToggleTheme}
-                />
+                <ThemeContext.Provider value={{ themeMode: settings.themeMode, isDark, toggleTheme: handleToggleTheme }}>
+                    <SessionProvider>
+                        <AppContent
+                            settings={settings}
+                            onUpdateSettings={handleUpdateSettings}
+                            onToggleTheme={handleToggleTheme}
+                        />
+                    </SessionProvider>
+                </ThemeContext.Provider>
             </AntdApp>
         </ConfigProvider>
     )

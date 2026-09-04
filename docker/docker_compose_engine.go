@@ -25,17 +25,18 @@ import (
 )
 
 const (
-	composeProjectLabel = "com.docker.compose.project"
-	composeServiceLabel = "com.docker.compose.service"
-	composeVersionLabel = "com.docker.compose.version"
-	composeConfigHash   = "com.docker.compose.config-hash"
-	composeOneOffLabel  = "com.docker.compose.oneoff"
-	composeNumberLabel  = "com.docker.compose.container-number"
-	composeImageLabel   = "com.docker.compose.image"
-	composeNetworkLabel = "com.docker.compose.network"
-	composeVolumeLabel  = "com.docker.compose.volume"
-	composeWorkingDir   = "com.docker.compose.project.working_dir"
-	composeConfigFiles  = "com.docker.compose.project.config_files"
+	composeProjectLabel    = "com.docker.compose.project"
+	composeServiceLabel    = "com.docker.compose.service"
+	composeVersionLabel    = "com.docker.compose.version"
+	composeConfigHash      = "com.docker.compose.config-hash"
+	composeOneOffLabel     = "com.docker.compose.oneoff"
+	composeNumberLabel     = "com.docker.compose.container-number"
+	composeImageLabel      = "com.docker.compose.image"
+	composeNetworkLabel    = "com.docker.compose.network"
+	composeVolumeLabel     = "com.docker.compose.volume"
+	composeWorkingDir      = "com.docker.compose.project.working_dir"
+	composeConfigFiles     = "com.docker.compose.project.config_files"
+	terminalComposeIDLabel = "terminal.compose.id"
 )
 
 // ListComposeStacks 获取所有识别到的 Compose 项目。
@@ -102,12 +103,15 @@ func (d *DockerClient) ListComposeStacks(ctx context.Context) ([]DockerComposeSt
 			createdTime := time.Unix(c.Created, 0).Format("2006-01-02 15:04:05")
 
 			stack = &DockerComposeStackInfo{
+				UUID:        c.Labels[terminalComposeIDLabel],
 				Name:        project,
 				ConfigFiles: cfgFiles,
 				CreatedAt:   createdTime,
 				Services:    []DockerComposeServiceInfo{},
 			}
 			projectMap[project] = stack
+		} else if stack.UUID == "" && c.Labels[terminalComposeIDLabel] != "" {
+			stack.UUID = c.Labels[terminalComposeIDLabel]
 		}
 
 		stack.Services = append(stack.Services, svcInfo)
@@ -161,12 +165,31 @@ func (d *DockerClient) GetComposeStack(ctx context.Context, projectName string) 
 	return nil, fmt.Errorf("未找到项目: %s", projectName)
 }
 
-// DeployComposeStack 解析 YAML 并严格遵循官方 Docker Compose 规范编排创建/启动项目。
-func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerComposeDeployReq) error {
+// UpComposeStack 解析 YAML 并遵循官方 docker compose up 规范智能增量更新创建/启动项目。
+func (d *DockerClient) UpComposeStack(ctx context.Context, req DockerComposeDeployReq) (retErr error) {
 	projectName := sanitizeProjectName(req.ProjectName)
 	if projectName == "" {
 		return fmt.Errorf("项目名称 (Project Name) 不能为空")
 	}
+
+	// 记录本次执行过程中新创建的容器与网络，若后续步骤出错自动回滚清理，确保一致性
+	var newlyCreatedContainerIDs []string
+	var newlyCreatedNetworkIDs []string
+	var isBrandNewProject bool
+	defer func() {
+		if retErr != nil {
+			stopTimeout := 2
+			for _, cid := range newlyCreatedContainerIDs {
+				_ = d.cli.ContainerStop(context.Background(), cid, container.StopOptions{Timeout: &stopTimeout})
+				_ = d.cli.ContainerRemove(context.Background(), cid, container.RemoveOptions{Force: true})
+			}
+			if isBrandNewProject {
+				for _, nid := range newlyCreatedNetworkIDs {
+					_ = d.cli.NetworkRemove(context.Background(), nid)
+				}
+			}
+		}
+	}()
 
 	// 1. 变量插值
 	interpolatedYaml := interpolateEnv(req.YamlContent, req.EnvVars)
@@ -191,14 +214,16 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 	// 默认网络
 	defaultNetName := fmt.Sprintf("%s_default", projectName)
 	defaultNetID, err := d.ensureNetwork(ctx, defaultNetName, "bridge", map[string]string{
-		composeProjectLabel: projectName,
-		composeNetworkLabel: "default",
-		composeVersionLabel: version,
+		composeProjectLabel:    projectName,
+		composeNetworkLabel:    "default",
+		composeVersionLabel:    version,
+		terminalComposeIDLabel: req.ID,
 	})
 	if err != nil {
 		return fmt.Errorf("创建默认项目网络失败: %w", err)
 	}
 	networkMap["default"] = defaultNetID
+	newlyCreatedNetworkIDs = append(newlyCreatedNetworkIDs, defaultNetID)
 
 	// 自定义网络
 	for nKey, nSpec := range spec.Networks {
@@ -220,9 +245,10 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 			driver = "bridge"
 		}
 		labels := map[string]string{
-			composeProjectLabel: projectName,
-			composeNetworkLabel: nKey,
-			composeVersionLabel: version,
+			composeProjectLabel:    projectName,
+			composeNetworkLabel:    nKey,
+			composeVersionLabel:    version,
+			terminalComposeIDLabel: req.ID,
 		}
 		for k, v := range nSpec.Labels {
 			labels[k] = v
@@ -233,6 +259,7 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 			return fmt.Errorf("创建网络 (%s) 失败: %w", nKey, err)
 		}
 		networkMap[nKey] = nID
+		newlyCreatedNetworkIDs = append(newlyCreatedNetworkIDs, nID)
 	}
 
 	// 3. 数据卷创建
@@ -249,9 +276,10 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 			driver = "local"
 		}
 		labels := map[string]string{
-			composeProjectLabel: projectName,
-			composeVolumeLabel:  vKey,
-			composeVersionLabel: version,
+			composeProjectLabel:    projectName,
+			composeVolumeLabel:     vKey,
+			composeVersionLabel:    version,
+			terminalComposeIDLabel: req.ID,
 		}
 		for k, v := range vSpec.Labels {
 			labels[k] = v
@@ -269,7 +297,48 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 		return fmt.Errorf("解析服务依赖关系失败: %w", err)
 	}
 
-	// 5. 按拓扑顺序创建并启动各个服务容器
+	// 5. 发现已存在的关联容器（匹配 UUID 或 ProjectName）
+	existingContainers, _ := d.cli.ContainerList(ctx, container.ListOptions{All: true})
+	existingByService := make(map[string]container.Summary)
+	allExistingProjectContainers := make([]container.Summary, 0)
+
+	for _, c := range existingContainers {
+		isMatch := false
+		if req.ID != "" && c.Labels[terminalComposeIDLabel] == req.ID {
+			isMatch = true
+		} else if c.Labels[composeProjectLabel] == projectName || c.Labels["io.docker.compose.project"] == projectName {
+			isMatch = true
+		}
+
+		if isMatch {
+			allExistingProjectContainers = append(allExistingProjectContainers, c)
+			svcName := c.Labels[composeServiceLabel]
+			if svcName == "" {
+				svcName = c.Labels["io.docker.compose.service"]
+			}
+			if svcName != "" {
+				existingByService[svcName] = c
+			}
+		}
+	}
+	isBrandNewProject = len(allExistingProjectContainers) == 0
+
+	// 6. 清理孤儿容器（Remove Orphans）：存在于旧项目但在当前 YAML 的 spec.Services 中已被移除的容器
+	for _, c := range allExistingProjectContainers {
+		svcName := c.Labels[composeServiceLabel]
+		if svcName == "" {
+			svcName = c.Labels["io.docker.compose.service"]
+		}
+		if svcName != "" {
+			if _, existsInSpec := spec.Services[svcName]; !existsInSpec {
+				timeout := 5
+				_ = d.cli.ContainerStop(ctx, c.ID, container.StopOptions{Timeout: &timeout})
+				_ = d.cli.ContainerRemove(ctx, c.ID, container.RemoveOptions{Force: true})
+			}
+		}
+	}
+
+	// 7. 按拓扑顺序智能更新各个服务
 	createdContainers := make(map[string]string) // serviceName -> containerID
 
 	for _, serviceName := range sortedServices {
@@ -278,22 +347,48 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 			return fmt.Errorf("服务 [%s] 未指定 image 镜像", serviceName)
 		}
 
-		// 检查/拉取镜像
-		if req.ForcePull || !d.hasLocalImage(ctx, svc.Image) {
-			_, _ = d.PullImage(ctx, svc.Image)
-		}
+		newHash := computeServiceConfigHash(svc)
+		existing, hasExisting := existingByService[serviceName]
 
 		containerName := svc.ContainerName
 		if containerName == "" {
 			containerName = fmt.Sprintf("%s-%s-1", projectName, serviceName)
 		}
 
-		// 如果容器已存在，按策略停止并移除
-		existingID, _ := d.findContainerByName(ctx, containerName)
-		if existingID != "" {
+		// 判断是否无需重建（对标 docker compose up：未修改且在运行的服务保持原样运行）
+		needsRecreate := true
+		if hasExisting && !req.Recreate && !req.ForcePull {
+			oldHash := existing.Labels[composeConfigHash]
+			hasSameUUID := req.ID == "" || existing.Labels[terminalComposeIDLabel] == req.ID
+			hasSameProject := existing.Labels[composeProjectLabel] == projectName
+			if oldHash == newHash && hasSameUUID && hasSameProject && existing.State == "running" {
+				needsRecreate = false
+			}
+		}
+
+		if !needsRecreate {
+			// 该服务未变动，保持运行
+			createdContainers[serviceName] = existing.ID
+			continue
+		}
+
+		// 检查/拉取镜像
+		if req.ForcePull || !d.hasLocalImage(ctx, svc.Image) {
+			_, _ = d.PullImage(ctx, svc.Image)
+		}
+
+		// 如果容器已存在，停止并移除
+		if hasExisting {
 			timeout := 5
-			_ = d.cli.ContainerStop(ctx, existingID, container.StopOptions{Timeout: &timeout})
-			_ = d.cli.ContainerRemove(ctx, existingID, container.RemoveOptions{Force: true})
+			_ = d.cli.ContainerStop(ctx, existing.ID, container.StopOptions{Timeout: &timeout})
+			_ = d.cli.ContainerRemove(ctx, existing.ID, container.RemoveOptions{Force: true})
+		}
+		// 避免名字冲突
+		existingByName, _ := d.findContainerByName(ctx, containerName)
+		if existingByName != "" && existingByName != existing.ID {
+			timeout := 5
+			_ = d.cli.ContainerStop(ctx, existingByName, container.StopOptions{Timeout: &timeout})
+			_ = d.cli.ContainerRemove(ctx, existingByName, container.RemoveOptions{Force: true})
 		}
 
 		// 解析端口配置
@@ -311,7 +406,7 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 		// 解析环境变量
 		envList := parseComposeEnv(svc.Environment)
 
-		// 解析数据卷绑定
+		// 解析数据卷绑定（命名数据卷保持原样挂载）
 		mounts, binds := parseComposeVolumes(projectName, svc.Volumes, spec.Volumes)
 
 		// 命令与 Entrypoint
@@ -324,7 +419,7 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 			entrypoint = parseStringSliceOrString(svc.Entrypoint)
 		}
 
-		// 官方标准标签
+		// 官方标准标签 + 客户端专属 UUID 强绑定标签
 		labels := map[string]string{
 			composeProjectLabel: projectName,
 			composeServiceLabel: serviceName,
@@ -332,8 +427,11 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 			composeNumberLabel:  "1",
 			composeOneOffLabel:  "False",
 			composeImageLabel:   svc.Image,
-			composeConfigHash:   computeServiceConfigHash(svc),
+			composeConfigHash:   newHash,
 			composeConfigFiles:  "docker-compose.yml",
+		}
+		if req.ID != "" {
+			labels[terminalComposeIDLabel] = req.ID
 		}
 		for k, v := range svc.Labels {
 			labels[k] = v
@@ -432,6 +530,7 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 		if err != nil {
 			return fmt.Errorf("创建容器 [%s] 失败: %w", containerName, err)
 		}
+		newlyCreatedContainerIDs = append(newlyCreatedContainerIDs, created.ID)
 		createdContainers[serviceName] = created.ID
 
 		// 连接其余次级网络
@@ -458,6 +557,11 @@ func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerCompose
 	return nil
 }
 
+// DeployComposeStack 兼容旧接口，内部调用 UpComposeStack 实现部署与智能更新。
+func (d *DockerClient) DeployComposeStack(ctx context.Context, req DockerComposeDeployReq) error {
+	return d.UpComposeStack(ctx, req)
+}
+
 // ControlComposeStack 控制 Compose 项目的生命周期（start, stop, restart, down, remove）。
 func (d *DockerClient) ControlComposeStack(ctx context.Context, projectName string, action string) error {
 	projectName = sanitizeProjectName(projectName)
@@ -465,14 +569,17 @@ func (d *DockerClient) ControlComposeStack(ctx context.Context, projectName stri
 		return fmt.Errorf("项目名称不能为空")
 	}
 
-	containers, err := d.cli.ContainerList(ctx, container.ListOptions{
-		All: true,
-		Filters: filters.NewArgs(
-			filters.Arg("label", fmt.Sprintf("%s=%s", composeProjectLabel, projectName)),
-		),
-	})
+	allContainers, err := d.cli.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		return fmt.Errorf("获取项目容器失败: %w", err)
+	}
+	var containers []container.Summary
+	for _, c := range allContainers {
+		if c.Labels[composeProjectLabel] == projectName ||
+			c.Labels["io.docker.compose.project"] == projectName ||
+			(c.Labels[terminalComposeIDLabel] != "" && c.Labels[terminalComposeIDLabel] == projectName) {
+			containers = append(containers, c)
+		}
 	}
 
 	switch action {
@@ -502,13 +609,12 @@ func (d *DockerClient) ControlComposeStack(ctx context.Context, projectName stri
 		}
 
 		// 清理该项目创建的非外部网络
-		nets, _ := d.cli.NetworkList(ctx, network.ListOptions{
-			Filters: filters.NewArgs(
-				filters.Arg("label", fmt.Sprintf("%s=%s", composeProjectLabel, projectName)),
-			),
-		})
+		nets, _ := d.cli.NetworkList(ctx, network.ListOptions{})
 		for _, n := range nets {
-			_ = d.cli.NetworkRemove(ctx, n.ID)
+			if n.Labels[composeProjectLabel] == projectName ||
+				(n.Labels[terminalComposeIDLabel] != "" && n.Labels[terminalComposeIDLabel] == projectName) {
+				_ = d.cli.NetworkRemove(ctx, n.ID)
+			}
 		}
 	default:
 		return fmt.Errorf("不支持的 Compose 操作: %s", action)

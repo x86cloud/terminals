@@ -67,10 +67,52 @@ export function DockerCreateVolume(id: string, name: string, driver: string, lab
 }
 
 /**
+ * DockerDeleteComposeRecord 强力联动删除 Compose 记录（同时清理关联容器和网络）。
+ */
+export function DockerDeleteComposeRecord(serverId: string, id: string): $CancellablePromise<void> {
+    return $Call.ByID(2450380969, serverId, id);
+}
+
+/**
  * DockerDeployComposeStack 部署/更新 Compose 项目。
  */
 export function DockerDeployComposeStack(id: string, req: docker$0.DockerComposeDeployReq): $CancellablePromise<void> {
     return $Call.ByID(2944382300, id, req);
+}
+
+/**
+ * DockerExecClose 关闭指定 Docker 容器终端会话。
+ */
+export function DockerExecClose(execId: string): $CancellablePromise<void> {
+    return $Call.ByID(448638050, execId);
+}
+
+/**
+ * DockerExecResize 调整 Docker 容器终端会话行列尺寸。
+ */
+export function DockerExecResize(serverId: string, execId: string, cols: number, rows: number): $CancellablePromise<void> {
+    return $Call.ByID(3289306554, serverId, execId, cols, rows);
+}
+
+/**
+ * DockerExecStart 启动指定 Docker 容器的交互式终端会话。
+ */
+export function DockerExecStart(serverId: string, containerId: string, command: string, cols: number, rows: number): $CancellablePromise<string> {
+    return $Call.ByID(3746907814, serverId, containerId, command, cols, rows);
+}
+
+/**
+ * DockerExecWrite 写入数据到指定 Docker 容器终端会话。
+ */
+export function DockerExecWrite(execId: string, data: string): $CancellablePromise<void> {
+    return $Call.ByID(1583947137, execId, data);
+}
+
+/**
+ * DockerGetComposeRecord 获取特定 Compose 记录详情。
+ */
+export function DockerGetComposeRecord(id: string): $CancellablePromise<core$0.DockerComposeRecord | null> {
+    return $Call.ByID(867706746, id);
 }
 
 /**
@@ -116,6 +158,13 @@ export function DockerInspectImage(id: string, imageID: string): $CancellablePro
 }
 
 /**
+ * DockerListComposeRecords 获取指定 Docker 服务器的本地 Compose 记录。
+ */
+export function DockerListComposeRecords(serverId: string): $CancellablePromise<core$0.DockerComposeRecord[] | null> {
+    return $Call.ByID(823024045, serverId);
+}
+
+/**
  * DockerListComposeStacks 获取所有 Compose 项目。
  */
 export function DockerListComposeStacks(id: string): $CancellablePromise<docker$0.DockerComposeStackInfo[] | null> {
@@ -148,6 +197,13 @@ export function DockerListNetworks(id: string): $CancellablePromise<docker$0.Doc
  */
 export function DockerListVolumes(id: string): $CancellablePromise<docker$0.DockerVolumeInfo[] | null> {
     return $Call.ByID(782015154, id);
+}
+
+/**
+ * DockerLoadImage 弹出选择文件对话框并从本地 tar 包导入镜像。
+ */
+export function DockerLoadImage(id: string): $CancellablePromise<string> {
+    return $Call.ByID(3269431192, id);
 }
 
 /**
@@ -186,6 +242,20 @@ export function DockerRemoveVolume(id: string, name: string, force: boolean): $C
 }
 
 /**
+ * DockerSaveComposeRecord 保存/创建本地 Compose 记录。
+ */
+export function DockerSaveComposeRecord(record: core$0.DockerComposeRecord): $CancellablePromise<core$0.DockerComposeRecord | null> {
+    return $Call.ByID(1395318731, record);
+}
+
+/**
+ * DockerSaveImage 弹出保存文件对话框并将镜像导出保存为本地 tar 压缩包。
+ */
+export function DockerSaveImage(id: string, imageIDOrTag: string, defaultFilename: string): $CancellablePromise<string> {
+    return $Call.ByID(2544736979, id, imageIDOrTag, defaultFilename);
+}
+
+/**
  * DockerSystemPrune 执行系统清理。
  */
 export function DockerSystemPrune(id: string, pruneContainers: boolean, pruneImages: boolean, pruneVolumes: boolean, pruneNetworks: boolean): $CancellablePromise<docker$0.DockerPruneReport | null> {
@@ -197,4 +267,11 @@ export function DockerSystemPrune(id: string, pruneContainers: boolean, pruneIma
  */
 export function DockerTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<string> {
     return $Call.ByID(4119310511, cfg);
+}
+
+/**
+ * DockerUpComposeStack 执行类似 docker compose up 的智能增量更新，仅在实例创建/启动成功后才同步保存本地 YAML。
+ */
+export function DockerUpComposeStack(serverId: string, record: core$0.DockerComposeRecord, forcePull: boolean, recreate: boolean): $CancellablePromise<core$0.DockerComposeRecord | null> {
+    return $Call.ByID(2251632454, serverId, record, forcePull, recreate);
 }

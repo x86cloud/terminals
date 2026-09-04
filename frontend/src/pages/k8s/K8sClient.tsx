@@ -69,7 +69,6 @@ export default function K8sClient({ session }: Props) {
         setCreateNsLoading(true)
         try {
             await API.k8sCreateNamespace(session.serverId, trimmed)
-            message.success(`命名空间 [${trimmed}] 创建成功`)
             setCreateNsModalOpen(false)
             setNewNsName('')
             await fetchOverviewAndNs()
@@ -85,7 +84,6 @@ export default function K8sClient({ session }: Props) {
         if (currentNamespace === '_all') return
         try {
             await API.k8sDeleteNamespace(session.serverId, currentNamespace)
-            message.success(`命名空间 [${currentNamespace}] 已删除`)
             setCurrentNamespace('_all')
             await fetchOverviewAndNs()
         } catch (err: any) {

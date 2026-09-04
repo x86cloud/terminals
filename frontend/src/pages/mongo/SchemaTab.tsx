@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Select, Button, Space, Tag, Alert } from 'antd'
+import { Select, Button, Space, Tag, Alert, message } from 'antd'
 import { RotateCw } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
@@ -11,10 +11,9 @@ interface Props {
     session: MongoSessionInfo
     db: string
     collection: string | null
-    onNotify: (msg: string, kind?: 'info' | 'error') => void
 }
 
-export default function SchemaTab({ session, db, collection, onNotify }: Props) {
+export default function SchemaTab({ session, db, collection }: Props) {
     const [fields, setFields] = useState<MongoFieldInfo[]>([])
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
@@ -71,7 +70,7 @@ export default function SchemaTab({ session, db, collection, onNotify }: Props) 
         try {
             await API.mongoSetValidator(id, db, collection!, validator, level, action)
             setValidatorMsg('校验规则已保存')
-            onNotify('Schema 校验规则已更新')
+            message.success('Schema 校验规则已更新')
         } catch (e) {
             setValidatorMsg(errorMessage(e))
         } finally {

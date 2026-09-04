@@ -141,7 +141,6 @@ export default function K8sResourceYamlModal({
                     onClick={() => {
                         if (!content) return
                         navigator.clipboard.writeText(content)
-                        message.success('YAML 已复制到剪贴板')
                     }}
                 >
                     复制 YAML
