@@ -6,18 +6,18 @@
 
 :root,
 [data-theme='light'] {
-    --bg: linear-gradient(135deg, #f0f4f9 0%, #e6edf6 50%, #dbe5f0 100%);
+    --bg: linear-gradient(135deg, #f7f8fa 0%, #f1f3f6 50%, #e9ecef 100%);
     --bj: var(--bg);
-    --bg-solid: #f0f4f9;
-    --bg-1: rgba(255, 255, 255, 0.85);
+    --bg-solid: #f3f4f6;
+    --bg-1: rgba(255, 255, 255, 0.90);
     --bg-1-solid: #ffffff;
-    --bg-2: rgba(243, 246, 250, 0.80);
-    --bg-2-solid: #f3f6fa;
-    --bg-3: #e3e9f1;
-    --border: rgba(212, 219, 230, 0.85);
+    --bg-2: rgba(242, 244, 247, 0.85);
+    --bg-2-solid: #f0f2f5;
+    --bg-3: #e4e7ec;
+    --border: rgba(220, 224, 230, 0.85);
     --text: #1f2733;
-    --text-dim: #6b7686;
-    --text-faint: #aab3c0;
+    --text-dim: #667085;
+    --text-faint: #98a2b3;
     --accent: #3370ff;
     --accent-dim: #255cd8;
     --accent-dim-2: rgba(51, 112, 255, 0.12);
@@ -31,13 +31,13 @@
     --warn: #c97a1a;
     --warn-bg: rgba(201, 122, 26, 0.12);
     --warn-text: #8c4c06;
-    --bg-elev: rgba(245, 247, 250, 0.85);
-    --bg-elev-solid: #f5f7fa;
-    --term-bg: #ffffff;
+    --bg-elev: rgba(248, 249, 251, 0.88);
+    --bg-elev-solid: #f8f9fb;
+    --term-bg: #fcfdfd;
     --tile-bg-1: #ffffff;
-    --tile-bg-2: #edf2f7;
-    --tile-border: rgba(0, 0, 0, 0.08);
-    --tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --tile-bg-2: #f0f2f5;
+    --tile-border: rgba(0, 0, 0, 0.07);
+    --tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     --tile-node: #444444;
 
     font-family: var(--font-family, "Microsoft YaHei UI", "Segoe UI", system-ui, -apple-system, sans-serif);

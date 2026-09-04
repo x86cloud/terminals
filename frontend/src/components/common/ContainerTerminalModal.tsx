@@ -14,6 +14,7 @@ import '@xterm/xterm/css/xterm.css'
 import { API, subscribe } from '@/api'
 import { base64ToBytes } from '@/utils'
 import { useTheme } from '@/contexts/ThemeContext'
+import { getTerminalTheme } from '@/theme'
 
 export interface ContainerExecTarget {
     type: 'docker' | 'k8s'
@@ -32,52 +33,6 @@ interface Props {
     open: boolean
     onClose: () => void
     target: ContainerExecTarget | null
-}
-
-const LIGHT_TERM_THEME = {
-    background: '#ffffff',
-    foreground: '#1f2733',
-    cursor: '#255cd8',
-    selectionBackground: '#cfe4f1',
-    black: '#1f2733',
-    red: '#d6453f',
-    green: '#1c8830',
-    yellow: '#9a6700',
-    blue: '#0969da',
-    magenta: '#8250df',
-    cyan: '#1c8fc4',
-    white: '#6b7686',
-    brightBlack: '#6b7686',
-    brightRed: '#e5534b',
-    brightGreen: '#2a8536',
-    brightYellow: '#bf8700',
-    brightBlue: '#218bff',
-    brightMagenta: '#a371f7',
-    brightCyan: '#39c5de',
-    brightWhite: '#1f2733',
-}
-
-const DARK_TERM_THEME = {
-    background: '#141619',
-    foreground: '#e1e4ea',
-    cursor: '#29b6f6',
-    selectionBackground: '#304d6d',
-    black: '#141619',
-    red: '#ef5350',
-    green: '#66bb6a',
-    yellow: '#ffa726',
-    blue: '#42a5f5',
-    magenta: '#ab47bc',
-    cyan: '#26c6da',
-    white: '#e1e4ea',
-    brightBlack: '#606673',
-    brightRed: '#ff7371',
-    brightGreen: '#81c784',
-    brightYellow: '#ffb74d',
-    brightBlue: '#64b5f6',
-    brightMagenta: '#ba68c8',
-    brightCyan: '#4dd0e1',
-    brightWhite: '#ffffff',
 }
 
 export default function ContainerTerminalModal({ open, onClose, target }: Props) {
@@ -171,7 +126,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                 lineHeight: 1.25,
                 cursorBlink: true,
                 scrollback: 10000,
-                theme: isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME,
+                theme: getTerminalTheme(isDark),
             })
             const fit = new FitAddon()
             term.loadAddon(fit)
@@ -302,7 +257,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
     // 动态同步深浅色主题
     useEffect(() => {
         if (termRef.current) {
-            termRef.current.options.theme = isDark ? DARK_TERM_THEME : LIGHT_TERM_THEME
+            termRef.current.options.theme = getTerminalTheme(isDark)
         }
     }, [isDark])
 
