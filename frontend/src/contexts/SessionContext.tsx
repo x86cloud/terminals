@@ -11,7 +11,7 @@ import {
     K8sSessionInfo,
     ConnType,
 } from '@/types'
-import { disconnectHelper, pickFallback } from './sessionHelpers'
+import { disconnectHelper, getAllOpenTabs, pickAdjacentFallback } from './sessionHelpers'
 
 export type ToolKind = 'api' | 'devtools' | 'aiAgent'
 export type TabKind = ConnType | ToolKind
@@ -113,20 +113,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const openTool = useCallback((tool: ToolKind) => {
-        setTools((prev) => ({
-            ...prev,
-            [tool]: { open: true, active: true },
-        }))
-        setActiveTarget({ kind: tool, id: null })
-    }, [])
+        activateTab(tool)
+    }, [activateTab])
 
     const closeTool = useCallback((tool: ToolKind) => {
+        const closedTarget: ActiveTarget = { kind: tool, id: null }
+        const allTabs = getAllOpenTabs(sessions, tools)
+        const fallback = pickAdjacentFallback(closedTarget, allTabs)
+
         setTools((prev) => ({
             ...prev,
             [tool]: { open: false, active: false },
+            ...(fallback?.kind === 'api' || fallback?.kind === 'devtools' || fallback?.kind === 'aiAgent'
+                ? { [fallback.kind]: { ...prev[fallback.kind], active: true } }
+                : {}),
         }))
-        setActiveTarget((curr) => (curr?.kind === tool ? null : curr))
-    }, [])
+
+        setActiveTarget((curr) => {
+            if (curr?.kind === tool) {
+                return fallback
+            }
+            return curr
+        })
+    }, [sessions, tools])
 
     const addSession = useCallback(<K extends keyof SessionsState>(kind: K, info: SessionsState[K][number]) => {
         setSessions((prev) => {
@@ -153,39 +162,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const closeSession = useCallback(async (kind: ConnType, id: string) => {
         await disconnectHelper(kind, id)
 
-        let remainingTarget: { kind: ConnType; id: string } | null = null
+        const closedTarget: ActiveTarget = { kind, id }
+        const allTabs = getAllOpenTabs(sessions, tools)
+        const fallback = pickAdjacentFallback(closedTarget, allTabs)
 
         setSessions((prev) => {
             const currentList = prev[kind] as Array<{ id: string }>
             const nextList = currentList.filter((s) => s.id !== id)
-            const nextSessions = {
+            return {
                 ...prev,
                 [kind]: nextList,
             }
-
-            const sessionsMap: Record<ConnType, Array<{ id: string }>> = {
-                ssh: nextSessions.ssh,
-                docker: nextSessions.docker,
-                k8s: nextSessions.k8s,
-                redis: nextSessions.redis,
-                mysql: nextSessions.mysql,
-                postgres: nextSessions.postgres,
-                mqtt: nextSessions.mqtt,
-                mongo: nextSessions.mongo,
-                sqlite: nextSessions.sqlite,
-            }
-
-            remainingTarget = pickFallback(kind, sessionsMap)
-            return nextSessions
         })
 
         setActiveTarget((curr) => {
             if (curr?.kind === kind && curr?.id === id) {
-                return remainingTarget
+                return fallback
             }
             return curr
         })
-    }, [])
+
+        if (fallback?.kind === 'api' || fallback?.kind === 'devtools' || fallback?.kind === 'aiAgent') {
+            setTools((prev) => ({
+                ...prev,
+                api: { ...prev.api, active: fallback.kind === 'api' },
+                devtools: { ...prev.devtools, active: fallback.kind === 'devtools' },
+                aiAgent: { ...prev.aiAgent, active: fallback.kind === 'aiAgent' },
+            }))
+        }
+    }, [sessions, tools])
 
     return (
         <SessionContext.Provider

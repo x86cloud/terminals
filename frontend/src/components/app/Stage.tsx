@@ -173,7 +173,7 @@ export default function Stage({
             ))}
 
             {tools.aiAgent.open && (
-                <div style={tools.aiAgent.active ? shownPane : hiddenPane}>
+                <div style={activeTarget?.kind === 'aiAgent' ? shownPane : hiddenPane}>
                     <ErrorBoundary title="AI 智能体渲染异常" onClose={() => closeTool('aiAgent')}>
                         <AiAgentPanel settings={settings} />
                     </ErrorBoundary>
@@ -181,7 +181,7 @@ export default function Stage({
             )}
 
             {tools.devtools.open && (
-                <div style={tools.devtools.active ? shownPane : hiddenPane}>
+                <div style={activeTarget?.kind === 'devtools' ? shownPane : hiddenPane}>
                     <ErrorBoundary title="DevTools 页面渲染异常" onClose={() => closeTool('devtools')}>
                         <DevTools onClose={() => closeTool('devtools')} />
                     </ErrorBoundary>
@@ -189,7 +189,7 @@ export default function Stage({
             )}
 
             {tools.api.open && (
-                <div style={tools.api.active ? shownPane : hiddenPane}>
+                <div style={activeTarget?.kind === 'api' ? shownPane : hiddenPane}>
                     <ErrorBoundary title="API 页面渲染异常" onClose={() => closeTool('api')}>
                         <ApiClient onClose={() => closeTool('api')} />
                     </ErrorBoundary>

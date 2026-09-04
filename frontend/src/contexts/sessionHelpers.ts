@@ -12,6 +12,7 @@ import {
     K8sSessionInfo,
     ConnType,
 } from '@/types'
+import type { ActiveTarget, SessionsState, ToolsState } from './SessionContext'
 
 export async function connectK8sHelper(cfg: ServerConfig): Promise<K8sSessionInfo> {
     const ok = await API.k8sConnect(cfg.id)
@@ -184,6 +185,36 @@ export async function disconnectHelper(kind: ConnType, id: string): Promise<void
     } catch {
         /* ignore */
     }
+}
+
+export function getAllOpenTabs(
+    sessions: SessionsState,
+    tools: ToolsState
+): ActiveTarget[] {
+    const list: ActiveTarget[] = []
+    const kinds: ConnType[] = ['ssh', 'docker', 'k8s', 'redis', 'mysql', 'postgres', 'mqtt', 'mongo', 'sqlite']
+    for (const k of kinds) {
+        const sList = sessions[k]
+        if (sList && sList.length) {
+            for (const s of sList) {
+                list.push({ kind: k, id: s.id })
+            }
+        }
+    }
+    if (tools.aiAgent.open) list.push({ kind: 'aiAgent', id: null })
+    if (tools.devtools.open) list.push({ kind: 'devtools', id: null })
+    if (tools.api.open) list.push({ kind: 'api', id: null })
+    return list
+}
+
+export function pickAdjacentFallback(
+    closedTarget: ActiveTarget,
+    allTabs: ActiveTarget[]
+): ActiveTarget | null {
+    const idx = allTabs.findIndex((t) => t.kind === closedTarget.kind && (t.id ?? null) === (closedTarget.id ?? null))
+    if (idx === -1 || allTabs.length <= 1) return null
+    // 优先切换至后一个相邻标签，若已是末尾则切换至前一个标签
+    return idx < allTabs.length - 1 ? allTabs[idx + 1] : allTabs[idx - 1]
 }
 
 export function pickFallback(
