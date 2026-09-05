@@ -86,8 +86,11 @@ export function getAntdTheme(themeMode: 'dark' | 'light' | 'system' = 'dark'): T
             },
             Radio: {
                 buttonBg: isDark ? '#1b1e23' : '#ffffff',
-                buttonCheckedBg: isDark ? '#255cd8' : '#3b82f6',
-                buttonSolidCheckedBg: isDark ? '#255cd8' : '#3b82f6',
+                buttonCheckedBg: isDark ? '#1b1e23' : '#ffffff',
+                buttonSolidCheckedBg: isDark ? '#255cd8' : '#3370ff',
+                buttonSolidCheckedColor: '#ffffff',
+                buttonSolidCheckedHoverBg: isDark ? '#1d4ed8' : '#2563eb',
+                buttonSolidCheckedActiveBg: isDark ? '#1e40af' : '#1d4ed8',
             },
             Tooltip: {
                 colorBgSpotlight: isDark ? '#2d333b' : '#333333',

@@ -1,12 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ConfigProvider, App as AntdApp, message } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
-
-// 全局精简消息通知配置：控制显示时长与最大堆叠数，避免干扰
-message.config({
-    duration: 2,
-    maxCount: 2,
-})
 import { getAntdTheme } from './theme'
 import { ThemeContext } from '@/contexts/ThemeContext'
 import { SessionProvider, useSession } from '@/contexts/SessionContext'

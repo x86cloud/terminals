@@ -31,6 +31,8 @@ import s from './K8sClient.module.less'
 interface Props {
     serverId: string
     currentNamespace: string
+    initialSearchKw?: string
+    initialSubTab?: 'configmap' | 'secret' | 'pvc'
 }
 
 const DEFAULT_CONFIGMAP_TEMPLATE = (namespace: string) => `apiVersion: v1
@@ -73,15 +75,28 @@ spec:
   # storageClassName: standard
 `
 
-export default function ConfigStorageTab({ serverId, currentNamespace }: Props) {
-    const [subTab, setSubTab] = useState<'configmap' | 'secret' | 'pvc'>('configmap')
+export default function ConfigStorageTab({ serverId, currentNamespace, initialSearchKw, initialSubTab }: Props) {
+    const [subTab, setSubTab] = useState<'configmap' | 'secret' | 'pvc'>(initialSubTab || 'configmap')
     const [configMaps, setConfigMaps] = useState<K8sConfigMapInfo[]>([])
     const [secrets, setSecrets] = useState<K8sSecretInfo[]>([])
     const [pvcs, setPvcs] = useState<K8sPVCInfo[]>([])
     const [loading, setLoading] = useState(false)
-    const [searchKw, setSearchKw] = useState('')
+    const [searchKw, setSearchKw] = useState(initialSearchKw || '')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    useEffect(() => {
+        if (initialSearchKw !== undefined) {
+            setSearchKw(initialSearchKw)
+            setPage(1)
+        }
+    }, [initialSearchKw])
+
+    useEffect(() => {
+        if (initialSubTab) {
+            setSubTab(initialSubTab)
+        }
+    }, [initialSubTab])
 
     // YAML 模态框 (查看/编辑/新建)
     const [yamlModalOpen, setYamlModalOpen] = useState(false)

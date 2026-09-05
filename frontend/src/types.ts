@@ -1223,3 +1223,30 @@ export interface K8sApplyResult {
     message?: string
 }
 
+export interface K8sResourceItemSummary {
+    kind: string
+    name: string
+    namespace: string
+}
+
+export interface K8sOrchestrationRecord {
+    id: string
+    serverId: string
+    name: string
+    namespace: string
+    yamlContent: string
+    status: string // 'deployed' | 'not_deployed'
+    resources: K8sResourceItemSummary[] | null
+    resourcesSummary: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface K8sDeleteResult {
+    kind: string
+    name: string
+    namespace?: string
+    action: 'deleted' | 'not_found' | 'failed' | string
+    message?: string
+}
+

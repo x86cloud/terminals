@@ -17,6 +17,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -1341,3 +1342,199 @@ func (c *K8sClient) ExecStream(ctx context.Context, namespace, podName, containe
 	}
 	return 0, nil
 }
+
+// DeleteYAML 解析并声明式下线/删除 YAML 清单中的所有资源（等价于 kubectl delete -f）。
+func (c *K8sClient) DeleteYAML(ctx context.Context, yamlContent string) ([]K8sDeleteResult, error) {
+	if strings.TrimSpace(yamlContent) == "" {
+		return nil, fmt.Errorf("YAML 内容为空")
+	}
+
+	dynClient, err := dynamic.NewForConfig(c.restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("创建动态客户端失败: %w", err)
+	}
+
+	discoClient, err := discovery.NewDiscoveryClientForConfig(c.restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("创建发现客户端失败: %w", err)
+	}
+
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(memory.NewMemCacheClient(discoClient))
+	decoder := k8syaml.NewYAMLOrJSONDecoder(strings.NewReader(yamlContent), 4096)
+
+	var results []K8sDeleteResult
+	deletePolicy := metav1.DeletePropagationBackground
+
+	for {
+		var rawObj map[string]interface{}
+		err := decoder.Decode(&rawObj)
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return results, fmt.Errorf("解析 YAML 语法失败: %w", err)
+		}
+		if len(rawObj) == 0 {
+			continue
+		}
+
+		if tm, ok := rawObj["typemeta"].(map[string]interface{}); ok {
+			for k, v := range tm {
+				if _, exists := rawObj[k]; !exists {
+					rawObj[k] = v
+				}
+			}
+			delete(rawObj, "typemeta")
+		}
+
+		unstructObj := &unstructured.Unstructured{Object: rawObj}
+		gvk := unstructObj.GroupVersionKind()
+		if gvk.Kind == "" {
+			if k, ok := rawObj["kind"].(string); ok && k != "" {
+				gvk.Kind = k
+			} else if k, ok := rawObj["Kind"].(string); ok && k != "" {
+				gvk.Kind = k
+			}
+		}
+
+		if gvk.Kind == "" {
+			continue
+		}
+
+		if gvk.Version == "" {
+			switch strings.ToLower(gvk.Kind) {
+			case "deployment", "statefulset", "daemonset", "replicaset":
+				gvk.Group = "apps"
+				gvk.Version = "v1"
+			case "ingress":
+				gvk.Group = "networking.k8s.io"
+				gvk.Version = "v1"
+			case "job", "cronjob":
+				gvk.Group = "batch"
+				gvk.Version = "v1"
+			default:
+				gvk.Version = "v1"
+			}
+			unstructObj.SetGroupVersionKind(gvk)
+		}
+
+		mapping, err := mapper.RESTMapping(gvk.GroupKind(), gvk.Version)
+		if err != nil {
+			results = append(results, K8sDeleteResult{
+				Kind:    gvk.Kind,
+				Name:    unstructObj.GetName(),
+				Action:  "failed",
+				Message: fmt.Sprintf("未识别的资源定义 GVK (%s): %v", gvk.String(), err),
+			})
+			continue
+		}
+
+		var dri dynamic.ResourceInterface
+		if mapping.Scope.Name() == meta.RESTScopeNameNamespace {
+			ns := unstructObj.GetNamespace()
+			if ns == "" {
+				ns = "default"
+			}
+			dri = dynClient.Resource(mapping.Resource).Namespace(ns)
+		} else {
+			dri = dynClient.Resource(mapping.Resource)
+		}
+
+		name := unstructObj.GetName()
+		if name == "" {
+			continue
+		}
+
+		deleteErr := dri.Delete(ctx, name, metav1.DeleteOptions{
+			PropagationPolicy: &deletePolicy,
+		})
+
+		if deleteErr != nil {
+			if apierrors.IsNotFound(deleteErr) {
+				results = append(results, K8sDeleteResult{
+					Kind:      gvk.Kind,
+					Name:      name,
+					Namespace: unstructObj.GetNamespace(),
+					Action:    "not_found",
+					Message:   "资源已不存在",
+				})
+			} else {
+				results = append(results, K8sDeleteResult{
+					Kind:      gvk.Kind,
+					Name:      name,
+					Namespace: unstructObj.GetNamespace(),
+					Action:    "failed",
+					Message:   deleteErr.Error(),
+				})
+			}
+		} else {
+			results = append(results, K8sDeleteResult{
+				Kind:      gvk.Kind,
+				Name:      name,
+				Namespace: unstructObj.GetNamespace(),
+				Action:    "deleted",
+			})
+		}
+	}
+
+	return results, nil
+}
+
+// ParseYAMLResourceSummaries 从 YAML 文本中解析出声明的资源列表与汇总统计文本。
+func ParseYAMLResourceSummaries(yamlContent string) ([]core.K8sResourceItemSummary, string) {
+	if strings.TrimSpace(yamlContent) == "" {
+		return []core.K8sResourceItemSummary{}, ""
+	}
+
+	decoder := k8syaml.NewYAMLOrJSONDecoder(strings.NewReader(yamlContent), 4096)
+	var list []core.K8sResourceItemSummary
+	kindCounts := make(map[string]int)
+
+	for {
+		var rawObj map[string]interface{}
+		err := decoder.Decode(&rawObj)
+		if err != nil {
+			break
+		}
+		if len(rawObj) == 0 {
+			continue
+		}
+
+		kind := ""
+		if k, ok := rawObj["kind"].(string); ok && k != "" {
+			kind = k
+		} else if k, ok := rawObj["Kind"].(string); ok && k != "" {
+			kind = k
+		}
+
+		name := ""
+		namespace := ""
+		if metaObj, ok := rawObj["metadata"].(map[string]interface{}); ok {
+			if n, ok := metaObj["name"].(string); ok {
+				name = n
+			}
+			if ns, ok := metaObj["namespace"].(string); ok {
+				namespace = ns
+			}
+		}
+
+		if kind != "" && name != "" {
+			list = append(list, core.K8sResourceItemSummary{
+				Kind:      kind,
+				Name:      name,
+				Namespace: namespace,
+			})
+			kindCounts[kind]++
+		}
+	}
+
+	var summaryParts []string
+	for k, count := range kindCounts {
+		summaryParts = append(summaryParts, fmt.Sprintf("%s (%d)", k, count))
+	}
+	sort.Strings(summaryParts)
+	summary := strings.Join(summaryParts, ", ")
+
+	return list, summary
+}
+

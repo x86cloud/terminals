@@ -36,6 +36,47 @@ export default function K8sClient({ session }: Props) {
     const [loading, setLoading] = useState(false)
     const [pingMs, setPingMs] = useState<number | null>(null)
 
+    // 跨 Tab 资源定位搜索词及子 Tab 状态
+    const [targetFilters, setTargetFilters] = useState<{
+        deployments?: string
+        pods?: string
+        network?: { kw: string; subTab?: 'service' | 'ingress' }
+        config?: { kw: string; subTab?: 'configmap' | 'secret' | 'pvc' }
+    }>({})
+
+    const handleNavigateToResource = (kind: string, name: string, targetNamespace?: string) => {
+        const k = (kind || '').trim().toLowerCase()
+        if (targetNamespace && targetNamespace !== '_all') {
+            setCurrentNamespace(targetNamespace)
+        }
+
+        if (['deployment', 'statefulset', 'daemonset', 'replicaset'].includes(k)) {
+            setTargetFilters((prev) => ({ ...prev, deployments: name }))
+            setActiveTab('deployments')
+        } else if (k === 'pod') {
+            setTargetFilters((prev) => ({ ...prev, pods: name }))
+            setActiveTab('pods')
+        } else if (k === 'service') {
+            setTargetFilters((prev) => ({ ...prev, network: { kw: name, subTab: 'service' } }))
+            setActiveTab('network')
+        } else if (k === 'ingress') {
+            setTargetFilters((prev) => ({ ...prev, network: { kw: name, subTab: 'ingress' } }))
+            setActiveTab('network')
+        } else if (k === 'configmap') {
+            setTargetFilters((prev) => ({ ...prev, config: { kw: name, subTab: 'configmap' } }))
+            setActiveTab('config')
+        } else if (k === 'secret') {
+            setTargetFilters((prev) => ({ ...prev, config: { kw: name, subTab: 'secret' } }))
+            setActiveTab('config')
+        } else if (['persistentvolumeclaim', 'pvc'].includes(k)) {
+            setTargetFilters((prev) => ({ ...prev, config: { kw: name, subTab: 'pvc' } }))
+            setActiveTab('config')
+        } else {
+            setTargetFilters((prev) => ({ ...prev, deployments: name }))
+            setActiveTab('deployments')
+        }
+    }
+
     // 新建命名空间模态框
     const [createNsModalOpen, setCreateNsModalOpen] = useState(false)
     const [newNsName, setNewNsName] = useState('')
@@ -257,6 +298,7 @@ export default function K8sClient({ session }: Props) {
                     <PodsTab
                         serverId={session.serverId}
                         currentNamespace={currentNamespace}
+                        initialSearchKw={targetFilters.pods}
                     />
                 )}
 
@@ -264,6 +306,7 @@ export default function K8sClient({ session }: Props) {
                     <DeploymentsTab
                         serverId={session.serverId}
                         currentNamespace={currentNamespace}
+                        initialSearchKw={targetFilters.deployments}
                     />
                 )}
 
@@ -271,6 +314,8 @@ export default function K8sClient({ session }: Props) {
                     <NetworkTab
                         serverId={session.serverId}
                         currentNamespace={currentNamespace}
+                        initialSearchKw={targetFilters.network?.kw}
+                        initialSubTab={targetFilters.network?.subTab}
                     />
                 )}
 
@@ -278,6 +323,8 @@ export default function K8sClient({ session }: Props) {
                     <ConfigStorageTab
                         serverId={session.serverId}
                         currentNamespace={currentNamespace}
+                        initialSearchKw={targetFilters.config?.kw}
+                        initialSubTab={targetFilters.config?.subTab}
                     />
                 )}
 
@@ -285,6 +332,7 @@ export default function K8sClient({ session }: Props) {
                     <YamlTab
                         serverId={session.serverId}
                         currentNamespace={currentNamespace}
+                        onNavigateToResource={handleNavigateToResource}
                     />
                 )}
             </div>

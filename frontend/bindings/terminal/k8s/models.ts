@@ -45,6 +45,21 @@ export interface K8sContainerSummary {
 }
 
 /**
+ * K8sDeleteResult 描述 YAML 下线删除单个资源的结果。
+ */
+export interface K8sDeleteResult {
+    "kind": string;
+    "name": string;
+    "namespace"?: string;
+
+    /**
+     * "deleted" | "not_found" | "failed"
+     */
+    "action": string;
+    "message"?: string;
+}
+
+/**
  * K8sDeploymentInfo 描述 Deployment 无状态负载信息。
  */
 export interface K8sDeploymentInfo {

@@ -31,5 +31,6 @@ export {
 };
 
 export type {
+    DockerGenerateComposeRequest,
     K8sGenerateYAMLRequest
 } from "./models.js";

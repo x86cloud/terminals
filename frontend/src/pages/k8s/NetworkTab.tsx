@@ -30,6 +30,8 @@ import s from './K8sClient.module.less'
 interface Props {
     serverId: string
     currentNamespace: string
+    initialSearchKw?: string
+    initialSubTab?: 'service' | 'ingress'
 }
 
 const DEFAULT_SERVICE_TEMPLATE = (namespace: string) => `apiVersion: v1
@@ -72,14 +74,27 @@ spec:
               number: 80
 `
 
-export default function NetworkTab({ serverId, currentNamespace }: Props) {
-    const [subTab, setSubTab] = useState<'service' | 'ingress'>('service')
+export default function NetworkTab({ serverId, currentNamespace, initialSearchKw, initialSubTab }: Props) {
+    const [subTab, setSubTab] = useState<'service' | 'ingress'>(initialSubTab || 'service')
     const [services, setServices] = useState<K8sServiceInfo[]>([])
     const [ingresses, setIngresses] = useState<K8sIngressInfo[]>([])
     const [loading, setLoading] = useState(false)
-    const [searchKw, setSearchKw] = useState('')
+    const [searchKw, setSearchKw] = useState(initialSearchKw || '')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    useEffect(() => {
+        if (initialSearchKw !== undefined) {
+            setSearchKw(initialSearchKw)
+            setPage(1)
+        }
+    }, [initialSearchKw])
+
+    useEffect(() => {
+        if (initialSubTab) {
+            setSubTab(initialSubTab)
+        }
+    }, [initialSubTab])
 
     // YAML 模态框 (查看/编辑/新建)
     const [yamlModalOpen, setYamlModalOpen] = useState(false)

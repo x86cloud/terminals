@@ -4,6 +4,8 @@
 export type {
     AppSettings,
     DockerComposeRecord,
+    K8sOrchestrationRecord,
+    K8sResourceItemSummary,
     ServerConfig,
     ServerGroup
 } from "./models.js";

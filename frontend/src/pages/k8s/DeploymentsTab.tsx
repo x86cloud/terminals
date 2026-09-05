@@ -30,6 +30,7 @@ import s from './K8sClient.module.less'
 interface Props {
     serverId: string
     currentNamespace: string
+    initialSearchKw?: string
 }
 
 const DEFAULT_DEPLOY_TEMPLATE = (namespace: string) => `apiVersion: apps/v1
@@ -63,12 +64,19 @@ spec:
             memory: 512Mi
 `
 
-export default function DeploymentsTab({ serverId, currentNamespace }: Props) {
+export default function DeploymentsTab({ serverId, currentNamespace, initialSearchKw }: Props) {
     const [deployments, setDeployments] = useState<K8sDeploymentInfo[]>([])
     const [loading, setLoading] = useState(false)
-    const [searchKw, setSearchKw] = useState('')
+    const [searchKw, setSearchKw] = useState(initialSearchKw || '')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    useEffect(() => {
+        if (initialSearchKw !== undefined) {
+            setSearchKw(initialSearchKw)
+            setPage(1)
+        }
+    }, [initialSearchKw])
 
     // 扩缩容模态框
     const [scaleModalOpen, setScaleModalOpen] = useState(false)

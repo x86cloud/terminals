@@ -385,3 +385,122 @@ func (s *K8sService) K8sApplyYAML(id string, yamlContent string) ([]k8s.K8sApply
 	defer cancel()
 	return cli.ApplyYAML(ctx, yamlContent)
 }
+
+// K8sDeleteYAML 声明式删除并下线 YAML 资源清单中的资源。
+func (s *K8sService) K8sDeleteYAML(id string, yamlContent string) ([]k8s.K8sDeleteResult, error) {
+	cli, err := GetContainer().K8sMgr.GetClient(id)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	return cli.DeleteYAML(ctx, yamlContent)
+}
+
+// K8sListOrchestrationRecords 获取指定集群本地持久化存储的 K8s 编排记录。
+func (s *K8sService) K8sListOrchestrationRecords(serverId string) []core.K8sOrchestrationRecord {
+	c := GetContainer()
+	return c.Store.ListK8sOrchestrationRecords(serverId)
+}
+
+// K8sGetOrchestrationRecord 获取单个 K8s 编排记录详情。
+func (s *K8sService) K8sGetOrchestrationRecord(id string) (*core.K8sOrchestrationRecord, error) {
+	c := GetContainer()
+	return c.Store.GetK8sOrchestrationRecord(id)
+}
+
+// K8sApplyOrchestration 部署并保存 Kubernetes YAML 编排。严格遵循后验强一致性：先部署，成功后再落盘。
+func (s *K8sService) K8sApplyOrchestration(serverId string, record core.K8sOrchestrationRecord) ([]k8s.K8sApplyResult, error) {
+	c := GetContainer()
+	cli, err := c.K8sMgr.GetClient(serverId)
+	if err != nil {
+		return nil, fmt.Errorf("无法连接至集群: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	// 1. 声明式应用 YAML
+	results, err := cli.ApplyYAML(ctx, record.YamlContent)
+	if err != nil {
+		return results, fmt.Errorf("部署失败: %w", err)
+	}
+
+	// 检查是否有至少一个资源创建/更新成功
+	hasSuccess := false
+	for _, r := range results {
+		if r.Action == "created" || r.Action == "configured" {
+			hasSuccess = true
+			break
+		}
+	}
+
+	if !hasSuccess && len(results) > 0 {
+		return results, errors.New("所有资源均应用失败，拒绝保存到本地配置")
+	}
+
+	// 2. 解析资源元信息并落盘保存
+	resList, resSummary := k8s.ParseYAMLResourceSummaries(record.YamlContent)
+	record.ServerID = serverId
+	record.Status = "deployed"
+	record.Resources = resList
+	record.ResourcesSummary = resSummary
+	if record.Namespace == "" || record.Namespace == "default" {
+		for _, r := range resList {
+			if r.Namespace != "" {
+				record.Namespace = r.Namespace
+				break
+			}
+		}
+	}
+	if record.Namespace == "" {
+		record.Namespace = "default"
+	}
+
+	_, saveErr := c.Store.SaveK8sOrchestrationRecord(record)
+	if saveErr != nil {
+		return results, fmt.Errorf("集群部署成功但本地记录保存失败: %w", saveErr)
+	}
+
+	return results, nil
+}
+
+// K8sOfflineOrchestration 下线指定的编排资源，支持同时删除本地记录或标记为已下线。
+func (s *K8sService) K8sOfflineOrchestration(serverId string, recordId string, deleteLocalFile bool) ([]k8s.K8sDeleteResult, error) {
+	c := GetContainer()
+	rec, err := c.Store.GetK8sOrchestrationRecord(recordId)
+	if err != nil {
+		return nil, fmt.Errorf("未找到编排记录: %w", err)
+	}
+
+	cli, err := c.K8sMgr.GetClient(serverId)
+	if err != nil {
+		return nil, fmt.Errorf("无法连接至集群: %w", err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+
+	// 1. 执行级联删除
+	results, delErr := cli.DeleteYAML(ctx, rec.YamlContent)
+	if delErr != nil {
+		return results, fmt.Errorf("下线资源失败: %w", delErr)
+	}
+
+	// 2. 根据用户选择决定是彻底删除本地记录还是更新为已下线
+	if deleteLocalFile {
+		_ = c.Store.DeleteK8sOrchestrationRecord(recordId)
+	} else {
+		rec.Status = "not_deployed"
+		_, _ = c.Store.SaveK8sOrchestrationRecord(*rec)
+	}
+
+	return results, nil
+}
+
+// K8sDeleteOrchestrationRecordOnly 仅删除本地编排记录，不下线集群中的资源。
+func (s *K8sService) K8sDeleteOrchestrationRecordOnly(recordId string) error {
+	c := GetContainer()
+	return c.Store.DeleteK8sOrchestrationRecord(recordId)
+}
+

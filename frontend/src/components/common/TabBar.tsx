@@ -211,9 +211,8 @@ export default function TabBar({
                         >
                             <div
                                 ref={(el) => (tabRefs.current[item.key] = el)}
-                                className={`${s.tabItem}${isActive ? ' ' + s.active : ''}${
-                                    item.disabled ? ' ' + s.disabled : ''
-                                }`}
+                                className={`${s.tabItem}${isActive ? ' ' + s.active : ''}${item.disabled ? ' ' + s.disabled : ''
+                                    }`}
                                 onClick={() => !item.disabled && onChange(item.key)}
                             >
                                 {item.icon}
@@ -222,20 +221,16 @@ export default function TabBar({
                                 )}
                                 <span className={s.tabTitle}>{item.label}</span>
                                 {item.extra}
-                                {isClosable && (
-                                    <Tooltip title="关闭">
-                                        <Button
-                                            size="small"
-                                            type="text"
-                                            className={s.tabCloseBtn}
-                                            icon={<X size={11} />}
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                executeClose(item.key)
-                                            }}
-                                        />
-                                    </Tooltip>
-                                )}
+                                {isClosable && <Button
+                                    size="small"
+                                    type="text"
+                                    className={s.tabCloseBtn}
+                                    icon={<X size={11} />}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        executeClose(item.key)
+                                    }}
+                                />}
                             </div>
                         </Dropdown>
                     )

@@ -36,6 +36,7 @@ import s from './K8sClient.module.less'
 interface Props {
     serverId: string
     currentNamespace: string
+    initialSearchKw?: string
 }
 
 const DEFAULT_POD_TEMPLATE = (namespace: string) => `apiVersion: v1
@@ -53,13 +54,20 @@ spec:
     - containerPort: 80
 `
 
-export default function PodsTab({ serverId, currentNamespace }: Props) {
+export default function PodsTab({ serverId, currentNamespace, initialSearchKw }: Props) {
     const [pods, setPods] = useState<K8sPodInfo[]>([])
     const [loading, setLoading] = useState(false)
-    const [searchKw, setSearchKw] = useState('')
+    const [searchKw, setSearchKw] = useState(initialSearchKw || '')
     const [statusFilter, setStatusFilter] = useState('ALL')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
+
+    useEffect(() => {
+        if (initialSearchKw !== undefined) {
+            setSearchKw(initialSearchKw)
+            setPage(1)
+        }
+    }, [initialSearchKw])
 
     // 日志抽屉状态
     const [logsDrawerOpen, setLogsDrawerOpen] = useState(false)

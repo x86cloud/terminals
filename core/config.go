@@ -479,6 +479,7 @@ type Store struct {
 	groups       []ServerGroup
 	settings     AppSettings
 	composeStore *ComposeStore
+	k8sOrchStore *K8sOrchestrationStore
 }
 
 func appConfigDir() (string, error) {
@@ -529,12 +530,17 @@ func NewStore() (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
+	ks, err := NewK8sOrchestrationStore(dir)
+	if err != nil {
+		return nil, err
+	}
 	s := &Store{
 		dir:          dir,
 		file:         filepath.Join(dir, "servers.json"),
 		box:          box,
 		settings:     DefaultAppSettings(),
 		composeStore: cs,
+		k8sOrchStore: ks,
 	}
 	if err := s.load(); err != nil {
 		return nil, err
@@ -935,3 +941,36 @@ func (s *Store) DeleteComposeRecord(id string) error {
 	}
 	return s.composeStore.DeleteRecord(id)
 }
+
+// ListK8sOrchestrationRecords 获取指定 serverId 的本地 K8s 编排记录。
+func (s *Store) ListK8sOrchestrationRecords(serverId string) []K8sOrchestrationRecord {
+	if s.k8sOrchStore == nil {
+		return []K8sOrchestrationRecord{}
+	}
+	return s.k8sOrchStore.ListRecords(serverId)
+}
+
+// GetK8sOrchestrationRecord 获取单个 K8s 编排记录。
+func (s *Store) GetK8sOrchestrationRecord(id string) (*K8sOrchestrationRecord, error) {
+	if s.k8sOrchStore == nil {
+		return nil, errors.New("存储不可用")
+	}
+	return s.k8sOrchStore.GetRecord(id)
+}
+
+// SaveK8sOrchestrationRecord 保存或更新一条 K8s 编排记录。
+func (s *Store) SaveK8sOrchestrationRecord(r K8sOrchestrationRecord) (*K8sOrchestrationRecord, error) {
+	if s.k8sOrchStore == nil {
+		return nil, errors.New("存储不可用")
+	}
+	return s.k8sOrchStore.SaveRecord(r)
+}
+
+// DeleteK8sOrchestrationRecord 删除一条 K8s 编排记录。
+func (s *Store) DeleteK8sOrchestrationRecord(id string) error {
+	if s.k8sOrchStore == nil {
+		return errors.New("存储不可用")
+	}
+	return s.k8sOrchStore.DeleteRecord(id)
+}
+

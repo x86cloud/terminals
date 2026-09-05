@@ -15,6 +15,7 @@ import {
     ArrowUpRight,
     Sparkles,
     Terminal,
+    RotateCcw,
 } from 'lucide-react'
 import {
     Table as AntTable,
@@ -34,6 +35,7 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import { API } from '@/api'
 import CodeEditor from '@/components/CodeEditor'
+import DockerComposeGenerateModal from './DockerComposeGenerateModal'
 import type {
     DockerComposeStackInfo,
     DockerComposeServiceInfo,
@@ -89,6 +91,7 @@ export default function ComposeTab({ serverId }: Props) {
     const [forcePull, setForcePull] = useState(false)
     const [recreate, setRecreate] = useState(false)
     const [updating, setUpdating] = useState(false)
+    const [aiModalOpen, setAiModalOpen] = useState(false)
 
     // 单个容器日志抽屉状态
     const [containerLogDrawer, setContainerLogDrawer] = useState<{
@@ -463,7 +466,7 @@ export default function ComposeTab({ serverId }: Props) {
                 } else if (status === 'not_deployed') {
                     return (
                         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                            <AntTag style={{ margin: 0 }}>未部署/无容器</AntTag>
+                            <AntTag style={{ margin: 0 }}>未部署</AntTag>
                         </span>
                     )
                 }
@@ -838,7 +841,7 @@ export default function ComposeTab({ serverId }: Props) {
                         </AntButton>
                         <AntButton
                             type="primary"
-                            icon={<Sparkles size={13} />}
+                            icon={<Check size={13} />}
                             loading={updating}
                             onClick={handleUpAndUpdate}
                         >
@@ -901,14 +904,54 @@ export default function ComposeTab({ serverId }: Props) {
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 6, fontWeight: 500 }}>
-                            编排内容 <span style={{ color: 'var(--danger)' }}>*</span>
+                        <div
+                            style={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                marginBottom: 6,
+                            }}
+                        >
+                            <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>
+                                编排内容 <span style={{ color: 'var(--danger)' }}>*</span>
+                            </span>
+                            <AntSpace size={8}>
+                                <AntButton
+                                    type="primary"
+                                    size="small"
+                                    icon={<Sparkles size={13} />}
+                                    onClick={() => setAiModalOpen(true)}
+                                >
+                                    AI 生成 Compose
+                                </AntButton>
+                                <AntButton
+                                    size="small"
+                                    icon={<RotateCcw size={12} />}
+                                    onClick={() => setYamlContent('')}
+                                >
+                                    清空
+                                </AntButton>
+                                <AntButton
+                                    size="small"
+                                    icon={<Copy size={12} />}
+                                    onClick={() => {
+                                        if (!yamlContent) {
+                                            message.info('当前没有可复制的编排内容')
+                                            return
+                                        }
+                                        navigator.clipboard.writeText(yamlContent)
+                                        message.success('编排内容已复制到剪贴板')
+                                    }}
+                                >
+                                    复制
+                                </AntButton>
+                            </AntSpace>
                         </div>
                         <CodeEditor
                             value={yamlContent}
                             onChange={setYamlContent}
                             lang="yaml"
-                            height="400px"
+                            height="420px"
                             bordered
                             placeholder="在此输入或编辑 docker-compose.yml 内容..."
                         />
@@ -1012,6 +1055,15 @@ export default function ComposeTab({ serverId }: Props) {
                 open={!!execTarget}
                 onClose={() => setExecTarget(null)}
                 target={execTarget}
+            />
+
+            {/* AI 智能生成 Docker Compose 模态框 */}
+            <DockerComposeGenerateModal
+                open={aiModalOpen}
+                onClose={() => setAiModalOpen(false)}
+                onGenerated={(newYaml) => {
+                    setYamlContent(newYaml)
+                }}
             />
         </div>
     )

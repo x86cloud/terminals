@@ -5,6 +5,7 @@ export type {
     K8sApplyResult,
     K8sConfigMapInfo,
     K8sContainerSummary,
+    K8sDeleteResult,
     K8sDeploymentInfo,
     K8sIngressInfo,
     K8sNamespaceInfo,

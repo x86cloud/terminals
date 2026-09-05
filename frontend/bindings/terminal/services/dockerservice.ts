@@ -17,6 +17,10 @@ import * as core$0 from "../core/models.js";
 // @ts-ignore: Unused imports
 import * as docker$0 from "../docker/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 /**
  * DockerClose 关闭指定 ID 的 Docker 连接。
  */
@@ -106,6 +110,13 @@ export function DockerExecStart(serverId: string, containerId: string, command: 
  */
 export function DockerExecWrite(execId: string, data: string): $CancellablePromise<void> {
     return $Call.ByID(1583947137, execId, data);
+}
+
+/**
+ * DockerGenerateCompose 使用专职 Agent 生成 Docker Compose 配置。
+ */
+export function DockerGenerateCompose(req: $models.DockerGenerateComposeRequest): $CancellablePromise<string> {
+    return $Call.ByID(2602907792, req);
 }
 
 /**

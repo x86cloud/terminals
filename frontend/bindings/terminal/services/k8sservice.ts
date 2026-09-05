@@ -22,6 +22,13 @@ import * as k8s$0 from "../k8s/models.js";
 import * as $models from "./models.js";
 
 /**
+ * K8sApplyOrchestration 部署并保存 Kubernetes YAML 编排。严格遵循后验强一致性：先部署，成功后再落盘。
+ */
+export function K8sApplyOrchestration(serverId: string, record: core$0.K8sOrchestrationRecord): $CancellablePromise<k8s$0.K8sApplyResult[] | null> {
+    return $Call.ByID(819612696, serverId, record);
+}
+
+/**
  * K8sApplyYAML 声明式部署并应用 YAML 资源清单。
  */
 export function K8sApplyYAML(id: string, yamlContent: string): $CancellablePromise<k8s$0.K8sApplyResult[] | null> {
@@ -78,6 +85,13 @@ export function K8sDeleteNamespace(id: string, name: string): $CancellablePromis
 }
 
 /**
+ * K8sDeleteOrchestrationRecordOnly 仅删除本地编排记录，不下线集群中的资源。
+ */
+export function K8sDeleteOrchestrationRecordOnly(recordId: string): $CancellablePromise<void> {
+    return $Call.ByID(597004804, recordId);
+}
+
+/**
  * K8sDeletePVC 删除指定 PVC。
  */
 export function K8sDeletePVC(id: string, $namespace: string, name: string): $CancellablePromise<void> {
@@ -103,6 +117,13 @@ export function K8sDeleteSecret(id: string, $namespace: string, name: string): $
  */
 export function K8sDeleteService(id: string, $namespace: string, name: string): $CancellablePromise<void> {
     return $Call.ByID(3349422065, id, $namespace, name);
+}
+
+/**
+ * K8sDeleteYAML 声明式删除并下线 YAML 资源清单中的资源。
+ */
+export function K8sDeleteYAML(id: string, yamlContent: string): $CancellablePromise<k8s$0.K8sDeleteResult[] | null> {
+    return $Call.ByID(3261434137, id, yamlContent);
 }
 
 /**
@@ -138,6 +159,13 @@ export function K8sExecWrite(execID: string, data: string): $CancellablePromise<
  */
 export function K8sGenerateYAML(req: $models.K8sGenerateYAMLRequest): $CancellablePromise<string> {
     return $Call.ByID(1902076433, req);
+}
+
+/**
+ * K8sGetOrchestrationRecord 获取单个 K8s 编排记录详情。
+ */
+export function K8sGetOrchestrationRecord(id: string): $CancellablePromise<core$0.K8sOrchestrationRecord | null> {
+    return $Call.ByID(2076350265, id);
 }
 
 /**
@@ -197,6 +225,13 @@ export function K8sListNodes(id: string): $CancellablePromise<k8s$0.K8sNodeInfo[
 }
 
 /**
+ * K8sListOrchestrationRecords 获取指定集群本地持久化存储的 K8s 编排记录。
+ */
+export function K8sListOrchestrationRecords(serverId: string): $CancellablePromise<core$0.K8sOrchestrationRecord[] | null> {
+    return $Call.ByID(416016864, serverId);
+}
+
+/**
  * K8sListPVCs 获取 PVC 列表。
  */
 export function K8sListPVCs(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sPVCInfo[] | null> {
@@ -222,6 +257,13 @@ export function K8sListSecrets(id: string, $namespace: string): $CancellableProm
  */
 export function K8sListServices(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sServiceInfo[] | null> {
     return $Call.ByID(1254326489, id, $namespace);
+}
+
+/**
+ * K8sOfflineOrchestration 下线指定的编排资源，支持同时删除本地记录或标记为已下线。
+ */
+export function K8sOfflineOrchestration(serverId: string, recordId: string, deleteLocalFile: boolean): $CancellablePromise<k8s$0.K8sDeleteResult[] | null> {
+    return $Call.ByID(848722473, serverId, recordId, deleteLocalFile);
 }
 
 /**

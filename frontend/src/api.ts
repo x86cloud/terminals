@@ -69,6 +69,9 @@ import type {
     DockerComposeRecord,
     KubeconfigContextInfo,
     K8sApplyResult,
+    K8sResourceItemSummary,
+    K8sOrchestrationRecord,
+    K8sDeleteResult,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -725,6 +728,8 @@ export const API = {
         DockerService.DockerDeleteComposeRecord(serverId, id),
     dockerUpComposeStack: (serverId: string, record: DockerComposeRecord, forcePull = false, recreate = false): Promise<DockerComposeRecord | null> =>
         DockerService.DockerUpComposeStack(serverId, record as any, forcePull, recreate) as any,
+    dockerGenerateCompose: (images: string[], prompt: string): Promise<string> =>
+        (DockerService as any).DockerGenerateCompose({ images, prompt }),
     dockerExecStart: (serverId: string, containerId: string, command: string, cols: number, rows: number): Promise<string> =>
         (DockerService as any).DockerExecStart(serverId, containerId, command, cols, rows),
     dockerExecWrite: (execId: string, data: string): Promise<void> =>
@@ -789,6 +794,18 @@ export const API = {
         (K8sService as any).K8sGenerateYAML({ namespace, kinds, images, prompt }),
     k8sApplyYAML: (id: string, yamlContent: string): Promise<K8sApplyResult[]> =>
         (K8sService as any).K8sApplyYAML(id, yamlContent).then((r: any) => r || []),
+    k8sDeleteYAML: (id: string, yamlContent: string): Promise<K8sDeleteResult[]> =>
+        (K8sService as any).K8sDeleteYAML(id, yamlContent).then((r: any) => r || []),
+    k8sListOrchestrationRecords: (serverId: string): Promise<K8sOrchestrationRecord[]> =>
+        (K8sService as any).K8sListOrchestrationRecords(serverId).then((r: any) => r || []),
+    k8sGetOrchestrationRecord: (id: string): Promise<K8sOrchestrationRecord | null> =>
+        (K8sService as any).K8sGetOrchestrationRecord(id),
+    k8sApplyOrchestration: (serverId: string, record: K8sOrchestrationRecord): Promise<K8sApplyResult[]> =>
+        (K8sService as any).K8sApplyOrchestration(serverId, record).then((r: any) => r || []),
+    k8sOfflineOrchestration: (serverId: string, recordId: string, deleteLocalFile: boolean): Promise<K8sDeleteResult[]> =>
+        (K8sService as any).K8sOfflineOrchestration(serverId, recordId, deleteLocalFile).then((r: any) => r || []),
+    k8sDeleteOrchestrationRecordOnly: (recordId: string): Promise<void> =>
+        (K8sService as any).K8sDeleteOrchestrationRecordOnly(recordId),
 }
 
 /* ------------------------------------------------------------------ */

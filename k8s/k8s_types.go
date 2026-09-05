@@ -140,3 +140,13 @@ type K8sApplyResult struct {
 	Action    string `json:"action"` // "created" | "configured" | "failed"
 	Message   string `json:"message,omitempty"`
 }
+
+// K8sDeleteResult 描述 YAML 下线删除单个资源的结果。
+type K8sDeleteResult struct {
+	Kind      string `json:"kind"`
+	Name      string `json:"name"`
+	Namespace string `json:"namespace,omitempty"`
+	Action    string `json:"action"` // "deleted" | "not_found" | "failed"
+	Message   string `json:"message,omitempty"`
+}
+

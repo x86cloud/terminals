@@ -89,6 +89,81 @@ export interface DockerComposeRecord {
 }
 
 /**
+ * K8sOrchestrationRecord 描述在客户端本地保存的一个 Kubernetes YAML 资源编排记录。
+ */
+export interface K8sOrchestrationRecord {
+    /**
+     * 唯一主键 UUID
+     */
+    "id": string;
+
+    /**
+     * 所属 K8s 集群 ID
+     */
+    "serverId": string;
+
+    /**
+     * 编排名称 (如: nginx-ingress, redis-ha)
+     */
+    "name": string;
+
+    /**
+     * 默认命名空间
+     */
+    "namespace": string;
+
+    /**
+     * 完整的 YAML 编排内容
+     */
+    "yamlContent": string;
+
+    /**
+     * 状态: "deployed" (已部署) | "not_deployed" (未部署/已下线)
+     */
+    "status": string;
+
+    /**
+     * 解析出的资源列表
+     */
+    "resources": K8sResourceItemSummary[] | null;
+
+    /**
+     * 统计摘要，如 "Deployment (1), Service (1)"
+     */
+    "resourcesSummary": string;
+
+    /**
+     * 创建时间
+     */
+    "createdAt": string;
+
+    /**
+     * 最近更新/部署时间
+     */
+    "updatedAt": string;
+}
+
+/**
+ * K8sResourceItemSummary 记录编排中单个资源的基本元信息。
+ */
+export interface K8sResourceItemSummary {
+    /**
+     * 例如: Deployment, Service, ConfigMap, Pod
+     */
+    "kind": string;
+
+    /**
+     * metadata.name
+     */
+    "name": string;
+
+    /**
+     * metadata.namespace
+     */
+    "namespace": string;
+}
+
+/**
  * ServerConfig 描述一台远程服务器的连接信息。Type 字段区分 SSH / Redis / MySQL / Docker / Postgres。
  */
 export interface ServerConfig {

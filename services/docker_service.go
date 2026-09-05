@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"terminal/agent"
 	"terminal/core"
 	"terminal/docker"
 
@@ -526,5 +527,19 @@ func (s *DockerService) DockerExecClose(execId string) error {
 		return nil
 	}
 	return c.DockerMgr.ExecMgr.Close(execId)
+}
+
+// DockerGenerateComposeRequest 描述 AI 生成 Docker Compose 请求参数。
+type DockerGenerateComposeRequest struct {
+	Images []string `json:"images"`
+	Prompt string   `json:"prompt"`
+}
+
+// DockerGenerateCompose 使用专职 Agent 生成 Docker Compose 配置。
+func (s *DockerService) DockerGenerateCompose(req DockerGenerateComposeRequest) (string, error) {
+	c := GetContainer()
+	cfg := c.Store.GetSettings()
+	_ = agent.DefaultRuntime.InitOrUpdate(cfg)
+	return agent.GenerateDockerCompose(context.Background(), req.Images, req.Prompt)
 }
 
