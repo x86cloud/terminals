@@ -8,6 +8,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 	"terminal/core"
 
 	"github.com/google/uuid"
@@ -192,6 +193,9 @@ func (m *K8sExecManager) StartExec(k8sCli *K8sClient, namespace, podName, contai
 			m.remove(execID)
 			core.EmitEvent("k8s:terminal:closed:"+execID, "容器会话已退出")
 		}()
+
+		// 给予前端 IPC 返回与事件订阅挂载一个微小准备窗口，避免初始 prompt 丢失
+		time.Sleep(50 * time.Millisecond)
 
 		outWriter := &k8sOutputWriter{sessionID: execID}
 		streamErr := executor.StreamWithContext(ctx, remotecommand.StreamOptions{

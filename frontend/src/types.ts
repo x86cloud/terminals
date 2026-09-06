@@ -362,15 +362,24 @@ export type {
 
 export type RedisValueType = 'string' | 'list' | 'set' | 'hash' | 'zset' | 'stream'
 
+export interface RedisKeyItem {
+    key: string
+    type: RedisValueType
+    ttl: number
+}
+
 export interface RedisKeysResult {
     cursor: string
-    keys: string[]
+    keys: (string | RedisKeyItem)[]
 }
 
 export interface RedisValue {
+    key?: string
     type: RedisValueType
     value: any
     ttl: number
+    size?: number
+    rawJson?: any
 }
 
 export interface RedisSessionInfo {

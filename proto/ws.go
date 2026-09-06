@@ -54,6 +54,13 @@ type wsConn struct {
 	conn      *websocket.Conn
 	done      chan struct{}
 	closeOnce sync.Once
+	writeMu   sync.Mutex
+}
+
+func (c *wsConn) writeMessage(messageType int, data []byte) error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
+	return c.conn.WriteMessage(messageType, data)
 }
 
 type WsManager struct {
@@ -95,7 +102,7 @@ func (m *WsManager) close(id string) {
 	}
 	c.closeOnce.Do(func() {
 		close(c.done)
-		_ = c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+		_ = c.writeMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 		_ = c.conn.Close()
 	})
 }
@@ -112,7 +119,7 @@ func (m *WsManager) CloseAll() {
 	for _, c := range conns {
 		c.closeOnce.Do(func() {
 			close(c.done)
-			_ = c.conn.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
+			_ = c.writeMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 			_ = c.conn.Close()
 		})
 	}
@@ -213,7 +220,7 @@ func (m *WsManager) WsSend(id string, message string) error {
 	if !ok {
 		return errors.New("WebSocket 连接不存在或已断开")
 	}
-	if err := c.conn.WriteMessage(websocket.TextMessage, []byte(message)); err != nil {
+	if err := c.writeMessage(websocket.TextMessage, []byte(message)); err != nil {
 		return err
 	}
 	core.EmitEvent("ws:message:"+id, WsMessageEvent{

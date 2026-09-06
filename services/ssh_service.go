@@ -43,6 +43,13 @@ func (s *SshService) ResizeTerminal(sessionID string, cols int, rows int) error 
 	return GetContainer().Sessions.Resize(sessionID, cols, rows)
 }
 
+func (s *SshService) TerminalAttach(sessionID string, cols int, rows int) error {
+	if cols > 0 && rows > 0 {
+		_ = GetContainer().Sessions.Resize(sessionID, cols, rows)
+	}
+	return GetContainer().Sessions.Attach(sessionID)
+}
+
 func (s *SshService) SSHDashboardStats(sessionID string) (*ssh.SSHDashboardInfo, error) {
 	return GetContainer().Sessions.GetDashboardStats(sessionID)
 }

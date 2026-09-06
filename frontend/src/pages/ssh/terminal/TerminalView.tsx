@@ -181,6 +181,9 @@ export default function TerminalView({ sessionId, active }: Props) {
             term.writeln(`\r\n\x1b[33m[${reason || '连接已断开'}]\x1b[0m`)
         })
 
+        // 通知后端终端视图已挂载就绪，立即同步实际视口尺寸并回放缓冲的早期 Prompt 与 MOTD
+        API.terminalAttach(sessionId, term.cols, term.rows).catch(() => undefined)
+
         const observer = new ResizeObserver(() => {
             if (!host.clientWidth || !host.clientHeight) return
             try {

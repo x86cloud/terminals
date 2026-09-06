@@ -54,6 +54,10 @@ func (s *RedisService) RedisExpire(id string, key string, ttl int) error {
 	return GetContainer().RedisMgr.ExpireKey(id, key, int64(ttl))
 }
 
+func (s *RedisService) RedisRenameKey(id string, oldKey string, newKey string) error {
+	return GetContainer().RedisMgr.RenameKey(id, oldKey, newKey)
+}
+
 func (s *RedisService) RedisRaw(id string, cmd string) (map[string]any, error) {
 	return GetContainer().RedisMgr.ExecuteRawCommand(id, cmd)
 }

@@ -3,6 +3,7 @@ import { Tabs, Tag, Button, message } from 'antd'
 import { API, subscribe } from '@/api'
 import type {
     RedisKeysResult,
+    RedisKeyItem,
     RedisSessionInfo,
     RedisValue,
     RedisPipelineResult,
@@ -184,18 +185,24 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
             try {
                 const res = await API.redisKeys(session.id, pattern, cur)
                 const rawKeys = Array.isArray(res?.keys) ? res.keys : []
-                const keys: string[] = rawKeys
+                const keys: RedisKeyItem[] = rawKeys
                     .map((item: any) => {
-                        if (typeof item === 'string') return item
-                        if (item && typeof item === 'object' && item.key) return String(item.key)
-                        return String(item ?? '')
+                        if (typeof item === 'string') return { key: item, type: 'string', ttl: -1 } as RedisKeyItem
+                        if (item && typeof item === 'object' && item.key) {
+                            return {
+                                key: String(item.key),
+                                type: (item.type || 'string') as any,
+                                ttl: Number(item.ttl ?? -1),
+                            } as RedisKeyItem
+                        }
+                        return null
                     })
-                    .filter(Boolean)
+                    .filter(Boolean) as RedisKeyItem[]
                 const nextCursor = String(res?.cursor ?? '0')
                 cursorRef.current = nextCursor
                 setData((d) => ({
                     cursor: nextCursor,
-                    keys: reset ? keys : [...(Array.isArray(d?.keys) ? d.keys : []), ...keys],
+                    keys: reset ? keys : [...(Array.isArray(d?.keys) ? (d.keys as any) : []), ...keys],
                 }))
             } catch (e: any) {
                 flash('加载键失败: ' + (e?.message || e))

@@ -605,6 +605,82 @@ func (m *SessionManager) UploadBase64(tm *TransferManager, sessionID, remoteDir,
 	return nil
 }
 
+// MakeDir 在远程目录 parent 下创建名为 name 的新目录。
+func (m *SessionManager) MakeDir(sessionID, parent, name string) error {
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return err
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return errors.New("目录名不能为空")
+	}
+	parentResolved := session.ResolveRemotePath(parent)
+	targetDir := path.Join(parentResolved, name)
+
+	// 1. 优先尝试 SFTP
+	client, sftpErr := session.sftpConn()
+	if sftpErr == nil {
+		if err := mkdirAllRemote(client, targetDir); err != nil {
+			return fmt.Errorf("创建远程目录失败: %w", err)
+		}
+		m.NotifyDirChanged(sessionID, parentResolved)
+		return nil
+	}
+
+	// 2. 降级为 SSH Exec
+	if session.isClosed() || session.client == nil {
+		return errors.New("会话已断开")
+	}
+	cmd := fmt.Sprintf("mkdir -p %q", targetDir)
+	if _, err := session.ExecCombined(cmd); err != nil {
+		return fmt.Errorf("执行远程创建目录失败: %w (SFTP 错误: %v)", err, sftpErr)
+	}
+	m.NotifyDirChanged(sessionID, parentResolved)
+	return nil
+}
+
+// RenameRemotePath 重命名远程文件或目录。
+func (m *SessionManager) RenameRemotePath(sessionID, target, newName string) error {
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return err
+	}
+	newName = strings.TrimSpace(newName)
+	if newName == "" {
+		return errors.New("新名称不能为空")
+	}
+
+	targetResolved := session.ResolveRemotePath(target)
+	var destResolved string
+	if strings.Contains(newName, "/") {
+		destResolved = session.ResolveRemotePath(newName)
+	} else {
+		destResolved = path.Join(path.Dir(targetResolved), newName)
+	}
+
+	// 1. 优先尝试 SFTP 原生重命名
+	client, sftpErr := session.sftpConn()
+	if sftpErr == nil {
+		if err := client.Rename(targetResolved, destResolved); err != nil {
+			return fmt.Errorf("重命名失败: %w", err)
+		}
+		m.NotifyDirChanged(sessionID, path.Dir(targetResolved))
+		return nil
+	}
+
+	// 2. 降级为 SSH Exec 安全带引号执行 mv
+	if session.isClosed() || session.client == nil {
+		return errors.New("会话已断开")
+	}
+	cmd := fmt.Sprintf("mv %q %q", targetResolved, destResolved)
+	if _, err := session.ExecCombined(cmd); err != nil {
+		return fmt.Errorf("执行重命名失败: %w (SFTP 错误: %v)", err, sftpErr)
+	}
+	m.NotifyDirChanged(sessionID, path.Dir(targetResolved))
+	return nil
+}
+
 func (m *SessionManager) RemoveRemotePath(sessionID, target string) error {
 	session, err := m.Get(sessionID)
 	if err != nil {

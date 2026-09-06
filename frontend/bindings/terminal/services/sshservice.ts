@@ -71,3 +71,7 @@ export function SSHServiceLogs(sessionID: string, serviceName: string): $Cancell
 export function SendInput(sessionID: string, data: string): $CancellablePromise<void> {
     return $Call.ByID(350783029, sessionID, data);
 }
+
+export function TerminalAttach(sessionID: string, cols: number, rows: number): $CancellablePromise<void> {
+    return $Call.ByID(2019728728, sessionID, cols, rows);
+}

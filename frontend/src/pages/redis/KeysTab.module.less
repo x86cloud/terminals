@@ -3,16 +3,43 @@
 
 .body {
     display: flex;
+    flex-direction: column;
     flex: 1;
     min-height: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.keysContent {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .redisSide {
-    width: 280px;
     border-right: 1px solid @border;
     display: flex;
     flex-direction: column;
     background: @bg-1;
+    flex-shrink: 0;
+    user-select: none;
+    overflow: hidden;
+}
+
+.splitResizer {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    z-index: 10;
+    margin: 0 -2px;
+
+    &:hover,
+    &.dragging {
+        background: @accent;
+    }
 }
 
 .redisSideHead {
@@ -22,6 +49,7 @@
     padding: 8px 10px;
     border-bottom: 1px solid @border;
     background: @bg-1;
+    flex-shrink: 0;
 }
 
 .dbRow {
@@ -31,7 +59,7 @@
 }
 
 .dbSelect {
-    width: 82px;
+    width: 84px;
 }
 
 .redisDbCount {
@@ -60,6 +88,15 @@
     min-width: 0;
 }
 
+.filterRow {
+    display: flex;
+    align-items: center;
+}
+
+.filterInput {
+    width: 100%;
+}
+
 .redisKeys {
     flex: 1;
     overflow-y: auto;
@@ -67,17 +104,22 @@
 }
 
 .redisKey {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     padding: 5px 8px;
     border-radius: @radius-sm;
     cursor: pointer;
     font-size: 12px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     color: @text;
+    transition: background 0.1s;
 
     &:hover {
         background: @bg-2;
+
+        .keyDelBtn {
+            opacity: 1;
+        }
     }
 
     &.active {
@@ -87,130 +129,93 @@
     }
 }
 
+.keyLabel {
+    flex: 1;
+    min-width: 0;
+    font-family: @font-mono;
+    .ellipsis();
+}
+
+.typePill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9.5px;
+    font-weight: 700;
+    font-family: @font-mono;
+    padding: 1px 4px;
+    border-radius: 3px;
+    line-height: 1.1;
+    letter-spacing: 0.2px;
+    flex-shrink: 0;
+}
+
+.keyDelBtn {
+    opacity: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: transparent;
+    color: @text-dim;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: rgba(255, 77, 79, 0.15);
+        color: @danger;
+    }
+}
+
 .redisEmpty {
     color: @text-dim;
     font-size: 13px;
     text-align: center;
-    padding: 24px 0;
+    padding: 40px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
 }
 
 .redisMain {
     flex: 1;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     padding: 12px;
     gap: 12px;
-    overflow-y: auto;
-    background: @bg-1;
+    background: @bg-2;
+    overflow: hidden;
 }
 
-.redisValueHead {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.redisKeyName {
-    font-weight: 600;
-    font-size: 14px;
-    word-break: break-all;
-}
-
-.redisTypeBadge {
-    padding: 2px 6px;
-    border-radius: @radius-sm;
-    background: @accent-soft;
-    color: @accent;
-    font-size: 11px;
-}
-
-.redisTtl {
-    color: @text-dim;
-    font-size: 12px;
-    margin-left: auto;
-}
-
-.redisValueActions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-top: 4px;
-}
-
-.redisTtlInput {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: @text-dim;
-
-    input {
-        width: 70px;
-        height: 26px;
-        padding: 0 6px;
-        border: 1px solid @border;
-        border-radius: @radius-sm;
-        background: @bg-2;
-        color: @text;
-    }
-}
-
-.redisCli {
+.emptyMain {
+    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-top: 16px;
-    padding-top: 12px;
-    border-top: 1px solid @border;
-}
-
-.redisCliHead {
-    font-size: 12px;
-    font-weight: 600;
-    color: @text-dim;
-}
-
-.redisCliRow {
-    display: flex;
     align-items: center;
-    gap: 8px;
-}
-
-.cliResultWrapper {
-    position: relative;
-    margin-top: 4px;
-}
-
-.cliClearBtn {
-    position: absolute;
-    top: 6px;
-    right: 8px;
-    font-size: 11px;
-    padding: 2px 8px;
-    border-radius: @radius-sm;
-    background: @bg-2;
+    justify-content: center;
+    background: @bg-1;
+    border: 1px dashed @border;
+    border-radius: @radius-lg;
+    gap: 12px;
     color: @text-dim;
-    border: 1px solid @border;
-    cursor: pointer;
-    line-height: 1.2;
-
-    &:hover {
-        color: @text;
-        border-color: @accent;
-    }
+    padding: 30px;
 }
 
-.redisCliResult {
-    font-family: monospace;
-    font-size: 12px;
-    background: @bg-2;
-    padding: 8px 12px;
-    padding-right: 50px;
-    border-radius: @radius-sm;
-    max-height: 140px;
-    overflow-y: auto;
-    white-space: pre-wrap;
-    border: 1px solid @border;
+.emptyTitle {
+    font-size: 15px;
+    font-weight: 600;
     color: @text;
-    margin: 0;
+}
+
+.emptySubtitle {
+    font-size: 12.5px;
+    color: @text-dim;
+    max-width: 320px;
+    text-align: center;
+    line-height: 1.6;
 }

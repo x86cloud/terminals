@@ -2,11 +2,7 @@ package services
 
 import (
 	"encoding/base64"
-	"errors"
-	"fmt"
 	"os"
-	"path"
-	"strings"
 	"terminal/core"
 	"terminal/ssh"
 )
@@ -34,12 +30,8 @@ func (s *SftpService) HomeDir(sessionID string) (string, error) {
 }
 
 func (s *SftpService) MakeDir(sessionID string, parent string, name string) error {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return errors.New("目录名不能为空")
-	}
 	c := GetContainer()
-	return c.Sessions.StartUpload(c.Transfers, sessionID, parent, name)
+	return c.Sessions.MakeDir(sessionID, parent, name)
 }
 
 func (s *SftpService) RemovePath(sessionID string, target string) error {
@@ -56,48 +48,22 @@ func (s *SftpService) RemovePaths(sessionID string, targets []string) error {
 }
 
 func (s *SftpService) RenamePath(sessionID string, target string, newName string) error {
-	newName = strings.TrimSpace(newName)
-	if newName == "" {
-		return errors.New("新名称不能为空")
-	}
-	dest := path.Join(path.Dir(target), newName)
-	if strings.Contains(newName, "/") {
-		dest = ssh.NormalizeRemote(newName)
-	}
-	target = ssh.NormalizeRemote(target)
-	cmd := fmt.Sprintf("mv %s %s", target, dest)
 	c := GetContainer()
-	session, err := c.Sessions.Get(sessionID)
-	if err != nil {
-		return err
-	}
-	_, err = session.ExecCombined(cmd)
-	c.Sessions.NotifyDirChanged(sessionID, path.Dir(target))
-	return err
+	return c.Sessions.RenameRemotePath(sessionID, target, newName)
 }
 
 func (s *SftpService) ReadRemoteFile(sessionID string, remotePath string) (string, error) {
-	session, err := GetContainer().Sessions.Get(sessionID)
+	c := GetContainer()
+	data, err := c.Sessions.ReadFileContent(sessionID, remotePath)
 	if err != nil {
 		return "", err
 	}
-	remotePath = ssh.NormalizeRemote(remotePath)
-	cmd := fmt.Sprintf("cat %s", remotePath)
-	return session.ExecCombined(cmd)
+	return string(data), nil
 }
 
 func (s *SftpService) WriteRemoteFile(sessionID string, remotePath string, content string) error {
 	c := GetContainer()
-	session, err := c.Sessions.Get(sessionID)
-	if err != nil {
-		return err
-	}
-	remotePath = ssh.NormalizeRemote(remotePath)
-	encoded := base64.StdEncoding.EncodeToString([]byte(content))
-	cmd := fmt.Sprintf("echo %s | base64 -d > %s", encoded, remotePath)
-	_, err = session.ExecCombined(cmd)
-	c.Sessions.NotifyDirChanged(sessionID, path.Dir(remotePath))
-	return err
+	return c.Sessions.WriteFileContent(sessionID, remotePath, []byte(content))
 }
 
 func (s *SftpService) ChooseLocalFiles() ([]string, error) {

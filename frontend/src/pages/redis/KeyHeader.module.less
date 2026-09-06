@@ -1,0 +1,93 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    flex-shrink: 0;
+}
+
+.leftSection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+}
+
+.typeBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    font-family: @font-mono;
+    padding: 2px 6px;
+    border-radius: @radius-sm;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.keyName {
+    font-family: @font-mono;
+    font-size: 14px;
+    font-weight: 600;
+    color: @text;
+    .ellipsis();
+    user-select: text;
+}
+
+.copyBtn {
+    cursor: pointer;
+    color: @text-dim;
+    transition: color 0.15s;
+
+    &:hover {
+        color: @accent;
+    }
+}
+
+.rightSection {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.ttlTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    font-size: 11.5px;
+    padding: 2px 8px;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    border: 1px solid @border;
+    color: @text;
+    transition: all 0.15s;
+
+    &:hover {
+        border-color: @accent;
+        color: @accent;
+    }
+}
+
+.sizeTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    padding: 2px 8px;
+    border-radius: @radius-sm;
+    background: @bg-2;
+    border: 1px solid @border;
+    color: @text-dim;
+}

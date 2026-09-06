@@ -175,6 +175,7 @@ func ExecuteHttpRequest(ctx context.Context, input *HttpRequestInput) (*HttpRequ
 	}
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
+	defer transport.CloseIdleConnections()
 
 	if input.InsecureSkipVerify {
 		if transport.TLSClientConfig == nil {

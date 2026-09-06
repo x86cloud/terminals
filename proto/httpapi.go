@@ -121,6 +121,7 @@ func HttpApiRequest(req ApiRequest) (ApiResponse, error) {
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: req.InsecureTLS}, //nolint:gosec
 	}
+	defer transport.CloseIdleConnections()
 	client := &http.Client{
 		Transport: transport,
 		Timeout:   timeout,

@@ -41,11 +41,14 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
     const termRef = useRef<Terminal | null>(null)
     const fitRef = useRef<FitAddon | null>(null)
     const execIdRef = useRef<string | null>(null)
+    const unsubsRef = useRef<Array<() => void>>([])
 
     const [status, setStatus] = useState<'connecting' | 'connected' | 'closed'>('connecting')
 
     // 清理并断开终端会话
     const cleanSession = useCallback(() => {
+        unsubsRef.current.forEach((u) => u())
+        unsubsRef.current = []
         if (execIdRef.current) {
             const id = execIdRef.current
             execIdRef.current = null
@@ -100,6 +103,28 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
             }
 
             execIdRef.current = execId
+
+            // 获得会话 ID 后立即注册事件监听，确保初始欢迎信息与提示符不丢失
+            unsubsRef.current.forEach((u) => u())
+            unsubsRef.current = []
+
+            const eventPrefix = target.type === 'docker' ? 'docker:terminal' : 'k8s:terminal'
+            const offData = subscribe(`${eventPrefix}:data:${execId}`, (payload: string) => {
+                if (termRef.current && payload) {
+                    try {
+                        const bytes = base64ToBytes(payload)
+                        termRef.current.write(bytes)
+                    } catch {
+                        /* ignore */
+                    }
+                }
+            })
+            const offClosed = subscribe(`${eventPrefix}:closed:${execId}`, (reason: string) => {
+                setStatus('closed')
+                termRef.current?.writeln(`\r\n\x1b[33m[会话已退出] ${reason || '容器终端已关闭'}\x1b[0m\r\n`)
+            })
+            unsubsRef.current = [offData, offClosed]
+
             setStatus('connected')
             if (termRef.current) {
                 termRef.current.focus()
@@ -215,44 +240,6 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
             }
         }
     }, [open, target?.serverId, target?.containerId, target?.podName, target?.containerName])
-
-    // 订阅当前会话的流式数据与关闭事件
-    useEffect(() => {
-        if (!open || !target) return
-
-        let unsubData: (() => void) | null = null
-        let unsubClosed: (() => void) | null = null
-
-        const eventPrefix = target.type === 'docker' ? 'docker:terminal' : 'k8s:terminal'
-
-        const interval = setInterval(() => {
-            const execId = execIdRef.current
-            if (execId && !unsubData) {
-                unsubData = subscribe(`${eventPrefix}:data:${execId}`, (payload: string) => {
-                    if (termRef.current && payload) {
-                        try {
-                            const bytes = base64ToBytes(payload)
-                            termRef.current.write(bytes)
-                        } catch {
-                            /* ignore */
-                        }
-                    }
-                })
-
-                unsubClosed = subscribe(`${eventPrefix}:closed:${execId}`, (reason: string) => {
-                    setStatus('closed')
-                    termRef.current?.writeln(`\r\n\x1b[33m[会话已退出] ${reason || '容器终端已关闭'}\x1b[0m\r\n`)
-                })
-                clearInterval(interval)
-            }
-        }, 60)
-
-        return () => {
-            clearInterval(interval)
-            if (unsubData) unsubData()
-            if (unsubClosed) unsubClosed()
-        }
-    }, [open, target?.type, status])
 
     // 动态同步深浅色主题
     useEffect(() => {

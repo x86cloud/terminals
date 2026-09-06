@@ -1,11 +1,17 @@
-import React from 'react'
-import { Input, InputNumber, Button, Segmented, Select, Tag, Tooltip, Space, message } from 'antd'
-import { Folder, Table, Search, RotateCw, Download, Plus, Sparkles, Minimize2 } from 'lucide-react'
-import CodeEditor from '@/components/CodeEditor'
-import { RedisKeysResult, RedisSessionInfo, RedisValue } from '@/types'
-import { KeyTreeNode, TYPE_LABEL } from '@/pages/redis/redisTypes'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { Input, Button, Segmented, Select, Tooltip, Dropdown, message } from 'antd'
+import { Folder, Table as TableIcon, Search, RotateCw, Download, Plus, Filter, Database, Trash2, Copy } from 'lucide-react'
+import { RedisKeyItem, RedisKeysResult, RedisSessionInfo, RedisValue } from '@/types'
+import { KeyTreeNode, TYPE_COLOR, TYPE_SHORT_LABEL, buildKeyTree } from '@/pages/redis/redisTypes'
 import KeyItemTree from '@/pages/redis/KeyItemTree'
-import ValueEditor from '@/pages/redis/ValueEditor'
+import KeyHeader from '@/pages/redis/KeyHeader'
+import RedisCliDrawer from '@/pages/redis/RedisCliDrawer'
+import StringViewer from '@/pages/redis/viewers/StringViewer'
+import HashViewer from '@/pages/redis/viewers/HashViewer'
+import ListViewer from '@/pages/redis/viewers/ListViewer'
+import SetViewer from '@/pages/redis/viewers/SetViewer'
+import ZSetViewer from '@/pages/redis/viewers/ZSetViewer'
+import StreamViewer from '@/pages/redis/viewers/StreamViewer'
 import k from '@/pages/redis/KeysTab.module.less'
 
 interface KeysTabProps {
@@ -49,257 +55,363 @@ export default function KeysTab({
     data,
     selected,
     value,
-    editor,
-    setEditor,
-    ttl,
-    setTtl,
     db,
-    dbInput,
-    setDbInput,
+    switchDb,
     viewMode,
     setViewMode,
     expandedKeys,
     toggleExpand,
     keyTree,
-    cliInput,
-    setCliInput,
-    cliResult,
-    setCliResult,
     loadKeys,
     loadValue,
-    switchDb,
-    saveValue,
     delKey,
     delFolder,
     runRaw,
     flash,
     onOpenCreateKey,
 }: KeysTabProps) {
-    const beautifyJson = () => {
-        try {
-            const obj = JSON.parse(editor)
-            setEditor(JSON.stringify(obj, null, 2))
-        } catch {
-            message.warning('当前内容不是合法的 JSON 格式')
+    // Sidebar width resize state
+    const [sidebarWidth, setSidebarWidth] = useState(() => {
+        const saved = localStorage.getItem('redis_sidebar_width')
+        return saved ? Number(saved) : 320
+    })
+    const [isDragging, setIsDragging] = useState(false)
+    const isDraggingRef = useRef(false)
+    const startXRef = useRef(0)
+    const startWidthRef = useRef(320)
+
+    // Local filter state
+    const [localFilter, setLocalFilter] = useState('')
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        isDraggingRef.current = true
+        setIsDragging(true)
+        startXRef.current = e.clientX
+        startWidthRef.current = sidebarWidth
+
+        const onMouseMove = (moveEvent: MouseEvent) => {
+            if (!isDraggingRef.current) return
+            const delta = moveEvent.clientX - startXRef.current
+            const nextW = Math.max(240, Math.min(650, startWidthRef.current + delta))
+            setSidebarWidth(nextW)
         }
+
+        const onMouseUp = () => {
+            isDraggingRef.current = false
+            setIsDragging(false)
+            localStorage.setItem('redis_sidebar_width', String(sidebarWidth))
+            window.removeEventListener('mousemove', onMouseMove)
+            window.removeEventListener('mouseup', onMouseUp)
+        }
+
+        window.addEventListener('mousemove', onMouseMove)
+        window.addEventListener('mouseup', onMouseUp)
     }
 
-    const minifyJson = () => {
-        try {
-            const obj = JSON.parse(editor)
-            setEditor(JSON.stringify(obj))
-        } catch {
-            message.warning('当前内容不是合法的 JSON 格式')
-        }
+    // Filter keys locally
+    const filteredKeyItems = useMemo(() => {
+        const list = Array.isArray(data.keys) ? data.keys : []
+        if (!localFilter.trim()) return list
+        const query = localFilter.toLowerCase().trim()
+        return list.filter((item) => {
+            const keyName = typeof item === 'string' ? item : item?.key || ''
+            return keyName.toLowerCase().includes(query)
+        })
+    }, [data.keys, localFilter])
+
+    // Filtered tree when localFilter is present
+    const displayTree = useMemo(() => {
+        if (!localFilter.trim()) return keyTree
+        return buildKeyTree(filteredKeyItems, ':')
+    }, [keyTree, localFilter, filteredKeyItems])
+
+    const copyKeyName = (keyName: string) => {
+        navigator.clipboard.writeText(keyName)
+        message.success('已复制键名')
     }
 
     return (
         <div className={k.body}>
-            <div className={k.redisSide}>
-                <div className={k.redisSideHead}>
-                    <div className={k.dbRow}>
-                        <Select
-                            size="small"
-                            value={db}
-                            onChange={(v) => switchDb(v)}
-                            options={Array.from({ length: 16 }, (_, i) => ({ value: i, label: `DB ${i}` }))}
-                            className={k.dbSelect}
-                        />
-                        <span className={k.redisDbCount}>
-                            {data.keys.length} 键 / 共 {session.dbSize || 0}
-                        </span>
-                        <div className={k.sideActions}>
-                            {onOpenCreateKey && (
-                                <Tooltip title="新建键 (Create Key)">
-                                    <Button
-                                        type="text"
-                                        icon={<Plus size={13} />}
-                                        onClick={onOpenCreateKey}
-                                    />
-                                </Tooltip>
-                            )}
-                            <Tooltip title="刷新键列表">
-                                <Button
-                                    size="small"
-                                    type="text"
-                                    icon={<RotateCw size={13} />}
-                                    onClick={() => loadKeys(true)}
-                                />
-                            </Tooltip>
-                            {data.cursor !== '0' && (
-                                <Tooltip title="加载更多键">
+            <div className={k.keysContent}>
+                {/* Left Sidebar */}
+                <div className={k.redisSide} style={{ width: sidebarWidth }}>
+                    <div className={k.redisSideHead}>
+                        <div className={k.dbRow}>
+                            <Select
+                                size="small"
+                                value={db}
+                                onChange={(v) => switchDb(v)}
+                                options={Array.from({ length: 16 }, (_, i) => ({ value: i, label: `DB ${i}` }))}
+                                className={k.dbSelect}
+                            />
+                            <span className={k.redisDbCount}>
+                                {data.keys.length} 键 / 共 {session.dbSize || 0}
+                            </span>
+                            <div className={k.sideActions}>
+                                {onOpenCreateKey && (
+                                    <Tooltip title="新建键 (Create Key)">
+                                        <Button
+                                            size="small"
+                                            type="text"
+                                            icon={<Plus size={13} />}
+                                            onClick={onOpenCreateKey}
+                                        />
+                                    </Tooltip>
+                                )}
+                                <Tooltip title="重新扫描 (SCAN)">
                                     <Button
                                         size="small"
                                         type="text"
-                                        icon={<Download size={13} />}
-                                        onClick={() => loadKeys(false)}
-                                    >
-                                        更多
-                                    </Button>
+                                        icon={<RotateCw size={13} />}
+                                        onClick={() => loadKeys(true)}
+                                    />
                                 </Tooltip>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className={k.searchRow}>
-                        <Input
-                            size="small"
-                            placeholder="搜索 pattern (如: user:*)..."
-                            value={pattern}
-                            prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
-                            allowClear
-                            onChange={(e) => setPattern(e.target.value)}
-                            onPressEnter={() => loadKeys(true)}
-                            className={k.searchInput}
-                        />
-                        <Segmented
-                            size="small"
-                            value={viewMode}
-                            onChange={(v) => setViewMode(v as 'tree' | 'flat')}
-                            options={[
-                                { value: 'tree', icon: <Folder size={12} /> },
-                                { value: 'flat', icon: <Table size={12} /> },
-                            ]}
-                        />
-                    </div>
-                </div>
-
-                <div className={k.redisKeys}>
-                    {data.keys.length === 0 && <div className={k.redisEmpty}>无键</div>}
-                    {data.keys.length > 0 && (
-                        viewMode === 'flat' ? (
-                            data.keys.map((key) => (
-                                <div
-                                    key={key}
-                                    className={`${k.redisKey} ${key === selected ? ' ' + k.active : ''}`}
-                                    onClick={() => loadValue(key)}
-                                    title={key}
-                                >
-                                    {key}
-                                </div>
-                            ))
-                        ) : (
-                            <KeyItemTree
-                                nodes={keyTree}
-                                selected={selected}
-                                expandedKeys={expandedKeys}
-                                onToggleExpand={toggleExpand}
-                                onSelectKey={loadValue}
-                                onDeleteFolder={delFolder}
-                                onDeleteKey={delKey}
-                            />
-                        )
-                    )}
-                </div>
-            </div>
-
-            <div className={k.redisMain}>
-                {selected && value ? (
-                    <>
-                        <div className={k.redisValueHead} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
-                            <span className={k.redisKeyName} title={selected} style={{ fontWeight: 600 }}>{selected}</span>
-                            <Tag color="geekblue">{TYPE_LABEL[value.type]}</Tag>
-                            {value.type === 'string' && (
-                                <Space size={4}>
-                                    <Tooltip title="美化 JSON 格式">
-                                        <Button size="small" type="text" icon={<Sparkles size={12} />} onClick={beautifyJson}>美化</Button>
+                                {String(data.cursor) !== '0' && (
+                                    <Tooltip title="加载更多键">
+                                        <Button
+                                            size="small"
+                                            type="text"
+                                            icon={<Download size={13} />}
+                                            onClick={() => loadKeys(false)}
+                                        >
+                                            更多
+                                        </Button>
                                     </Tooltip>
-                                    <Tooltip title="压缩 JSON 为单行">
-                                        <Button size="small" type="text" icon={<Minimize2 size={12} />} onClick={minifyJson}>压缩</Button>
-                                    </Tooltip>
-                                </Space>
-                            )}
-                            <span className={k.redisTtl} style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-dim)' }}>TTL: {ttl}</span>
-                        </div>
-                        {value.type === 'stream' ? (
-                            <CodeEditor
-                                value={editor}
-                                onChange={setEditor}
-                                lang="plain"
-                                height="220px"
-                                readOnly
-                                placeholder="值内容"
-                            />
-                        ) : (
-                            <CodeEditor
-                                value={editor}
-                                onChange={setEditor}
-                                lang={/^\s*[[{]/.test(editor) ? 'json' : 'plain'}
-                                height="280px"
-                                lineNumbers={false}
-                                placeholder="值内容"
-                            />
-                        )}
-                        <div className={k.redisValueActions} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>TTL(秒)</span>
-                                <InputNumber
-                                    size="small"
-                                    style={{ width: 90 }}
-                                    value={ttl}
-                                    onChange={(v) => setTtl(v ?? 0)}
-                                />
+                                )}
                             </div>
-                            <Button size="small" type="primary" onClick={saveValue}>保存</Button>
-                            <Button size="small" danger onClick={() => delKey()}>删除</Button>
                         </div>
-                        <ValueEditor
-                            session={session}
-                            value={value}
-                            selected={selected}
-                            flash={flash}
-                            onReload={() => loadValue(selected)}
-                        />
-                    </>
-                ) : (
-                    <div className={k.redisEmpty}>从左侧选择一个键查看 / 编辑</div>
-                )}
 
-                <div className={k.redisCli}>
-                    <div className={k.redisCliHead}>命令行 (CLI)</div>
-                    <div className={k.redisCliRow} style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <CodeEditor
-                                value={cliInput}
-                                onChange={setCliInput}
-                                lang="json"
-                                lineNumbers={false}
-                                bordered
-                                height="168px"
-                                placeholder="输入 Redis 原生命令（例如：GET foo / HSET myhash field val）"
-                                onEnter={async (v) => {
-                                    if (!v.trim()) return
-                                    const res = await runRaw(v)
-                                    setCliResult(res || '(空结果)')
-                                }}
+                        {/* Remote pattern search */}
+                        <div className={k.searchRow}>
+                            <Input
+                                size="small"
+                                placeholder="匹配模式 (如: user:*)..."
+                                value={pattern}
+                                prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
+                                allowClear
+                                onChange={(e) => setPattern(e.target.value)}
+                                onPressEnter={() => loadKeys(true)}
+                                className={k.searchInput}
+                            />
+                            <Segmented
+                                size="small"
+                                value={viewMode}
+                                onChange={(v) => setViewMode(v as 'tree' | 'flat')}
+                                options={[
+                                    { value: 'tree', icon: <Folder size={12} /> },
+                                    { value: 'flat', icon: <TableIcon size={12} /> },
+                                ]}
                             />
                         </div>
-                        <Button
-                            type="primary"
-                            style={{ height: 'auto', minHeight: 56, padding: '0 20px', fontSize: 13 }}
-                            onClick={async () => {
-                                if (!cliInput.trim()) return
-                                const res = await runRaw(cliInput)
-                                setCliResult(res || '(空结果)')
-                            }}
-                        >
-                            执行
-                        </Button>
-                    </div>
-                    {cliResult && (
-                        <div className={k.cliResultWrapper}>
-                            <pre className={k.redisCliResult}>{cliResult}</pre>
-                            <Button
+
+                        {/* Local fast filter */}
+                        <div className={k.filterRow}>
+                            <Input
                                 size="small"
-                                className={k.cliClearBtn}
-                                onClick={() => setCliResult('')}
-                            >
-                                清空
-                            </Button>
+                                placeholder="过滤已扫描出的键..."
+                                value={localFilter}
+                                prefix={<Filter size={11} style={{ color: 'var(--text-dim)' }} />}
+                                allowClear
+                                onChange={(e) => setLocalFilter(e.target.value)}
+                                className={k.filterInput}
+                            />
+                        </div>
+                    </div>
+
+                    <div className={k.redisKeys}>
+                        {filteredKeyItems.length === 0 && (
+                            <div className={k.redisEmpty}>
+                                <span>{data.keys.length === 0 ? '无键' : '无匹配结果'}</span>
+                                {data.keys.length === 0 && onOpenCreateKey && (
+                                    <Button size="small" type="primary" icon={<Plus size={12} />} onClick={onOpenCreateKey}>
+                                        新建键
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                        {filteredKeyItems.length > 0 && (
+                            viewMode === 'flat' ? (
+                                filteredKeyItems.map((item) => {
+                                    const keyName = typeof item === 'string' ? item : item.key
+                                    const itemType = typeof item === 'object' ? item.type : undefined
+                                    const typeStyle = itemType ? TYPE_COLOR[itemType] : null
+                                    const isSelected = keyName === selected
+
+                                    const contextMenu = [
+                                        {
+                                            key: 'copy',
+                                            label: '复制键名',
+                                            icon: <Copy size={13} />,
+                                            onClick: () => copyKeyName(keyName),
+                                        },
+                                        {
+                                            type: 'divider' as const,
+                                        },
+                                        {
+                                            key: 'delete',
+                                            danger: true,
+                                            label: '删除键',
+                                            icon: <Trash2 size={13} />,
+                                            onClick: () => delKey(keyName),
+                                        },
+                                    ]
+
+                                    return (
+                                        <Dropdown key={keyName} menu={{ items: contextMenu }} trigger={['contextMenu']}>
+                                            <div
+                                                className={`${k.redisKey} ${isSelected ? k.active : ''}`}
+                                                onClick={() => loadValue(keyName)}
+                                                title={keyName}
+                                            >
+                                                <span className={k.keyLabel}>{keyName}</span>
+                                                {itemType && typeStyle && (
+                                                    <span
+                                                        className={k.typePill}
+                                                        style={{
+                                                            backgroundColor: typeStyle.bg,
+                                                            color: typeStyle.text,
+                                                            border: `1px solid ${typeStyle.border}`,
+                                                        }}
+                                                    >
+                                                        {TYPE_SHORT_LABEL[itemType] || itemType.toUpperCase()}
+                                                    </span>
+                                                )}
+                                                <Tooltip title={`删除 ${keyName}`}>
+                                                    <button
+                                                        type="button"
+                                                        className={k.keyDelBtn}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            delKey(keyName)
+                                                        }}
+                                                    >
+                                                        <Trash2 size={12} />
+                                                    </button>
+                                                </Tooltip>
+                                            </div>
+                                        </Dropdown>
+                                    )
+                                })
+                            ) : (
+                                <KeyItemTree
+                                    nodes={displayTree}
+                                    selected={selected}
+                                    expandedKeys={expandedKeys}
+                                    onToggleExpand={toggleExpand}
+                                    onSelectKey={loadValue}
+                                    onDeleteFolder={delFolder}
+                                    onDeleteKey={delKey}
+                                />
+                            )
+                        )}
+                    </div>
+                </div>
+
+                {/* Resizable Divider */}
+                <div
+                    className={`${k.splitResizer} ${isDragging ? k.dragging : ''}`}
+                    onMouseDown={handleMouseDown}
+                />
+
+                {/* Right Main Content */}
+                <div className={k.redisMain}>
+                    {selected && value ? (
+                        <>
+                            <KeyHeader
+                                session={session}
+                                selected={selected}
+                                value={value}
+                                onReload={() => loadValue(selected)}
+                                onKeyRenamed={(newKey) => {
+                                    loadKeys(true)
+                                    loadValue(newKey)
+                                }}
+                                onKeyDeleted={() => delKey(selected)}
+                            />
+
+                            {value.type === 'string' && (
+                                <StringViewer
+                                    session={session}
+                                    selected={selected}
+                                    value={value}
+                                    onReload={() => loadValue(selected)}
+                                    flash={flash}
+                                />
+                            )}
+
+                            {value.type === 'hash' && (
+                                <HashViewer
+                                    session={session}
+                                    selected={selected}
+                                    value={value}
+                                    onReload={() => loadValue(selected)}
+                                    flash={flash}
+                                />
+                            )}
+
+                            {value.type === 'list' && (
+                                <ListViewer
+                                    session={session}
+                                    selected={selected}
+                                    value={value}
+                                    onReload={() => loadValue(selected)}
+                                    flash={flash}
+                                />
+                            )}
+
+                            {value.type === 'set' && (
+                                <SetViewer
+                                    session={session}
+                                    selected={selected}
+                                    value={value}
+                                    onReload={() => loadValue(selected)}
+                                    flash={flash}
+                                />
+                            )}
+
+                            {value.type === 'zset' && (
+                                <ZSetViewer
+                                    session={session}
+                                    selected={selected}
+                                    value={value}
+                                    onReload={() => loadValue(selected)}
+                                    flash={flash}
+                                />
+                            )}
+
+                            {value.type === 'stream' && (
+                                <StreamViewer
+                                    session={session}
+                                    selected={selected}
+                                    value={value}
+                                    onReload={() => loadValue(selected)}
+                                    flash={flash}
+                                />
+                            )}
+                        </>
+                    ) : (
+                        <div className={k.emptyMain}>
+                            <Database size={52} style={{ color: 'var(--text-faint)', opacity: 0.6 }} />
+                            <div className={k.emptyTitle}>未选择任何键</div>
+                            <div className={k.emptySubtitle}>
+                                从左侧列表点击一个键进行查看与交互式编辑，或直接新建一个键。
+                            </div>
+                            {onOpenCreateKey && (
+                                <Button type="primary" icon={<Plus size={13} />} onClick={onOpenCreateKey}>
+                                    新建键 (Create Key)
+                                </Button>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
+
+            {/* Bottom Dockable CLI Console */}
+            <RedisCliDrawer
+                session={session}
+                currentDb={db}
+                runRaw={runRaw}
+            />
         </div>
     )
 }

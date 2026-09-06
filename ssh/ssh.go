@@ -48,6 +48,10 @@ type Session struct {
 
 	closeOnce sync.Once
 	done      chan struct{}
+
+	bufMu    sync.Mutex
+	buffer   []byte
+	attached bool
 }
 
 func (s *Session) Info() SessionInfo {
@@ -108,6 +112,10 @@ func (s *Session) close() {
 			_ = s.shell.Close()
 		}
 		s.shellMu.Unlock()
+
+		s.bufMu.Lock()
+		s.buffer = nil
+		s.bufMu.Unlock()
 
 		if s.client != nil {
 			_ = s.client.Close()
@@ -273,6 +281,20 @@ func (m *SessionManager) Connect(cfg core.ServerConfig, cols, rows int) (Session
 	m.sessions[session.id] = session
 	m.mu.Unlock()
 
+	// 5 秒兜底定时器：若因异常前端始终未触发 Attach，自动开启实时推送并回放
+	time.AfterFunc(5*time.Second, func() {
+		session.bufMu.Lock()
+		defer session.bufMu.Unlock()
+		if !session.attached {
+			session.attached = true
+			if len(session.buffer) > 0 {
+				payload := base64.StdEncoding.EncodeToString(session.buffer)
+				core.EmitEvent("terminal:data:"+session.id, payload)
+				session.buffer = nil
+			}
+		}
+	})
+
 	go m.keepAlive(session)
 
 	return session.Info(), nil
@@ -363,13 +385,40 @@ func (m *SessionManager) pumpOutput(s *Session, r io.Reader) {
 	for {
 		n, err := r.Read(buf)
 		if n > 0 {
-			payload := base64.StdEncoding.EncodeToString(buf[:n])
-			core.EmitEvent("terminal:data:"+s.id, payload)
+			s.bufMu.Lock()
+			if !s.attached {
+				// 前端终端组件尚未挂载并 Attach，将早期的欢迎词与 Prompt 存入缓冲（上限 512KB）
+				if len(s.buffer) < 512*1024 {
+					s.buffer = append(s.buffer, buf[:n]...)
+				}
+				s.bufMu.Unlock()
+			} else {
+				s.bufMu.Unlock()
+				payload := base64.StdEncoding.EncodeToString(buf[:n])
+				core.EmitEvent("terminal:data:"+s.id, payload)
+			}
 		}
 		if err != nil {
 			return
 		}
 	}
+}
+
+// Attach 挂载前端终端视图，回放缓冲的早期 Prompt/MOTD 数据并开启后续实时事件流。
+func (m *SessionManager) Attach(sessionID string) error {
+	s, err := m.Get(sessionID)
+	if err != nil {
+		return err
+	}
+	s.bufMu.Lock()
+	defer s.bufMu.Unlock()
+	s.attached = true
+	if len(s.buffer) > 0 {
+		payload := base64.StdEncoding.EncodeToString(s.buffer)
+		core.EmitEvent("terminal:data:"+s.id, payload)
+		s.buffer = nil
+	}
+	return nil
 }
 
 func (m *SessionManager) handleDisconnect(s *Session, reason string) {

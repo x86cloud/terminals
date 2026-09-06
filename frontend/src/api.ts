@@ -107,6 +107,8 @@ export const API = {
         SshService.ResizeTerminal(sessionId, cols, rows),
     resize: (sessionId: string, cols: number, rows: number): Promise<void> =>
         SshService.ResizeTerminal(sessionId, cols, rows),
+    terminalAttach: (sessionId: string, cols?: number, rows?: number): Promise<void> =>
+        (SshService as any).TerminalAttach(sessionId, cols || 0, rows || 0),
 
     // SFTP
     listDir: (sessionId: string, dir: string): Promise<DirListing> => SftpService.ListDir(sessionId, dir) as any,
@@ -156,6 +158,10 @@ export const API = {
         RedisService.RedisSet(id, key, typ, val, ttl),
     redisDelete: (id: string, key: string): Promise<void> => RedisService.RedisDelete(id, key),
     redisExpire: (id: string, key: string, ttl: number): Promise<void> => RedisService.RedisExpire(id, key, ttl),
+    redisRenameKey: (id: string, oldKey: string, newKey: string): Promise<void> =>
+        (RedisService as any).RedisRenameKey
+            ? (RedisService as any).RedisRenameKey(id, oldKey, newKey)
+            : RedisService.RedisRaw(id, `RENAME ${oldKey} ${newKey}`).then(() => {}),
     redisRaw: (id: string, cmd: string): Promise<Record<string, any>> => RedisService.RedisRaw(id, cmd).then(r => (r || {}) as any),
     redisDBSize: (id: string): Promise<number> => RedisService.RedisDBSize(id),
     redisModeInfo: (id: string): Promise<Record<string, any>> => RedisService.RedisModeInfo(id).then(r => (r || {}) as any),

@@ -40,6 +40,9 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
         }
     }
 
+    const watchKeyRef = useRef('')
+    watchKeyRef.current = watchKey
+
     useEffect(() => {
         subRef.current = subscribe('mongo:change:' + id, (evt: MongoChangeEvent) => {
             if (evt.error) {
@@ -48,7 +51,12 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
             }
             setEvents((prev) => [evt, ...prev].slice(0, 200))
         })
-        return () => clearSub()
+        return () => {
+            clearSub()
+            if (watchKeyRef.current) {
+                API.mongoUnwatch(id, watchKeyRef.current).catch(() => undefined)
+            }
+        }
     }, [id])
 
     // 切换库时清空上一个库的事件列表

@@ -8,6 +8,7 @@ import (
 	"net"
 	"strings"
 	"sync"
+	"time"
 	"terminal/core"
 
 	"github.com/docker/docker/api/types/container"
@@ -136,6 +137,9 @@ func (m *DockerExecManager) StartExec(dockerCli *DockerClient, containerID, comm
 			core.EmitEvent("docker:terminal:closed:"+sessionID, "容器会话已退出")
 		}()
 
+		// 给予前端 IPC 返回与事件订阅挂载一个微小准备窗口，避免初始 prompt 丢失
+		time.Sleep(50 * time.Millisecond)
+
 		buf := make([]byte, 4096)
 		for {
 			n, err := attachResp.Reader.Read(buf)
@@ -185,10 +189,11 @@ func (m *DockerExecManager) Resize(dockerCli *DockerClient, sessionID string, co
 
 // Close 关闭指定终端会话。
 func (m *DockerExecManager) Close(sessionID string) error {
-	m.mu.RLock()
+	m.mu.Lock()
 	s, ok := m.sessions[sessionID]
-	m.mu.RUnlock()
-	if !ok {
+	delete(m.sessions, sessionID)
+	m.mu.Unlock()
+	if !ok || s == nil {
 		return nil
 	}
 	return s.Close()

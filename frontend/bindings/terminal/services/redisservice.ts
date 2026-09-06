@@ -104,6 +104,10 @@ export function RedisRaw(id: string, cmd: string): $CancellablePromise<{ [_ in s
     return $Call.ByID(692209427, id, cmd);
 }
 
+export function RedisRenameKey(id: string, oldKey: string, newKey: string): $CancellablePromise<void> {
+    return $Call.ByID(1745439168, id, oldKey, newKey);
+}
+
 export function RedisSelectDB(id: string, db: number): $CancellablePromise<void> {
     return $Call.ByID(2988606821, id, db);
 }

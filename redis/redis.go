@@ -151,6 +151,9 @@ func buildUniversalOptions(cfg core.ServerConfig) *goredis.UniversalOptions {
 	if maxBackoff <= 0 {
 		maxBackoff = 512 * time.Millisecond
 	}
+	if maxBackoff < minBackoff {
+		maxBackoff = minBackoff
+	}
 
 	opt := &goredis.UniversalOptions{
 		Username:         cfg.RedisUsername,
@@ -541,6 +544,7 @@ func (m *RedisManager) GetKey(id, key string) (RedisValue, error) {
 			}
 			val.Value = strings.Join(lines, "\n")
 			val.Size = int64(len(m))
+			val.RawJSON = m
 		case "list":
 			l, e := rc.client.LRange(c, key, 0, -1).Result()
 			if e != nil {
@@ -548,6 +552,7 @@ func (m *RedisManager) GetKey(id, key string) (RedisValue, error) {
 			}
 			val.Value = strings.Join(l, "\n")
 			val.Size = int64(len(l))
+			val.RawJSON = l
 		case "set":
 			s, e := rc.client.SMembers(c, key).Result()
 			if e != nil {
@@ -555,32 +560,43 @@ func (m *RedisManager) GetKey(id, key string) (RedisValue, error) {
 			}
 			val.Value = strings.Join(s, "\n")
 			val.Size = int64(len(s))
+			val.RawJSON = s
 		case "zset":
 			zs, e := rc.client.ZRangeWithScores(c, key, 0, -1).Result()
 			if e != nil {
 				return e
 			}
 			lines := make([]string, 0, len(zs)*2)
+			zList := make([]map[string]any, 0, len(zs))
 			for _, z := range zs {
-				lines = append(lines, fmt.Sprintf("%v", z.Member), fmt.Sprintf("%v", z.Score))
+				mStr := fmt.Sprintf("%v", z.Member)
+				lines = append(lines, mStr, fmt.Sprintf("%v", z.Score))
+				zList = append(zList, map[string]any{"member": mStr, "score": z.Score})
 			}
 			val.Value = strings.Join(lines, "\n")
 			val.Size = int64(len(zs))
+			val.RawJSON = zList
 		case "stream":
 			msgs, e := rc.client.XRevRangeN(c, key, "+", "-", 100).Result()
 			if e != nil {
 				return e
 			}
 			lines := make([]string, 0, len(msgs))
+			streamList := make([]map[string]any, 0, len(msgs))
 			for _, msg := range msgs {
 				fieldParts := make([]string, 0, len(msg.Values))
 				for fk, fv := range msg.Values {
 					fieldParts = append(fieldParts, fmt.Sprintf("%s=%v", fk, fv))
 				}
 				lines = append(lines, fmt.Sprintf("%s\n%s", msg.ID, strings.Join(fieldParts, " ")))
+				streamList = append(streamList, map[string]any{
+					"id":     msg.ID,
+					"values": msg.Values,
+				})
 			}
 			val.Value = strings.Join(lines, "\n---\n")
 			val.Size = int64(len(msgs))
+			val.RawJSON = streamList
 		case "none":
 			val.Value = ""
 			val.Size = 0
