@@ -2,6 +2,7 @@
 @import (reference) '../styles/mixins.less';
 
 .sidebar {
+    position: relative;
     width: 280px;
     flex: none;
     display: flex;
@@ -10,6 +11,40 @@
     border-right: none;
     user-select: none;
     -webkit-user-select: none;
+    overflow: hidden;
+    box-sizing: border-box;
+    transition: width 0.28s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease;
+
+    &.noTransition {
+        transition: none !important;
+    }
+
+    &.open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    &.closed {
+        width: 0 !important;
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: width 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, visibility 0.25s;
+    }
+}
+
+.inner {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    width: 280px;
+    min-width: 280px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: transparent;
 }
 
 .tools {

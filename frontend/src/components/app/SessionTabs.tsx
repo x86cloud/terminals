@@ -6,7 +6,7 @@ import { ConnType } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
 
 export default function SessionTabs() {
-    const { sessions, tools, activeTarget, activateTab, closeSession, closeTool } = useSession()
+    const { sessions, tools, activeTarget, activateTab, closeSession, closeTool, sidebarOpen } = useSession()
 
     // 计算当前激活的 Tab Key
     const activeKey = useMemo(() => {
@@ -174,12 +174,19 @@ export default function SessionTabs() {
     }
 
     return (
-        <TabBar
-            items={items}
-            activeKey={activeKey}
-            onChange={handleChange}
-            onClose={handleClose}
-            size="middle"
-        />
+        <div
+            style={{
+                paddingLeft: sidebarOpen ? 0 : 8,
+                transition: 'padding-left 0.28s cubic-bezier(0.2, 0, 0, 1)',
+            }}
+        >
+            <TabBar
+                items={items}
+                activeKey={activeKey}
+                onChange={handleChange}
+                onClose={handleClose}
+                size="middle"
+            />
+        </div>
     )
 }

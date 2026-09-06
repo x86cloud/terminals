@@ -43,6 +43,9 @@ export interface SessionContextValue {
     sessions: SessionsState
     tools: ToolsState
     activeTarget: ActiveTarget | null
+    sidebarOpen: boolean
+    toggleSidebar: () => void
+    setSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>
     aiSidebarOpen: boolean
     toggleAiSidebar: () => void
     setAiSidebarOpen: React.Dispatch<React.SetStateAction<boolean>>
@@ -86,7 +89,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const [sessions, setSessions] = useState<SessionsState>(initialSessionsState)
     const [tools, setTools] = useState<ToolsState>(initialToolsState)
     const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>(null)
+    const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
     const [aiSidebarOpen, setAiSidebarOpen] = useState<boolean>(false)
+
+    const toggleSidebar = useCallback(() => {
+        setSidebarOpen((prev) => !prev)
+    }, [])
 
     const toggleAiSidebar = useCallback(() => {
         setAiSidebarOpen((prev) => !prev)
@@ -219,6 +227,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 sessions,
                 tools,
                 activeTarget,
+                sidebarOpen,
+                toggleSidebar,
+                setSidebarOpen,
                 aiSidebarOpen,
                 toggleAiSidebar,
                 setAiSidebarOpen,

@@ -77,7 +77,16 @@ export default function Sidebar({
     onOpenDevTools,
     onFocusSession,
 }: Props) {
-    const { sessions: ctxSessions, activeTarget, openTool, activateTab, aiSidebarOpen, toggleAiSidebar } = useSession()
+    const { sessions: ctxSessions, activeTarget, openTool, activateTab, aiSidebarOpen, toggleAiSidebar, sidebarOpen } = useSession()
+    const [mounted, setMounted] = useState(false)
+
+    useEffect(() => {
+        const raf = requestAnimationFrame(() => {
+            setMounted(true)
+        })
+        return () => cancelAnimationFrame(raf)
+    }, [])
+
     const [keyword, setKeyword] = useState('')
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     // 默认所有分组为折叠状态（未显式展开即为折叠）
@@ -314,7 +323,11 @@ export default function Sidebar({
     const ungrouped = filtered.filter((s) => !s.groupId)
 
     return (
-        <aside className={s.sidebar}>
+        <aside
+            className={`${s.sidebar} ${sidebarOpen ? s.open : s.closed} ${!mounted ? s.noTransition : ''}`}
+            style={{ width: sidebarOpen ? 280 : 0 }}
+        >
+            <div className={s.inner}>
             <div className={s.sidebarHead}>
                 <Input
                     size="small"
@@ -498,6 +511,7 @@ export default function Sidebar({
                 >
                     API 调试
                 </Button>
+            </div>
             </div>
 
             <ContextMenu state={menu} onClose={() => setMenu(closedMenu)} />

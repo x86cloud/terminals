@@ -42,7 +42,7 @@ export default function Stage({
     onPathChange,
     onNewServer,
 }: StageProps) {
-    const { sessions, tools, activeTarget, closeSession, closeTool, updateSession } = useSession()
+    const { sessions, tools, activeTarget, closeSession, closeTool, updateSession, sidebarOpen } = useSession()
 
     const activeId = activeTarget?.kind === 'ssh' ? activeTarget.id : null
     const activeDockerId = activeTarget?.kind === 'docker' ? activeTarget.id : null
@@ -68,7 +68,7 @@ export default function Stage({
         !tools.api.open
 
     return (
-        <div className={a.stage}>
+        <div className={`${a.stage} ${!sidebarOpen ? a.standalone : ''}`}>
             {sessions.ssh.map((s) => (
                 <SessionWorkspace
                     key={s.id}

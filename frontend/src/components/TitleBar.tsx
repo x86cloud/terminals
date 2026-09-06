@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Button, Tooltip } from 'antd'
 import {
-    Terminal,
     Pin,
     Settings,
     Minus,
@@ -10,8 +9,11 @@ import {
     X,
     Sun,
     Moon,
+    PanelLeft,
+    PanelRight,
 } from 'lucide-react'
 import { Window, Events } from '@wailsio/runtime'
+import { useSession } from '@/contexts/SessionContext'
 import AppLogo from './AppLogo'
 import s from './TitleBar.module.less'
 
@@ -20,6 +22,10 @@ interface TitleBarProps {
     activeTitle?: string
     themeMode?: 'light' | 'dark' | 'system'
     onToggleTheme?: () => void
+    sidebarOpen?: boolean
+    onToggleSidebar?: () => void
+    aiSidebarOpen?: boolean
+    onToggleAiSidebar?: () => void
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -27,7 +33,16 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     activeTitle,
     themeMode = 'dark',
     onToggleTheme,
+    sidebarOpen,
+    onToggleSidebar,
+    aiSidebarOpen,
+    onToggleAiSidebar,
 }) => {
+    const session = useSession()
+    const isSidebarOpen = sidebarOpen ?? session.sidebarOpen
+    const handleToggleSidebar = onToggleSidebar ?? session.toggleSidebar
+    const isAiSidebarOpen = aiSidebarOpen ?? session.aiSidebarOpen
+    const handleToggleAiSidebar = onToggleAiSidebar ?? session.toggleAiSidebar
     const [isMaximised, setIsMaximised] = useState<boolean>(false)
     const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(false)
 
@@ -129,6 +144,28 @@ export const TitleBar: React.FC<TitleBarProps> = ({
 
             <div className={s.right} style={{ ['--wails-draggable' as any]: 'no-drag' }}>
                 <div className={s.quickActions}>
+                    {handleToggleSidebar && (
+                        <Tooltip title={isSidebarOpen ? '收起主侧边栏' : '展开主侧边栏'}>
+                            <Button
+                                size="small"
+                                type={isSidebarOpen ? 'primary' : 'text'}
+                                icon={<PanelLeft size={13} strokeWidth={1.8} />}
+                                onClick={handleToggleSidebar}
+                            />
+                        </Tooltip>
+                    )}
+
+                    {handleToggleAiSidebar && (
+                        <Tooltip title={isAiSidebarOpen ? '收起 AI 智能体' : '展开 AI 智能体'}>
+                            <Button
+                                size="small"
+                                type={isAiSidebarOpen ? 'primary' : 'text'}
+                                icon={<PanelRight size={13} strokeWidth={1.8} />}
+                                onClick={handleToggleAiSidebar}
+                            />
+                        </Tooltip>
+                    )}
+
                     {onToggleTheme && (
                         <Tooltip title={isCurrentDark ? '切换至浅色模式' : '切换至暗色模式'}>
                             <Button
