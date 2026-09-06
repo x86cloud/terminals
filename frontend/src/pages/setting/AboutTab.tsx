@@ -103,7 +103,7 @@ export default function AboutTab() {
             </div>
 
             <div className={ab.appDesc}>
-                一款跨平台的现代高颜值客户端，支持 SSH、Redis、MySQL、PostgreSQL、MongoDB、MQTT 及 SQLite 全套数据协同管理与 AI 智能编排。
+                一款跨平台的现代 All-in-One 全栈工作台，集 SSH 终端、Docker & Kubernetes 容器云原生编排、全套多数据库协同（MySQL、PostgreSQL、Redis、MongoDB、SQLite）、MQTT 物联网调试、API 测试与自主 AI Agent 智能助手于一体。
             </div>
 
             {/* Check Updates Action Area */}
