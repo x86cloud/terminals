@@ -72,11 +72,43 @@ import type {
     K8sResourceItemSummary,
     K8sOrchestrationRecord,
     K8sDeleteResult,
+    AppVersionInfo,
+    UpdateCheckResult,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
 
 export const API = {
+    // 版本信息与更新
+    getAppVersion: (): Promise<AppVersionInfo> =>
+        (SystemService as any).GetAppVersion
+            ? (SystemService as any).GetAppVersion()
+            : Promise.resolve({
+                  version: 'v1.0.3',
+                  gitCommit: 'dev',
+                  buildDate: '',
+                  goVersion: '',
+                  platform: 'windows/amd64',
+              }),
+    checkForUpdates: (): Promise<UpdateCheckResult> =>
+        (SystemService as any).CheckForUpdates
+            ? (SystemService as any).CheckForUpdates()
+            : Promise.resolve({
+                  currentVersion: 'v1.0.3',
+                  latestVersion: 'v1.0.3',
+                  hasUpdate: false,
+                  releaseUrl: 'https://github.com/x86cloud/terminals/releases',
+                  repoUrl: 'https://github.com/x86cloud/terminals',
+                  checkedAt: new Date().toLocaleString(),
+              }),
+    openBrowser: (url: string): Promise<void> => {
+        if ((SystemService as any).OpenBrowser) {
+            return (SystemService as any).OpenBrowser(url)
+        }
+        window.open(url, '_blank')
+        return Promise.resolve()
+    },
+
     // 设置持久化
     getAppSettings: (): Promise<AppSettings> => SystemService.GetAppSettings() as any,
     saveAppSettings: (settings: AppSettings): Promise<AppSettings> => SystemService.SaveAppSettings(settings as any) as any,

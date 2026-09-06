@@ -48,6 +48,14 @@ export interface AppSettings {
     "aiMaxParallel": number;
 }
 
+export interface AppVersionInfo {
+    "version": string;
+    "gitCommit": string;
+    "buildDate": string;
+    "goVersion": string;
+    "platform": string;
+}
+
 /**
  * DockerComposeRecord 描述在客户端本地保存的一个 Compose 配置文件记录。
  */
@@ -842,4 +850,14 @@ export interface ServerConfig {
 export interface ServerGroup {
     "id": string;
     "name": string;
+}
+
+export interface UpdateCheckResult {
+    "currentVersion": string;
+    "latestVersion": string;
+    "hasUpdate": boolean;
+    "releaseUrl": string;
+    "repoUrl": string;
+    "checkedAt": string;
+    "errorMessage"?: string;
 }

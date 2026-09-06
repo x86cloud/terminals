@@ -5,6 +5,12 @@ vars:
   BIN_DIR: "bin"
   PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "pnpm"}}'
   VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  VERSION:
+    sh: 'echo "${GITHUB_REF_NAME:-$(git describe --tags --abbrev=0 2>/dev/null || echo "v1.0.3")}"'
+  GIT_COMMIT:
+    sh: 'git rev-parse --short HEAD 2>/dev/null || echo "dev"'
+  BUILD_DATE:
+    sh: 'date -u +"%Y-%m-%d" 2>/dev/null || echo ""'
   # Target OS for build/package/run. Defaults to the host OS, and is overridden
   # by `wails3 build GOOS=...` (or the GOOS env var) for cross-compilation. The
   # tasks below dispatch to the matching platform Taskfile via this variable.
@@ -23,11 +29,19 @@ tasks:
     summary: Builds the application
     cmds:
       - task: "{{.GOOS}}:build"
+        vars:
+          VERSION: '{{.VERSION}}'
+          GIT_COMMIT: '{{.GIT_COMMIT}}'
+          BUILD_DATE: '{{.BUILD_DATE}}'
 
   package:
     summary: Packages a production build of the application
     cmds:
       - task: "{{.GOOS}}:package"
+        vars:
+          VERSION: '{{.VERSION}}'
+          GIT_COMMIT: '{{.GIT_COMMIT}}'
+          BUILD_DATE: '{{.BUILD_DATE}}'
 
   run:
     summary: Runs the application

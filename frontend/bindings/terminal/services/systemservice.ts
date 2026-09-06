@@ -9,6 +9,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // @ts-ignore: Unused imports
 import * as core$0 from "../core/models.js";
 
+export function CheckForUpdates(): $CancellablePromise<core$0.UpdateCheckResult> {
+    return $Call.ByID(2981386841);
+}
+
 export function DeleteGroup(id: string): $CancellablePromise<void> {
     return $Call.ByID(1243504996, id);
 }
@@ -21,6 +25,10 @@ export function GetAppSettings(): $CancellablePromise<core$0.AppSettings> {
     return $Call.ByID(3489392456);
 }
 
+export function GetAppVersion(): $CancellablePromise<core$0.AppVersionInfo> {
+    return $Call.ByID(2593061335);
+}
+
 export function ListGroups(): $CancellablePromise<core$0.ServerGroup[] | null> {
     return $Call.ByID(3810483558);
 }
@@ -31,6 +39,10 @@ export function ListServers(): $CancellablePromise<core$0.ServerConfig[] | null>
 
 export function MoveServerToGroup(serverID: string, groupID: string): $CancellablePromise<void> {
     return $Call.ByID(1292569476, serverID, groupID);
+}
+
+export function OpenBrowser(targetURL: string): $CancellablePromise<void> {
+    return $Call.ByID(1062841006, targetURL);
 }
 
 export function SaveAppSettings(settings: core$0.AppSettings): $CancellablePromise<core$0.AppSettings> {

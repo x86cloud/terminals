@@ -6,30 +6,131 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 30px 20px;
+    padding: 36px 24px;
     text-align: center;
-    gap: 10px;
+    gap: 12px;
+    max-width: 540px;
+    margin: 0 auto;
+}
 
-    .appName {
-        font-size: 18px;
-        font-weight: 700;
-        color: @text;
-    }
+.appName {
+    font-size: 20px;
+    font-weight: 700;
+    color: @text;
+    letter-spacing: -0.2px;
+}
 
-    .appVer {
-        font-size: 12px;
-        padding: 2px 8px;
-        background: @accent-soft;
-        color: @accent;
-        border-radius: 10px;
-        font-weight: 600;
-    }
+.verBadgeRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
 
-    .appDesc {
-        font-size: 12.5px;
+.appVer {
+    font-size: 12px;
+    padding: 2px 10px;
+    background: @accent-soft;
+    color: @accent;
+    border-radius: @radius-pill;
+    font-weight: 600;
+    font-family: @font-mono;
+    border: 1px solid rgba(51, 112, 255, 0.2);
+}
+
+.appDesc {
+    font-size: 13px;
+    color: @text-dim;
+    max-width: 420px;
+    line-height: 1.6;
+    margin-top: 4px;
+}
+
+.actionArea {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.updateCard {
+    width: 100%;
+    background: @bg-elev;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    padding: 16px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: fadeIn 0.2s ease;
+}
+
+.updateCardNew {
+    border-color: @accent;
+    background: rgba(51, 112, 255, 0.04);
+}
+
+.updateCardHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.updateTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: @text;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.updateDesc {
+    font-size: 12.5px;
+    color: @text-dim;
+    line-height: 1.5;
+}
+
+.updateBtns {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 6px;
+}
+
+.sysInfoBox {
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid @border;
+    width: 100%;
+    font-size: 11.5px;
+    color: @text-faint;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    a {
         color: @text-dim;
-        max-width: 360px;
-        line-height: 1.5;
-        margin-top: 6px;
+        transition: color 0.15s;
+
+        &:hover {
+            color: @accent;
+            text-decoration: underline;
+        }
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }

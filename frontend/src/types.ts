@@ -1259,3 +1259,22 @@ export interface K8sDeleteResult {
     message?: string
 }
 
+export interface AppVersionInfo {
+    version: string
+    gitCommit: string
+    buildDate: string
+    goVersion: string
+    platform: string
+}
+
+export interface UpdateCheckResult {
+    currentVersion: string
+    latestVersion: string
+    hasUpdate: boolean
+    releaseUrl: string
+    repoUrl: string
+    checkedAt: string
+    errorMessage?: string
+}
+
+

@@ -3,9 +3,11 @@
 
 export type {
     AppSettings,
+    AppVersionInfo,
     DockerComposeRecord,
     K8sOrchestrationRecord,
     K8sResourceItemSummary,
     ServerConfig,
-    ServerGroup
+    ServerGroup,
+    UpdateCheckResult
 } from "./models.js";

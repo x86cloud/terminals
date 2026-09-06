@@ -94,3 +94,16 @@ func (s *SystemService) SelectLocalSqliteFile() (string, error) {
 func (s *SystemService) SelectCertFile() (string, error) {
 	return core.OpenFileDialog("选择证书文件 (CA/Cert/Key)")
 }
+
+func (s *SystemService) GetAppVersion() core.AppVersionInfo {
+	return core.GetAppVersionInfo()
+}
+
+func (s *SystemService) CheckForUpdates() core.UpdateCheckResult {
+	return core.CheckForUpdates()
+}
+
+func (s *SystemService) OpenBrowser(targetURL string) error {
+	return core.OpenBrowser(targetURL)
+}
+
