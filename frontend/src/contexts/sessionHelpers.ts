@@ -201,7 +201,6 @@ export function getAllOpenTabs(
             }
         }
     }
-    if (tools.aiAgent.open) list.push({ kind: 'aiAgent', id: null })
     if (tools.devtools.open) list.push({ kind: 'devtools', id: null })
     if (tools.api.open) list.push({ kind: 'api', id: null })
     return list

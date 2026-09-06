@@ -11,9 +11,7 @@ import (
 
 	"terminal/agent/ask"
 	"terminal/agent/events"
-	"terminal/agent/job"
 	"terminal/agent/planner"
-	"terminal/agent/subagent"
 	"terminal/agent/tools"
 	"terminal/agent/verifier"
 	"terminal/agent/workflow"
@@ -34,8 +32,6 @@ type Executor struct {
 	toolBus     *tools.ToolBus
 	verifier    *verifier.Verifier
 	eventBus    *events.EventBus
-	jobMgr      *job.JobManager
-	subagentMgr *subagent.SubagentManager
 	workflowEng *workflow.WorkflowEngine
 	askMgr      *ask.AskManager
 	maxParallel int
@@ -50,11 +46,9 @@ func NewExecutor(tb *tools.ToolBus, v *verifier.Verifier, eb *events.EventBus) *
 	}
 }
 
-func (e *Executor) SetManagers(jm *job.JobManager, sm *subagent.SubagentManager, wf *workflow.WorkflowEngine, ask *ask.AskManager) {
+func (e *Executor) SetManagers(wf *workflow.WorkflowEngine, ask *ask.AskManager) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.jobMgr = jm
-	e.subagentMgr = sm
 	e.workflowEng = wf
 	e.askMgr = ask
 }
@@ -315,92 +309,6 @@ func (e *Executor) executeSingleStep(
 			DurationMs: time.Since(start).Milliseconds(),
 		}
 
-	case "job":
-		if e.jobMgr != nil {
-			var jobSpec struct {
-				Command    string `json:"command"`
-				Target     string `json:"target"`
-				Cwd        string `json:"cwd"`
-				TimeoutSec int    `json:"timeout_sec"`
-			}
-			_ = json.Unmarshal([]byte(renderedArgs), &jobSpec)
-			cmd := jobSpec.Command
-			if cmd == "" {
-				cmd = step.Description
-			}
-			spec := job.ExecSpec{
-				Target:     jobSpec.Target,
-				Command:    cmd,
-				Cwd:        jobSpec.Cwd,
-				TimeoutSec: jobSpec.TimeoutSec,
-			}
-			jobID, err := e.jobMgr.SubmitExec(ctx, plan.SessionID, "plan_step", spec, step.ID, step.Description)
-			if err != nil {
-				stepRes = &StepResult{
-					StepID:     step.ID,
-					OK:         false,
-					Error:      fmt.Sprintf("提交后台作业失败: %v", err),
-					DurationMs: time.Since(start).Milliseconds(),
-				}
-			} else {
-				_, summary, waitErr := e.jobMgr.Wait(ctx, jobID)
-				stepRes = &StepResult{
-					StepID:     step.ID,
-					OK:         waitErr == nil,
-					Output:     summary,
-					Error:      func() string { if waitErr != nil { return waitErr.Error() }; return "" }(),
-					DurationMs: time.Since(start).Milliseconds(),
-				}
-			}
-		} else {
-			// Fallback to toolBus
-			toolRes := e.toolBus.Invoke(ctx, traceID, plan.SessionID, "exec_command", renderedArgs)
-			stepRes = &StepResult{
-				StepID:     step.ID,
-				OK:         toolRes.OK,
-				Output:     toolRes.Data,
-				Error:      toolRes.Error,
-				DurationMs: time.Since(start).Milliseconds(),
-			}
-		}
-
-	case "subagent":
-		if e.subagentMgr != nil {
-			var subSpec struct {
-				Prompt         string `json:"prompt"`
-				ExpectedSchema string `json:"expected_schema"`
-			}
-			_ = json.Unmarshal([]byte(renderedArgs), &subSpec)
-			prompt := subSpec.Prompt
-			if prompt == "" {
-				prompt = step.Description
-			}
-			subID, err := e.subagentMgr.Spawn(ctx, plan.ID, plan.SessionID, prompt, subSpec.ExpectedSchema, 1)
-			if err != nil {
-				stepRes = &StepResult{
-					StepID:     step.ID,
-					OK:         false,
-					Error:      fmt.Sprintf("委派子代理失败: %v", err),
-					DurationMs: time.Since(start).Milliseconds(),
-				}
-			} else {
-				_, res, waitErr := e.subagentMgr.Wait(ctx, subID)
-				stepRes = &StepResult{
-					StepID:     step.ID,
-					OK:         waitErr == nil,
-					Output:     res,
-					Error:      func() string { if waitErr != nil { return waitErr.Error() }; return "" }(),
-					DurationMs: time.Since(start).Milliseconds(),
-				}
-			}
-		} else {
-			stepRes = &StepResult{
-				StepID:     step.ID,
-				OK:         true,
-				Output:     fmt.Sprintf("【子代理推导完成】: %s", step.Description),
-				DurationMs: time.Since(start).Milliseconds(),
-			}
-		}
 
 	case "workflow":
 		if e.workflowEng != nil {

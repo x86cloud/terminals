@@ -21,6 +21,7 @@ import SettingsModal from '@/pages/setting/SettingsModal'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import SessionTabs from '@/components/app/SessionTabs'
 import Stage from '@/components/app/Stage'
+import AiSidebar from '@/components/app/AiSidebar'
 import TransferBar from '@/components/TransferBar'
 import { API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop } from '@/api'
 import {
@@ -357,6 +358,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                         }}
                     />
                 </main>
+
+                <AiSidebar settings={settings} />
             </div>
 
             <ServerDialog

@@ -453,4 +453,15 @@
 .toolBtn {
     justify-content: flex-start;
     text-align: left;
+    transition: all 0.15s ease;
+
+    &.toolBtnActive {
+        background: @accent-soft !important;
+        color: @accent !important;
+        font-weight: 600;
+
+        svg {
+            color: @accent !important;
+        }
+    }
 }

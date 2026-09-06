@@ -1084,69 +1084,6 @@ export interface AgentSessionItem {
     updated_at?: number
 }
 
-export interface AgentJobItem {
-    id: string
-    sessionId?: string
-    session_id?: string
-    kind?: string
-    description?: string
-    state: 'pending' | 'running' | 'completed' | 'failed' | 'killed' | 'cancelled'
-    progress: number
-    progressMsg?: string
-    error?: string
-    summary?: string
-    result?: string
-    createdAt?: number
-    created_at?: number
-    startedAt?: number
-    started_at?: number
-    finishedAt?: number
-    finished_at?: number
-}
-
-export interface AgentJobOutputItem {
-    id?: number
-    jobId?: string
-    job_id?: string
-    seq: number
-    chunk?: string
-    outputChunk?: string
-    createdAt?: number
-    created_at?: number
-}
-
-export interface AgentSubagentItem {
-    id: string
-    parentId?: string
-    parent_id?: string
-    sessionId?: string
-    session_id?: string
-    prompt: string
-    state: 'running' | 'completed' | 'failed' | 'interrupted'
-    result?: string
-    depth: number
-    createdAt?: number
-    created_at?: number
-    finishedAt?: number
-    finished_at?: number
-}
-
-export interface AgentAuditLogItem {
-    id?: number
-    traceId?: string
-    trace_id?: string
-    sessionId?: string
-    session_id?: string
-    tool: string
-    input: string
-    decision: string
-    outputPreview?: string
-    output_head?: string
-    durationMs?: number
-    duration_ms?: number
-    createdAt?: number
-    created_at?: number
-}
 
 export interface AgentSkillItem {
     name: string

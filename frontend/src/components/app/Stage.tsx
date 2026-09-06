@@ -12,7 +12,6 @@ import SqliteClient from '@/pages/sqlite/SqliteClient'
 import DockerClient from '@/pages/docker/DockerClient'
 import K8sClient from '@/pages/k8s/K8sClient'
 import ApiClient from '@/pages/api/ApiClient'
-import AiAgentPanel from '@/pages/agent/AiAgentPanel'
 import DevTools from '@/components/DevTools'
 import g from '@/styles/global.module.less'
 import a from '@/components/app/Stage.module.less'
@@ -66,8 +65,7 @@ export default function Stage({
         sessions.mongo.length === 0 &&
         sessions.sqlite.length === 0 &&
         !tools.devtools.open &&
-        !tools.api.open &&
-        !tools.aiAgent.open
+        !tools.api.open
 
     return (
         <div className={a.stage}>
@@ -171,14 +169,6 @@ export default function Stage({
                     </ErrorBoundary>
                 </div>
             ))}
-
-            {tools.aiAgent.open && (
-                <div style={activeTarget?.kind === 'aiAgent' ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="AI 智能体渲染异常" onClose={() => closeTool('aiAgent')}>
-                        <AiAgentPanel settings={settings} />
-                    </ErrorBoundary>
-                </div>
-            )}
 
             {tools.devtools.open && (
                 <div style={activeTarget?.kind === 'devtools' ? shownPane : hiddenPane}>

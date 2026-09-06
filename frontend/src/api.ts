@@ -54,10 +54,6 @@ import type {
     SSHCronItem,
     AppSettings,
     AiMessage,
-    AgentJobItem,
-    AgentJobOutputItem,
-    AgentSubagentItem,
-    AgentAuditLogItem,
     AgentSkillItem,
     AgentPlan,
     AgentPlanStep,
@@ -677,21 +673,6 @@ export const API = {
         AgentService.AgentGetSessionMessages(sessionId).then(r => (r || []) as any),
     agentSaveSessionMessages: (sessionId: string, messages: AiMessage[]): Promise<void> =>
         AgentService.AgentSaveSessionMessages(sessionId, messages as any),
-    agentListJobs: (sessionId: string): Promise<AgentJobItem[]> =>
-        AgentService.AgentListJobs(sessionId).then(r => (r || []) as any),
-    agentGetJob: (jobId: string): Promise<AgentJobItem> =>
-        AgentService.AgentGetJob(jobId) as any,
-    agentGetJobOutput: (jobId: string, fromSeq: number): Promise<AgentJobOutputItem[]> =>
-        AgentService.AgentGetJobOutput(jobId, fromSeq).then(r => (r || []) as any),
-    agentKillJob: (jobId: string): Promise<boolean> => Promise.resolve(AgentService.AgentKillJob(jobId)),
-    agentListSubagents: (sessionId: string): Promise<AgentSubagentItem[]> =>
-        AgentService.AgentListSubagents(sessionId).then(r => (r || []) as any),
-    agentSendSubagent: (subId: string, message: string): Promise<string> =>
-        AgentService.AgentSendSubagent(subId, message),
-    agentInterruptSubagent: (subId: string): Promise<boolean> =>
-        Promise.resolve(AgentService.AgentInterruptSubagent(subId)),
-    agentGetAuditLogs: (sessionId: string, limit: number): Promise<AgentAuditLogItem[]> =>
-        AgentService.AgentGetAuditLogs(sessionId, limit).then(r => (r || []) as any),
     agentListSkills: (): Promise<AgentSkillItem[]> =>
         Promise.resolve(AgentService.AgentListSkills() || []) as any,
     agentGetSkillsDir: (): Promise<string> => Promise.resolve(AgentService.AgentGetSkillsDir()),

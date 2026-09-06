@@ -17,8 +17,6 @@ interface UseAgentEventsProps {
     setPendingAsk: (ask: AgentAskRequest | null) => void
     setPendingHitl: (hitl: AgentHitlConfirmRequest | null) => void
     setPendingPlan: (plan: AgentPlan | null) => void
-    setJobOutputs: React.Dispatch<React.SetStateAction<Record<string, string>>>
-    loadInspectorData: (sessId: string) => Promise<void>
 }
 
 export function useAgentEvents({
@@ -30,8 +28,6 @@ export function useAgentEvents({
     setPendingAsk,
     setPendingHitl,
     setPendingPlan,
-    setJobOutputs,
-    loadInspectorData,
 }: UseAgentEventsProps) {
     useEffect(() => {
         const appendOrUpdateAssistant = (updater: (msg: AiMessage) => void) => {
@@ -271,31 +267,7 @@ export function useAgentEvents({
                     })
                     break
 
-                case 'JobCreated':
-                case 'job_created':
-                case 'JobProgress':
-                case 'job_progress':
-                case 'JobFinished':
-                case 'job_finished':
-                    loadInspectorData(activeSessionId)
-                    if (event.payload?.job_id) {
-                        const chunk = event.payload?.new_output || event.payload?.chunk
-                        if (chunk) {
-                            setJobOutputs((prev) => ({
-                                ...prev,
-                                [event.payload.job_id]:
-                                    (prev[event.payload.job_id] || '') + chunk,
-                            }))
-                        }
-                    }
-                    break
 
-                case 'SubagentCreated':
-                case 'subagent_created':
-                case 'SubagentFinished':
-                case 'subagent_finished':
-                    loadInspectorData(activeSessionId)
-                    break
 
                 case 'PlanProposed':
                 case 'plan_proposed':
@@ -481,7 +453,6 @@ export function useAgentEvents({
                         API.agentSaveSessionMessages(activeSessionId, copy).catch(() => {})
                         return copy
                     })
-                    loadInspectorData(activeSessionId)
                     break
 
                 case 'Error':
@@ -523,8 +494,6 @@ export function useAgentEvents({
         setPendingAsk,
         setPendingHitl,
         setPendingPlan,
-        setJobOutputs,
-        loadInspectorData,
     ])
 }
 

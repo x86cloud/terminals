@@ -7,67 +7,22 @@ import (
 
 	"terminal/agent/ask"
 	"terminal/agent/guard"
-	"terminal/agent/job"
 	"terminal/agent/memory"
 	"terminal/agent/skills"
 	"terminal/agent/store"
-	"terminal/agent/subagent"
 	"terminal/agent/workflow"
 
 	"github.com/cloudwego/eino/components/tool/utils"
 )
 
 type OrchestrationManagers struct {
-	JobMgr      *job.JobManager
-	SubagentM   *subagent.SubagentManager
 	SkillsReg   *skills.SkillsRegistry
 	MemorySys   *memory.MemorySystem
 	WorkflowEng *workflow.WorkflowEngine
 	AskMgr      *ask.AskManager
 }
 
-// ---------- Job Inputs ----------
-type JobSubmitInput struct {
-	SessionID   string            `json:"session_id,omitempty" jsonschema:"description=所属会话 ID，留空使用当前会话"`
-	Name        string            `json:"name" jsonschema:"description=作业名称"`
-	Description string            `json:"description" jsonschema:"description=异步长任务描述与指令"`
-	Target      string            `json:"target,omitempty" jsonschema:"description=执行目标: local(默认,本地Shell) | ssh(远程SSH)"`
-	Session     string            `json:"session,omitempty" jsonschema:"description=Target=ssh 时的 SSH 会话 ID 或名称"`
-	Command     string            `json:"command" jsonschema:"description=要执行的命令或脚本指令"`
-	Cwd         string            `json:"cwd,omitempty" jsonschema:"description=本地执行时的工作目录，默认使用当前绑定的工作区"`
-	Shell       string            `json:"shell,omitempty" jsonschema:"description=本地 Shell: 留空自动选择 (Windows: powershell, 其他: bash)"`
-	TimeoutSec  int               `json:"timeout_sec,omitempty" jsonschema:"description=超时时间 (秒)，默认 300"`
-	Env         map[string]string `json:"env,omitempty" jsonschema:"description=可选环境变量"`
-}
 
-type JobStatusInput struct {
-	JobID string `json:"job_id" jsonschema:"description=目标作业 ID"`
-}
-
-type JobOutputInput struct {
-	JobID   string `json:"job_id" jsonschema:"description=目标作业 ID"`
-	FromSeq int    `json:"from_seq,omitempty" jsonschema:"description=增量读取的起始序列号，默认 0"`
-}
-
-// ---------- Subagent Inputs ----------
-type SubagentSpawnInput struct {
-	SessionID      string `json:"session_id" jsonschema:"description=所属会话 ID"`
-	Prompt         string `json:"prompt" jsonschema:"description=委派给子代理的独立任务 Prompt"`
-	ExpectedSchema string `json:"expected_schema,omitempty" jsonschema:"description=可选的期望返回 JSON Schema"`
-}
-
-type SubagentSendInput struct {
-	SubagentID string `json:"subagent_id" jsonschema:"description=目标子代理 ID"`
-	Message    string `json:"message" jsonschema:"description=追加给子代理的补充说明或追问"`
-}
-
-type SubagentInterruptInput struct {
-	SubagentID string `json:"subagent_id" jsonschema:"description=目标子代理 ID"`
-}
-
-type SubagentListInput struct {
-	SessionID string `json:"session_id" jsonschema:"description=会话 ID"`
-}
 
 // ---------- Workflow Inputs ----------
 type WorkflowRunInput struct {
@@ -102,146 +57,7 @@ type AskUserInput struct {
 }
 
 func RegisterOrchestrationTools(bus *ToolBus, mgrs OrchestrationManagers) error {
-	// ---------- Job Tools ----------
-	if mgrs.JobMgr != nil {
-		submitTool, err := utils.InferTool("job_submit", "提交并启动一个新的后台异步执行作业 (支持本地与远程命令长任务)",
-			func(ctx context.Context, input *JobSubmitInput) (any, error) {
-				spec := job.ExecSpec{
-					Target:     input.Target,
-					Session:    input.Session,
-					Command:    input.Command,
-					Cwd:        input.Cwd,
-					Shell:      input.Shell,
-					TimeoutSec: input.TimeoutSec,
-					Env:        input.Env,
-				}
-				jobID, err := mgrs.JobMgr.SubmitExec(ctx, input.SessionID, "tool", spec, input.Name, input.Description)
-				if err != nil {
-					return nil, err
-				}
-				return map[string]any{
-					"job_id":      jobID,
-					"name":        input.Name,
-					"state":       "running",
-					"target":      input.Target,
-					"description": input.Description,
-				}, nil
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "job_submit",
-				Description: "提交并启动一个新的后台异步执行作业 (支持本地与远程命令长任务)",
-				BaseTool:    submitTool,
-				Level:       guard.LevelAllow,
-			})
-		}
 
-		statusTool, err := utils.InferTool("job_status", "查询后台作业的运行状态与进度",
-			func(ctx context.Context, input *JobStatusInput) (any, error) {
-				return mgrs.JobMgr.GetJob(input.JobID)
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "job_status",
-				Description: "查询后台作业的运行状态与进度",
-				BaseTool:    statusTool,
-				Level:       guard.LevelAllow,
-			})
-		}
-
-		outputTool, err := utils.InferTool("job_output", "增量读取后台作业的终端输出流",
-			func(ctx context.Context, input *JobOutputInput) (any, error) {
-				return mgrs.JobMgr.Output(input.JobID, input.FromSeq)
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "job_output",
-				Description: "增量读取后台作业的终端输出流",
-				BaseTool:    outputTool,
-				Level:       guard.LevelAllow,
-			})
-		}
-
-		killTool, err := utils.InferTool("job_kill", "强制终止正在后台运行的作业",
-			func(ctx context.Context, input *JobStatusInput) (string, error) {
-				ok := mgrs.JobMgr.Kill(input.JobID)
-				if !ok {
-					return "", fmt.Errorf("未找到作业 [%s] 或作业已结束", input.JobID)
-				}
-				return fmt.Sprintf("已成功向作业 [%s] 发送终止信号", input.JobID), nil
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "job_kill",
-				Description: "强制终止正在后台运行的作业",
-				BaseTool:    killTool,
-				Level:       guard.LevelAllow,
-			})
-		}
-	}
-
-	// ---------- Subagent Tools ----------
-	if mgrs.SubagentM != nil {
-		spawnTool, err := utils.InferTool("subagent_spawn", "委派独立子代理并发执行子任务 (隔离上下文与后台运行)",
-			func(ctx context.Context, input *SubagentSpawnInput) (string, error) {
-				subID, err := mgrs.SubagentM.Spawn(ctx, "", input.SessionID, input.Prompt, input.ExpectedSchema, 1)
-				if err != nil {
-					return "", err
-				}
-				return fmt.Sprintf("已成功创建并启动后台子代理 [%s]，子代理将在完成后自动回传结构化结果", subID), nil
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "subagent_spawn",
-				Description: "委派独立子代理并发执行子任务 (隔离上下文与后台运行)",
-				BaseTool:    spawnTool,
-				Level:       guard.LevelAllow,
-			})
-		}
-
-		sendSubTool, err := utils.InferTool("subagent_send", "向指定子代理发送追问或追加指令以进行多轮排障交互",
-			func(ctx context.Context, input *SubagentSendInput) (string, error) {
-				return mgrs.SubagentM.Send(ctx, input.SubagentID, input.Message)
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "subagent_send",
-				Description: "向指定子代理发送追问或追加指令以进行多轮排障交互",
-				BaseTool:    sendSubTool,
-				Level:       guard.LevelAllow,
-			})
-		}
-
-		interruptTool, err := utils.InferTool("subagent_interrupt", "中断正在运行的子代理推导",
-			func(ctx context.Context, input *SubagentInterruptInput) (string, error) {
-				ok := mgrs.SubagentM.Interrupt(input.SubagentID)
-				if !ok {
-					return "", fmt.Errorf("子代理不存在或已终止")
-				}
-				return fmt.Sprintf("已成功中断子代理 [%s]", input.SubagentID), nil
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "subagent_interrupt",
-				Description: "中断正在运行的子代理推导",
-				BaseTool:    interruptTool,
-				Level:       guard.LevelAllow,
-			})
-		}
-
-		listTool, err := utils.InferTool("subagent_list", "列出当前会话下的子代理树与执行结果",
-			func(ctx context.Context, input *SubagentListInput) (any, error) {
-				return mgrs.SubagentM.List(input.SessionID)
-			})
-		if err == nil {
-			bus.Register(&RegisteredTool{
-				Name:        "subagent_list",
-				Description: "列出当前会话下的子代理树与执行结果",
-				BaseTool:    listTool,
-				Level:       guard.LevelAllow,
-			})
-		}
-	}
 
 	// ---------- Workflow Tools ----------
 	if mgrs.WorkflowEng != nil {

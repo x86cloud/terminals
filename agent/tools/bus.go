@@ -146,9 +146,6 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 	t, ok := b.Get(toolName)
 	if !ok {
 		res := &ToolResult{OK: false, Error: fmt.Sprintf("未知的工具 [%s]", toolName)}
-		if b.guard != nil {
-			b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "forbidden", res.String(), time.Since(start).Milliseconds())
-		}
 		return res
 	}
 
@@ -167,7 +164,6 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 	}
 
 	// 3. Permission Guard Audit
-	decision := "allow"
 	if b.guard != nil {
 		lvl, reason := b.guard.Audit(ctx, sessionID, toolName, input, t.Level)
 		if lvl == guard.LevelForbidden {
@@ -175,7 +171,6 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 				OK:    false,
 				Error: fmt.Sprintf("【权限审查模块硬拦截】操作拒绝: %s", reason),
 			}
-			b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "forbidden", res.String(), time.Since(start).Milliseconds())
 			b.emitToolEvent(sessionID, callID, toolName, input, res.String(), time.Since(start).Milliseconds())
 			return res
 		} else if lvl == guard.LevelConfirm {
@@ -191,7 +186,6 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 						OK:    false,
 						Error: fmt.Sprintf("【人工审批中断】%s", err.Error()),
 					}
-					b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "aborted", res.String(), time.Since(start).Milliseconds())
 					b.emitToolEvent(sessionID, callID, toolName, input, res.String(), time.Since(start).Milliseconds())
 					return res
 				}
@@ -204,11 +198,9 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 						OK:    false,
 						Error: errMsg,
 					}
-					b.guard.RecordAuditLog(traceID, sessionID, toolName, input, "rejected", res.String(), time.Since(start).Milliseconds())
 					b.emitToolEvent(sessionID, callID, toolName, input, res.String(), time.Since(start).Milliseconds())
 					return res
 				}
-				decision = "confirmed_allow"
 			}
 		}
 	}
@@ -252,10 +244,7 @@ func (b *ToolBus) Invoke(ctx context.Context, traceID, sessionID, toolName, inpu
 		finalRes = &ToolResult{OK: true, Data: resultObj}
 	}
 
-	// 5. Record Audit Log & Emit Event
-	if b.guard != nil {
-		b.guard.RecordAuditLog(traceID, sessionID, toolName, input, decision, finalRes.String(), duration)
-	}
+	// 5. Emit Event
 	b.emitToolEvent(sessionID, callID, toolName, input, finalRes.String(), duration)
 
 	return finalRes

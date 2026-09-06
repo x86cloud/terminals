@@ -1,0 +1,70 @@
+@import (reference) '@/styles/variables.less';
+@import (reference) '@/styles/mixins.less';
+
+.aiSidebar {
+    position: relative;
+    height: calc(100% - 8px);
+    margin-bottom: 8px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    background: transparent;
+    box-sizing: border-box;
+    min-width: 0;
+    z-index: 20;
+    overflow: hidden;
+    transition: width 0.28s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease;
+
+    &.noTransition {
+        transition: none !important;
+    }
+
+    &.open {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+    }
+
+    &.closed {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transition: width 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.18s ease, visibility 0.25s;
+    }
+}
+
+.resizeHandle {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 6px;
+    cursor: col-resize;
+    z-index: 30;
+    background: transparent;
+    transition: background 0.2s ease;
+    border-top-left-radius: @radius-lg;
+    border-bottom-left-radius: @radius-lg;
+
+    &:hover,
+    &.resizing {
+        background: @accent;
+    }
+}
+
+.panelContent {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: @bg-1;
+    border-left: 1px solid @border;
+    border-top: 1px solid @border;
+    border-bottom: 1px solid @border;
+    border-top-left-radius: @radius-lg;
+    border-bottom-left-radius: @radius-lg;
+    box-shadow: -3px 0 12px rgba(0, 0, 0, 0.06);
+    box-sizing: border-box;
+}

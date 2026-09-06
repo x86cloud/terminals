@@ -20,9 +20,6 @@ import * as planner$0 from "../agent/planner/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as skills$0 from "../agent/skills/models.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as store$0 from "../agent/store/models.js";
 
 export function AgentAnswerAsk(askID: string, answer: string): $CancellablePromise<boolean> {
     return $Call.ByID(4268168758, askID, answer);
@@ -48,20 +45,8 @@ export function AgentDecideApproval(confirmID: string, approved: boolean, rememb
     return $Call.ByID(2014994780, confirmID, approved, remember, reason);
 }
 
-export function AgentGetAuditLogs(sessionID: string, limit: number): $CancellablePromise<store$0.AuditLogItem[] | null> {
-    return $Call.ByID(120196687, sessionID, limit);
-}
-
 export function AgentGetHistory(): $CancellablePromise<agent$0.FrontendMessage[] | null> {
     return $Call.ByID(2067821507);
-}
-
-export function AgentGetJob(jobID: string): $CancellablePromise<store$0.JobItem | null> {
-    return $Call.ByID(2411820840, jobID);
-}
-
-export function AgentGetJobOutput(jobID: string, fromSeq: number): $CancellablePromise<store$0.JobOutputItem[] | null> {
-    return $Call.ByID(3833284901, jobID, fromSeq);
 }
 
 export function AgentGetPendingApprovals(): $CancellablePromise<any[] | null> {
@@ -88,24 +73,8 @@ export function AgentGetWorkspaceDir(): $CancellablePromise<string> {
     return $Call.ByID(2272406089);
 }
 
-export function AgentInterruptSubagent(subID: string): $CancellablePromise<boolean> {
-    return $Call.ByID(3219622001, subID);
-}
-
-export function AgentKillJob(jobID: string): $CancellablePromise<boolean> {
-    return $Call.ByID(174897886, jobID);
-}
-
-export function AgentListJobs(sessionID: string): $CancellablePromise<store$0.JobItem[] | null> {
-    return $Call.ByID(3780268623, sessionID);
-}
-
 export function AgentListSkills(): $CancellablePromise<skills$0.Skill[] | null> {
     return $Call.ByID(1436024901);
-}
-
-export function AgentListSubagents(sessionID: string): $CancellablePromise<store$0.SubagentItem[] | null> {
-    return $Call.ByID(644993193, sessionID);
 }
 
 export function AgentOpenSkillsDir(): $CancellablePromise<string> {
@@ -146,10 +115,6 @@ export function AgentSelectWorkspaceDir(): $CancellablePromise<string> {
 
 export function AgentSend(sessionID: string, messages: agent$0.FrontendMessage[] | null): $CancellablePromise<string> {
     return $Call.ByID(2963912865, sessionID, messages);
-}
-
-export function AgentSendSubagent(subID: string, message: string): $CancellablePromise<string> {
-    return $Call.ByID(3922217498, subID, message);
 }
 
 export function AgentSetWorkspaceDir(dir: string): $CancellablePromise<string> {

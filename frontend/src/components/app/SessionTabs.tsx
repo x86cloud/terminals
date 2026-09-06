@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Bot, BarChart2, Link as LinkIcon } from 'lucide-react'
+import { BarChart2, Link as LinkIcon } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import TabBar, { TabItem } from '@/components/common/TabBar'
 import { ConnType } from '@/types'
@@ -11,7 +11,6 @@ export default function SessionTabs() {
     // 计算当前激活的 Tab Key
     const activeKey = useMemo(() => {
         if (!activeTarget) return null
-        if (activeTarget.kind === 'aiAgent') return 'ai_agent'
         if (activeTarget.kind === 'devtools') return 'devtools'
         if (activeTarget.kind === 'api') return 'api'
         return `${activeTarget.kind}:${activeTarget.id}`
@@ -111,15 +110,6 @@ export default function SessionTabs() {
             })
         })
 
-        if (tools.aiAgent.open) {
-            list.push({
-                key: 'ai_agent',
-                label: 'AI 智能体',
-                icon: <Bot size={13} />,
-                closable: true,
-            })
-        }
-
         if (tools.devtools.open) {
             list.push({
                 key: 'devtools',
@@ -143,10 +133,6 @@ export default function SessionTabs() {
 
     // 处理 Tab 切换点击
     const handleChange = (key: string) => {
-        if (key === 'ai_agent') {
-            activateTab('aiAgent')
-            return
-        }
         if (key === 'devtools') {
             activateTab('devtools')
             return
@@ -166,10 +152,6 @@ export default function SessionTabs() {
 
     // 处理 Tab 关闭
     const handleClose = (key: string) => {
-        if (key === 'ai_agent') {
-            closeTool('aiAgent')
-            return
-        }
         if (key === 'devtools') {
             closeTool('devtools')
             return

@@ -1,7 +1,8 @@
-import React from 'react'
-import { User, Bot } from 'lucide-react'
+import React, { useState } from 'react'
+import { Copy, Check } from 'lucide-react'
+import { Button, Tooltip } from 'antd'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
-import { AiMessage, AgentPlan } from '@/types'
+import { AiMessage } from '@/types'
 import { ProcessStepsList, getStepsForMessage } from './ProcessStepsList'
 import { MessagePlanCard } from './MessagePlanCard'
 import s from './ChatMessageList.module.less'
@@ -24,15 +25,37 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     onRetryPlanStep,
 }) => {
     const isUser = message.role === 'user'
+    const [copied, setCopied] = useState(false)
+
+    const handleCopyAssistant = () => {
+        if (!message.content) return
+        navigator.clipboard.writeText(message.content).then(() => {
+            setCopied(true)
+            setTimeout(() => setCopied(false), 2000)
+        })
+    }
+
+    if (isUser) {
+        return (
+            <div className={s.messageItem}>
+                <div className={s.userBlock}>
+                    {message.images && message.images.length > 0 && (
+                        <div className={s.imagesGrid}>
+                            {message.images.map((img, i) => (
+                                <img key={i} src={img} alt="attachment" />
+                            ))}
+                        </div>
+                    )}
+
+                    <div className={s.userContent}>{message.content}</div>
+                </div>
+            </div>
+        )
+    }
 
     return (
-        <div
-            className={`${s.messageRow} ${isUser ? s.userRow : s.assistantRow}`}
-        >
-            <div className={s.avatar}>
-                {isUser ? <User size={16} /> : <Bot size={16} />}
-            </div>
-            <div className={s.bubble}>
+        <div className={s.messageItem}>
+            <div className={s.assistantBlock}>
                 {message.images && message.images.length > 0 && (
                     <div className={s.imagesGrid}>
                         {message.images.map((img, i) => (
@@ -42,13 +65,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 )}
 
                 {/* Reasoning & Process Steps with Tools */}
-                {!isUser && (
-                    <ProcessStepsList
-                        steps={getStepsForMessage(message)}
-                        isStreaming={isStreaming}
-                    />
-                )}
+                <ProcessStepsList
+                    steps={getStepsForMessage(message)}
+                    isStreaming={isStreaming}
+                />
 
+                {/* Flat Markdown Viewer */}
                 {message.content && <MarkdownViewer content={message.content} />}
 
                 {/* Embedded Plan Card */}
@@ -60,7 +82,27 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                         onRetryStep={onRetryPlanStep}
                     />
                 )}
+
+                {/* Bottom Action Bar */}
+                {!isStreaming && message.content && (
+                    <div className={s.assistantActions}>
+                        <Tooltip title={copied ? '已复制到剪贴板' : '复制全文'}>
+                            <Button
+                                size="small"
+                                type="text"
+                                className={s.actionBtn}
+                                icon={copied ? <Check size={12} color="var(--ok)" /> : <Copy size={12} />}
+                                onClick={handleCopyAssistant}
+                            >
+                                {copied ? '已复制' : '复制全文'}
+                            </Button>
+                        </Tooltip>
+                    </div>
+                )}
             </div>
+
+            {/* Subtle divider separating Q&A rounds */}
+            <div className={s.turnDivider} />
         </div>
     )
 }

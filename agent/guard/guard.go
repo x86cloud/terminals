@@ -313,16 +313,6 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["http_request_readonly"] = ToolRule{ToolName: "http_request_readonly", Level: LevelAllow, Description: "发送 HTTP GET 请求"}
 	g.rules["http_request"] = ToolRule{ToolName: "http_request", Level: LevelAllow, Description: "发送全功能 HTTP/HTTPS 网络请求 (支持全方法、请求体与 Header)"}
 
-	g.rules["job_submit"] = ToolRule{ToolName: "job_submit", Level: LevelAllow, Description: "提交后台作业"}
-	g.rules["job_status"] = ToolRule{ToolName: "job_status", Level: LevelAllow, Description: "查询后台作业状态"}
-	g.rules["job_output"] = ToolRule{ToolName: "job_output", Level: LevelAllow, Description: "读取后台作业输出"}
-	g.rules["job_kill"] = ToolRule{ToolName: "job_kill", Level: LevelAllow, Description: "终止后台作业"}
-
-	g.rules["subagent_spawn"] = ToolRule{ToolName: "subagent_spawn", Level: LevelAllow, Description: "委派独立子代理"}
-	g.rules["subagent_send"] = ToolRule{ToolName: "subagent_send", Level: LevelAllow, Description: "向子代理追加消息"}
-	g.rules["subagent_interrupt"] = ToolRule{ToolName: "subagent_interrupt", Level: LevelAllow, Description: "中断子代理推导"}
-	g.rules["subagent_list"] = ToolRule{ToolName: "subagent_list", Level: LevelAllow, Description: "查看子代理列表"}
-
 	g.rules["workflow_run"] = ToolRule{ToolName: "workflow_run", Level: LevelAllow, Description: "执行工作流"}
 	g.rules["workflow_create"] = ToolRule{ToolName: "workflow_create", Level: LevelAllow, Description: "创建工作流"}
 
@@ -669,23 +659,4 @@ func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input stri
 	}
 
 	return LevelAllow, ""
-}
-
-func (g *PolicyGuard) RecordAuditLog(traceID, sessionID, tool, input, decision, outputHead string, durationMs int64) {
-	if g.store == nil {
-		return
-	}
-	if len(outputHead) > 200 {
-		outputHead = outputHead[:200] + "..."
-	}
-	_ = g.store.AddAuditLog(store.AuditLogItem{
-		TraceID:    traceID,
-		SessionID:  sessionID,
-		Tool:       tool,
-		Input:      input,
-		Decision:   decision,
-		OutputHead: outputHead,
-		DurationMs: durationMs,
-		CreatedAt:  time.Now().UnixMilli(),
-	})
 }

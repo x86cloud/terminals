@@ -1,7 +1,9 @@
-import React from 'react'
-import { Card, Input, InputNumber, Slider, Switch, Select, Space, Typography, Tag } from 'antd'
-import { Bot, Server, Shield, Sparkles, Layers } from 'lucide-react'
-import { AppSettings } from '@/types'
+import React, { useState, useEffect } from 'react'
+import { Card, Input, InputNumber, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, message } from 'antd'
+import { Bot, Server, Shield, Sparkles, Layers, FolderOpen, BookOpen, Eye } from 'lucide-react'
+import { AppSettings, AgentSkillItem } from '@/types'
+import { API } from '@/api'
+import MarkdownViewer from '@/components/common/MarkdownViewer'
 import s from './AiAgentTab.module.less'
 
 const { Text } = Typography
@@ -47,6 +49,34 @@ export default function AiAgentTab({
     aiSystemPrompt,
     onChange,
 }: Props) {
+    const [skills, setSkills] = useState<AgentSkillItem[]>([])
+    const [skillsLoading, setSkillsLoading] = useState(false)
+    const [selectedSkill, setSelectedSkill] = useState<AgentSkillItem | null>(null)
+
+    const loadSkills = async () => {
+        setSkillsLoading(true)
+        try {
+            const list = await API.agentListSkills()
+            setSkills(list || [])
+        } catch {
+            /* ignore */
+        } finally {
+            setSkillsLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        loadSkills()
+    }, [])
+
+    const handleOpenSkillsDir = async () => {
+        try {
+            await API.agentOpenSkillsDir()
+            message.success('已打开本地技能目录')
+        } catch (err: any) {
+            message.error(`打开技能目录失败: ${err?.message || err}`)
+        }
+    }
     const handlePreset = (preset: 'deepseek' | 'openai' | 'qwen' | 'ollama') => {
         switch (preset) {
             case 'deepseek':
@@ -388,6 +418,142 @@ export default function AiAgentTab({
                     placeholder="请输入系统提示词..."
                 />
             </Card>
+
+            {/* 卡片 6：SOP 技能 (Skills) */}
+            <Card
+                size="small"
+                title={
+                    <Space size={8}>
+                        <BookOpen size={15} />
+                        <span>SOP 技能包 (Skills)</span>
+                        <Tag color="blue" style={{ fontSize: 11 }}>已发现 {skills.length} 个</Tag>
+                    </Space>
+                }
+                extra={
+                    <Button
+                        size="small"
+                        icon={<FolderOpen size={13} />}
+                        onClick={handleOpenSkillsDir}
+                    >
+                        打开技能目录
+                    </Button>
+                }
+                style={{ borderRadius: 8 }}
+            >
+                <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--text-dim, #8c8c8c)' }}>
+                    技能包为 Agent 提供标准操作流程 (SOP)。放置于技能目录下的每个子文件夹中包含 <code>SKILL.md</code> 即可被自动发现并按需加载。
+                </div>
+
+                {skills.length === 0 ? (
+                    <div className={s.emptySkills}>
+                        <div>暂未检测到本地技能包</div>
+                        <Button size="small" type="link" onClick={handleOpenSkillsDir}>
+                            打开技能目录并添加技能
+                        </Button>
+                    </div>
+                ) : (
+                    <div className={s.skillsGrid}>
+                        {skills.map((sk) => (
+                            <div
+                                key={sk.name}
+                                className={s.skillCard}
+                                onClick={() => setSelectedSkill(sk)}
+                            >
+                                <div>
+                                    <div className={s.skillHeader}>
+                                        <span className={s.skillName}>{sk.name}</span>
+                                        <Tag color="cyan" style={{ fontSize: 10, margin: 0 }}>SOP</Tag>
+                                    </div>
+                                    <div className={s.skillDesc}>
+                                        {sk.description || '暂无描述'}
+                                    </div>
+                                </div>
+                                <div className={s.skillFooter}>
+                                    <Space size={4} wrap style={{ maxWidth: '75%' }}>
+                                        {sk.tools && sk.tools.length > 0 ? (
+                                            sk.tools.slice(0, 3).map((t) => (
+                                                <Tag key={t} style={{ fontSize: 10, margin: 0 }}>{t}</Tag>
+                                            ))
+                                        ) : (
+                                            <span style={{ fontSize: 11, color: '#999' }}>通用</span>
+                                        )}
+                                        {sk.tools && sk.tools.length > 3 && (
+                                            <span style={{ fontSize: 10, color: '#999' }}>+{sk.tools.length - 3}</span>
+                                        )}
+                                    </Space>
+                                    <Button
+                                        size="small"
+                                        type="link"
+                                        icon={<Eye size={12} />}
+                                        style={{ padding: 0, fontSize: 11 }}
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            setSelectedSkill(sk)
+                                        }}
+                                    >
+                                        详情
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </Card>
+
+            {/* 技能详情 Modal */}
+            <Modal
+                open={!!selectedSkill}
+                title={
+                    <Space size={8}>
+                        <BookOpen size={16} />
+                        <span>技能详情: {selectedSkill?.name}</span>
+                    </Space>
+                }
+                width={680}
+                footer={[
+                    <Button key="dir" icon={<FolderOpen size={13} />} onClick={handleOpenSkillsDir}>
+                        打开技能目录
+                    </Button>,
+                    <Button key="close" type="primary" onClick={() => setSelectedSkill(null)}>
+                        关闭
+                    </Button>,
+                ]}
+                onCancel={() => setSelectedSkill(null)}
+            >
+                {selectedSkill && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '60vh', overflowY: 'auto' }}>
+                        <div>
+                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>描述</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-dim, #8c8c8c)' }}>
+                                {selectedSkill.description || '无'}
+                            </div>
+                        </div>
+
+                        {selectedSkill.tools && selectedSkill.tools.length > 0 && (
+                            <div>
+                                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>关联工具</div>
+                                <Space size={6} wrap>
+                                    {selectedSkill.tools.map((t) => (
+                                        <Tag key={t} color="blue">{t}</Tag>
+                                    ))}
+                                </Space>
+                            </div>
+                        )}
+
+                        <div>
+                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>操作指南与指令 (SKILL.md)</div>
+                            <div style={{
+                                padding: 12,
+                                background: 'var(--bg-1, #fafafa)',
+                                border: '1px solid var(--border, #f0f0f0)',
+                                borderRadius: 6,
+                            }}>
+                                <MarkdownViewer content={selectedSkill.instructions || '*(无指令内容)*'} />
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </Space>
     )
 }

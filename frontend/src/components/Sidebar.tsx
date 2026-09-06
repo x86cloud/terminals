@@ -77,7 +77,7 @@ export default function Sidebar({
     onOpenDevTools,
     onFocusSession,
 }: Props) {
-    const { sessions: ctxSessions, activeTarget, openTool, activateTab } = useSession()
+    const { sessions: ctxSessions, activeTarget, openTool, activateTab, aiSidebarOpen, toggleAiSidebar } = useSession()
     const [keyword, setKeyword] = useState('')
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     // 默认所有分组为折叠状态（未显式展开即为折叠）
@@ -477,8 +477,8 @@ export default function Sidebar({
                 <Button
                     type="text"
                     icon={<Bot size={15} />}
-                    onClick={onOpenAiAgent || (() => openTool('aiAgent'))}
-                    className={s.toolBtn}
+                    onClick={onOpenAiAgent || toggleAiSidebar}
+                    className={`${s.toolBtn} ${aiSidebarOpen ? s.toolBtnActive : ''}`}
                 >
                     AI 智能体
                 </Button>

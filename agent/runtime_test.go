@@ -13,12 +13,10 @@ import (
 	"terminal/agent/events"
 	"terminal/agent/executor"
 	"terminal/agent/guard"
-	"terminal/agent/job"
 	"terminal/agent/memory"
 	"terminal/agent/planner"
 	"terminal/agent/skills"
 	"terminal/agent/store"
-	"terminal/agent/subagent"
 	"terminal/agent/tools"
 	"terminal/agent/verifier"
 	"terminal/agent/workflow"
@@ -66,23 +64,7 @@ func TestStoreCRUD(t *testing.T) {
 		t.Fatalf("读取消息失败: %v", err)
 	}
 
-	// 2. Audit Log
-	if err := st.AddAuditLog(store.AuditLogItem{
-		TraceID:    "trace_1",
-		SessionID:  "test_sess_1",
-		Tool:       "workspace_read_file",
-		Input:      `{"path": "README.md"}`,
-		Decision:   "allow",
-		DurationMs: 15,
-	}); err != nil {
-		t.Fatalf("记录审计日志失败: %v", err)
-	}
-	logs, err := st.ListAuditLogs("test_sess_1", 10)
-	if err != nil || len(logs) == 0 || logs[0].Tool != "workspace_read_file" {
-		t.Fatalf("查询审计日志失败: %v", err)
-	}
-
-	// 3. Memory
+	// 2. Memory
 	if err := st.SaveMemory(store.MemoryItem{
 		Kind:    "semantic",
 		Content: "Redis 运行在 6379 端口",
@@ -162,42 +144,8 @@ func TestToolBusGuardWrappedEinoTool(t *testing.T) {
 		t.Fatalf("期望输出不为空")
 	}
 
-	// Verify audit log was recorded in SQLite
-	logs, err := st.ListAuditLogs("test_sess_guard", 10)
-	if err != nil || len(logs) == 0 {
-		t.Fatalf("期望产生审计日志，实际未找到")
-	}
-	if logs[0].Tool != "custom_write_file" || logs[0].Decision != "allow" {
-		t.Fatalf("审计日志记录不符合预期: %+v", logs[0])
-	}
 }
 
-func TestJobManager(t *testing.T) {
-	st, cleanup := setupTestStore(t)
-	defer cleanup()
-
-	eb := events.NewEventBus()
-	jm := job.NewJobManager(st, eb)
-
-	jobID := jm.Submit(context.Background(), "s1", "test_job", func(jobCtx context.Context, emitProgress job.ProgressFunc) (string, error) {
-		emitProgress(0.5, "进行中", "chunk 1 output\n")
-		emitProgress(1.0, "完成", "chunk 2 output\n")
-		return "执行成功", nil
-	})
-
-	time.Sleep(50 * time.Millisecond)
-
-	j, err := jm.GetJob(jobID)
-	if err != nil || j == nil {
-		t.Fatalf("获取 Job 失败: %v", err)
-	}
-	if j.State != string(job.StateCompleted) {
-		t.Fatalf("期望 Job 状态为 completed，得到 %s", j.State)
-	}
-	if j.StartedAt == 0 {
-		t.Fatalf("期望 StartedAt 被持久化，得到 0")
-	}
-}
 
 func TestSkillsRegistry(t *testing.T) {
 	st, cleanup := setupTestStore(t)
@@ -260,28 +208,6 @@ func TestVerifier(t *testing.T) {
 	v2 := v.Verify(context.Background(), "ok", "Fatal Error: Connection refused", "")
 	if v2.Status != verifier.VerdictFail {
 		t.Fatalf("期望 VerdictFail，得到 %v", v2.Status)
-	}
-}
-
-func TestLocalExecutor(t *testing.T) {
-	wm := tools.NewWorkspaceManager("")
-	exec := job.NewLocalExecutor(wm)
-
-	var outputLines []string
-	err := exec.Execute(context.Background(), job.ExecSpec{
-		Target:     "local",
-		Command:    "echo 'xagent-exec-ok'",
-		TimeoutSec: 10,
-	}, func(line string) {
-		outputLines = append(outputLines, line)
-	})
-
-	if err != nil {
-		t.Fatalf("LocalExecutor 执行失败: %v", err)
-	}
-	joined := strings.Join(outputLines, " ")
-	if !strings.Contains(joined, "xagent-exec-ok") {
-		t.Fatalf("输出未包含预期内容: %s", joined)
 	}
 }
 
@@ -440,16 +366,11 @@ func TestRenderStepArgsAndActionExecution(t *testing.T) {
 	vr := verifier.NewVerifier(nil)
 	ex := executor.NewExecutor(tb, vr, eb)
 
-	jm := job.NewJobManager(st, eb)
-	jm.RegisterExecutor("local", job.NewLocalExecutor(tools.NewWorkspaceManager("")))
 	askMgr := ask.NewAskManager(eb)
 	wf := workflow.NewWorkflowEngine(eb)
 	wf.SetStore(st)
-	sm := subagent.NewSubagentManager(st, eb, func(ctx context.Context, subID, prompt string) (string, error) {
-		return "子代理推导结果: " + prompt, nil
-	})
 
-	ex.SetManagers(jm, sm, wf, askMgr)
+	ex.SetManagers(wf, askMgr)
 
 	// 1. Test template rendering
 	stepOutputs := map[string]any{
@@ -490,8 +411,8 @@ func TestRenderStepArgsAndActionExecution(t *testing.T) {
 				Description: "请确认是否继续",
 			},
 			{
-				ID:          "step_sub",
-				Action:      "subagent",
+				ID:          "step_custom",
+				Action:      "custom_action",
 				Description: "分析目标主机配置",
 				DependsOn:   []string{"step_ask"},
 			},
@@ -508,8 +429,8 @@ func TestRenderStepArgsAndActionExecution(t *testing.T) {
 	if !results[0].OK || results[0].Output != "确认通过" {
 		t.Fatalf("ask_user 步骤结果不符合预期: %v", results[0])
 	}
-	if !results[1].OK || !strings.Contains(fmt.Sprintf("%v", results[1].Output), "子代理推导结果") {
-		t.Fatalf("subagent 步骤结果不符合预期: %v", results[1])
+	if !results[1].OK || results[1].Output != "分析目标主机配置" {
+		t.Fatalf("step_custom 步骤结果不符合预期: %v", results[1])
 	}
 
 	go func() {
@@ -712,10 +633,8 @@ func TestLocalShellTool(t *testing.T) {
 	g := guard.NewPolicyGuard(true, true, st)
 	tb := tools.NewToolBus(g, eb)
 	wm := tools.NewWorkspaceManager("")
-	jm := job.NewJobManager(st, eb)
-	jm.RegisterExecutor("local", job.NewLocalExecutor(wm))
 
-	if err := tools.RegisterLocalShellTool(tb, wm, jm); err != nil {
+	if err := tools.RegisterLocalShellTool(tb, wm); err != nil {
 		t.Fatalf("注册 local shell 工具失败: %v", err)
 	}
 
@@ -724,99 +643,6 @@ func TestLocalShellTool(t *testing.T) {
 	res := tb.Invoke(ctx, "tr1", "sess_test", "execute", fmt.Sprintf(`{"command": "%s"}`, cmdStr))
 	if !res.OK {
 		t.Fatalf("execute 工具调用失败: %s", res.Error)
-	}
-
-	// 2. Test background execution (managed by JobManager)
-	bgRes := tb.Invoke(ctx, "tr1", "sess_test", "execute", fmt.Sprintf(`{"command": "%s", "run_in_background": true}`, cmdStr))
-	if !bgRes.OK {
-		t.Fatalf("execute 后台作业调用失败: %s", bgRes.Error)
-	}
-
-	// Verify job was persisted in store
-	time.Sleep(50 * time.Millisecond)
-	jobs, err := st.ListJobs("sess_test")
-	if err != nil || len(jobs) == 0 {
-		t.Fatalf("预期在 store 中查到后台作业，实际: %v, jobs: %d", err, len(jobs))
-	}
-}
-
-func TestBackgroundJobAndSubagentLifecycleDecoupling(t *testing.T) {
-	st, cleanup := setupTestStore(t)
-	defer cleanup()
-
-	eb := events.NewEventBus()
-	jm := job.NewJobManager(st, eb)
-	wm := tools.NewWorkspaceManager("")
-	jm.RegisterExecutor("local", job.NewLocalExecutor(wm))
-
-	// 1. Verify Job execution survives expired/cancelled parent tool context
-	ephemeralCtx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
-	time.Sleep(5 * time.Millisecond)
-	cancel() // Ensure parent ctx is completely cancelled
-
-	jobID := jm.Submit(ephemeralCtx, "sess_bg", "test", func(jobCtx context.Context, emitProgress job.ProgressFunc) (string, error) {
-		time.Sleep(30 * time.Millisecond)
-		if jobCtx.Err() != nil {
-			return "", jobCtx.Err()
-		}
-		emitProgress(1.0, "ok", "done")
-		return "success", nil
-	})
-
-	jobItem, summary, err := jm.Wait(context.Background(), jobID)
-	if err != nil {
-		t.Fatalf("后台作业应脱钩父 Context 正常执行完毕，但返回错误: %v", err)
-	}
-	if summary != "success" || jobItem.State != string(job.StateCompleted) {
-		t.Fatalf("预期作业状态为 completed，实际: %s, summary: %s", jobItem.State, summary)
-	}
-
-	// 2. Verify Subagent execution survives expired/cancelled parent context
-	subagentRunnerRan := false
-	sm := subagent.NewSubagentManager(st, eb, func(ctx context.Context, subID, prompt string) (string, error) {
-		time.Sleep(30 * time.Millisecond)
-		if ctx.Err() != nil {
-			return "", ctx.Err()
-		}
-		subagentRunnerRan = true
-		return "subagent_result", nil
-	})
-
-	subID, err := sm.Spawn(ephemeralCtx, "", "sess_sub", "test prompt", "", 1)
-	if err != nil {
-		t.Fatalf("启动子代理失败: %v", err)
-	}
-
-	time.Sleep(80 * time.Millisecond)
-	subItem, err := sm.Get(subID)
-	if err != nil || subItem.State != string(subagent.StateCompleted) {
-		t.Fatalf("预期子代理脱钩父 Context 并成功完成，实际状态: %s, err: %v", subItem.State, err)
-	}
-	if !subagentRunnerRan {
-		t.Fatalf("预期子代理 Runner 正常执行完成")
-	}
-
-	// 3. Verify Session.Stop cascade cancellation
-	sess := NewSession("sess_cascade", "测试级联停止会话", "", DefaultRuntime.cfg)
-	DefaultRuntime.JobMgr = jm
-	DefaultRuntime.SubagentM = sm
-
-	longJobID := jm.Submit(context.Background(), "sess_cascade", "long_job", func(jobCtx context.Context, emitProgress job.ProgressFunc) (string, error) {
-		select {
-		case <-jobCtx.Done():
-			return "", jobCtx.Err()
-		case <-time.After(2 * time.Second):
-			return "done", nil
-		}
-	})
-
-	time.Sleep(20 * time.Millisecond)
-	sess.Stop()
-
-	time.Sleep(30 * time.Millisecond)
-	killedJob, _ := jm.GetJob(longJobID)
-	if killedJob != nil && killedJob.State != string(job.StateKilled) {
-		t.Fatalf("预期 session.Stop 级联终止后台作业，实际状态: %s", killedJob.State)
 	}
 }
 

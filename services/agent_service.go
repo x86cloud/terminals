@@ -450,43 +450,6 @@ func (s *AgentService) AgentGetPendingApprovals() []any {
 	return res
 }
 
-func (s *AgentService) AgentListJobs(sessionID string) ([]store.JobItem, error) {
-	return agent.DefaultRuntime.JobMgr.ListJobs(sessionID)
-}
-
-func (s *AgentService) AgentGetJob(jobID string) (*store.JobItem, error) {
-	return agent.DefaultRuntime.JobMgr.GetJob(jobID)
-}
-
-func (s *AgentService) AgentGetJobOutput(jobID string, fromSeq int) ([]store.JobOutputItem, error) {
-	return agent.DefaultRuntime.JobMgr.Output(jobID, fromSeq)
-}
-
-func (s *AgentService) AgentKillJob(jobID string) bool {
-	return agent.DefaultRuntime.JobMgr.Kill(jobID)
-}
-
-func (s *AgentService) AgentListSubagents(sessionID string) ([]store.SubagentItem, error) {
-	return agent.DefaultRuntime.SubagentM.List(sessionID)
-}
-
-func (s *AgentService) AgentSendSubagent(subID, message string) (string, error) {
-	c := GetContainer()
-	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
-	return agent.DefaultRuntime.SubagentM.Send(context.Background(), subID, message)
-}
-
-func (s *AgentService) AgentInterruptSubagent(subID string) bool {
-	return agent.DefaultRuntime.SubagentM.Interrupt(subID)
-}
-
-func (s *AgentService) AgentGetAuditLogs(sessionID string, limit int) ([]store.AuditLogItem, error) {
-	if agent.DefaultRuntime.Store == nil {
-		return []store.AuditLogItem{}, nil
-	}
-	return agent.DefaultRuntime.Store.ListAuditLogs(sessionID, limit)
-}
-
 func (s *AgentService) AgentListSkills() []skills.Skill {
 	if agent.DefaultRuntime.SkillsReg == nil {
 		return []skills.Skill{}

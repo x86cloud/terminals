@@ -1,13 +1,11 @@
 import React, { useState } from 'react'
 import { Button, Modal, Tag, Space, Tooltip } from 'antd'
-import { Bot, Activity, Trash2, AlertTriangle } from 'lucide-react'
+import { Bot, Trash2, AlertTriangle, PanelRightClose } from 'lucide-react'
 import { API } from '@/api'
-import { AppSettings, AgentSkillItem, AgentHitlConfirmRequest } from '@/types'
+import { AppSettings, AgentHitlConfirmRequest } from '@/types'
 import { useAgentSessions } from './hooks/useAgentSessions'
-import { useAgentInspector } from './hooks/useAgentInspector'
 import { useAgentEvents } from './hooks/useAgentEvents'
 import { useAgentComposer } from './hooks/useAgentComposer'
-import { AgentInspectorDrawer } from './views/AgentInspectorDrawer'
 import { ChatMessageList } from './components/ChatMessageList'
 import { ApprovalDock } from './components/ApprovalDock'
 import { AskUserDock } from './components/AskUserDock'
@@ -17,9 +15,10 @@ import s from '@/pages/agent/AiAgentPanel.module.less'
 
 interface Props {
     settings: AppSettings
+    onClose?: () => void
 }
 
-export default function AiAgentPanel({ settings }: Props) {
+export default function AiAgentPanel({ settings, onClose }: Props) {
     const [noticeText, setNoticeText] = useState<string>('')
     const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
     const [pendingAsk, setPendingAsk] = useState<any>(null)
@@ -39,29 +38,7 @@ export default function AiAgentPanel({ settings }: Props) {
         clearMessages,
     } = useAgentSessions()
 
-    // 2. Inspector Hook
-    const {
-        jobs,
-        jobOutputs,
-        setJobOutputs,
-        subagents,
-        auditLogs,
-        skillsList,
-        subagentInputs,
-        setSubagentInputs,
-        expandedSkills,
-        expandedAudit,
-        inspectorTab,
-        setInspectorTab,
-        showInspector,
-        setShowInspector,
-        loadInspectorData,
-        handleKillJob,
-        handleSendSubagentMessage,
-        handleInterruptSubagent,
-        toggleSkillExpand,
-        toggleAuditExpand,
-    } = useAgentInspector(activeSessionId, setNoticeText)
+
 
     // 3. Composer Hook
     const {
@@ -103,8 +80,6 @@ export default function AiAgentPanel({ settings }: Props) {
         setPendingAsk,
         setPendingHitl,
         setPendingPlan,
-        setJobOutputs,
-        loadInspectorData,
     })
 
     const handleResolveHitl = async (confirmId: string, approved: boolean, reason?: string) => {
@@ -192,36 +167,29 @@ export default function AiAgentPanel({ settings }: Props) {
                         <Bot size={18} color="#2b90ee" />
                         <span style={{ fontWeight: 600, fontSize: 14 }}>xAgent 2.0</span>
                         {settings.aiModel && <Tag color="blue">{settings.aiModel}</Tag>}
-                        {settings.aiEnableThinking && (
-                            <Tag color="purple">
-                                💭{' '}
-                                {settings.aiReasoningEffort &&
-                                    settings.aiReasoningEffort !== 'none'
-                                    ? settings.aiReasoningEffort
-                                    : 'Thinking'}
-                            </Tag>
-                        )}
+
                     </div>
 
-                    <div className={s.actions} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Button
-                            size="small"
-                            type={showInspector ? 'primary' : 'default'}
-                            icon={<Activity size={13} />}
-                            onClick={() => setShowInspector(!showInspector)}
-                        >
-                            工作台 ({jobs.filter((j) => j.state === 'running').length || 0})
-                        </Button>
+                    <div className={s.actions} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Tooltip title="清空会话历史">
                             <Button
                                 size="small"
+                                type='primary'
                                 danger
                                 icon={<Trash2 size={12} />}
                                 onClick={() => setShowClearConfirm(true)}
-                            >
-                                清空
-                            </Button>
+                            />
                         </Tooltip>
+                        {onClose && (
+                            <Tooltip title="收起智能体">
+                                <Button
+                                    size="small"
+                                    type="text"
+                                    icon={<PanelRightClose size={14} />}
+                                    onClick={onClose}
+                                />
+                            </Tooltip>
+                        )}
                     </div>
                 </div>
 
@@ -274,27 +242,7 @@ export default function AiAgentPanel({ settings }: Props) {
                 </div>
             </div>
 
-            {/* Right Inspector Drawer */}
-            <AgentInspectorDrawer
-                showInspector={showInspector}
-                onClose={() => setShowInspector(false)}
-                inspectorTab={inspectorTab}
-                setInspectorTab={setInspectorTab}
-                jobs={jobs}
-                jobOutputs={jobOutputs}
-                onKillJob={handleKillJob}
-                subagents={subagents}
-                subagentInputs={subagentInputs}
-                setSubagentInputs={setSubagentInputs}
-                onSendSubagentMessage={handleSendSubagentMessage}
-                onInterruptSubagent={handleInterruptSubagent}
-                auditLogs={auditLogs}
-                expandedAudit={expandedAudit}
-                toggleAuditExpand={toggleAuditExpand}
-                skillsList={skillsList}
-                expandedSkills={expandedSkills}
-                toggleSkillExpand={toggleSkillExpand}
-            />
+
 
             {/* Clear History Confirmation Modal */}
             <Modal
