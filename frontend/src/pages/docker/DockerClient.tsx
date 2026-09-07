@@ -153,10 +153,11 @@ export default function DockerClient({ session, onClose }: Props) {
                         value={activeTab}
                         onChange={(v) => setActiveTab(v as TabKey)}
                         options={tabItems}
-                        size="middle"
+                        size="small"
                     />
 
                     <Button
+                        size="small"
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         onClick={() => fetchOverview(false)}
                     >

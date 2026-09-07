@@ -26,3 +26,24 @@
     background: transparent;
     min-width: 0;
 }
+
+.mainCard {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    height: calc(100% - 8px);
+    margin: 0 8px 8px 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-lg;
+    overflow: hidden;
+    box-sizing: border-box;
+    transition: margin-left 0.28s cubic-bezier(0.2, 0, 0, 1);
+
+    &.standalone {
+        margin-left: 8px;
+    }
+}

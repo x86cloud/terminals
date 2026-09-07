@@ -162,15 +162,14 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
             {/* Center Main Workspace */}
             <div className={s.centerPane}>
                 {/* Header Bar */}
-                <div className={s.headerBar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 16px' }}>
-                    <div className={s.titleSection} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className={s.headerBar}>
+                    <div className={s.titleSection}>
                         <Bot size={18} color="#2b90ee" />
                         <span style={{ fontWeight: 600, fontSize: 14 }}>xAgent 2.0</span>
                         {settings.aiModel && <Tag color="blue">{settings.aiModel}</Tag>}
-
                     </div>
 
-                    <div className={s.actions} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div className={s.actions}>
                         <Tooltip title="清空会话历史">
                             <Button
                                 size="small"

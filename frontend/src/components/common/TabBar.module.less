@@ -49,22 +49,22 @@
     user-select: none;
     -webkit-user-select: none;
     white-space: nowrap;
-    border-top: 2px solid transparent;
-    border-bottom: none;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    border: none;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     box-sizing: border-box;
     flex-shrink: 0;
+    height: 100%;
 
     &:hover:not(.active) {
-        background: @bg-2;
-        color: @text;
+        color: @accent;
+        background: color-mix(in srgb, @accent 6%, transparent);
     }
 
     &.active {
+        color: @accent;
         background: @bg-1;
-        color: @text;
-        border-top-color: @accent;
-        font-weight: 500;
+        font-weight: 600;
+        box-shadow: 0 -2px 0 @accent inset;
     }
 
     &.disabled {

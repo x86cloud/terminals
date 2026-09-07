@@ -52,6 +52,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         addSession,
         closeSession,
         openTool,
+        sidebarOpen,
     } = useSession()
 
     // ---- 服务器与分组 ----
@@ -339,24 +340,26 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 />
 
                 <main className={a.main}>
-                    <SessionTabs />
+                    <div className={`${a.mainCard} ${!sidebarOpen ? a.standalone : ''}`}>
+                        <SessionTabs />
 
-                    <Stage
-                        nativeDrop={nativeDrop}
-                        settings={settings}
-                        onPathChange={handlePathChange}
-                        onNewServer={addServer}
-                    />
+                        <Stage
+                            nativeDrop={nativeDrop}
+                            settings={settings}
+                            onPathChange={handlePathChange}
+                            onNewServer={addServer}
+                        />
 
-                    <TransferBar
-                        transfers={transfers}
-                        onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
-                        onClear={() => {
-                            API.clearFinishedTransfers()
-                                .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
-                                .catch(() => undefined)
-                        }}
-                    />
+                        <TransferBar
+                            transfers={transfers}
+                            onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
+                            onClear={() => {
+                                API.clearFinishedTransfers()
+                                    .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
+                                    .catch(() => undefined)
+                            }}
+                        />
+                    </div>
                 </main>
 
                 <AiSidebar settings={settings} />

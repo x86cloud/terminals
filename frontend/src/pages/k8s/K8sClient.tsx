@@ -144,7 +144,7 @@ export default function K8sClient({ session }: Props) {
             label: (
                 <Space size={6}>
                     <Activity size={14} />
-                    <span>概览 & 节点</span>
+                    <span>概览</span>
                 </Space>
             ),
             value: 'overview',
@@ -208,22 +208,22 @@ export default function K8sClient({ session }: Props) {
 
                     <div className={s.targetBadge} title={session.apiServer}>
                         <span className={s.onlineDot} />
-                        <span>{session.apiServer}</span>
+                        <span className={s.badgeText}>{session.apiServer}</span>
                         {pingMs !== null && (
-                            <span style={{ color: 'var(--text-faint)', marginLeft: 4 }}>
+                            <span style={{ color: 'var(--text-faint)', marginLeft: 4, flexShrink: 0 }}>
                                 ({pingMs}ms)
                             </span>
                         )}
                     </div>
 
                     {/* 全局 Namespace 选择器 */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 8 }}>
+                    <div className={s.nsSelector}>
                         <Layers size={14} color="var(--text-dim)" />
                         <Select
                             size="small"
                             value={currentNamespace}
                             onChange={(ns) => setCurrentNamespace(ns)}
-                            style={{ minWidth: 180 }}
+                            style={{ width: 140 }}
                             placeholder="选择 Namespace"
                             options={[
                                 { label: 'All Namespaces (全量)', value: '_all' },
@@ -267,7 +267,7 @@ export default function K8sClient({ session }: Props) {
 
                 <div className={s.headerRight}>
                     <Segmented
-                        size="middle"
+                        size="small"
                         value={activeTab}
                         onChange={(val) => setActiveTab(val as string)}
                         options={tabOptions}

@@ -4,9 +4,10 @@ import ClientIcon from '@/components/ClientIcon'
 import TabBar, { TabItem } from '@/components/common/TabBar'
 import { ConnType } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
+import s from './SessionTabs.module.less'
 
 export default function SessionTabs() {
-    const { sessions, tools, activeTarget, activateTab, closeSession, closeTool, sidebarOpen } = useSession()
+    const { sessions, tools, activeTarget, activateTab, closeSession, closeTool } = useSession()
 
     // 计算当前激活的 Tab Key
     const activeKey = useMemo(() => {
@@ -174,12 +175,7 @@ export default function SessionTabs() {
     }
 
     return (
-        <div
-            style={{
-                paddingLeft: sidebarOpen ? 0 : 8,
-                transition: 'padding-left 0.28s cubic-bezier(0.2, 0, 0, 1)',
-            }}
-        >
+        <div className={s.headerBar}>
             <TabBar
                 items={items}
                 activeKey={activeKey}

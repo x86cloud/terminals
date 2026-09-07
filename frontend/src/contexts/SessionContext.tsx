@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react'
 import {
     SessionInfo,
     RedisSessionInfo,
@@ -92,6 +92,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
     const [aiSidebarOpen, setAiSidebarOpen] = useState<boolean>(false)
 
+    const sessionsRef = useRef(sessions)
+    sessionsRef.current = sessions
+    const toolsRef = useRef(tools)
+    toolsRef.current = tools
+
     const toggleSidebar = useCallback(() => {
         setSidebarOpen((prev) => !prev)
     }, [])
@@ -147,7 +152,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             return
         }
         const closedTarget: ActiveTarget = { kind: tool, id: null }
-        const allTabs = getAllOpenTabs(sessions, tools)
+        const allTabs = getAllOpenTabs(sessionsRef.current, toolsRef.current)
         const fallback = pickAdjacentFallback(closedTarget, allTabs)
 
         setTools((prev) => ({
@@ -164,7 +169,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             }
             return curr
         })
-    }, [sessions, tools])
+    }, [])
 
     const addSession = useCallback(<K extends keyof SessionsState>(kind: K, info: SessionsState[K][number]) => {
         setSessions((prev) => {
@@ -192,7 +197,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         await disconnectHelper(kind, id)
 
         const closedTarget: ActiveTarget = { kind, id }
-        const allTabs = getAllOpenTabs(sessions, tools)
+        const allTabs = getAllOpenTabs(sessionsRef.current, toolsRef.current)
         const fallback = pickAdjacentFallback(closedTarget, allTabs)
 
         setSessions((prev) => {
@@ -219,7 +224,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 aiAgent: prev.aiAgent,
             }))
         }
-    }, [sessions, tools])
+    }, [])
 
     return (
         <SessionContext.Provider

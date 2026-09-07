@@ -46,17 +46,30 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 18px;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 12px;
+    padding: 8px 16px;
     background: @bg-1;
     border-bottom: 1px solid @border;
     flex-shrink: 0;
-    gap: 12px;
+    min-width: 0;
+
+    :global {
+        .ant-segmented {
+            max-width: 100%;
+            .ant-segmented-group {
+                flex-wrap: wrap;
+            }
+        }
+    }
 }
 
 .headerLeft {
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 10px;
     min-width: 0;
 }
 
@@ -67,6 +80,8 @@
     font-weight: 600;
     font-size: 14px;
     color: @text;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .targetBadge {
@@ -80,6 +95,16 @@
     font-size: 12px;
     color: @text-dim;
     font-family: @font-mono;
+    flex-shrink: 0;
+    max-width: 260px;
+    white-space: nowrap;
+
+    .badgeText {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-block;
+    }
 }
 
 .onlineDot {
@@ -90,11 +115,18 @@
     box-shadow: 0 0 6px @ok;
 }
 
+.nsSelector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
 .headerRight {
     display: flex;
     align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .tabContent {

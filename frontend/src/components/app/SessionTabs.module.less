@@ -1,6 +1,19 @@
 @import (reference) '../../styles/variables.less';
 @import (reference) '../../styles/mixins.less';
 
+.headerBar {
+    height: 36px;
+    background: @bg-1;
+    border-bottom: 1px solid @border;
+    border-top-left-radius: @radius-lg;
+    border-top-right-radius: @radius-lg;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
 .tabbar {
     display: flex;
     align-items: stretch;
@@ -28,14 +41,15 @@
     .ellipsis();
 
     &:hover:not(.active) {
-        background: @bg-2;
-        color: @text;
+        color: @accent;
+        background: color-mix(in srgb, @accent 6%, transparent);
     }
 
     &.active {
         background: @bg-1;
-        color: @text;
-        border-top: 2px solid @accent;
+        color: @accent;
+        font-weight: 600;
+        box-shadow: 0 -2px 0 @accent inset;
     }
 }
 

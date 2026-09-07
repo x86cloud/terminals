@@ -51,14 +51,18 @@ export default function TabBar({
         if (!el) return
 
         const checkOverflow = () => {
-            setHasOverflow(el.scrollWidth > el.clientWidth + 1)
+            if (!scrollRef.current) return
+            const next = scrollRef.current.scrollWidth > scrollRef.current.clientWidth + 1
+            setHasOverflow((prev) => (prev !== next ? next : prev))
         }
 
         checkOverflow()
-        const ro = new ResizeObserver(checkOverflow)
+        const ro = new ResizeObserver(() => {
+            checkOverflow()
+        })
         ro.observe(el)
         return () => ro.disconnect()
-    }, [items])
+    }, [items.length])
 
     // 当 activeKey 变化时自动滚动至视口可见
     useEffect(() => {
@@ -198,7 +202,7 @@ export default function TabBar({
     return (
         <div className={`${s.container} ${s[size]} ${className}`} style={style}>
             {/* 可滚动 Tab 区域 */}
-            <div className={s.scrollArea} ref={scrollRef} onWheel={handleWheel}>
+            <div className={s.scrollArea} ref={scrollRef} onWheel={handleWheel} role="tablist">
                 {items.map((item, index) => {
                     const isActive = item.key === activeKey
                     const isClosable = item.closable !== false
@@ -211,6 +215,8 @@ export default function TabBar({
                         >
                             <div
                                 ref={(el) => (tabRefs.current[item.key] = el)}
+                                role="tab"
+                                aria-selected={isActive}
                                 className={`${s.tabItem}${isActive ? ' ' + s.active : ''}${item.disabled ? ' ' + s.disabled : ''
                                     }`}
                                 onClick={() => !item.disabled && onChange(item.key)}

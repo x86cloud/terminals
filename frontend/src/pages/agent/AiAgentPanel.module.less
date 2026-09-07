@@ -29,11 +29,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 16px;
+    height: 36px;
+    padding: 0 12px;
     background: @bg-1;
     border-top-left-radius: @radius-lg;
     border-bottom: 1px solid @border;
     flex-shrink: 0;
+    box-sizing: border-box;
 
     .titleSection {
         display: flex;
@@ -41,6 +43,13 @@
         gap: 8px;
         font-weight: 600;
         font-size: 14px;
+        line-height: 1;
+
+        :global(.ant-tag) {
+            margin: 0;
+            line-height: 20px;
+            height: 22px;
+        }
 
         .modelTag {
             font-size: 11px;
@@ -64,25 +73,7 @@
     .actions {
         display: flex;
         align-items: center;
-        gap: 8px;
-
-        .inspectorToggle {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            padding: 4px 8px;
-            font-size: 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            border: 1px solid @border;
-            background: @bg-2;
-            color: @text;
-
-            &.active {
-                border-color: @accent;
-                color: @accent;
-            }
-        }
+        gap: 6px;
     }
 }
 
