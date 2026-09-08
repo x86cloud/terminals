@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Button, Modal, Tag, Space, Tooltip } from 'antd'
 import { Bot, Trash2, AlertTriangle, PanelRightClose } from 'lucide-react'
 import { API } from '@/api'
@@ -82,10 +82,29 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
         setPendingPlan,
     })
 
+    // Check pending approvals on mount
+    useEffect(() => {
+        API.agentGetPendingApprovals()
+            .then((list) => {
+                if (list && list.length > 0) {
+                    setPendingHitl(list[0] as AgentHitlConfirmRequest)
+                }
+            })
+            .catch(() => { })
+    }, [])
+
     const handleResolveHitl = async (confirmId: string, approved: boolean, reason?: string) => {
-        if (!pendingHitl) return
-        await API.agentDecideApproval(confirmId, approved, false, reason || '')
-        setPendingHitl(null)
+        // 1. Immediately clear only the current confirmId to prevent clobbering new incoming approvals
+        setPendingHitl((curr) => (curr?.confirm_id === confirmId ? null : curr))
+
+        // 2. Resolve on backend
+        try {
+            await API.agentDecideApproval(confirmId, approved, false, reason || '')
+        } catch (err) {
+            console.error('Failed to decide approval', err)
+        }
+
+        // 3. Update message process steps in UI
         setMessages((curr) => {
             const copy = [...curr]
             const last = copy[copy.length - 1]
@@ -108,6 +127,19 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
             }
             return copy
         })
+
+        // 4. Double check if there are subsequent pending approvals in backend queue
+        try {
+            const list = await API.agentGetPendingApprovals()
+            if (list && list.length > 0) {
+                const next = list.find((item: any) => item.confirm_id !== confirmId)
+                if (next) {
+                    setPendingHitl(next as AgentHitlConfirmRequest)
+                }
+            }
+        } catch {
+            /* ignore */
+        }
     }
 
     const handleAnswerAsk = async (answer: string) => {
@@ -165,7 +197,6 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
                 <div className={s.headerBar}>
                     <div className={s.titleSection}>
                         <Bot size={18} color="#2b90ee" />
-                        <span style={{ fontWeight: 600, fontSize: 14 }}>xAgent 2.0</span>
                         {settings.aiModel && <Tag color="blue">{settings.aiModel}</Tag>}
                     </div>
 

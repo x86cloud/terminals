@@ -107,11 +107,10 @@ export const Composer: React.FC<ComposerProps> = ({
                 />
             </div>
 
-            <div className={s.composerFooter} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px' }}>
-                <div className={s.footerLeft} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div className={s.composerFooter}>
+                <div className={s.footerLeft}>
                     <Radio.Group
                         size="small"
-                        block
                         optionType="button"
                         buttonStyle="solid"
                         value={activeMode}
@@ -128,7 +127,7 @@ export const Composer: React.FC<ComposerProps> = ({
                             onClick={onSelectWorkspace}
                             title={workspaceDir ? `工作目录: ${workspaceDir} (点击切换)` : '未绑定工作目录，点击选择'}
                         >
-                            <Folder size={12} color={workspaceDir ? 'var(--accent)' : 'var(--text-dim)'} />
+                            <Folder size={12} color={workspaceDir ? 'var(--accent)' : 'var(--text-dim)'} style={{ flexShrink: 0 }} />
                             <span>{workspaceDir ? workspaceDir.split(/[\\/]/).pop() : '选择目录'}</span>
                         </div>
                         {workspaceDir && (
@@ -152,7 +151,7 @@ export const Composer: React.FC<ComposerProps> = ({
                             <span className={s.tokenLabel}>
                                 {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)}
                             </span>
-                            <svg width="18" height="18" viewBox="0 0 18 18">
+                            <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
                                 <circle
                                     cx="9"
                                     cy="9"

@@ -868,22 +868,18 @@ func TestSqliteToolsFullSuite(t *testing.T) {
 		t.Fatalf("注册数据库工具失败: %v", err)
 	}
 
-	// 1. Test db_sqlite_list_connections
-	res := bus.Invoke(context.Background(), "t1", "s1", "db_sqlite_list_connections", "{}")
+	// 1. Test db_sqlite_list_tables with active connection fallback (empty file_id)
+	tools.SetActiveConnection(&tools.ActiveConnectionInfo{
+		Protocol: "sqlite",
+		ID:       "conn1",
+		Path:     dbFile,
+	})
+	defer tools.SetActiveConnection(nil)
+	res := bus.Invoke(context.Background(), "t1", "s1", "db_sqlite_list_tables", `{"file_id": ""}`)
 	if !res.OK {
-		t.Fatalf("调用 db_sqlite_list_connections 失败: %v", res.Error)
+		t.Fatalf("调用 db_sqlite_list_tables (空 file_id 主动感知) 失败: %v", res.Error)
 	}
 	resStr := fmt.Sprintf("%v", res.Data)
-	if !strings.Contains(resStr, "conn1") || !strings.Contains(resStr, "test.db") {
-		t.Fatalf("db_sqlite_list_connections 输出不符合预期: %s", resStr)
-	}
-
-	// 2. Test db_sqlite_list_tables
-	res = bus.Invoke(context.Background(), "t2", "s1", "db_sqlite_list_tables", `{"file_id": "conn1"}`)
-	if !res.OK {
-		t.Fatalf("调用 db_sqlite_list_tables 失败: %v", res.Error)
-	}
-	resStr = fmt.Sprintf("%v", res.Data)
 	if !strings.Contains(resStr, "users") {
 		t.Fatalf("db_sqlite_list_tables 输出未包含 users 表: %s", resStr)
 	}
@@ -927,7 +923,6 @@ func TestPostgresToolsRegistration(t *testing.T) {
 
 	toolList := bus.List()
 	expectedTools := []string{
-		"db_postgres_list_connections",
 		"db_postgres_databases",
 		"db_postgres_tables",
 		"db_postgres_query",
@@ -945,12 +940,6 @@ func TestPostgresToolsRegistration(t *testing.T) {
 			t.Fatalf("预期工具 [%s] 未成功注册到 ToolBus", expected)
 		}
 	}
-
-	// Test calling db_postgres_list_connections when empty
-	res := bus.Invoke(context.Background(), "t1", "s1", "db_postgres_list_connections", "{}")
-	if !res.OK {
-		t.Fatalf("调用 db_postgres_list_connections 失败: %v", res.Error)
-	}
 }
 
 func TestDockerAndK8sToolsRegistrationAndGuard(t *testing.T) {
@@ -963,24 +952,24 @@ func TestDockerAndK8sToolsRegistrationAndGuard(t *testing.T) {
 	g := guard.NewPolicyGuard(true, true, st)
 	bus := tools.NewToolBus(g, eb)
 
-	err := tools.RegisterDockerTools(bus, dkm)
+	err := tools.RegisterDockerTools(bus, dkm, nil)
 	if err != nil {
 		t.Fatalf("注册 Docker 工具失败: %v", err)
 	}
-	err = tools.RegisterK8sTools(bus, km)
+	err = tools.RegisterK8sTools(bus, km, nil)
 	if err != nil {
 		t.Fatalf("注册 K8s 工具失败: %v", err)
 	}
 
 	toolList := bus.List()
 	expectedTools := []string{
-		"docker_list_connections",
 		"docker_execute",
 		"docker_exec",
-		"k8s_list_connections",
+		"docker_orchestrate",
 		"k8s_kubectl_execute",
 		"kubectl_exec",
 		"k8s_exec",
+		"k8s_orchestrate",
 	}
 
 	for _, expected := range expectedTools {
@@ -994,16 +983,6 @@ func TestDockerAndK8sToolsRegistrationAndGuard(t *testing.T) {
 		if !found {
 			t.Fatalf("预期工具 [%s] 未成功注册到 ToolBus", expected)
 		}
-	}
-
-	// 1. Test empty connections
-	res := bus.Invoke(context.Background(), "t1", "s1", "docker_list_connections", "{}")
-	if !res.OK {
-		t.Fatalf("调用 docker_list_connections 失败: %v", res.Error)
-	}
-	res = bus.Invoke(context.Background(), "t2", "s1", "k8s_list_connections", "{}")
-	if !res.OK {
-		t.Fatalf("调用 k8s_list_connections 失败: %v", res.Error)
 	}
 
 	// 2. Test PolicyGuard for Docker commands
@@ -1065,6 +1044,102 @@ func TestDockerAndK8sToolsRegistrationAndGuard(t *testing.T) {
 	if lvl != guard.LevelForbidden {
 		t.Fatalf("预期 kubectl exec rm -rf / 为 LevelForbidden，实际: %s", lvl)
 	}
+
+	// 6. Test PolicyGuard and execution for k8s_orchestrate
+	lvl, _ = g.Audit(context.Background(), "s1", "k8s_orchestrate", `{"action": "list"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 k8s_orchestrate list 为 LevelAllow，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "k8s_orchestrate", `{"action": "apply", "name": "nginx-demo", "yaml": "apiVersion: v1\nkind: Pod\nmetadata:\n  name: nginx"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 k8s_orchestrate apply 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "k8s_orchestrate", `{"action": "delete", "name": "nginx-demo"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 k8s_orchestrate delete 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "k8s_orchestrate", `{"action": "delete", "yaml": "apiVersion: v1\nkind: Namespace\nmetadata:\n  name: kube-system"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("预期 k8s_orchestrate delete kube-system 为 LevelForbidden，实际: %s", lvl)
+	}
+
+	// Test invoke k8s_orchestrate list with nil store (safe fallback)
+	res := bus.Invoke(context.Background(), "t3", "s1", "k8s_orchestrate", `{"action": "list"}`)
+	if !res.OK {
+		t.Fatalf("调用 k8s_orchestrate list 失败: %v", res.Error)
+	}
+
+	// 7. Test PolicyGuard and execution for docker_orchestrate
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_orchestrate", `{"action": "list"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("预期 docker_orchestrate list 为 LevelAllow，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_orchestrate", `{"action": "apply", "name": "web-stack", "yaml_content": "version: '3.8'\nservices:\n  web:\n    image: nginx"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 docker_orchestrate apply 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_orchestrate", `{"action": "up", "name": "web-stack"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 docker_orchestrate up 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_orchestrate", `{"action": "delete", "name": "web-stack"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 docker_orchestrate delete 为 LevelConfirm，实际: %s", lvl)
+	}
+	lvl, _ = g.Audit(context.Background(), "s1", "docker_orchestrate", `{"action": "down", "name": "web-stack"}`, guard.LevelAllow)
+	if lvl != guard.LevelConfirm {
+		t.Fatalf("预期 docker_orchestrate down 为 LevelConfirm，实际: %s", lvl)
+	}
+
+	// Test invoke docker_orchestrate list with nil store (safe fallback)
+	res = bus.Invoke(context.Background(), "t4", "s1", "docker_orchestrate", `{"action": "list"}`)
+	if !res.OK {
+		t.Fatalf("调用 docker_orchestrate list 失败: %v", res.Error)
+	}
 }
+
+func TestActiveConnectionPerceptionAndFallback(t *testing.T) {
+	tools.SetActiveConnection(nil)
+	defer tools.SetActiveConnection(nil)
+
+	r := NewAgentRuntime()
+
+	// 1. Initially nil
+	if r.GetActiveConnection() != nil {
+		t.Fatalf("初始活跃连接应为 nil")
+	}
+
+	// 2. Set active connection on runtime
+	testConn := &ActiveConnectionInfo{
+		Protocol: "mysql",
+		ID:       "mysql_prod_01",
+		Name:     "生产主库",
+		Host:     "10.0.0.88",
+		Port:     3306,
+		Database: "mall_db",
+	}
+	r.SetActiveConnection(testConn)
+
+	got := r.GetActiveConnection()
+	if got == nil || got.ID != "mysql_prod_01" || got.Database != "mall_db" {
+		t.Fatalf("获取活跃连接不符合预期: %+v", got)
+	}
+
+	// Verify tools.GetActiveConnection is synchronized
+	toolsGot := tools.GetActiveConnection()
+	if toolsGot == nil || toolsGot.ID != "mysql_prod_01" || toolsGot.Database != "mall_db" {
+		t.Fatalf("tools.GetActiveConnection 同步不符合预期: %+v", toolsGot)
+	}
+
+	// 3. Clear active connection
+	r.SetActiveConnection(nil)
+	if r.GetActiveConnection() != nil {
+		t.Fatalf("清理活跃连接后应为 nil")
+	}
+	if tools.GetActiveConnection() != nil {
+		t.Fatalf("清理活跃连接后 tools.GetActiveConnection 应为 nil")
+	}
+}
+
 
 

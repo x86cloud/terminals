@@ -69,6 +69,9 @@ func (c *Container) Startup(ctx context.Context) {
 	c.DockerMgr.SetContext(ctx)
 	c.K8sMgr.SetContext(ctx)
 	agent.DefaultManager.SetContext(ctx)
+	if c.Store != nil {
+		agent.DefaultRuntime.SetCoreStore(c.Store)
+	}
 	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 
 	if c.Store != nil {

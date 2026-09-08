@@ -58,7 +58,11 @@ type AgentRuntime struct {
 	mqttMgr     *proto.MqttManager
 	dockerMgr   *docker.DockerManager
 	k8sMgr      *k8s.K8sManager
+	coreStore   *core.Store
+	activeConn  *ActiveConnectionInfo
 }
+
+type ActiveConnectionInfo = tools.ActiveConnectionInfo
 
 var DefaultRuntime = NewAgentRuntime()
 
@@ -114,6 +118,23 @@ func (rt *AgentRuntime) SetContext(ctx context.Context) {
 	rt.EventBus.SetContext(ctx)
 }
 
+func (rt *AgentRuntime) SetCoreStore(st *core.Store) {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+	rt.coreStore = st
+}
+
+func (rt *AgentRuntime) SetActiveConnection(info *ActiveConnectionInfo) {
+	rt.mu.Lock()
+	defer rt.mu.Unlock()
+	rt.activeConn = info
+	tools.SetActiveConnection(info)
+}
+
+func (rt *AgentRuntime) GetActiveConnection() *ActiveConnectionInfo {
+	return tools.GetActiveConnection()
+}
+
 func (rt *AgentRuntime) SetManagers(
 	sm *ssh.SessionManager,
 	rm *redis.RedisManager,
@@ -151,8 +172,8 @@ func (rt *AgentRuntime) SetManagers(
 		MongoMgr:    mgm,
 		SqliteMgr:   sq,
 	})
-	_ = tools.RegisterDockerTools(rt.ToolBus, dkm)
-	_ = tools.RegisterK8sTools(rt.ToolBus, km)
+	_ = tools.RegisterDockerTools(rt.ToolBus, dkm, rt.coreStore)
+	_ = tools.RegisterK8sTools(rt.ToolBus, km, rt.coreStore)
 	_ = tools.RegisterMqttTools(rt.ToolBus, mq)
 	_ = tools.RegisterHttpTools(rt.ToolBus)
 	_ = tools.RegisterOrchestrationTools(rt.ToolBus, tools.OrchestrationManagers{

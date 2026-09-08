@@ -74,6 +74,17 @@ import type {
 
 type AnyFn = (...args: any[]) => void
 
+export interface ActiveConnectionInfo {
+    protocol: string
+    id: string
+    name: string
+    host?: string
+    port?: number
+    database?: string
+    namespace?: string
+    path?: string
+}
+
 export const API = {
     // 版本信息与更新
     getAppVersion: (): Promise<AppVersionInfo> =>
@@ -686,6 +697,10 @@ export const API = {
     agentSaveHistory: (messages: AiMessage[]): Promise<void> =>
         AgentService.AgentSaveHistory(messages as any),
     agentClearHistory: (): Promise<void> => AgentService.AgentClearHistory(),
+    agentSetActiveConnection: (info: ActiveConnectionInfo | null): Promise<void> =>
+        (AgentService as any).AgentSetActiveConnection ? Promise.resolve((AgentService as any).AgentSetActiveConnection((info || {}) as any)) : Promise.resolve(),
+    agentGetActiveConnection: (): Promise<ActiveConnectionInfo | null> =>
+        (AgentService as any).AgentGetActiveConnection ? Promise.resolve((AgentService as any).AgentGetActiveConnection()) : Promise.resolve(null),
 
     // Docker 独立客户端
     dockerConnect: (id: string): Promise<boolean> => DockerService.DockerConnect(id),

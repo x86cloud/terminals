@@ -113,18 +113,12 @@ func HttpApiRequest(req ApiRequest) (ApiResponse, error) {
 		}
 	}
 
-	// 客户端配置。
-	timeout := time.Duration(req.TimeoutMs) * time.Millisecond
-	if timeout <= 0 {
-		timeout = 30 * time.Second
-	}
 	transport := &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: req.InsecureTLS}, //nolint:gosec
 	}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{
 		Transport: transport,
-		Timeout:   timeout,
 	}
 	if !req.FollowRedirects {
 		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
@@ -132,8 +126,7 @@ func HttpApiRequest(req ApiRequest) (ApiResponse, error) {
 		}
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
+	ctx := context.Background()
 	httpReq = httpReq.WithContext(ctx)
 
 	start := time.Now()

@@ -210,7 +210,6 @@ func (g *PolicyGuard) initDefaultRules() {
 
 	// 3. SSH Tools
 	// 读操作类：直接放行
-	g.rules["ssh_list_sessions"] = ToolRule{ToolName: "ssh_list_sessions", Level: LevelAllow, Description: "查看 SSH 会话列表"}
 	g.rules["ssh_get_system_info"] = ToolRule{ToolName: "ssh_get_system_info", Level: LevelAllow, Description: "查看远程服务器 CPU/内存/磁盘与负载"}
 	g.rules["ssh_list_dir"] = ToolRule{ToolName: "ssh_list_dir", Level: LevelAllow, Description: "查看远程服务器文件目录"}
 	g.rules["ssh_read_file"] = ToolRule{ToolName: "ssh_read_file", Level: LevelAllow, Description: "读取远程服务器文件内容"}
@@ -228,13 +227,11 @@ func (g *PolicyGuard) initDefaultRules() {
 	}
 
 	// 4. Database tools
-	g.rules["db_redis_list_connections"] = ToolRule{ToolName: "db_redis_list_connections", Level: LevelAllow, Description: "查看 Redis 实例"}
 	g.rules["db_redis_keys"] = ToolRule{ToolName: "db_redis_keys", Level: LevelAllow, Description: "查询 Redis 键列表"}
 	g.rules["db_redis_get"] = ToolRule{ToolName: "db_redis_get", Level: LevelAllow, Description: "读取 Redis 键值"}
 	g.rules["db_redis_info"] = ToolRule{ToolName: "db_redis_info", Level: LevelAllow, Description: "查看 Redis 状态"}
 	g.rules["db_redis_slowlog"] = ToolRule{ToolName: "db_redis_slowlog", Level: LevelAllow, Description: "查看 Redis 慢日志"}
 
-	g.rules["db_mysql_list_connections"] = ToolRule{ToolName: "db_mysql_list_connections", Level: LevelAllow, Description: "查看 MySQL 实例"}
 	g.rules["db_mysql_databases"] = ToolRule{ToolName: "db_mysql_databases", Level: LevelAllow, Description: "查看 MySQL 数据库"}
 	g.rules["db_mysql_tables"] = ToolRule{ToolName: "db_mysql_tables", Level: LevelAllow, Description: "查看 MySQL 数据表"}
 	g.rules["db_mysql_query"] = ToolRule{
@@ -247,12 +244,10 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["db_mysql_status"] = ToolRule{ToolName: "db_mysql_status", Level: LevelAllow, Description: "查看 MySQL 指标"}
 	g.rules["db_mysql_processlist"] = ToolRule{ToolName: "db_mysql_processlist", Level: LevelAllow, Description: "查看 MySQL 线程"}
 
-	g.rules["db_mongo_list_connections"] = ToolRule{ToolName: "db_mongo_list_connections", Level: LevelAllow, Description: "查看 MongoDB 实例"}
 	g.rules["db_mongo_find"] = ToolRule{ToolName: "db_mongo_find", Level: LevelAllow, Description: "查询 MongoDB 集合文档"}
 	g.rules["db_mongo_aggregate"] = ToolRule{ToolName: "db_mongo_aggregate", Level: LevelAllow, Description: "执行 MongoDB 聚合查询"}
 	g.rules["db_mongo_health"] = ToolRule{ToolName: "db_mongo_health", Level: LevelAllow, Description: "查看 MongoDB 健康状态"}
 
-	g.rules["db_sqlite_list_connections"] = ToolRule{ToolName: "db_sqlite_list_connections", Level: LevelAllow, Description: "查看 SQLite 列表"}
 	g.rules["db_sqlite_list_tables"] = ToolRule{ToolName: "db_sqlite_list_tables", Level: LevelAllow, Description: "查看 SQLite 数据表"}
 	g.rules["db_sqlite_schema"] = ToolRule{ToolName: "db_sqlite_schema", Level: LevelAllow, Description: "查看 SQLite 表结构"}
 	g.rules["db_sqlite_query"] = ToolRule{
@@ -262,7 +257,6 @@ func (g *PolicyGuard) initDefaultRules() {
 		AuditFunc:   g.auditSQLQuery,
 	}
 
-	g.rules["db_postgres_list_connections"] = ToolRule{ToolName: "db_postgres_list_connections", Level: LevelAllow, Description: "查看 PostgreSQL 实例"}
 	g.rules["db_postgres_databases"] = ToolRule{ToolName: "db_postgres_databases", Level: LevelAllow, Description: "查看 PostgreSQL 数据库"}
 	g.rules["db_postgres_tables"] = ToolRule{ToolName: "db_postgres_tables", Level: LevelAllow, Description: "查看 PostgreSQL 数据表"}
 	g.rules["db_postgres_query"] = ToolRule{
@@ -273,7 +267,6 @@ func (g *PolicyGuard) initDefaultRules() {
 	}
 
 	// 5. Docker & Kubernetes tools
-	g.rules["docker_list_connections"] = ToolRule{ToolName: "docker_list_connections", Level: LevelAllow, Description: "查看 Docker 实例连接"}
 	g.rules["docker_execute"] = ToolRule{
 		ToolName:    "docker_execute",
 		Level:       LevelAllow,
@@ -286,8 +279,13 @@ func (g *PolicyGuard) initDefaultRules() {
 		Description: "在 Docker 容器内部流式执行命令",
 		AuditFunc:   g.auditContainerExecCommand,
 	}
+	g.rules["docker_orchestrate"] = ToolRule{
+		ToolName:    "docker_orchestrate",
+		Level:       LevelConfirm,
+		Description: "Docker Compose 声明式多服务容器栈编排部署、下线销毁与方案查询",
+		AuditFunc:   g.auditDockerOrchestrate,
+	}
 
-	g.rules["k8s_list_connections"] = ToolRule{ToolName: "k8s_list_connections", Level: LevelAllow, Description: "查看 Kubernetes 集群连接"}
 	g.rules["k8s_kubectl_execute"] = ToolRule{
 		ToolName:    "k8s_kubectl_execute",
 		Level:       LevelAllow,
@@ -296,15 +294,21 @@ func (g *PolicyGuard) initDefaultRules() {
 	}
 	g.rules["kubectl_exec"] = ToolRule{
 		ToolName:    "kubectl_exec",
-		Level:       LevelAllow,
+		Level:       LevelConfirm,
 		Description: "在 Kubernetes Pod 容器内部流式执行命令",
 		AuditFunc:   g.auditContainerExecCommand,
 	}
 	g.rules["k8s_exec"] = ToolRule{
 		ToolName:    "k8s_exec",
-		Level:       LevelAllow,
+		Level:       LevelConfirm,
 		Description: "在 Kubernetes Pod 容器内部流式执行命令",
 		AuditFunc:   g.auditContainerExecCommand,
+	}
+	g.rules["k8s_orchestrate"] = ToolRule{
+		ToolName:    "k8s_orchestrate",
+		Level:       LevelConfirm,
+		Description: "Kubernetes YAML 编排部署、下线与历史记录查看",
+		AuditFunc:   g.auditK8sOrchestrate,
 	}
 
 	// 6. Protocol & Orchestration tools
@@ -473,6 +477,39 @@ func (g *PolicyGuard) auditDockerCommand(ctx context.Context, inputJSON string) 
 	return LevelConfirm, "执行该 Docker 命令具有潜在状态变更风险，需人工审批确认"
 }
 
+func (g *PolicyGuard) auditDockerOrchestrate(ctx context.Context, inputJSON string) (PermissionLevel, string) {
+	clean := strings.TrimSpace(inputJSON)
+	if clean == "" || clean == "{}" {
+		return LevelAllow, ""
+	}
+
+	var obj struct {
+		Action string `json:"action"`
+		Name   string `json:"name"`
+	}
+	if err := json.Unmarshal([]byte(clean), &obj); err == nil {
+		action := strings.ToLower(strings.TrimSpace(obj.Action))
+		switch action {
+		case "list":
+			return LevelAllow, ""
+		case "apply", "up":
+			detail := "执行 Docker Compose 编排部署"
+			if obj.Name != "" {
+				detail = fmt.Sprintf("执行 Docker Compose 编排部署 [项目: %s]", obj.Name)
+			}
+			return LevelConfirm, detail
+		case "delete", "down":
+			detail := "下线并销毁 Docker Compose 编排项目及本地记录"
+			if obj.Name != "" {
+				detail = fmt.Sprintf("下线并销毁 Docker Compose 编排项目及本地记录 [项目: %s]", obj.Name)
+			}
+			return LevelConfirm, detail
+		}
+	}
+
+	return LevelConfirm, "执行 Docker Compose 编排操作需人工确认"
+}
+
 func (g *PolicyGuard) auditKubectlCommand(ctx context.Context, inputJSON string) (PermissionLevel, string) {
 	clean := strings.TrimSpace(inputJSON)
 	if clean == "" || clean == "{}" {
@@ -526,6 +563,55 @@ func (g *PolicyGuard) auditKubectlCommand(ctx context.Context, inputJSON string)
 	}
 
 	return LevelConfirm, "执行该 Kubernetes 变更命令需人工审批确认"
+}
+
+func (g *PolicyGuard) auditK8sOrchestrate(ctx context.Context, inputJSON string) (PermissionLevel, string) {
+	clean := strings.TrimSpace(inputJSON)
+	if clean == "" || clean == "{}" {
+		return LevelAllow, ""
+	}
+
+	var obj struct {
+		Action    string `json:"action"`
+		Name      string `json:"name"`
+		YAML      string `json:"yaml"`
+		Namespace string `json:"namespace"`
+	}
+	if err := json.Unmarshal([]byte(clean), &obj); err == nil {
+		action := strings.ToLower(strings.TrimSpace(obj.Action))
+		switch action {
+		case "list":
+			return LevelAllow, ""
+		case "apply":
+			detail := "执行 Kubernetes YAML 编排部署"
+			if obj.Name != "" {
+				detail = fmt.Sprintf("执行 Kubernetes YAML 编排部署 [%s]", obj.Name)
+			}
+			return LevelConfirm, detail
+		case "delete":
+			g.mu.RLock()
+			blockHighRisk := g.blockHighRiskCommands
+			g.mu.RUnlock()
+
+			if blockHighRisk && obj.YAML != "" {
+				upperYAML := strings.ToUpper(obj.YAML)
+				if strings.Contains(upperYAML, "KIND: NAMESPACE") && (strings.Contains(upperYAML, "NAME: KUBE-SYSTEM") || strings.Contains(upperYAML, "NAME: DEFAULT")) {
+					return LevelForbidden, "禁止删除核心系统命名空间"
+				}
+				if strings.Contains(upperYAML, "KIND: NODE") {
+					return LevelForbidden, "禁止删除物理节点"
+				}
+			}
+
+			detail := "下线/删除 Kubernetes YAML 编排资源"
+			if obj.Name != "" {
+				detail = fmt.Sprintf("下线/删除 Kubernetes YAML 编排资源 [%s]", obj.Name)
+			}
+			return LevelConfirm, detail
+		}
+	}
+
+	return LevelConfirm, "执行 Kubernetes YAML 编排操作需人工确认"
 }
 
 func (g *PolicyGuard) auditContainerExecCommand(ctx context.Context, inputJSON string) (PermissionLevel, string) {

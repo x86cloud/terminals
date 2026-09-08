@@ -31,6 +31,7 @@ export const HitlConfirmModal: React.FC<Props> = ({ pendingHitl, onResolve }) =>
         if (typeof parsed === 'object' && parsed !== null) {
             if (parsed.command) commandText = parsed.command
             else if (parsed.cmd) commandText = parsed.cmd
+            else if (parsed.path) commandText = `path: ${parsed.path}`
 
             if (parsed.sql) sqlText = parsed.sql
 

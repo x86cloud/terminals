@@ -11,19 +11,6 @@ import (
 	"github.com/cloudwego/eino/components/tool/utils"
 )
 
-type SSHListSessionsInput struct{}
-
-type SSHSessionItem struct {
-	ID       string `json:"id"`
-	Title    string `json:"title"`
-	Host     string `json:"host"`
-	Port     int    `json:"port"`
-	Username string `json:"username"`
-}
-
-type SSHListSessionsOutput struct {
-	Sessions []SSHSessionItem `json:"sessions"`
-}
 
 type SSHGetSystemInfoInput struct {
 	SessionID string `json:"session_id" jsonschema:"description=要查询的目标 SSH 会话 ID 或服务器名称，如留空则自动使用当前激活的会话"`
@@ -94,6 +81,15 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 				}
 			}
 		}
+
+		// 优先使用当前活动 Tab 中的 SSH 连接
+		activeConn := GetActiveConnection()
+		if activeConn != nil && activeConn.Protocol == "ssh" && activeConn.ID != "" {
+			if sess, err := sm.Get(activeConn.ID); err == nil && sess != nil {
+				return sess, nil
+			}
+		}
+
 		sessions := sm.List()
 		for _, s := range sessions {
 			if s.Connected {
@@ -101,33 +97,6 @@ func RegisterSSHTools(bus *ToolBus, sm *ssh.SessionManager, wm *WorkspaceManager
 			}
 		}
 		return nil, fmt.Errorf("当前没有处于已连通状态的 SSH 会话")
-	}
-
-	// 1. ssh_list_sessions
-	listSessionsTool, err := utils.InferTool("ssh_list_sessions", "列出当前已连接并可用的远程 SSH 会话",
-		func(ctx context.Context, input *SSHListSessionsInput) (*SSHListSessionsOutput, error) {
-			sessions := sm.List()
-			var items []SSHSessionItem
-			for _, s := range sessions {
-				if s.Connected {
-					items = append(items, SSHSessionItem{
-						ID:       s.ID,
-						Title:    s.Title,
-						Host:     s.Host,
-						Port:     s.Port,
-						Username: s.Username,
-					})
-				}
-			}
-			return &SSHListSessionsOutput{Sessions: items}, nil
-		})
-	if err == nil {
-		bus.Register(&RegisteredTool{
-			Name:        "ssh_list_sessions",
-			Description: "列出当前已连接并可用的远程 SSH 会话",
-			BaseTool:    listSessionsTool,
-			Level:       guard.LevelAllow,
-		})
 	}
 
 	// 2. ssh_get_system_info

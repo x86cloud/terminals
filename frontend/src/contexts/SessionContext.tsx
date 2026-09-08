@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useRef, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
 import {
     SessionInfo,
     RedisSessionInfo,
@@ -11,6 +11,7 @@ import {
     K8sSessionInfo,
     ConnType,
 } from '@/types'
+import { API, ActiveConnectionInfo } from '@/api'
 import { disconnectHelper, getAllOpenTabs, pickAdjacentFallback } from './sessionHelpers'
 
 export type ToolKind = 'api' | 'devtools' | 'aiAgent'
@@ -104,6 +105,131 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const toggleAiSidebar = useCallback(() => {
         setAiSidebarOpen((prev) => !prev)
     }, [])
+
+    useEffect(() => {
+        if (!activeTarget || !activeTarget.id) {
+            API.agentSetActiveConnection(null).catch(() => {})
+            return
+        }
+
+        const kind = activeTarget.kind
+        const id = activeTarget.id
+        let info: ActiveConnectionInfo | null = null
+
+        switch (kind) {
+            case 'ssh': {
+                const s = sessions.ssh.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'ssh',
+                        id: s.id,
+                        name: s.title || s.host,
+                        host: s.host,
+                        port: s.port,
+                    }
+                }
+                break
+            }
+            case 'docker': {
+                const s = sessions.docker.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'docker',
+                        id: s.id,
+                        name: s.title || s.target,
+                        host: s.target,
+                    }
+                }
+                break
+            }
+            case 'k8s': {
+                const s = sessions.k8s.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'k8s',
+                        id: s.id,
+                        name: s.title || s.apiServer,
+                        host: s.apiServer,
+                        namespace: s.namespace || 'default',
+                    }
+                }
+                break
+            }
+            case 'redis': {
+                const s = sessions.redis.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'redis',
+                        id: s.id,
+                        name: s.title || s.host,
+                        host: s.host,
+                        port: s.port,
+                        database: s.db !== undefined ? String(s.db) : undefined,
+                    }
+                }
+                break
+            }
+            case 'mysql': {
+                const s = sessions.mysql.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'mysql',
+                        id: s.id,
+                        name: s.title || s.host,
+                        host: s.host,
+                        port: s.port,
+                        database: s.database || undefined,
+                    }
+                }
+                break
+            }
+            case 'postgres': {
+                const s = sessions.postgres.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'postgres',
+                        id: s.id,
+                        name: s.title || s.host,
+                        host: s.host,
+                        port: s.port,
+                        database: s.database || undefined,
+                    }
+                }
+                break
+            }
+            case 'mongo': {
+                const s = sessions.mongo.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'mongo',
+                        id: s.id,
+                        name: s.title || s.host,
+                        host: s.host,
+                        port: s.port,
+                        database: s.database || undefined,
+                    }
+                }
+                break
+            }
+            case 'sqlite': {
+                const s = sessions.sqlite.find((item) => item.id === id)
+                if (s) {
+                    info = {
+                        protocol: 'sqlite',
+                        id: s.id,
+                        name: s.title || s.path,
+                        path: s.path,
+                    }
+                }
+                break
+            }
+            default:
+                info = null
+                break
+        }
+
+        API.agentSetActiveConnection(info).catch(() => {})
+    }, [activeTarget, sessions])
 
     const activateTab = useCallback((kind: TabKind | null, id: string | null = null) => {
         if (!kind) {

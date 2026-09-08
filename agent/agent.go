@@ -189,17 +189,46 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 当面对用户需求模糊、缺少关键上下文参数（如目标数据库类型、具体主机会话、文件路径等）或需要二选一确认时，必须主动调用 `ask_user` 工具向用户发起提问获取澄清与确认，禁止盲目猜测假设。", sysPrompt)
 	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 合理规划工具使用，避免频繁向用户提问。", sysPrompt)
 
+	activeConn := DefaultRuntime.GetActiveConnection()
+	if activeConn != nil && (activeConn.ID != "" || activeConn.Name != "" || activeConn.Protocol != "") {
+		var activeDetail strings.Builder
+		activeDetail.WriteString(fmt.Sprintf("【用户当前活动 Tab 聚焦连接】: 协议类型: %s", strings.ToUpper(activeConn.Protocol)))
+		if activeConn.Name != "" {
+			activeDetail.WriteString(fmt.Sprintf(", 会话名称: [%s]", activeConn.Name))
+		}
+		if activeConn.ID != "" {
+			activeDetail.WriteString(fmt.Sprintf(", 连接ID/ServerID: `%s`", activeConn.ID))
+		}
+		if activeConn.Host != "" {
+			if activeConn.Port > 0 {
+				activeDetail.WriteString(fmt.Sprintf(", 目标主机: %s:%d", activeConn.Host, activeConn.Port))
+			} else {
+				activeDetail.WriteString(fmt.Sprintf(", 目标主机: %s", activeConn.Host))
+			}
+		}
+		if activeConn.Database != "" {
+			activeDetail.WriteString(fmt.Sprintf(", 选定库: [%s]", activeConn.Database))
+		}
+		if activeConn.Namespace != "" {
+			activeDetail.WriteString(fmt.Sprintf(", 命名空间: [%s]", activeConn.Namespace))
+		}
+		if activeConn.Path != "" {
+			activeDetail.WriteString(fmt.Sprintf(", 文件路径: [%s]", activeConn.Path))
+		}
+		sysPrompt = fmt.Sprintf("%s\n%s\n【上下文执行约定】: 用户在当前活动 Tab 提问且未明确指定目标连接/实例时，相关协议运维工具（如 SQL查询、Docker容器/Compose编排、Kubectl/K8s编排、SSH运维等）必须默认以此活动连接作为目标执行，无需额外询问！", sysPrompt, activeDetail.String())
+	}
+
 	if m.sshMgr != nil {
 		sessions := m.sshMgr.List()
 		var activeHosts []string
 		for _, s := range sessions {
 			if s.Connected {
-				activeHosts = append(activeHosts, fmt.Sprintf("%s (%s:%d)", s.Title, s.Host, s.Port))
+				activeHosts = append(activeHosts, fmt.Sprintf("%s (ID: %s)", s.Title, s.ID))
 			}
 		}
 		if len(activeHosts) > 0 {
-			sysPrompt = fmt.Sprintf("%s\n当前客户端共有 [%d] 个已连通激活的远程 SSH 服务器: [%s]。你可以使用 SSH 工具进行系统概况查询、文件与 Shell 命令行运维。",
-				sysPrompt, len(activeHosts), strings.Join(activeHosts, ", "))
+			sysPrompt = fmt.Sprintf("%s\n客户端当前已建立连通的 SSH 服务器会话: [%s]。",
+				sysPrompt, strings.Join(activeHosts, ", "))
 		}
 	}
 

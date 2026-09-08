@@ -40,6 +40,9 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 
 	c := GetContainer()
 	cfg := c.Store.GetSettings()
+	if c.Store != nil {
+		agent.DefaultRuntime.SetCoreStore(c.Store)
+	}
 	agent.DefaultManager.SetSSHManager(c.Sessions)
 	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 	_ = agent.DefaultManager.InitOrUpdate(cfg)
@@ -155,6 +158,9 @@ func (s *AgentService) AgentProposePlan(sessionID, objective string) (*planner.P
 		sessionID = "ai_agent_default"
 	}
 	c := GetContainer()
+	if c.Store != nil {
+		agent.DefaultRuntime.SetCoreStore(c.Store)
+	}
 	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 	toolsList := agent.DefaultRuntime.ToolBus.List()
 	var descBuilder strings.Builder
@@ -183,6 +189,9 @@ func (s *AgentService) AgentApprovePlan(planID string) (bool, error) {
 
 	traceID := fmt.Sprintf("trace_%d", time.Now().UnixNano())
 	c := GetContainer()
+	if c.Store != nil {
+		agent.DefaultRuntime.SetCoreStore(c.Store)
+	}
 	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 
 	planCtx, planCancel := context.WithCancel(context.Background())
@@ -314,6 +323,9 @@ func (s *AgentService) AgentRetryPlanStep(planID, stepID string) (*planner.PlanS
 	}
 
 	c := GetContainer()
+	if c.Store != nil {
+		agent.DefaultRuntime.SetCoreStore(c.Store)
+	}
 	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
 	traceID := fmt.Sprintf("retry_%d", time.Now().UnixNano())
 
@@ -365,6 +377,18 @@ func (s *AgentService) AgentGetWorkspaceDir() string {
 		}
 	}
 	return dir
+}
+
+func (s *AgentService) AgentSetActiveConnection(info agent.ActiveConnectionInfo) {
+	if info.Protocol == "" && info.ID == "" {
+		agent.DefaultRuntime.SetActiveConnection(nil)
+		return
+	}
+	agent.DefaultRuntime.SetActiveConnection(&info)
+}
+
+func (s *AgentService) AgentGetActiveConnection() *agent.ActiveConnectionInfo {
+	return agent.DefaultRuntime.GetActiveConnection()
 }
 
 func (s *AgentService) AgentGetSessionMessages(sessionID string) ([]agent.FrontendMessage, error) {

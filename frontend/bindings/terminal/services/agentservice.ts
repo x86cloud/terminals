@@ -45,6 +45,10 @@ export function AgentDecideApproval(confirmID: string, approved: boolean, rememb
     return $Call.ByID(2014994780, confirmID, approved, remember, reason);
 }
 
+export function AgentGetActiveConnection(): $CancellablePromise<agent$0.ActiveConnectionInfo | null> {
+    return $Call.ByID(4200676419);
+}
+
 export function AgentGetHistory(): $CancellablePromise<agent$0.FrontendMessage[] | null> {
     return $Call.ByID(2067821507);
 }
@@ -115,6 +119,10 @@ export function AgentSelectWorkspaceDir(): $CancellablePromise<string> {
 
 export function AgentSend(sessionID: string, messages: agent$0.FrontendMessage[] | null): $CancellablePromise<string> {
     return $Call.ByID(2963912865, sessionID, messages);
+}
+
+export function AgentSetActiveConnection(info: agent$0.ActiveConnectionInfo): $CancellablePromise<void> {
+    return $Call.ByID(3776865055, info);
 }
 
 export function AgentSetWorkspaceDir(dir: string): $CancellablePromise<string> {
