@@ -270,7 +270,7 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["docker_execute"] = ToolRule{
 		ToolName:    "docker_execute",
 		Level:       LevelAllow,
-		Description: "执行 Docker CLI 容器与镜像管理指令",
+		Description: "执行 Docker CLI 状态查询与基础运维指令 (明确不支持部署/下线操作)",
 		AuditFunc:   g.auditDockerCommand,
 	}
 	g.rules["docker_exec"] = ToolRule{
@@ -289,7 +289,7 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["k8s_kubectl_execute"] = ToolRule{
 		ToolName:    "k8s_kubectl_execute",
 		Level:       LevelAllow,
-		Description: "执行 Kubectl CLI 资源查询与控制指令",
+		Description: "执行 Kubectl CLI 状态查询与运维指令 (明确不支持部署/下线操作)",
 		AuditFunc:   g.auditKubectlCommand,
 	}
 	g.rules["kubectl_exec"] = ToolRule{
@@ -452,12 +452,23 @@ func (g *PolicyGuard) auditDockerCommand(ctx context.Context, inputJSON string) 
 		}
 	}
 
+	// 明确不支持部署/下线操作
+	if sub == "run" || sub == "create" {
+		return LevelForbidden, fmt.Sprintf("docker_execute 明确不支持部署/下线操作 (docker %s)；请使用 docker_orchestrate 工具", sub)
+	}
+	if sub == "compose" && len(parts) > 1 {
+		subAction := strings.ToLower(parts[1])
+		if subAction == "up" || subAction == "down" || subAction == "rm" {
+			return LevelForbidden, fmt.Sprintf("docker_execute 明确不支持部署/下线操作 (docker compose %s)；请使用 docker_orchestrate 工具", subAction)
+		}
+	}
+
 	// 只读/导出命令直接放行
 	readCmds := []string{"ps", "logs", "inspect", "images", "image", "save", "volume", "network", "info", "version", "compose"}
 	for _, rc := range readCmds {
 		if sub == rc {
-			if sub == "compose" && len(parts) > 1 && (parts[1] == "up" || parts[1] == "down" || parts[1] == "restart") {
-				return LevelConfirm, fmt.Sprintf("执行 Docker Compose %s 操作需人工审批确认", parts[1])
+			if sub == "compose" && len(parts) > 1 && parts[1] == "restart" {
+				return LevelConfirm, "执行 Docker Compose restart 操作需人工审批确认"
 			}
 			if sub == "image" && len(parts) > 1 && parts[1] == "rm" {
 				return LevelConfirm, "删除 Docker 镜像操作需人工审批确认"
@@ -546,6 +557,14 @@ func (g *PolicyGuard) auditKubectlCommand(ctx context.Context, inputJSON string)
 		}
 	}
 
+	// 明确不支持部署/下线操作
+	if sub == "apply" || sub == "create" {
+		return LevelForbidden, fmt.Sprintf("k8s_kubectl_execute 明确不支持部署/下线操作 (kubectl %s)；请使用 k8s_orchestrate 工具", sub)
+	}
+	if sub == "delete" && (strings.Contains(cmdText, "-f ") || strings.Contains(cmdText, "--filename") || strings.Contains(cmdText, "-f=")) {
+		return LevelForbidden, "k8s_kubectl_execute 明确不支持部署/下线操作 (kubectl delete -f)；请使用 k8s_orchestrate 工具"
+	}
+
 	// 只读命令直接放行
 	readCmds := []string{"get", "logs", "describe", "cluster-info", "version", "top", "explain"}
 	for _, rc := range readCmds {
@@ -555,7 +574,7 @@ func (g *PolicyGuard) auditKubectlCommand(ctx context.Context, inputJSON string)
 	}
 
 	// 变更操作需确认
-	confirmCmds := []string{"scale", "rollout", "delete", "apply", "create", "patch", "cordon", "drain"}
+	confirmCmds := []string{"scale", "rollout", "delete", "patch", "cordon", "drain"}
 	for _, cc := range confirmCmds {
 		if sub == cc {
 			return LevelConfirm, fmt.Sprintf("执行 Kubernetes 集群资源变更 (%s) 需人工审批确认", cc)

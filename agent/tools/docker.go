@@ -20,7 +20,7 @@ import (
 
 type DockerExecuteInput struct {
 	ServerID string `json:"server_id,omitempty" jsonschema:"description=Docker 实例连接 ID 或名称，若当前处于活动 Docker 会话或仅有一个连接可留空"`
-	Command  string `json:"command" jsonschema:"description=要执行的 Docker 命令行指令，例如: docker ps -a、docker logs -n 50 <容器名/ID>、docker inspect <容器名>、docker start/stop/restart <容器名>、docker images、docker info、docker compose ls"`
+	Command  string `json:"command" jsonschema:"description=要执行的 Docker 命令行指令，例如: docker ps -a、docker logs -n 50 <容器名/ID>、docker inspect <容器名>、docker start/stop/restart <容器名>、docker images、docker info、docker compose ls。注意：本工具明确不支持部署/下线操作（不支持 docker run, docker create, docker compose up/down 等）；涉及容器栈的编排部署、发布或下线销毁，请务必使用 docker_orchestrate 工具"`
 }
 
 type DockerExecInput struct {
@@ -61,7 +61,7 @@ func RegisterDockerTools(bus *ToolBus, mgr *docker.DockerManager, store *core.St
 	}
 
 	// 1. docker_execute
-	execTool, err := utils.InferTool("docker_execute", "以近似原生命令行 CLI 方式执行 Docker 容器/镜像/编排管理指令 (支持 ps, logs, inspect, start, stop, restart, pause, unpause, rm, images, rmi, volume ls, network ls, info, compose ls)",
+	execTool, err := utils.InferTool("docker_execute", "以近似原生命令行 CLI 方式执行 Docker 容器/镜像状态查询与基础运维指令 (支持 ps, logs, inspect, start, stop, restart, pause, unpause, rm, images, rmi, volume ls, network ls, info, compose ls)。注意：本工具明确不支持部署/下线操作（不支持 docker run, docker create, docker compose up/down 等）；涉及容器栈的编排部署、发布或下线销毁，请务必使用 docker_orchestrate 工具",
 		func(ctx context.Context, input *DockerExecuteInput) (string, error) {
 			serverID, err := resolveDockerServerID(mgr, input.ServerID)
 			if err != nil {
@@ -82,7 +82,7 @@ func RegisterDockerTools(bus *ToolBus, mgr *docker.DockerManager, store *core.St
 	if err == nil {
 		bus.Register(&RegisteredTool{
 			Name:        "docker_execute",
-			Description: "以近似原生命令行 CLI 方式执行 Docker 容器/镜像/编排管理指令 (支持 ps, logs, inspect, start, stop, restart, pause, unpause, rm, images, rmi, volume ls, network ls, info, compose ls)",
+			Description: "以近似原生命令行 CLI 方式执行 Docker 容器/镜像状态查询与基础运维指令 (支持 ps, logs, inspect, start, stop, restart, pause, unpause, rm, images, rmi, volume ls, network ls, info, compose ls)。注意：本工具明确不支持部署/下线操作（不支持 docker run, docker create, docker compose up/down 等）；涉及容器栈的编排部署、发布或下线销毁，请务必使用 docker_orchestrate 工具",
 			BaseTool:    execTool,
 			Level:       guard.LevelAllow,
 		})
@@ -502,6 +502,17 @@ func executeDockerCLI(ctx context.Context, cli *docker.DockerClient, rawCmd stri
 	}
 
 	sub := strings.ToLower(parts[0])
+
+	// 明确不支持部署/下线操作，阻断并引导至 docker_orchestrate
+	if sub == "run" || sub == "create" {
+		return "", fmt.Errorf("docker_execute 明确不支持部署/下线操作 (docker %s)；涉及容器栈的编排部署、发布或下线销毁，请务必使用 docker_orchestrate 工具", sub)
+	}
+	if sub == "compose" && len(parts) > 1 {
+		subAction := strings.ToLower(parts[1])
+		if subAction == "up" || subAction == "down" || subAction == "rm" {
+			return "", fmt.Errorf("docker_execute 明确不支持部署/下线操作 (docker compose %s)；涉及容器栈的编排部署、发布或下线销毁，请务必使用 docker_orchestrate 工具", subAction)
+		}
+	}
 
 	switch sub {
 	case "ps", "container":

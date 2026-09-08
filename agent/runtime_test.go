@@ -1002,6 +1002,19 @@ func TestDockerAndK8sToolsRegistrationAndGuard(t *testing.T) {
 	if lvl != guard.LevelForbidden {
 		t.Fatalf("预期高危 docker rm 批处理为 LevelForbidden，实际: %s", lvl)
 	}
+	// docker_execute 明确不支持部署/下线操作测试
+	lvl, reason := g.Audit(context.Background(), "s1", "docker_execute", `{"command": "docker run -d --name test nginx"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden || !strings.Contains(reason, "明确不支持部署/下线操作") {
+		t.Fatalf("预期 docker run 为 LevelForbidden 且包含明确不支持提示，实际: %s, %s", lvl, reason)
+	}
+	lvl, reason = g.Audit(context.Background(), "s1", "docker_execute", `{"command": "docker compose up -d"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden || !strings.Contains(reason, "明确不支持部署/下线操作") {
+		t.Fatalf("预期 docker compose up 为 LevelForbidden 且包含明确不支持提示，实际: %s, %s", lvl, reason)
+	}
+	lvl, reason = g.Audit(context.Background(), "s1", "docker_execute", `{"command": "docker compose down"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden || !strings.Contains(reason, "明确不支持部署/下线操作") {
+		t.Fatalf("预期 docker compose down 为 LevelForbidden 且包含明确不支持提示，实际: %s, %s", lvl, reason)
+	}
 
 	// 3. Test PolicyGuard for Docker Exec
 	lvl, _ = g.Audit(context.Background(), "s1", "docker_exec", `{"command": "docker exec -it web ls -la /app"}`, guard.LevelAllow)
@@ -1029,6 +1042,19 @@ func TestDockerAndK8sToolsRegistrationAndGuard(t *testing.T) {
 	lvl, _ = g.Audit(context.Background(), "s1", "k8s_kubectl_execute", `{"command": "kubectl delete namespace kube-system"}`, guard.LevelAllow)
 	if lvl != guard.LevelForbidden {
 		t.Fatalf("预期 kubectl delete namespace kube-system 为 LevelForbidden，实际: %s", lvl)
+	}
+	// k8s_kubectl_execute 明确不支持部署/下线操作测试
+	lvl, reason = g.Audit(context.Background(), "s1", "k8s_kubectl_execute", `{"command": "kubectl apply -f app.yaml"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden || !strings.Contains(reason, "明确不支持部署/下线操作") {
+		t.Fatalf("预期 kubectl apply 为 LevelForbidden 且包含明确不支持提示，实际: %s, %s", lvl, reason)
+	}
+	lvl, reason = g.Audit(context.Background(), "s1", "k8s_kubectl_execute", `{"command": "kubectl create deployment nginx --image=nginx"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden || !strings.Contains(reason, "明确不支持部署/下线操作") {
+		t.Fatalf("预期 kubectl create 为 LevelForbidden 且包含明确不支持提示，实际: %s, %s", lvl, reason)
+	}
+	lvl, reason = g.Audit(context.Background(), "s1", "k8s_kubectl_execute", `{"command": "kubectl delete -f app.yaml"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden || !strings.Contains(reason, "明确不支持部署/下线操作") {
+		t.Fatalf("预期 kubectl delete -f 为 LevelForbidden 且包含明确不支持提示，实际: %s, %s", lvl, reason)
 	}
 
 	// 5. Test PolicyGuard for Kubectl Exec

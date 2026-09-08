@@ -18,7 +18,7 @@ import (
 
 type K8sKubectlExecuteInput struct {
 	ServerID string `json:"server_id,omitempty" jsonschema:"description=Kubernetes 集群连接 ID 或名称，若当前处于活动 Kubernetes 会话或仅有一个连接可留空"`
-	Command  string `json:"command" jsonschema:"description=要执行的 Kubectl 命令行指令，例如: kubectl get pods -n default、kubectl get nodes、kubectl logs <pod_name> -n default、kubectl describe deployment <name> -n default、kubectl scale deployment <name> --replicas=3 -n default、kubectl rollout restart deployment <name> -n default、kubectl delete pod <name> -n default、kubectl apply -f <yaml内容>、kubectl cluster-info"`
+	Command  string `json:"command" jsonschema:"description=要执行的 Kubectl 命令行指令，例如: kubectl get pods -n default、kubectl get nodes、kubectl logs <pod_name> -n default、kubectl describe deployment <name> -n default、kubectl scale deployment <name> --replicas=3 -n default、kubectl rollout restart deployment <name> -n default、kubectl cluster-info、kubectl version。注意：本工具明确不支持部署/下线操作（不支持 kubectl apply, kubectl create, kubectl delete 等）；集群应用的声明式部署发布、批量资源下线与销毁清理，请务必使用 k8s_orchestrate 工具"`
 }
 
 type K8sExecInput struct {
@@ -57,7 +57,7 @@ func RegisterK8sTools(bus *ToolBus, mgr *k8s.K8sManager, store *core.Store) erro
 	}
 
 	// 1. k8s_kubectl_execute
-	execTool, err := utils.InferTool("k8s_kubectl_execute", "以近似原生 Kubectl CLI 方式执行 Kubernetes 集群资源查询与运维指令 (支持 get pods/nodes/deploy/svc/ns/cm/secret/pvc, logs, describe, scale, rollout restart, delete, apply -f, cluster-info, version)",
+	execTool, err := utils.InferTool("k8s_kubectl_execute", "以近似原生 Kubectl CLI 方式执行 Kubernetes 集群资源状态查询、日志排查与轻量运维指令 (支持 get pods/nodes/deploy/svc/ns/cm/secret/pvc, logs, describe, scale, rollout restart, cluster-info, version 等只读与状态排查)。注意：本工具明确不支持部署/下线操作（不支持 kubectl apply, kubectl create, kubectl delete 等）；若需进行应用的声明式部署、发布或下线销毁，请务必使用 k8s_orchestrate 工具",
 		func(ctx context.Context, input *K8sKubectlExecuteInput) (string, error) {
 			serverID, err := resolveK8sServerID(mgr, input.ServerID)
 			if err != nil {
@@ -78,7 +78,7 @@ func RegisterK8sTools(bus *ToolBus, mgr *k8s.K8sManager, store *core.Store) erro
 	if err == nil {
 		bus.Register(&RegisteredTool{
 			Name:        "k8s_kubectl_execute",
-			Description: "以近似原生 Kubectl CLI 方式执行 Kubernetes 集群资源查询与运维指令 (支持 get pods/nodes/deploy/svc/ns/cm/secret/pvc, logs, describe, scale, rollout restart, delete, apply -f, cluster-info, version)",
+			Description: "以近似原生 Kubectl CLI 方式执行 Kubernetes 集群资源状态查询、日志排查与轻量运维指令 (支持 get pods/nodes/deploy/svc/ns/cm/secret/pvc, logs, describe, scale, rollout restart, cluster-info, version 等只读与状态排查)。注意：本工具明确不支持部署/下线操作（不支持 kubectl apply, kubectl create, kubectl delete 等）；若需进行应用的声明式部署、发布或下线销毁，请务必使用 k8s_orchestrate 工具",
 			BaseTool:    execTool,
 			Level:       guard.LevelAllow,
 		})
@@ -490,6 +490,16 @@ func executeKubectlCLI(ctx context.Context, cli *k8s.K8sClient, rawCmd string) (
 
 	sub := strings.ToLower(parts[0])
 
+	// 明确不支持部署/下线操作，阻断并引导至 k8s_orchestrate
+	if sub == "apply" || sub == "create" {
+		return "", fmt.Errorf("k8s_kubectl_execute 明确不支持部署/下线操作 (kubectl %s)；集群应用的声明式部署发布与下线清理请务必使用 k8s_orchestrate 工具", sub)
+	}
+	if sub == "delete" {
+		if len(parts) > 1 && (parts[1] == "-f" || parts[1] == "--filename" || strings.HasPrefix(parts[1], "-f=")) {
+			return "", fmt.Errorf("k8s_kubectl_execute 明确不支持部署/下线操作 (kubectl delete -f)；集群应用的声明式下线清理请务必使用 k8s_orchestrate 工具")
+		}
+	}
+
 	switch sub {
 	case "get":
 		return handleKubectlGet(ctx, cli, parts[1:])
@@ -546,9 +556,12 @@ func executeKubectlCLI(ctx context.Context, cli *k8s.K8sClient, rawCmd string) (
 
 	case "delete":
 		if len(parts) < 3 {
-			return "", fmt.Errorf("用法: kubectl delete <pod|deployment|service|namespace> <name> [-n <namespace>]")
+			return "", fmt.Errorf("用法: kubectl delete <pod|namespace> <name> [-n <namespace>]")
 		}
 		kind := strings.ToLower(parts[1])
+		if kind == "-f" || kind == "--filename" || strings.HasPrefix(kind, "-f=") {
+			return "", fmt.Errorf("k8s_kubectl_execute 明确不支持部署/下线操作 (kubectl delete -f)；集群应用的声明式下线清理请务必使用 k8s_orchestrate 工具")
+		}
 		name := parts[2]
 		namespace := extractNamespaceFlag(parts[3:], "default")
 		switch kind {
@@ -557,16 +570,8 @@ func executeKubectlCLI(ctx context.Context, cli *k8s.K8sClient, rawCmd string) (
 				return "", err
 			}
 			return fmt.Sprintf("pod \"%s\" deleted (namespace: %s)", name, namespace), nil
-		case "deployment", "deploy":
-			if err := cli.DeleteDeployment(ctx, namespace, name); err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("deployment.apps \"%s\" deleted (namespace: %s)", name, namespace), nil
-		case "service", "svc":
-			if err := cli.DeleteService(ctx, namespace, name); err != nil {
-				return "", err
-			}
-			return fmt.Sprintf("service \"%s\" deleted (namespace: %s)", name, namespace), nil
+		case "deployment", "deploy", "service", "svc", "statefulset", "daemonset":
+			return "", fmt.Errorf("k8s_kubectl_execute 明确不支持部署/下线操作 (kubectl delete %s)；应用的下线清理与销毁请务必使用 k8s_orchestrate 工具 (action: delete)", kind)
 		case "namespace", "ns":
 			if err := cli.DeleteNamespace(ctx, name); err != nil {
 				return "", err
@@ -576,29 +581,8 @@ func executeKubectlCLI(ctx context.Context, cli *k8s.K8sClient, rawCmd string) (
 			return "", fmt.Errorf("暂不支持通过 CLI 删除类型 %s", kind)
 		}
 
-	case "apply":
-		// kubectl apply -f <yaml>
-		yamlIdx := strings.Index(rawCmd, "-f")
-		if yamlIdx == -1 {
-			return "", fmt.Errorf("用法: kubectl apply -f <yaml_content>")
-		}
-		yamlContent := strings.TrimSpace(rawCmd[yamlIdx+2:])
-		if yamlContent == "" {
-			return "", fmt.Errorf("未提供 YAML 清单内容")
-		}
-		results, err := cli.ApplyYAML(ctx, yamlContent)
-		if err != nil {
-			return "", err
-		}
-		var sb strings.Builder
-		for _, r := range results {
-			if r.Message != "" {
-				sb.WriteString(fmt.Sprintf("%s/%s %s: %s\n", strings.ToLower(r.Kind), r.Name, r.Action, r.Message))
-			} else {
-				sb.WriteString(fmt.Sprintf("%s/%s %s\n", strings.ToLower(r.Kind), r.Name, r.Action))
-			}
-		}
-		return strings.TrimRight(sb.String(), "\n"), nil
+	case "apply", "create":
+		return "", fmt.Errorf("k8s_kubectl_execute 明确不支持部署/下线操作 (kubectl %s)；集群应用的声明式部署发布与下线清理请务必使用 k8s_orchestrate 工具", sub)
 
 	case "version", "cluster-info":
 		overview, err := cli.GetOverview(ctx)
@@ -609,7 +593,7 @@ func executeKubectlCLI(ctx context.Context, cli *k8s.K8sClient, rawCmd string) (
 		return string(data), nil
 
 	default:
-		return "", fmt.Errorf("未知或暂不支持的 Kubectl 子命令: %s (支持 get, logs, describe, scale, rollout restart, delete, apply -f, cluster-info, version)", sub)
+		return "", fmt.Errorf("未知或暂不支持的 Kubectl 子命令: %s (支持 get, logs, describe, scale, rollout restart, cluster-info, version。注意：明确不支持部署/下线操作)", sub)
 	}
 }
 
