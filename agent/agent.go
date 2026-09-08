@@ -188,7 +188,6 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 	}
 	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 当面对用户需求模糊、缺少关键上下文参数（如目标数据库类型、具体主机会话、文件路径等）或需要二选一确认时，必须主动调用 `ask_user` 工具向用户发起提问获取澄清与确认，禁止盲目猜测假设。", sysPrompt)
 	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 合理规划工具使用，避免频繁向用户提问。", sysPrompt)
-	sysPrompt = fmt.Sprintf("%s\n【运维与编排工具规范】: `docker_execute` 与 `k8s_kubectl_execute` 仅用于状态查询、日志排查与轻量基础运维，明确不支持部署与下线操作；涉及 Docker 容器栈或 Kubernetes 应用的声明式部署、发布、更新与下线销毁，必须使用 `docker_orchestrate` 与 `k8s_orchestrate` 工具！", sysPrompt)
 
 	activeConn := DefaultRuntime.GetActiveConnection()
 	if activeConn != nil && (activeConn.ID != "" || activeConn.Name != "" || activeConn.Protocol != "") {
