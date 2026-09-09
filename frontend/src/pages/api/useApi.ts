@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {API, subscribe} from '@/api'
 import {errorMessage} from '@/utils'
 import {
@@ -34,6 +34,14 @@ import {
 const MAX_HISTORY = 50
 const MAX_WS_MESSAGES = 500
 
+export interface ApiExecState {
+    response: ApiResponse | null
+    historicalSnapshotTime: number | null
+    error: string
+    respTab: 'body' | 'headers'
+    sending: boolean
+}
+
 export function useApi() {
     const [method, setMethod] = useState<ApiMethod>('GET')
     const [url, setUrl] = useState('')
@@ -67,6 +75,10 @@ export function useApi() {
     const [historyKeyword, setHistoryKeyword] = useState('')
     const [historyMethodFilter, setHistoryMethodFilter] = useState('ALL')
     const [drawerHistoryItem, setDrawerHistoryItem] = useState<ApiHistoryItem | null>(null)
+
+    // 每个接口独立的响应与执行状态缓存，防止切换接口时响应互相污染
+    const apiExecMapRef = useRef<Record<string, ApiExecState>>({})
+    const currentApiIdRef = useRef<string | null>(null)
 
     // 接口树与接口管理状态
     const [apiTree, setApiTree] = useState<ApiTreeNode[]>(() => {
@@ -108,6 +120,7 @@ export function useApi() {
         ]
     })
     const [currentApiId, setCurrentApiId] = useState<string | null>(null)
+    currentApiIdRef.current = currentApiId
     const [currentApiName, setCurrentApiName] = useState<string | null>(null)
     const [apiTreeSearch, setApiTreeSearch] = useState('')
     const [apiTreeExpandedKeys, setApiTreeExpandedKeys] = useState<string[]>(['folder_default'])
@@ -161,12 +174,34 @@ export function useApi() {
         setError('')
         setSending(true)
         setHistoricalSnapshotTime(null)
+
+        const sendApiId = currentApiIdRef.current || '__draft__'
+        apiExecMapRef.current[sendApiId] = {
+            ...(apiExecMapRef.current[sendApiId] || { respTab: 'body' }),
+            sending: true,
+            error: '',
+            historicalSnapshotTime: null,
+        }
+
         try {
             const res = await API.apiRequest(
                 buildRequest({method, url: target, headers, bodyType, body, timeoutMs, insecureTLS, followRedirects, auth, bodyTypes: BODY_TYPES})
             )
-            setResponse(res)
-            setRespTab('body')
+            // 写入该接口专属的响应缓存
+            apiExecMapRef.current[sendApiId] = {
+                response: res,
+                historicalSnapshotTime: null,
+                error: res.error || '',
+                respTab: 'body',
+                sending: false,
+            }
+            // 仅当用户当前仍停留在该接口视图时才同步更新界面，防止异步返回污染其他接口
+            if ((currentApiIdRef.current || '__draft__') === sendApiId) {
+                setResponse(res)
+                setRespTab('body')
+                setHistoricalSnapshotTime(null)
+                if (res.error) setError(res.error)
+            }
             const histItem: ApiHistoryItem = {
                 id: 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
                 mode: 'http',
@@ -188,9 +223,22 @@ export function useApi() {
             }
             setHistory((h) => [sanitizeHistoryItem(histItem), ...h].slice(0, MAX_HISTORY))
         } catch (e) {
-            setError(errorMessage(e))
+            const errMsg = errorMessage(e)
+            apiExecMapRef.current[sendApiId] = {
+                ...(apiExecMapRef.current[sendApiId] || { response: null, historicalSnapshotTime: null, respTab: 'body' }),
+                sending: false,
+                error: errMsg,
+            }
+            if ((currentApiIdRef.current || '__draft__') === sendApiId) {
+                setError(errMsg)
+            }
         } finally {
-            setSending(false)
+            if (apiExecMapRef.current[sendApiId]) {
+                apiExecMapRef.current[sendApiId].sending = false
+            }
+            if ((currentApiIdRef.current || '__draft__') === sendApiId) {
+                setSending(false)
+            }
         }
     }, [url, method, params, headers, bodyType, body, timeoutMs, insecureTLS, followRedirects, auth])
 
@@ -374,12 +422,20 @@ export function useApi() {
             if (item.insecureTLS !== undefined) setInsecureTLS(item.insecureTLS)
             if (item.followRedirects !== undefined) setFollowRedirects(item.followRedirects)
 
+            const key = currentApiIdRef.current || '__draft__'
             if (item.response) {
                 setResponse(item.response)
                 setHistoricalSnapshotTime(item.at)
                 setRespTab('body')
+                apiExecMapRef.current[key] = {
+                    response: item.response,
+                    historicalSnapshotTime: item.at,
+                    error: item.error || '',
+                    respTab: 'body',
+                    sending: false,
+                }
             } else {
-                setResponse({
+                const fallbackResp: ApiResponse = {
                     status: item.statusCode ? String(item.statusCode) : '',
                     statusCode: item.statusCode || 0,
                     proto: '',
@@ -388,8 +444,16 @@ export function useApi() {
                     durationMs: item.durationMs || 0,
                     size: 0,
                     error: item.error || '',
-                })
+                }
+                setResponse(fallbackResp)
                 setHistoricalSnapshotTime(item.at)
+                apiExecMapRef.current[key] = {
+                    response: fallbackResp,
+                    historicalSnapshotTime: item.at,
+                    error: item.error || '',
+                    respTab: 'body',
+                    sending: false,
+                }
             }
             setError(item.error || '')
             setShowConfig(true)
@@ -416,6 +480,16 @@ export function useApi() {
     const loadSavedApi = useCallback((item: SavedApiItem) => {
         setCurrentApiId(item.id)
         setCurrentApiName(item.name)
+        currentApiIdRef.current = item.id
+
+        // 切换接口时恢复该接口独立的响应与执行状态，防止与其他接口相互影响
+        const cached = apiExecMapRef.current[item.id]
+        setResponse(cached?.response || null)
+        setHistoricalSnapshotTime(cached?.historicalSnapshotTime || null)
+        setError(cached?.error || '')
+        setRespTab(cached?.respTab || 'body')
+        setSending(!!cached?.sending)
+
         if (item.mode === 'ws' || item.method === ('WS' as any)) {
             setMode('ws')
             setUrl(item.url || '')
@@ -439,7 +513,6 @@ export function useApi() {
             setConfigTab('params')
         }
         setShowConfig(true)
-        setError('')
     }, [])
 
     const saveCurrentApi = useCallback((name?: string) => {
@@ -496,6 +569,14 @@ export function useApi() {
         setApiTree((prev) => insertTreeNode(prev, targetFolderId || null, newItem))
         setCurrentApiId(id)
         setCurrentApiName(apiName)
+        currentApiIdRef.current = id
+
+        // 如果草稿有响应数据，平移给新保存的接口
+        if (apiExecMapRef.current['__draft__']) {
+            apiExecMapRef.current[id] = { ...apiExecMapRef.current['__draft__'] }
+            delete apiExecMapRef.current['__draft__']
+        }
+
         if (targetFolderId) {
             setApiTreeExpandedKeys((keys) => Array.from(new Set([...keys, targetFolderId])))
         }
@@ -528,9 +609,17 @@ export function useApi() {
             const { newNodes } = removeTreeNode(prev, id)
             return newNodes
         })
+        delete apiExecMapRef.current[id]
         if (currentApiId === id) {
             setCurrentApiId(null)
             setCurrentApiName(null)
+            currentApiIdRef.current = null
+            const cached = apiExecMapRef.current['__draft__']
+            setResponse(cached?.response || null)
+            setHistoricalSnapshotTime(cached?.historicalSnapshotTime || null)
+            setError(cached?.error || '')
+            setRespTab(cached?.respTab || 'body')
+            setSending(!!cached?.sending)
         }
     }, [currentApiId])
 
@@ -584,6 +673,16 @@ export function useApi() {
     const newBlankApi = useCallback(() => {
         setCurrentApiId(null)
         setCurrentApiName(null)
+        currentApiIdRef.current = null
+
+        // 切换到空白接口时恢复草稿专属的响应状态
+        const cached = apiExecMapRef.current['__draft__']
+        setResponse(cached?.response || null)
+        setHistoricalSnapshotTime(cached?.historicalSnapshotTime || null)
+        setError(cached?.error || '')
+        setRespTab(cached?.respTab || 'body')
+        setSending(!!cached?.sending)
+
         setMode('http')
         setMethod('GET')
         setUrl('')
@@ -592,9 +691,15 @@ export function useApi() {
         setBodyType('none')
         setBody('')
         setAuth(emptyAuth())
+    }, [])
+
+    // 主动清空当前接口的响应内容
+    const clearResponse = useCallback(() => {
         setResponse(null)
         setHistoricalSnapshotTime(null)
         setError('')
+        const key = currentApiIdRef.current || '__draft__'
+        delete apiExecMapRef.current[key]
     }, [])
 
     const filteredHistory = useMemo(() => {
@@ -658,7 +763,7 @@ export function useApi() {
         bodyPretty, setBodyPretty, history, filteredHistory, showHistory, setShowHistory,
         historyKeyword, setHistoryKeyword, historyMethodFilter, setHistoryMethodFilter,
         drawerHistoryItem, setDrawerHistoryItem,
-        allowBody, doSend, prettyBody,
+        allowBody, doSend, prettyBody, clearResponse,
         addHeader, updateHeader, removeHeader, copy, loadHistory, deleteHistory, clearHistory, respHeaders, respLang,
         formatJsonBody,
         // WS 状态

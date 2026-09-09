@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { Select, Input, Button, Segmented, Space, Tag, Checkbox, Tooltip, Alert, message } from 'antd'
-import { X, Copy, PanelLeft, Send, Save, Globe, Radio, CheckCircle, Clock, Database, Download, Edit2 } from 'lucide-react'
+import { X, Copy, PanelLeft, Send, Save, Globe, Radio, CheckCircle, Clock, Database, Download, Edit2, Trash2 } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import a from '@/pages/api/HttpRequest.module.less'
 import { findTreeNode } from '@/pages/api/apiTypes'
@@ -239,8 +239,17 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
             <div className={a.respHead}>
                 {response ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Tag color={response.error ? 'error' : response.statusCode >= 200 && response.statusCode < 300 ? 'success' : 'warning'} style={{ fontWeight: 700, padding: '2px 8px', fontSize: 13 }}>
-                            {response.error ? 'ERR' : `${response.statusCode} ${response.status || ''}`}
+                        <Tag
+                            color={response.error ? 'error' : response.statusCode >= 200 && response.statusCode < 300 ? 'success' : response.statusCode >= 400 ? 'error' : 'warning'}
+                            style={{ fontWeight: 700, padding: '2px 8px', fontSize: 13 }}
+                        >
+                            {response.error
+                                ? 'ERR'
+                                : response.status
+                                    ? (response.status.startsWith(String(response.statusCode))
+                                        ? response.status
+                                        : `${response.statusCode} ${response.status}`.trim())
+                                    : `${response.statusCode || 'OK'}`}
                         </Tag>
                         {response.durationMs > 0 && (
                             <Tag color="geekblue" icon={<Clock size={12} style={{ verticalAlign: -1, marginRight: 4 }} />} style={{ padding: '2px 8px', fontSize: 12 }}>
@@ -313,6 +322,13 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
                                 disabled={!response.body}
                             >
                                 下载
+                            </Button>
+                            <Button
+                                icon={<Trash2 size={13} />}
+                                onClick={state.clearResponse}
+                                disabled={!response}
+                            >
+                                清空
                             </Button>
                         </div>
                         <div className={a.respCodeWrap}>

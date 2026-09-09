@@ -1,9 +1,10 @@
 import React from 'react'
-import { Select, Input, InputNumber, Button, Segmented, Checkbox, Tooltip, Space, Badge } from 'antd'
+import { Select, Input, InputNumber, Button, Segmented, Checkbox, Tooltip, Space, Badge, AutoComplete } from 'antd'
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import a from '@/pages/api/ApiConfigTabs.module.less'
 import type { ApiState } from '@/pages/api/useApi'
+import { COMMON_HEADER_KEYS, getHeaderValueOptions, getHeaderDefaultValue } from './headerPresets'
 
 export default function ApiConfigTabs({ state }: { state: ApiState }) {
     const {
@@ -142,19 +143,42 @@ export function ConfigBody({ state }: { state: ApiState }) {
                                 title="启用"
                                 onChange={(e) => updateHeader(i, { enabled: e.target.checked })}
                             />
-                            <Input
-                                style={{ flex: 1, height: 32 }}
+                            <AutoComplete
+                                style={{ flex: 1, minWidth: 0 }}
                                 placeholder="Header Key (如 Content-Type)"
                                 value={h.name}
-                                spellCheck={false}
-                                onChange={(e) => updateHeader(i, { name: e.target.value })}
+                                options={COMMON_HEADER_KEYS}
+                                filterOption={(inputValue, option) =>
+                                    !inputValue ||
+                                    (option?.value ?? '')
+                                        .toLowerCase()
+                                        .includes(inputValue.toLowerCase())
+                                }
+                                onChange={(val) => updateHeader(i, { name: val })}
+                                onSelect={(val) => {
+                                    const defaultVal = getHeaderDefaultValue(val)
+                                    if (!h.value && defaultVal !== undefined) {
+                                        updateHeader(i, { name: val, value: defaultVal })
+                                    } else {
+                                        updateHeader(i, { name: val })
+                                    }
+                                }}
+                                defaultActiveFirstOption={false}
                             />
-                            <Input
-                                style={{ flex: 2, height: 32 }}
+                            <AutoComplete
+                                style={{ flex: 2, minWidth: 0 }}
                                 placeholder="Header Value"
                                 value={h.value}
-                                spellCheck={false}
-                                onChange={(e) => updateHeader(i, { value: e.target.value })}
+                                options={getHeaderValueOptions(h.name)}
+                                popupMatchSelectWidth={false}
+                                filterOption={(inputValue, option) =>
+                                    !inputValue ||
+                                    (option?.value ?? '')
+                                        .toLowerCase()
+                                        .includes(inputValue.toLowerCase())
+                                }
+                                onChange={(val) => updateHeader(i, { value: val })}
+                                defaultActiveFirstOption={false}
                             />
                             <Tooltip title="删除">
                                 <Button

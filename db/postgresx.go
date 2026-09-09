@@ -1016,15 +1016,17 @@ func (m *PostgresManager) PostgresExport(serverID, dbName, schema, mode, source,
 		schema = "public"
 	}
 
-	query := sqlText
+	query := strings.TrimSpace(sqlText)
 	if source == "table" {
 		query = fmt.Sprintf("SELECT * FROM \"%s\".\"%s\"", schema, table)
 		if limit > 0 {
 			query += fmt.Sprintf(" LIMIT %d", limit)
 		}
+	} else if limit > 0 && !strings.Contains(strings.ToUpper(query), "LIMIT") {
+		query = fmt.Sprintf("%s LIMIT %d", query, limit)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
 
 	rows, err := pool.Query(ctx, query)

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Tree, Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
+import { Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
+import Tree from '@/components/common/Tree'
 import {
     Database,
     Folder,
@@ -546,6 +547,19 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         })
     }, [databases, tablesMap, loadingDbs])
 
+    // 左侧树与当前激活 Tab 双向联动高亮
+    const selectedTreeKeys = useMemo(() => {
+        const activeTab = tabs.find((t) => t.key === activeTabKey)
+        if (!activeTab) return []
+        if (activeTab.type === 'data' && activeTab.dbName && activeTab.table) {
+            return [`table_${activeTab.dbName}_${activeTab.table}`, `view_${activeTab.dbName}_${activeTab.table}`]
+        }
+        if (activeTab.type === 'er' && activeTab.dbName) {
+            return [`er_node_${activeTab.dbName}`]
+        }
+        return []
+    }, [tabs, activeTabKey])
+
     // 数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
         {
@@ -701,9 +715,8 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 <Dropdown menu={{ items: blankMenuItems }} trigger={['contextMenu']}>
                     <div className={my.treeWrap}>
                         <Tree
-                            showIcon
-                            blockNode
                             expandedKeys={expandedKeys}
+                            selectedKeys={selectedTreeKeys}
                             loadData={async (node: any) => {
                                 const raw = node.raw
                                 if (!raw) return

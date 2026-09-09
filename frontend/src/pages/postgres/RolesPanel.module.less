@@ -16,16 +16,26 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: @bg-2;
-    border: 1px solid color-mix(in srgb, @border 70%, transparent);
+    background: @bg-1;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
     border-radius: @radius-lg;
     padding: 12px 16px;
 }
 
 .tableSection {
-    background: @bg-2;
-    border: 1px solid color-mix(in srgb, @border 70%, transparent);
+    background: @bg-1;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
     border-radius: @radius-lg;
     padding: 16px;
     flex: 1;
+
+    :global {
+        .ant-table-thead > tr > th {
+            background: @bg-1-solid !important;
+            border-bottom: 1px solid @border;
+        }
+        .ant-table-tbody > tr:hover > td {
+            background: color-mix(in srgb, @accent 6%, @bg-1) !important;
+        }
+    }
 }

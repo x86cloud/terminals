@@ -1,4 +1,4 @@
-﻿@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/variables.less';
 @import (reference) '../../styles/mixins.less';
 
 /* 数据/结构/索引/约束/DDL 视图容器 */
@@ -16,7 +16,7 @@
     align-items: center;
     gap: 10px;
     padding: 6px 12px;
-    border-bottom: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
     background: @bg-1;
     flex-wrap: wrap;
     min-height: 42px;
@@ -38,7 +38,7 @@
 .schemaTag {
     font-size: 11px;
     color: @text-dim;
-    background: @bg-2;
+    background: @bg-elev;
     padding: 1px 6px;
     border-radius: @radius-sm;
     border: 1px solid color-mix(in srgb, @border 60%, transparent);
@@ -73,15 +73,39 @@
     flex-shrink: 0;
 }
 
-/* WHERE 过滤条件栏 */
+/* WHERE 过滤条件栏：统一融入工作区纯白操作层，不再呈现灰色夹层 */
 .filterBar {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 6px 12px;
-    background: @bg-2;
-    border-bottom: 1px solid color-mix(in srgb, @border 60%, transparent);
+    background: @bg-1;
+    border-bottom: 1px solid color-mix(in srgb, @border 65%, transparent);
     flex-shrink: 0;
+
+    :global {
+        .ant-input {
+            height: 24px !important;
+            line-height: 22px;
+            box-sizing: border-box;
+            background: @bg-elev;
+            border-color: color-mix(in srgb, @border 75%, transparent);
+            transition: all @transition-fast ease;
+
+            &:hover, &:focus {
+                background: @bg-1;
+                border-color: @accent;
+            }
+        }
+
+        .ant-btn {
+            height: 24px !important;
+            box-sizing: border-box;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+    }
 }
 
 .tableBody {
@@ -100,7 +124,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 6px 12px;
-    border-top: 1px solid color-mix(in srgb, @border 60%, transparent);
+    border-top: 1px solid color-mix(in srgb, @border 65%, transparent);
     background: @bg-1;
     flex-shrink: 0;
     flex-wrap: wrap;
@@ -145,7 +169,7 @@
     text-align: center;
     color: @text-faint;
     font-variant-numeric: tabular-nums;
-    background: @bg-2-solid;
+    background: @bg-1;
     user-select: none;
 }
 

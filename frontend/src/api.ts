@@ -91,7 +91,7 @@ export const API = {
         (SystemService as any).GetAppVersion
             ? (SystemService as any).GetAppVersion()
             : Promise.resolve({
-                  version: 'v1.0.5',
+                  version: 'v1.0.6',
                   gitCommit: 'dev',
                   buildDate: '',
                   goVersion: '',
@@ -101,8 +101,8 @@ export const API = {
         (SystemService as any).CheckForUpdates
             ? (SystemService as any).CheckForUpdates()
             : Promise.resolve({
-                  currentVersion: 'v1.0.5',
-                  latestVersion: 'v1.0.5',
+                  currentVersion: 'v1.0.6',
+                  latestVersion: 'v1.0.6',
                   hasUpdate: false,
                   releaseUrl: 'https://github.com/x86cloud/terminals/releases',
                   repoUrl: 'https://github.com/x86cloud/terminals',

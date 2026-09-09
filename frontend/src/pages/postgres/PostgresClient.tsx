@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Tree, Button, Tag, Dropdown, MenuProps, message, Tooltip, Space, Popconfirm } from 'antd'
+import { Button, Tag, Dropdown, MenuProps, message, Tooltip, Space, Popconfirm } from 'antd'
+import Tree from '@/components/common/Tree'
 import {
     Database,
     Folder,
@@ -362,6 +363,19 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
         })
     }, [databases, schemasMap, tablesMap, loadingDbs, loadingSchemas])
 
+    // 左侧树与当前激活 Tab 双向联动高亮
+    const selectedTreeKeys = useMemo(() => {
+        const activeTab = tabs.find((t) => t.key === activeTabKey)
+        if (!activeTab) return []
+        if (activeTab.type === 'data' && activeTab.dbName && activeTab.schema && activeTab.table) {
+            return [`table_${activeTab.dbName}_${activeTab.schema}_${activeTab.table}`]
+        }
+        if ((activeTab.type === 'er' || activeTab.type === 'functions') && activeTab.dbName && activeTab.schema) {
+            return [`schema_${activeTab.dbName}_${activeTab.schema}`]
+        }
+        return []
+    }, [tabs, activeTabKey])
+
     // 渲染数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
         {
@@ -529,10 +543,9 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
                 <Dropdown menu={{ items: blankMenuItems }} trigger={['contextMenu']}>
                     <div className={pg.treeWrap}>
                         <Tree
-                            blockNode
-                            showIcon={false}
                             treeData={treeData}
                             expandedKeys={expandedKeys}
+                            selectedKeys={selectedTreeKeys}
                             loadData={async (node: any) => {
                                 const raw = node.raw
                                 if (!raw) return

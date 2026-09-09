@@ -367,8 +367,13 @@ func (m *MysqlManagerEx) CloseAll() {
 	}
 }
 
-// queryEx 在扩展连接上执行查询。
+// queryEx 在扩展连接上执行查询，默认不截断（兼容库表元数据查询等场景）。
 func (m *MysqlManagerEx) queryEx(id, dbName, sqlText string) (columns []string, rows []map[string]any, err error) {
+	return m.queryExWithTimeoutLimit(id, dbName, sqlText, 60*time.Second, 0)
+}
+
+// queryExWithTimeoutLimit 支持自定义超时时间与最大行数（maxRows <= 0 表示全量不限制）。
+func (m *MysqlManagerEx) queryExWithTimeoutLimit(id, dbName, sqlText string, timeout time.Duration, maxRows int) (columns []string, rows []map[string]any, err error) {
 	mc, ok := m.Get(id)
 	if !ok {
 		return nil, nil, errors.New("MySQL 连接不存在或已断开，请重新连接")
@@ -379,7 +384,10 @@ func (m *MysqlManagerEx) queryEx(id, dbName, sqlText string) (columns []string, 
 		}
 		mc.curDb = dbName
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	if timeout <= 0 {
+		timeout = 30 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	res, e := mc.db.QueryContext(ctx, sqlText)
@@ -391,10 +399,14 @@ func (m *MysqlManagerEx) queryEx(id, dbName, sqlText string) (columns []string, 
 	if e != nil {
 		return nil, nil, e
 	}
-	const maxRows = 100
-	out := make([]map[string]any, 0, maxRows)
+	var out []map[string]any
+	if maxRows > 0 {
+		out = make([]map[string]any, 0, maxRows)
+	} else {
+		out = make([]map[string]any, 0)
+	}
 	for res.Next() {
-		if len(out) >= maxRows {
+		if maxRows > 0 && len(out) >= maxRows {
 			break
 		}
 		vals := make([]any, len(cols))
@@ -1061,7 +1073,7 @@ func (m *MysqlManagerEx) MysqlExportCSV(id, db, source, table, sqlText string, l
 	if err != nil {
 		return "", err
 	}
-	cols, rows, err := m.queryEx(id, db, query)
+	cols, rows, err := m.queryExWithTimeoutLimit(id, db, query, 10*time.Minute, limit)
 	if err != nil {
 		return "", err
 	}
@@ -1088,7 +1100,7 @@ func (m *MysqlManagerEx) MysqlExportSQL(id, db, source, table, sqlText string, l
 	if err != nil {
 		return "", err
 	}
-	cols, rows, err := m.queryEx(id, db, query)
+	cols, rows, err := m.queryExWithTimeoutLimit(id, db, query, 10*time.Minute, limit)
 	if err != nil {
 		return "", err
 	}
@@ -1372,7 +1384,7 @@ func (m *MysqlManagerEx) MysqlExportJSON(id, db, source, table, sqlText string, 
 			return "", fmt.Errorf("切换数据库失败: %w", e)
 		}
 	}
-	_, rows, err := m.queryEx(id, db, query)
+	_, rows, err := m.queryExWithTimeoutLimit(id, db, query, 10*time.Minute, limit)
 	if err != nil {
 		return "", err
 	}
@@ -1484,7 +1496,7 @@ func (m *MysqlManagerEx) MysqlQueryCSV(id, db, sqlText string, limit int) (strin
 			sqlText = fmt.Sprintf("%s LIMIT %d", sqlText, limit)
 		}
 	}
-	cols, rows, err := m.queryEx(id, db, sqlText)
+	cols, rows, err := m.queryExWithTimeoutLimit(id, db, sqlText, 10*time.Minute, limit)
 	if err != nil {
 		return "", err
 	}

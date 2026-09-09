@@ -45,7 +45,7 @@
     }
 
     th {
-        background: @bg-2-solid;
+        background: @bg-1-solid;
         color: @text-dim;
         font-weight: 600;
         font-size: 11.5px;
@@ -57,14 +57,15 @@
     }
 
     tbody tr {
+        background: @bg-1;
         transition: background 0.12s ease;
 
         &:nth-child(even) {
-            background: color-mix(in srgb, @bg-2 45%, transparent);
+            background: @bg-1;
         }
 
         &:hover {
-            background: @bg-2;
+            background: color-mix(in srgb, @accent 6%, @bg-1);
         }
     }
 }

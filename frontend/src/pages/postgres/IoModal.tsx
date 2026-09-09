@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Modal, Segmented, Button, Input, Select, message } from 'antd'
+import { Modal, Segmented, Button, Input, InputNumber, Select, message } from 'antd'
 import { Download, Upload, FileCode } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -21,7 +21,8 @@ export function ExportModal({
 }) {
     const [mode, setMode] = useState<'csv' | 'json'>('csv')
     const [exportSource, setExportSource] = useState<'table' | 'sql'>('table')
-    const [customSql, setCustomSql] = useState(`SELECT * FROM "${schema}"."${tableName}" LIMIT 500;`)
+    const [customSql, setCustomSql] = useState(`SELECT * FROM "${schema}"."${tableName}";`)
+    const [limit, setLimit] = useState<number>(0)
     const [loading, setLoading] = useState(false)
 
     const handleExport = async () => {
@@ -35,7 +36,7 @@ export function ExportModal({
                 exportSource,
                 tableName,
                 customSql,
-                0
+                limit
             )
             if (savedPath) {
                 message.success(`导出成功: ${savedPath}`)
@@ -91,6 +92,11 @@ export function ExportModal({
                         </div>
                     </div>
                 )}
+
+                <div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>限制行数（0 表示不限制）</div>
+                    <InputNumber min={0} value={limit} onChange={(v) => setLimit(v ?? 0)} style={{ width: '100%' }} />
+                </div>
             </div>
         </Modal>
     )
