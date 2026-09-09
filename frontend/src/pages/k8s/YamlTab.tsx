@@ -439,10 +439,23 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
     {
       title: '操作',
       key: 'action',
-      width: 230,
+      width: 190,
       render: (_, record) => {
         const isDeploying = deployingId === record.id
-        const moreMenuItems = [
+        const isDeployed = record.status === 'deployed'
+
+        const moreMenuItems: any[] = [
+          ...(isDeployed
+            ? [
+                {
+                  key: 'redeploy',
+                  label: '重新应用/同步部署',
+                  icon: <RotateCcw size={13} />,
+                  disabled: isDeploying,
+                  onClick: () => handleRowDeploy(record),
+                },
+              ]
+            : []),
           {
             key: 'copy_yaml',
             label: '复制 YAML 内容',
@@ -476,21 +489,34 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
 
         return (
           <Space size={6}>
-            <Tooltip title="将当前 YAML 清单部署/同步至集群">
-              <Button
-                type="primary"
-                size="small"
-                icon={<Play size={12} />}
-                loading={isDeploying}
-                style={{
-                  background: 'var(--ok, #52c41a)',
-                  borderColor: 'var(--ok, #52c41a)',
-                }}
-                onClick={() => handleRowDeploy(record)}
-              >
-                部署
-              </Button>
-            </Tooltip>
+            {isDeployed ? (
+              <Tooltip title="从集群中下线清理相关声明资源">
+                <Button
+                  size="small"
+                  danger
+                  icon={<Square size={12} />}
+                  onClick={() => handleOpenOfflineModal(record)}
+                >
+                  下线
+                </Button>
+              </Tooltip>
+            ) : (
+              <Tooltip title="将当前 YAML 清单部署至集群">
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<Play size={12} />}
+                  loading={isDeploying}
+                  style={{
+                    background: 'var(--ok, #52c41a)',
+                    borderColor: 'var(--ok, #52c41a)',
+                  }}
+                  onClick={() => handleRowDeploy(record)}
+                >
+                  部署
+                </Button>
+              </Tooltip>
+            )}
 
             <Tooltip title="编辑 YAML 内容或元信息">
               <Button
@@ -499,17 +525,6 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 onClick={() => handleOpenEditDrawer(record)}
               >
                 编辑
-              </Button>
-            </Tooltip>
-
-            <Tooltip title="从集群中下线清理相关声明资源">
-              <Button
-                size="small"
-                danger
-                icon={<Square size={12} />}
-                onClick={() => handleOpenOfflineModal(record)}
-              >
-                下线
               </Button>
             </Tooltip>
 
@@ -610,7 +625,15 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Layers size={16} color="var(--accent)" />
-            <span>{currentRecord ? `编辑资源编排: ${formName}` : '新建 Kubernetes 资源编排'}</span>
+            <span>{currentRecord ? `编辑资源编排: ${formName || currentRecord.name}` : '新建 Kubernetes 资源编排'}</span>
+            {currentRecord && (
+              <Tag
+                color={currentRecord.status === 'deployed' ? 'success' : 'default'}
+                style={{ marginLeft: 4 }}
+              >
+                {currentRecord.status === 'deployed' ? '已部署' : '已下线'}
+              </Tag>
+            )}
           </div>
         }
         width={860}
@@ -664,7 +687,11 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
               }}
               onClick={handleSaveAndApply}
             >
-              {saving ? '正在部署验证...' : '保存'}
+              {saving
+                ? '正在部署验证...'
+                : currentRecord?.status === 'deployed'
+                  ? '保存并重新部署'
+                  : '保存并部署'}
             </Button>
           </div>
         }

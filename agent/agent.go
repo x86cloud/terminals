@@ -186,9 +186,9 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 	if wsDir != "" {
 		sysPrompt = fmt.Sprintf("%s\n当前绑定的工作目录为: [%s]。", sysPrompt, wsDir)
 	}
-	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 当面对用户需求模糊、缺少关键上下文参数（如目标数据库类型、具体主机会话、文件路径等）或需要二选一确认时，必须主动调用 `ask_user` 工具向用户发起提问获取澄清与确认，禁止盲目猜测假设。", sysPrompt)
+	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 当面对用户需求模糊、缺少关键上下文参数（如目标数据库类型、具体主机会话、文件路径、镜像版本号、等）或需要二选一确认时，必须主动调用 `ask_user` 工具向用户发起提问获取澄清与确认，禁止盲目猜测假设。", sysPrompt)
 	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 合理规划工具使用，避免频繁向用户提问。", sysPrompt)
-
+	sysPrompt = fmt.Sprintf("%s\n【排障与方案处理规范】: 当用户询问运维管理、数据库操作等问题怎么处理时，必须先进行分析，给出解决方案，主动调用`ask_user`询问是否需要帮用户处理问题。", sysPrompt)
 	activeConn := DefaultRuntime.GetActiveConnection()
 	if activeConn != nil && (activeConn.ID != "" || activeConn.Name != "" || activeConn.Protocol != "") {
 		var activeDetail strings.Builder

@@ -2,6 +2,7 @@ package services
 
 import (
 	"errors"
+	"terminal/agent"
 	"terminal/core"
 )
 
@@ -48,7 +49,12 @@ func (s *SystemService) SaveAppSettings(settings core.AppSettings) (core.AppSett
 	if c.Store == nil {
 		return settings, errors.New("配置存储不可用")
 	}
-	return c.Store.SaveSettings(settings)
+	saved, err := c.Store.SaveSettings(settings)
+	if err == nil {
+		_ = agent.DefaultRuntime.InitOrUpdate(saved)
+		_ = agent.DefaultManager.InitOrUpdate(saved)
+	}
+	return saved, err
 }
 
 func (s *SystemService) ListGroups() []core.ServerGroup {

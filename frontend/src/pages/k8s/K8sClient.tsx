@@ -201,19 +201,13 @@ export default function K8sClient({ session }: Props) {
             {/* 顶栏 */}
             <div className={s.headerBar}>
                 <div className={s.headerLeft}>
-                    <div className={s.titleArea}>
+                    <div className={s.titleArea} title={session.apiServer || session.title}>
                         <ClientIcon kind="k8s" size={22} />
-                        <span>{session.title || 'Kubernetes 集群'}</span>
-                    </div>
-
-                    <div className={s.targetBadge} title={session.apiServer}>
-                        <span className={s.onlineDot} />
-                        <span className={s.badgeText}>{session.apiServer}</span>
-                        {pingMs !== null && (
-                            <span style={{ color: 'var(--text-faint)', marginLeft: 4, flexShrink: 0 }}>
-                                ({pingMs}ms)
-                            </span>
-                        )}
+                        <span className={s.titleText}>{session.title || session.apiServer || 'Kubernetes 集群'}</span>
+                        <div className={s.statusBadge} title={session.apiServer || '已连接'}>
+                            <span className={s.onlineDot} />
+                            {pingMs !== null && <span>{pingMs}ms</span>}
+                        </div>
                     </div>
 
                     {/* 全局 Namespace 选择器 */}

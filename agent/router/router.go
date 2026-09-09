@@ -110,21 +110,22 @@ func (r *ModelRouter) Resolve(ctx context.Context, role ModelRole) (*ResolvedMod
 		HTTPClient:  httpClient,
 	}
 
-	if profile.EnableThinking {
-		lowerURL := strings.ToLower(baseURL)
-		if strings.Contains(lowerURL, "anthropic") || strings.Contains(lowerURL, "claude") {
-			cfg.ExtraFields = map[string]any{
-				"thinking": map[string]any{
-					"type": "enabled",
-				},
-			}
-		} else if cfg.ReasoningEffort == "" {
-			cfg.ReasoningEffort = openai.ReasoningEffortLevelMedium
-		}
+	thinkingEnabled := "enabled"
+	if !profile.EnableThinking {
+		thinkingEnabled = "disabled"
 	}
-	if profile.ReasoningEffort != "" && profile.ReasoningEffort != "none" {
-		cfg.ReasoningEffort = openai.ReasoningEffortLevel(profile.ReasoningEffort)
+
+	cfg.ExtraFields = map[string]any{
+		"thinking": map[string]any{
+			"type": thinkingEnabled,
+		},
 	}
+
+	effort := profile.ReasoningEffort
+	if effort == "" || effort == "none" {
+		effort = "medium"
+	}
+	cfg.ReasoningEffort = openai.ReasoningEffortLevel(effort)
 
 	cm, err := openai.NewChatModel(ctx, cfg)
 	if err != nil {

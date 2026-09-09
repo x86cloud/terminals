@@ -84,27 +84,27 @@
     white-space: nowrap;
 }
 
-.targetBadge {
+.titleText {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.statusBadge {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 3px 10px;
+    gap: 5px;
+    padding: 2px 8px;
     border-radius: @radius-pill;
     background: @bg-2;
     border: 1px solid @border;
-    font-size: 12px;
+    font-size: 11.5px;
     color: @text-dim;
     font-family: @font-mono;
+    font-weight: normal;
     flex-shrink: 0;
-    max-width: 260px;
     white-space: nowrap;
-
-    .badgeText {
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        display: inline-block;
-    }
 }
 
 .onlineDot {

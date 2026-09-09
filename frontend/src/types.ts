@@ -1,5 +1,16 @@
 export type AuthType = 'password' | 'key'
-export type ConnType = 'ssh' | 'redis' | 'mysql' | 'mqtt' | 'mongo' | 'sqlite' | 'docker' | 'k8s' | 'postgres'
+export const CONN_TYPES = [
+    'ssh',
+    'redis',
+    'mysql',
+    'mqtt',
+    'mongo',
+    'sqlite',
+    'docker',
+    'k8s',
+    'postgres',
+] as const
+export type ConnType = (typeof CONN_TYPES)[number]
 
 export interface ServerGroup {
     id: string
