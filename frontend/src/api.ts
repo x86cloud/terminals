@@ -468,6 +468,11 @@ export const API = {
 
     // API & WS
     apiRequest: (req: ApiRequest): Promise<ApiResponse> => ApiService.ApiRequest(req as any) as any,
+    loadApiTree: (): Promise<string> => ApiService.LoadApiTree(),
+    saveApiTree: (content: string): Promise<void> => ApiService.SaveApiTree(content),
+    chooseImportApiFile: (): Promise<string> => ApiService.ChooseImportApiFile(),
+    chooseExportApiFile: (content: string, defaultName?: string): Promise<string> =>
+        ApiService.ChooseExportApiFile(content, defaultName || 'apis_backup.json'),
     wsConnect: (
         urlOrReq: any,
         headers?: any[],

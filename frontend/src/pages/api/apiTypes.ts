@@ -7,7 +7,6 @@ import {
     ApiMode,
     WsStatus,
     WsMessage,
-    ApiHistoryItem,
     SavedApiItem,
     ApiFolderNode,
     ApiTreeNode,
@@ -22,7 +21,6 @@ export type {
     ApiMode,
     WsStatus,
     WsMessage,
-    ApiHistoryItem,
     SavedApiItem,
     ApiFolderNode,
     ApiTreeNode,
@@ -37,7 +35,6 @@ export const BODY_TYPES: Array<{ value: string; label: string; ct: string }> = [
     {value: 'xml', label: 'XML', ct: 'application/xml'},
 ]
 
-export const HISTORY_KEY = 'api_client_history'
 export const SAVED_APIS_KEY = 'api_client_saved_apis'
 
 export type ConfigTab = 'params' | 'headers' | 'body' | 'auth' | 'options' | 'messages'
@@ -111,7 +108,7 @@ export function buildRequest(req: {
     }
 }
 
-export function buildCurlCommand(item: Partial<SavedApiItem | ApiHistoryItem>): string {
+export function buildCurlCommand(item: Partial<SavedApiItem>): string {
     const method = item.method || 'GET'
     let url = item.url || ''
 
@@ -164,34 +161,6 @@ export function buildCurlCommand(item: Partial<SavedApiItem | ApiHistoryItem>): 
 
     parts.push(`"${url}"`)
     return parts.join(' ')
-}
-
-const MAX_STORED_BODY_LENGTH = 200 * 1024 // 200KB
-
-export function sanitizeHistoryItem(item: ApiHistoryItem): ApiHistoryItem {
-    let response = item.response
-    if (response && response.body && response.body.length > MAX_STORED_BODY_LENGTH) {
-        response = {
-            ...response,
-            body: response.body.slice(0, MAX_STORED_BODY_LENGTH) + '\n\n...[响应体超过 200KB，已自动截断历史存储]',
-        }
-    }
-    return {
-        ...item,
-        response,
-    }
-}
-
-export function formatHistoryTime(timestamp: number): string {
-    if (!timestamp) return ''
-    const d = new Date(timestamp)
-    const now = new Date()
-    const isToday = d.toDateString() === now.toDateString()
-    const timeStr = d.toTimeString().slice(0, 8)
-    if (isToday) return timeStr
-    const month = String(d.getMonth() + 1).padStart(2, '0')
-    const day = String(d.getDate()).padStart(2, '0')
-    return `${month}-${day} ${timeStr}`
 }
 
 export function findTreeNode(nodes: ApiTreeNode[], id: string): ApiTreeNode | null {

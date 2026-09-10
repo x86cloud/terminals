@@ -13,6 +13,34 @@ export function ApiRequest(req: proto$0.ApiRequest): $CancellablePromise<proto$0
     return $Call.ByID(1541371874, req);
 }
 
+/**
+ * ChooseExportApiFile 弹出文件保存对话框，将内容写入用户指定的路径
+ */
+export function ChooseExportApiFile(content: string, defaultName: string): $CancellablePromise<string> {
+    return $Call.ByID(4274029566, content, defaultName);
+}
+
+/**
+ * ChooseImportApiFile 弹出文件选择对话框，读取用户选择的 JSON 文件内容
+ */
+export function ChooseImportApiFile(): $CancellablePromise<string> {
+    return $Call.ByID(1142644283);
+}
+
+/**
+ * LoadApiTree 读取本地接口树文件内容。如果文件不存在则自动创建并写入默认接口树
+ */
+export function LoadApiTree(): $CancellablePromise<string> {
+    return $Call.ByID(1680946813);
+}
+
+/**
+ * SaveApiTree 保存接口树数据到本地文件
+ */
+export function SaveApiTree(content: string): $CancellablePromise<void> {
+    return $Call.ByID(4166564434, content);
+}
+
 export function WsClose(id: string): $CancellablePromise<void> {
     return $Call.ByID(168471487, id);
 }

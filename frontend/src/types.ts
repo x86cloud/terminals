@@ -580,27 +580,6 @@ export interface ApiResponse {
     error: string
 }
 
-export interface ApiHistoryItem {
-    id?: string
-    mode?: ApiMode
-    method: ApiMethod
-    url: string
-    params?: ApiHeader[]
-    headers?: ApiHeader[]
-    bodyType?: string
-    body?: string
-    auth?: ApiAuth
-    timeoutMs?: number
-    insecureTLS?: boolean
-    followRedirects?: boolean
-    wsProtocols?: string
-    statusCode: number
-    durationMs: number
-    at: number
-    error: string
-    response?: ApiResponse
-}
-
 export interface SavedApiItem {
     id: string
     name: string

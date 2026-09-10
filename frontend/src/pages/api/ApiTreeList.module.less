@@ -27,23 +27,48 @@
     color: @text;
     font-size: 14px;
     font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+    user-select: none;
+}
+
+.headActions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.headBtn {
+    width: 28px !important;
+    height: 28px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    color: @text-dim;
+    border-radius: @radius-sm;
+
+    &:hover {
+        color: @text;
+        background: @bg-2;
+    }
 }
 
 .searchBar {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 0 12px;
-    height: 48px;
-    border-bottom: 1px solid @border;
-    background: @bg-2;
+    padding: 8px 12px 4px 12px;
+    background: @bg-1;
     flex-shrink: 0;
     box-sizing: border-box;
 }
 
 .treeContent {
     flex: 1;
-    padding: 8px 6px;
+    padding: 4px 6px 8px 6px;
     overflow-y: auto;
     overflow-x: hidden;
     min-height: 0;

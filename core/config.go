@@ -482,7 +482,7 @@ type Store struct {
 	k8sOrchStore *K8sOrchestrationStore
 }
 
-func appConfigDir() (string, error) {
+func AppConfigDir() (string, error) {
 	base, err := os.UserConfigDir()
 	if err != nil {
 		home, herr := os.UserHomeDir()
@@ -514,7 +514,7 @@ func loadOrCreateKey(dir string) ([]byte, error) {
 }
 
 func NewStore() (*Store, error) {
-	dir, err := appConfigDir()
+	dir, err := AppConfigDir()
 	if err != nil {
 		return nil, err
 	}

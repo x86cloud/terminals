@@ -19,7 +19,7 @@ const methodColorMap: Record<string, string> = {
 export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () => void }) {
     const {
         mode, wsStatus, wsConnect, wsDisconnect, wsConnecting, wsSendMsg,
-        method, setMethod, methods, url, updateUrl, doSend, sending, showHistory, setShowHistory,
+        method, setMethod, methods, url, updateUrl, doSend, sending, showApiTree, setShowApiTree,
         currentApiName, currentApiId, renameTreeNode, saveCurrentApi, setSaveModalOpen, setSaveModalMode,
         params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects, apiTree, isModified,
     } = state
@@ -73,12 +73,12 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
 
     return (
         <div className={a.apiToolbar}>
-            <Tooltip title={showHistory ? '隐藏接口列表' : '显示接口列表'}>
+            <Tooltip title={showApiTree ? '隐藏接口列表' : '显示接口列表'}>
                 <Button
                     type="text"
                     style={{ flexShrink: 0, height: 34, width: 34, padding: 0 }}
                     icon={<PanelLeft size={16} />}
-                    onClick={() => setShowHistory((v) => !v)}
+                    onClick={() => setShowApiTree((v) => !v)}
                 />
             </Tooltip>
 
@@ -284,9 +284,6 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
                     <div className={a.emptyStateWrap}>
                         <Globe size={44} style={{ opacity: 0.3 }} />
                         <div style={{ fontSize: 14, fontWeight: 600 }}>准备就绪</div>
-                        <div style={{ fontSize: 13, opacity: 0.75, maxWidth: 380 }}>
-                            输入目标地址并配置请求参数后，点击「发送」或按 <kbd style={{ padding: '2px 6px', background: 'var(--bg-3)', borderRadius: 3, border: '1px solid var(--border)' }}>Ctrl + Enter</kbd> 查看即时响应数据
-                        </div>
                     </div>
                 )}
 

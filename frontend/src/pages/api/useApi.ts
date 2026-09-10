@@ -4,7 +4,6 @@ import {errorMessage} from '@/utils'
 import {
     ApiAuth,
     ApiHeader,
-    ApiHistoryItem,
     ApiMethod,
     ApiMode,
     ApiRequest,
@@ -16,27 +15,22 @@ import {
     ApiFolderNode,
     ApiTreeNode,
     BODY_TYPES,
-    HISTORY_KEY,
-    SAVED_APIS_KEY,
     METHODS,
     buildRequest,
     emptyAuth,
     looksLikeJson,
     parseUrlParams,
     buildUrlWithParams,
-    sanitizeHistoryItem,
     findTreeNode,
     removeTreeNode,
     updateTreeNode,
     insertTreeNode,
 } from './apiTypes'
 
-const MAX_HISTORY = 50
 const MAX_WS_MESSAGES = 500
 
 export interface ApiExecState {
     response: ApiResponse | null
-    historicalSnapshotTime: number | null
     error: string
     respTab: 'body' | 'headers'
     sending: boolean
@@ -60,65 +54,58 @@ export function useApi() {
     const [sending, setSending] = useState(false)
     const [error, setError] = useState('')
     const [response, setResponse] = useState<ApiResponse | null>(null)
-    const [historicalSnapshotTime, setHistoricalSnapshotTime] = useState<number | null>(null)
     const [respTab, setRespTab] = useState<'body' | 'headers'>('body')
     const [bodyPretty, setBodyPretty] = useState(true)
-    const [history, setHistory] = useState<ApiHistoryItem[]>(() => {
-        try {
-            const raw = localStorage.getItem(HISTORY_KEY)
-            return raw ? (JSON.parse(raw) as ApiHistoryItem[]) : []
-        } catch {
-            return []
-        }
-    })
-    const [showHistory, setShowHistory] = useState(true)
-    const [historyKeyword, setHistoryKeyword] = useState('')
-    const [historyMethodFilter, setHistoryMethodFilter] = useState('ALL')
-    const [drawerHistoryItem, setDrawerHistoryItem] = useState<ApiHistoryItem | null>(null)
+    const [showApiTree, setShowApiTree] = useState(true)
 
     // 每个接口独立的响应与执行状态缓存，防止切换接口时响应互相污染
     const apiExecMapRef = useRef<Record<string, ApiExecState>>({})
     const currentApiIdRef = useRef<string | null>(null)
 
     // 接口树与接口管理状态
-    const [apiTree, setApiTree] = useState<ApiTreeNode[]>(() => {
-        try {
-            const raw = localStorage.getItem(SAVED_APIS_KEY)
-            if (raw) {
-                const parsed = JSON.parse(raw)
-                if (Array.isArray(parsed) && parsed.length > 0) return parsed as ApiTreeNode[]
-            }
-        } catch {}
-        return [
-            {
-                id: 'folder_default',
-                name: '默认分组',
-                isFolder: true,
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-                children: [
-                    {
-                        id: 'api_example_get',
-                        name: '示例: GET 请求',
-                        isFolder: false,
-                        mode: 'http',
-                        method: 'GET',
-                        url: 'https://httpbin.org/get',
-                        params: [{ name: 'test', value: '123', enabled: true }],
-                        headers: [],
-                        bodyType: 'none',
-                        body: '',
-                        auth: emptyAuth(),
-                        timeoutMs: 30000,
-                        insecureTLS: false,
-                        followRedirects: true,
-                        createdAt: Date.now(),
-                        updatedAt: Date.now(),
-                    },
-                ],
-            },
-        ]
-    })
+    const [apiTree, setApiTree] = useState<ApiTreeNode[]>([])
+    const hasLoadedFileRef = useRef(false)
+
+    // 首次挂载时从本地文件 apis.json 加载
+    useEffect(() => {
+        let isMounted = true
+        API.loadApiTree()
+            .then((raw) => {
+                if (!isMounted) return
+                if (raw && raw.trim()) {
+                    try {
+                        const parsed = JSON.parse(raw)
+                        if (Array.isArray(parsed) && parsed.length > 0) {
+                            setApiTree(parsed)
+                        }
+                    } catch (e) {
+                        console.error('解析本地接口数据失败:', e)
+                    }
+                }
+                hasLoadedFileRef.current = true
+            })
+            .catch((e) => {
+                console.error('加载本地接口数据失败:', e)
+                hasLoadedFileRef.current = true
+            })
+        return () => {
+            isMounted = false
+        }
+    }, [])
+
+    // 监听接口树变更，自动防抖持久化至本地文件
+    useEffect(() => {
+        if (!hasLoadedFileRef.current) return
+
+        const timer = setTimeout(() => {
+            API.saveApiTree(JSON.stringify(apiTree, null, 2)).catch((e) => {
+                console.error('持久化接口树失败:', e)
+            })
+        }, 300)
+
+        return () => clearTimeout(timer)
+    }, [apiTree])
+
     const [currentApiId, setCurrentApiId] = useState<string | null>(null)
     currentApiIdRef.current = currentApiId
     const [currentApiName, setCurrentApiName] = useState<string | null>(null)
@@ -145,22 +132,6 @@ export function useApi() {
         }
     }, [])
 
-    useEffect(() => {
-        try {
-            localStorage.setItem(HISTORY_KEY, JSON.stringify(history))
-        } catch {
-            /* 忽略写入失败 */
-        }
-    }, [history])
-
-    useEffect(() => {
-        try {
-            localStorage.setItem(SAVED_APIS_KEY, JSON.stringify(apiTree))
-        } catch {
-            /* 忽略写入失败 */
-        }
-    }, [apiTree])
-
     const allowBody = method !== 'GET' && method !== 'HEAD'
 
     const doSend = useCallback(async () => {
@@ -173,14 +144,12 @@ export function useApi() {
         if (target !== url) setUrl(target)
         setError('')
         setSending(true)
-        setHistoricalSnapshotTime(null)
 
         const sendApiId = currentApiIdRef.current || '__draft__'
         apiExecMapRef.current[sendApiId] = {
             ...(apiExecMapRef.current[sendApiId] || { respTab: 'body' }),
             sending: true,
             error: '',
-            historicalSnapshotTime: null,
         }
 
         try {
@@ -190,7 +159,6 @@ export function useApi() {
             // 写入该接口专属的响应缓存
             apiExecMapRef.current[sendApiId] = {
                 response: res,
-                historicalSnapshotTime: null,
                 error: res.error || '',
                 respTab: 'body',
                 sending: false,
@@ -199,33 +167,12 @@ export function useApi() {
             if ((currentApiIdRef.current || '__draft__') === sendApiId) {
                 setResponse(res)
                 setRespTab('body')
-                setHistoricalSnapshotTime(null)
                 if (res.error) setError(res.error)
             }
-            const histItem: ApiHistoryItem = {
-                id: 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-                mode: 'http',
-                method,
-                url: target,
-                params: [...params],
-                headers: [...headers],
-                bodyType,
-                body,
-                auth: {...auth},
-                timeoutMs,
-                insecureTLS,
-                followRedirects,
-                statusCode: res.statusCode,
-                durationMs: res.durationMs,
-                at: Date.now(),
-                error: res.error,
-                response: res,
-            }
-            setHistory((h) => [sanitizeHistoryItem(histItem), ...h].slice(0, MAX_HISTORY))
         } catch (e) {
             const errMsg = errorMessage(e)
             apiExecMapRef.current[sendApiId] = {
-                ...(apiExecMapRef.current[sendApiId] || { response: null, historicalSnapshotTime: null, respTab: 'body' }),
+                ...(apiExecMapRef.current[sendApiId] || { response: null, respTab: 'body' }),
                 sending: false,
                 error: errMsg,
             }
@@ -281,21 +228,6 @@ export function useApi() {
                 auth,
                 wsProtocols.split(',').map((p) => p.trim()).filter(Boolean)
             )
-            const wsHistItem: ApiHistoryItem = {
-                id: 'hist_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
-                mode: 'ws',
-                method: 'WS' as any,
-                url: target,
-                headers: [...headers],
-                auth: {...auth},
-                insecureTLS,
-                wsProtocols,
-                statusCode: res.error ? 0 : 101,
-                durationMs: 0,
-                at: Date.now(),
-                error: res.error || '',
-            }
-            setHistory((h) => [sanitizeHistoryItem(wsHistItem), ...h].slice(0, MAX_HISTORY))
 
             if (res.error) {
                 setWsStatus('error')
@@ -392,90 +324,6 @@ export function useApi() {
         if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {})
     }, [])
 
-    const loadHistory = useCallback((item: ApiHistoryItem) => {
-        const isWs = item.mode === 'ws' || item.method === ('WS' as any)
-        if (isWs) {
-            setMode('ws')
-            setUrl(item.url)
-            if (item.headers) setHeaders(item.headers)
-            if (item.auth) setAuth(item.auth)
-            if (item.insecureTLS !== undefined) setInsecureTLS(item.insecureTLS)
-            if (item.wsProtocols !== undefined) setWsProtocols(item.wsProtocols)
-            setConfigTab('messages')
-            setShowConfig(true)
-            setError(item.error || '')
-        } else {
-            setMode('http')
-            setMethod(item.method || 'GET')
-            setUrl(item.url)
-            if (item.params) {
-                setParams(item.params)
-            } else {
-                const {params: parsed} = parseUrlParams(item.url)
-                setParams(parsed)
-            }
-            if (item.headers) setHeaders(item.headers)
-            if (item.bodyType !== undefined) setBodyType(item.bodyType)
-            if (item.body !== undefined) setBody(item.body)
-            if (item.auth) setAuth(item.auth)
-            if (item.timeoutMs !== undefined) setTimeoutMs(item.timeoutMs)
-            if (item.insecureTLS !== undefined) setInsecureTLS(item.insecureTLS)
-            if (item.followRedirects !== undefined) setFollowRedirects(item.followRedirects)
-
-            const key = currentApiIdRef.current || '__draft__'
-            if (item.response) {
-                setResponse(item.response)
-                setHistoricalSnapshotTime(item.at)
-                setRespTab('body')
-                apiExecMapRef.current[key] = {
-                    response: item.response,
-                    historicalSnapshotTime: item.at,
-                    error: item.error || '',
-                    respTab: 'body',
-                    sending: false,
-                }
-            } else {
-                const fallbackResp: ApiResponse = {
-                    status: item.statusCode ? String(item.statusCode) : '',
-                    statusCode: item.statusCode || 0,
-                    proto: '',
-                    headers: {},
-                    body: '',
-                    durationMs: item.durationMs || 0,
-                    size: 0,
-                    error: item.error || '',
-                }
-                setResponse(fallbackResp)
-                setHistoricalSnapshotTime(item.at)
-                apiExecMapRef.current[key] = {
-                    response: fallbackResp,
-                    historicalSnapshotTime: item.at,
-                    error: item.error || '',
-                    respTab: 'body',
-                    sending: false,
-                }
-            }
-            setError(item.error || '')
-            setShowConfig(true)
-        }
-    }, [])
-
-    const deleteHistory = useCallback((idxOrId: number | string) => {
-        setHistory((h) => {
-            if (typeof idxOrId === 'number') {
-                return h.filter((_, i) => i !== idxOrId)
-            }
-            return h.filter((item) => item.id !== idxOrId)
-        })
-    }, [])
-
-    const clearHistory = useCallback(() => {
-        setHistory([])
-        try {
-            localStorage.removeItem(HISTORY_KEY)
-        } catch {}
-    }, [])
-
     // 接口列表 / 树操作方法
     const loadSavedApi = useCallback((item: SavedApiItem) => {
         setCurrentApiId(item.id)
@@ -485,7 +333,6 @@ export function useApi() {
         // 切换接口时恢复该接口独立的响应与执行状态，防止与其他接口相互影响
         const cached = apiExecMapRef.current[item.id]
         setResponse(cached?.response || null)
-        setHistoricalSnapshotTime(cached?.historicalSnapshotTime || null)
         setError(cached?.error || '')
         setRespTab(cached?.respTab || 'body')
         setSending(!!cached?.sending)
@@ -616,7 +463,6 @@ export function useApi() {
             currentApiIdRef.current = null
             const cached = apiExecMapRef.current['__draft__']
             setResponse(cached?.response || null)
-            setHistoricalSnapshotTime(cached?.historicalSnapshotTime || null)
             setError(cached?.error || '')
             setRespTab(cached?.respTab || 'body')
             setSending(!!cached?.sending)
@@ -678,7 +524,6 @@ export function useApi() {
         // 切换到空白接口时恢复草稿专属的响应状态
         const cached = apiExecMapRef.current['__draft__']
         setResponse(cached?.response || null)
-        setHistoricalSnapshotTime(cached?.historicalSnapshotTime || null)
         setError(cached?.error || '')
         setRespTab(cached?.respTab || 'body')
         setSending(!!cached?.sending)
@@ -696,31 +541,10 @@ export function useApi() {
     // 主动清空当前接口的响应内容
     const clearResponse = useCallback(() => {
         setResponse(null)
-        setHistoricalSnapshotTime(null)
         setError('')
         const key = currentApiIdRef.current || '__draft__'
         delete apiExecMapRef.current[key]
     }, [])
-
-    const filteredHistory = useMemo(() => {
-        return history.filter((item) => {
-            const isWs = item.mode === 'ws' || item.method === ('WS' as any)
-            if (historyMethodFilter !== 'ALL') {
-                if (historyMethodFilter === 'WS') {
-                    if (!isWs) return false
-                } else {
-                    if (isWs || item.method !== historyMethodFilter) return false
-                }
-            }
-            if (historyKeyword.trim()) {
-                const kw = historyKeyword.trim().toLowerCase()
-                const matchUrl = item.url.toLowerCase().includes(kw)
-                const matchMethod = (item.method || '').toLowerCase().includes(kw)
-                if (!matchUrl && !matchMethod) return false
-            }
-            return true
-        })
-    }, [history, historyKeyword, historyMethodFilter])
 
     const currentSavedItem = useMemo(() => {
         if (!currentApiId) return null
@@ -753,18 +577,37 @@ export function useApi() {
         return ct.toLowerCase().includes('json') || looksLikeJson(prettyBody) ? 'json' : 'plain'
     }, [response, prettyBody, respHeaders])
 
+    const exportApis = useCallback(async () => {
+        const content = JSON.stringify(apiTree, null, 2)
+        return API.chooseExportApiFile(content, 'apis_backup.json')
+    }, [apiTree])
+
+    const importApis = useCallback(async (): Promise<{ count: number } | null> => {
+        const raw = await API.chooseImportApiFile()
+        if (!raw || !raw.trim()) return null
+        let parsed: any
+        try {
+            parsed = JSON.parse(raw)
+        } catch {
+            throw new Error('导入文件不是合法的 JSON 格式')
+        }
+        if (!Array.isArray(parsed)) {
+            throw new Error('导入文件格式不合法，根节点需为 JSON 数组')
+        }
+        setApiTree(parsed as ApiTreeNode[])
+        await API.saveApiTree(JSON.stringify(parsed, null, 2))
+        return { count: parsed.length }
+    }, [])
+
     return {
         // HTTP 状态
         method, setMethod, url, setUrl, updateUrl, params, setParams, addParam, updateParam, removeParam,
         headers, setHeaders, bodyType, setBodyType, body, setBody,
         auth, setAuth, timeoutMs, setTimeoutMs, insecureTLS, setInsecureTLS, followRedirects, setFollowRedirects,
         configTab, setConfigTab, showConfig, setShowConfig, sending, error, setError, response, respTab, setRespTab,
-        historicalSnapshotTime, setHistoricalSnapshotTime,
-        bodyPretty, setBodyPretty, history, filteredHistory, showHistory, setShowHistory,
-        historyKeyword, setHistoryKeyword, historyMethodFilter, setHistoryMethodFilter,
-        drawerHistoryItem, setDrawerHistoryItem,
+        bodyPretty, setBodyPretty, showApiTree, setShowApiTree,
         allowBody, doSend, prettyBody, clearResponse,
-        addHeader, updateHeader, removeHeader, copy, loadHistory, deleteHistory, clearHistory, respHeaders, respLang,
+        addHeader, updateHeader, removeHeader, copy, respHeaders, respLang,
         formatJsonBody,
         // WS 状态
         mode, setMode, wsSwitchMode, wsConnId, wsStatus, wsMessages, wsInput, setWsInput, wsProtocols, setWsProtocols,
@@ -787,6 +630,8 @@ export function useApi() {
         duplicateApiItem,
         moveTreeNode,
         newBlankApi,
+        exportApis,
+        importApis,
         // 常量
         methods: METHODS,
     }

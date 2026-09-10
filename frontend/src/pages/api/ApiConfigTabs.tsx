@@ -82,9 +82,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                             <span style={{ width: 32 }}></span>
                         </div>
                     )}
-                    {params.length === 0 && (
-                        <div className={a.emptyHint}>暂无 Query 参数，点击下方按钮添加</div>
-                    )}
+
                     {params.map((p, i) => (
                         <div key={i} className={a.headerRow}>
                             <Checkbox
@@ -132,9 +130,6 @@ export function ConfigBody({ state }: { state: ApiState }) {
                             <span style={{ flex: 2 }}>请求头值 (Value)</span>
                             <span style={{ width: 32 }}></span>
                         </div>
-                    )}
-                    {headers.length === 0 && (
-                        <div className={a.emptyHint}>暂无自定义请求头，点击下方按钮添加</div>
                     )}
                     {headers.map((h, i) => (
                         <div key={i} className={a.headerRow}>
