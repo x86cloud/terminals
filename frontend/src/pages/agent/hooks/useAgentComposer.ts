@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { API, consumePendingAsk } from '@/api'
 import { AiMessage, AgentPlan } from '@/types'
+import { message } from 'antd'
 
 interface UseAgentComposerProps {
     activeSessionId: string
@@ -31,7 +32,7 @@ export function useAgentComposer({
             .then((dir) => {
                 if (dir) setWorkspaceDir(dir)
             })
-            .catch(() => {})
+            .catch(() => { })
     }, [])
 
     // Check consumePendingAsk on mount
@@ -89,7 +90,7 @@ export function useAgentComposer({
                     }
                     return msg
                 })
-                API.agentSaveSessionMessages(activeSessionId, copy).catch(() => {})
+                API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
                 return copy
             })
 
@@ -97,7 +98,7 @@ export function useAgentComposer({
                 await API.agentApprovePlan(planId)
             } catch (err: any) {
                 const errMsg = err?.message || String(err)
-                setNoticeText(`❌ 执行规划失败: ${errMsg}`)
+                setNoticeText(`执行规划失败: ${errMsg}`)
                 setMessages((current) => {
                     const copy = current.map((msg) => {
                         if (msg.plan && msg.plan.id === planId) {
@@ -136,7 +137,7 @@ export function useAgentComposer({
                         }
                         return msg
                     })
-                    API.agentSaveSessionMessages(activeSessionId, copy).catch(() => {})
+                    API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
                     return copy
                 })
             } catch {
@@ -167,12 +168,12 @@ export function useAgentComposer({
                         }
                         return msg
                     })
-                    API.agentSaveSessionMessages(activeSessionId, copy).catch(() => {})
+                    API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
                     return copy
                 })
                 setNoticeText(`步骤 [${stepId}] 重试执行完成`)
             } catch (err: any) {
-                setNoticeText(`❌ 步骤重试失败: ${err?.message || err}`)
+                setNoticeText(`步骤重试失败: ${err?.message || err}`)
             }
         },
         [activeSessionId, setMessages, setNoticeText]
@@ -245,14 +246,14 @@ export function useAgentComposer({
                                 content:
                                     st.type === 'think'
                                         ? reasoning ||
-                                          st.content ||
-                                          '已完成目标分析与拓扑步骤依赖推演。'
+                                        st.content ||
+                                        '已完成目标分析与拓扑步骤依赖推演。'
                                         : st.content,
                                 summary: `成功生成包含 ${plan?.steps?.length || 0} 个步骤的执行规划`,
                             }))
                         }
                     }
-                    API.agentSaveSessionMessages(activeSessionId, copy).catch(() => {})
+                    API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
                     return copy
                 })
             } catch (err: any) {
@@ -261,7 +262,7 @@ export function useAgentComposer({
                     const copy = [...current]
                     const last = copy[copy.length - 1]
                     if (last && last.role === 'assistant') {
-                        last.content = `❌ 生成规划失败: ${errMsg}`
+                        last.content = `生成规划失败: ${errMsg}`
                         if (last.process_steps) {
                             last.process_steps = last.process_steps.map((st) => ({
                                 ...st,
@@ -271,7 +272,7 @@ export function useAgentComposer({
                     }
                     return copy
                 })
-                setNoticeText(`❌ 生成规划失败: ${errMsg}`)
+                setNoticeText(`生成规划失败: ${errMsg}`)
             } finally {
                 setIsGenerating(false)
                 setActiveReasoning('')
@@ -322,18 +323,18 @@ export function useAgentComposer({
                         }))
                     }
                 }
-                API.agentSaveSessionMessages(activeSessionId, copy).catch(() => {})
+                API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
                 return copy
             })
         } catch (err: any) {
             const errMsg = err?.message || String(err)
-            setNoticeText(`❌ 发送失败: ${errMsg}`)
+            setNoticeText(`发送失败: ${errMsg}`)
             setMessages((current) => {
                 const copy = [...current]
                 const last = copy[copy.length - 1]
                 if (last && last.role === 'assistant') {
                     if (!last.content) {
-                        last.content = `⚠️ 执行中断: ${errMsg}`
+                        last.content = `执行中断: ${errMsg}`
                     }
                     if (last.process_steps) {
                         last.process_steps = last.process_steps.map((st) =>
@@ -362,7 +363,7 @@ export function useAgentComposer({
         await API.agentStopSend(activeSessionId)
         messages.forEach((msg) => {
             if (msg.plan && msg.plan.executing) {
-                API.agentCancelPlan(msg.plan.id).catch(() => {})
+                API.agentCancelPlan(msg.plan.id).catch(() => { })
             }
         })
         setIsGenerating(false)

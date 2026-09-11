@@ -8,14 +8,12 @@ import (
 	"terminal/agent/events"
 	"terminal/agent/executor"
 	"terminal/agent/guard"
-	"terminal/agent/memory"
 	"terminal/agent/planner"
 	"terminal/agent/router"
 	"terminal/agent/skills"
 	"terminal/agent/store"
 	"terminal/agent/tools"
 	"terminal/agent/verifier"
-	"terminal/agent/workflow"
 	"terminal/core"
 	"terminal/db"
 	"terminal/docker"
@@ -37,10 +35,8 @@ type AgentRuntime struct {
 	EventBus     *events.EventBus
 	Guard        *guard.PolicyGuard
 	Router       *router.ModelRouter
-	Memory       *memory.MemorySystem
 	ToolBus      *tools.ToolBus
 	WorkspaceMgr *tools.WorkspaceManager
-	WorkflowEng  *workflow.WorkflowEngine
 	SkillsReg    *skills.SkillsRegistry
 	Planner      *planner.Planner
 	PlanGate     *planner.PlanGate
@@ -74,17 +70,15 @@ func NewAgentRuntime() *AgentRuntime {
 	hitlMgr := guard.NewHitlManager(eb)
 	g.SetHitlManager(hitlMgr)
 	r := router.NewModelRouter()
-	mem := memory.NewMemorySystem(st)
 	tb := tools.NewToolBus(g, eb)
 	wm := tools.NewWorkspaceManager("")
-	wf := workflow.NewWorkflowEngine(eb)
 	sk := skills.NewSkillsRegistry(st)
 	pl := planner.NewPlanner(r, g, eb)
 	pg := planner.NewPlanGate()
 	vr := verifier.NewVerifier(r)
 	ex := executor.NewExecutor(tb, vr, eb)
 	askMgr := ask.NewAskManager(eb)
-	ex.SetManagers(wf, askMgr)
+	ex.SetAskManager(askMgr)
 
 	defaultSession := NewSession("ai_agent_default", "AI 助手", wm.GetDir(), defaultCfg)
 
@@ -95,10 +89,8 @@ func NewAgentRuntime() *AgentRuntime {
 		EventBus:     eb,
 		Guard:        g,
 		Router:       r,
-		Memory:       mem,
 		ToolBus:      tb,
 		WorkspaceMgr: wm,
-		WorkflowEng:  wf,
 		SkillsReg:    sk,
 		Planner:      pl,
 		PlanGate:     pg,
@@ -176,11 +168,10 @@ func (rt *AgentRuntime) SetManagers(
 	_ = tools.RegisterK8sTools(rt.ToolBus, km, rt.coreStore)
 	_ = tools.RegisterMqttTools(rt.ToolBus, mq)
 	_ = tools.RegisterHttpTools(rt.ToolBus)
+	_ = tools.RegisterApiManagerTool(rt.ToolBus)
 	_ = tools.RegisterOrchestrationTools(rt.ToolBus, tools.OrchestrationManagers{
-		SkillsReg:   rt.SkillsReg,
-		MemorySys:   rt.Memory,
-		WorkflowEng: rt.WorkflowEng,
-		AskMgr:      rt.AskMgr,
+		SkillsReg: rt.SkillsReg,
+		AskMgr:    rt.AskMgr,
 	})
 }
 

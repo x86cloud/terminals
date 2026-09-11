@@ -89,10 +89,6 @@ export function AgentProposePlan(sessionID: string, objective: string): $Cancell
     return $Call.ByID(3469939612, sessionID, objective);
 }
 
-export function AgentRecallMemories(query: string, limit: number): $CancellablePromise<string[] | null> {
-    return $Call.ByID(2571516017, query, limit);
-}
-
 export function AgentResolveHitl(confirmID: string, approved: boolean, reason: string): $CancellablePromise<boolean> {
     return $Call.ByID(696413550, confirmID, approved, reason);
 }
@@ -103,10 +99,6 @@ export function AgentRetryPlanStep(planID: string, stepID: string): $Cancellable
 
 export function AgentSaveHistory(messages: agent$0.FrontendMessage[] | null): $CancellablePromise<void> {
     return $Call.ByID(40985730, messages);
-}
-
-export function AgentSaveMemory(kind: string, content: string, tags: string, source: string): $CancellablePromise<void> {
-    return $Call.ByID(1024061357, kind, content, tags, source);
 }
 
 export function AgentSaveSessionMessages(sessionID: string, messages: agent$0.FrontendMessage[] | null): $CancellablePromise<void> {

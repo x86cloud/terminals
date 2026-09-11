@@ -693,10 +693,6 @@ export const API = {
         Promise.resolve(AgentService.AgentListSkills() || []) as any,
     agentGetSkillsDir: (): Promise<string> => Promise.resolve(AgentService.AgentGetSkillsDir()),
     agentOpenSkillsDir: (): Promise<string> => AgentService.AgentOpenSkillsDir(),
-    agentRecallMemories: (query: string, limit: number): Promise<string[]> =>
-        AgentService.AgentRecallMemories(query, limit).then(r => r || []),
-    agentSaveMemory: (kind: string, content: string, tags: string, source: string): Promise<void> =>
-        AgentService.AgentSaveMemory(kind, content, tags, source),
     agentGetHistory: (): Promise<AiMessage[]> =>
         AgentService.AgentGetHistory().then(r => (r || []) as any),
     agentSaveHistory: (messages: AiMessage[]): Promise<void> =>

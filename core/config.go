@@ -482,7 +482,27 @@ type Store struct {
 	k8sOrchStore *K8sOrchestrationStore
 }
 
+var (
+	testAppConfigDir   string
+	testAppConfigDirMu sync.RWMutex
+)
+
+// SetAppConfigDirForTest 用于单测隔离自定义配置目录
+func SetAppConfigDirForTest(dir string) {
+	testAppConfigDirMu.Lock()
+	defer testAppConfigDirMu.Unlock()
+	testAppConfigDir = dir
+}
+
 func AppConfigDir() (string, error) {
+	testAppConfigDirMu.RLock()
+	if testAppConfigDir != "" {
+		dir := testAppConfigDir
+		testAppConfigDirMu.RUnlock()
+		return dir, nil
+	}
+	testAppConfigDirMu.RUnlock()
+
 	base, err := os.UserConfigDir()
 	if err != nil {
 		home, herr := os.UserHomeDir()

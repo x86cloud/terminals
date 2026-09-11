@@ -23,28 +23,11 @@ type MessageItem struct {
 	CreatedAt    int64  `json:"created_at"`
 }
 
-type MemoryItem struct {
-	ID        int64  `json:"id"`
-	Kind      string `json:"kind"` // episodic | semantic
-	Content   string `json:"content"`
-	Tags      string `json:"tags"`
-	Source    string `json:"source"`
-	Meta      string `json:"meta,omitempty"`
-	CreatedAt int64  `json:"created_at"`
-}
-
 type SkillItem struct {
 	Name         string `json:"name"`
 	Description  string `json:"description"`
 	Instructions string `json:"instructions"`
 	Tools        string `json:"tools"` // comma separated
-}
-
-type WorkflowItem struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Script      string `json:"script"`
-	Version     int    `json:"version"`
 }
 
 type Store struct {
@@ -111,35 +94,17 @@ func (s *Store) initSchema() error {
 	);
 	CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
 
-	CREATE TABLE IF NOT EXISTS memories (
-		id          INTEGER PRIMARY KEY AUTOINCREMENT,
-		kind        TEXT,
-		content     TEXT,
-		tags        TEXT,
-		source      TEXT,
-		meta        TEXT,
-		created_at  INTEGER
-	);
-
 	CREATE TABLE IF NOT EXISTS skills (
 		name         TEXT PRIMARY KEY,
 		description  TEXT,
 		instructions TEXT,
 		tools        TEXT
 	);
-
-	CREATE TABLE IF NOT EXISTS workflows (
-		name        TEXT PRIMARY KEY,
-		description TEXT,
-		script      TEXT,
-		version     INTEGER
-	);
 	`
 	_, err := s.db.Exec(schemaSQL)
 	if err != nil {
 		return err
 	}
-	_, _ = s.db.Exec("ALTER TABLE memories ADD COLUMN meta TEXT;")
 	return nil
 }
 
@@ -292,69 +257,7 @@ func (s *Store) ClearSessionMessages(sessionID string) error {
 	return err
 }
 
-// ---------- Memory Operations ----------
-
-func (s *Store) SaveMemory(it MemoryItem) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if it.CreatedAt == 0 {
-		it.CreatedAt = time.Now().UnixMilli()
-	}
-
-	_, err := s.db.Exec(`
-		INSERT INTO memories (kind, content, tags, source, meta, created_at)
-		VALUES (?, ?, ?, ?, ?, ?)
-	`, it.Kind, it.Content, it.Tags, it.Source, it.Meta, it.CreatedAt)
-	return err
-}
-
-func (s *Store) QueryMemories(query string, sourceFilter string, limit int) ([]MemoryItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if limit <= 0 {
-		limit = 10
-	}
-
-	var rows *sql.Rows
-	var err error
-	if sourceFilter != "" {
-		rows, err = s.db.Query(`
-			SELECT id, kind, content, tags, source, COALESCE(meta, ''), created_at
-			FROM memories
-			WHERE (content LIKE ? OR tags LIKE ?) AND source = ?
-			ORDER BY id DESC LIMIT ?
-		`, "%"+query+"%", "%"+query+"%", sourceFilter, limit)
-	} else {
-		rows, err = s.db.Query(`
-			SELECT id, kind, content, tags, source, COALESCE(meta, ''), created_at
-			FROM memories
-			WHERE content LIKE ? OR tags LIKE ?
-			ORDER BY id DESC LIMIT ?
-		`, "%"+query+"%", "%"+query+"%", limit)
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var list []MemoryItem
-	for rows.Next() {
-		var it MemoryItem
-		var tg, src, mt sql.NullString
-		if err := rows.Scan(&it.ID, &it.Kind, &it.Content, &tg, &src, &mt, &it.CreatedAt); err != nil {
-			continue
-		}
-		it.Tags = tg.String
-		it.Source = src.String
-		it.Meta = mt.String
-		list = append(list, it)
-	}
-	return list, nil
-}
-
-// ---------- Skills & Workflows ----------
+// ---------- Skills ----------
 
 func (s *Store) ListSkills() ([]SkillItem, error) {
 	s.mu.RLock()
@@ -391,74 +294,5 @@ func (s *Store) SaveSkill(it SkillItem) error {
 			instructions = excluded.instructions,
 			tools = excluded.tools
 	`, it.Name, it.Description, it.Instructions, it.Tools)
-	return err
-}
-
-// ---------- Workflow Operations ----------
-
-func (s *Store) SaveWorkflow(it WorkflowItem) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if it.Version <= 0 {
-		it.Version = 1
-	}
-
-	_, err := s.db.Exec(`
-		INSERT INTO workflows (name, description, script, version)
-		VALUES (?, ?, ?, ?)
-		ON CONFLICT(name) DO UPDATE SET
-			description = excluded.description,
-			script = excluded.script,
-			version = excluded.version
-	`, it.Name, it.Description, it.Script, it.Version)
-	return err
-}
-
-func (s *Store) GetWorkflow(name string) (*WorkflowItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	var it WorkflowItem
-	var desc, script sql.NullString
-	err := s.db.QueryRow("SELECT name, description, script, version FROM workflows WHERE name = ?", name).
-		Scan(&it.Name, &desc, &script, &it.Version)
-	if err != nil {
-		return nil, err
-	}
-	it.Description = desc.String
-	it.Script = script.String
-	return &it, nil
-}
-
-func (s *Store) ListWorkflows() ([]WorkflowItem, error) {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	rows, err := s.db.Query("SELECT name, description, script, version FROM workflows")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var list []WorkflowItem
-	for rows.Next() {
-		var it WorkflowItem
-		var desc, script sql.NullString
-		if err := rows.Scan(&it.Name, &desc, &script, &it.Version); err != nil {
-			continue
-		}
-		it.Description = desc.String
-		it.Script = script.String
-		list = append(list, it)
-	}
-	return list, nil
-}
-
-func (s *Store) DeleteWorkflow(name string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	_, err := s.db.Exec("DELETE FROM workflows WHERE name = ?", name)
 	return err
 }

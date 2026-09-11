@@ -242,10 +242,10 @@ func TestHttp_InsecureSkipVerify(t *testing.T) {
 	}
 }
 
-func TestHttp_ToolBusRegistrationAndReadonlyCompatibility(t *testing.T) {
+func TestHttp_ToolBusRegistration(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("compat-ok"))
+		_, _ = w.Write([]byte("ok"))
 	}))
 	defer ts.Close()
 
@@ -266,15 +266,6 @@ func TestHttp_ToolBusRegistrationAndReadonlyCompatibility(t *testing.T) {
 		t.Errorf("http_request 权限等级应为 LevelAllow, 实际 %s", fullTool.Level)
 	}
 
-	// 验证 http_request_readonly 工具已注册
-	readonlyTool, ok := bus.Get("http_request_readonly")
-	if !ok {
-		t.Fatal("未找到 http_request_readonly 工具")
-	}
-	if readonlyTool.Level != guard.LevelAllow {
-		t.Errorf("http_request_readonly 权限等级应为 LevelAllow, 实际 %s", readonlyTool.Level)
-	}
-
 	// 通过 ToolBus.Invoke 测试全功能 http_request
 	inputJSON, _ := json.Marshal(HttpRequestInput{
 		Method: "GET",
@@ -283,14 +274,5 @@ func TestHttp_ToolBusRegistrationAndReadonlyCompatibility(t *testing.T) {
 	res := bus.Invoke(context.Background(), "trace_1", "session_1", "http_request", string(inputJSON))
 	if !res.OK {
 		t.Fatalf("ToolBus 调用 http_request 失败: %s", res.Error)
-	}
-
-	// 通过 ToolBus.Invoke 测试兼容的 http_request_readonly
-	inputReadonlyJSON, _ := json.Marshal(HttpReadonlyInput{
-		URL: ts.URL,
-	})
-	resReadonly := bus.Invoke(context.Background(), "trace_2", "session_1", "http_request_readonly", string(inputReadonlyJSON))
-	if !resReadonly.OK {
-		t.Fatalf("ToolBus 调用 http_request_readonly 兼容失败: %s", resReadonly.Error)
 	}
 }

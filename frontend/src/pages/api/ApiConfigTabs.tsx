@@ -143,12 +143,13 @@ export function ConfigBody({ state }: { state: ApiState }) {
                                 placeholder="Header Key (如 Content-Type)"
                                 value={h.name}
                                 options={COMMON_HEADER_KEYS}
-                                filterOption={(inputValue, option) =>
-                                    !inputValue ||
-                                    (option?.value ?? '')
-                                        .toLowerCase()
-                                        .includes(inputValue.toLowerCase())
-                                }
+                                showSearch={{
+                                    filterOption: (inputValue, option) =>
+                                        !inputValue ||
+                                        (option?.value ?? '')
+                                            .toLowerCase()
+                                            .includes(inputValue.toLowerCase())
+                                }}
                                 onChange={(val) => updateHeader(i, { name: val })}
                                 onSelect={(val) => {
                                     const defaultVal = getHeaderDefaultValue(val)
@@ -166,12 +167,13 @@ export function ConfigBody({ state }: { state: ApiState }) {
                                 value={h.value}
                                 options={getHeaderValueOptions(h.name)}
                                 popupMatchSelectWidth={false}
-                                filterOption={(inputValue, option) =>
-                                    !inputValue ||
-                                    (option?.value ?? '')
-                                        .toLowerCase()
-                                        .includes(inputValue.toLowerCase())
-                                }
+                                showSearch={{
+                                    filterOption: (inputValue, option) =>
+                                        !inputValue ||
+                                        (option?.value ?? '')
+                                            .toLowerCase()
+                                            .includes(inputValue.toLowerCase())
+                                }}
                                 onChange={(val) => updateHeader(i, { value: val })}
                                 defaultActiveFirstOption={false}
                             />

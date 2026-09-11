@@ -99,21 +99,6 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 		},
 	})
 
-	// 异步尝试沉淀会话情节记忆与关键事实
-	if agent.DefaultRuntime.Memory != nil && len(messages) >= 4 {
-		schemaMsgs := make([]*schema.Message, 0, len(messages))
-		for _, m := range messages {
-			if m.Role == "user" {
-				schemaMsgs = append(schemaMsgs, schema.UserMessage(m.Content))
-			} else if m.Role == "assistant" {
-				schemaMsgs = append(schemaMsgs, schema.AssistantMessage(m.Content, nil))
-			}
-		}
-		go func(sid string, msgs []*schema.Message) {
-			_ = agent.DefaultRuntime.Memory.SummarizeSession(context.Background(), sid, msgs, agent.DefaultRuntime.Router)
-		}(sessionID, schemaMsgs)
-	}
-
 	return fullText, nil
 }
 
@@ -509,14 +494,6 @@ func (s *AgentService) AgentOpenSkillsDir() (string, error) {
 		return dir, fmt.Errorf("打开本地技能目录失败: %w", err)
 	}
 	return dir, nil
-}
-
-func (s *AgentService) AgentRecallMemories(query string, limit int) []string {
-	return agent.DefaultRuntime.Memory.Recall(context.Background(), query, limit)
-}
-
-func (s *AgentService) AgentSaveMemory(kind, content, tags, source string) error {
-	return agent.DefaultRuntime.Memory.SaveFact(kind, content, tags, source)
 }
 
 func (s *AgentService) AgentGetHistory() ([]agent.FrontendMessage, error) {

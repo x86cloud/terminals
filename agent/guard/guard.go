@@ -314,17 +314,16 @@ func (g *PolicyGuard) initDefaultRules() {
 	// 6. Protocol & Orchestration tools
 	g.rules["mqtt_publish"] = ToolRule{ToolName: "mqtt_publish", Level: LevelAllow, Description: "发布 MQTT 消息"}
 	g.rules["mqtt_subscribe_once"] = ToolRule{ToolName: "mqtt_subscribe_once", Level: LevelAllow, Description: "单次订阅 MQTT 消息"}
-	g.rules["http_request_readonly"] = ToolRule{ToolName: "http_request_readonly", Level: LevelAllow, Description: "发送 HTTP GET 请求"}
 	g.rules["http_request"] = ToolRule{ToolName: "http_request", Level: LevelAllow, Description: "发送全功能 HTTP/HTTPS 网络请求 (支持全方法、请求体与 Header)"}
-
-	g.rules["workflow_run"] = ToolRule{ToolName: "workflow_run", Level: LevelAllow, Description: "执行工作流"}
-	g.rules["workflow_create"] = ToolRule{ToolName: "workflow_create", Level: LevelAllow, Description: "创建工作流"}
+	g.rules["api_manager"] = ToolRule{
+		ToolName:    "api_manager",
+		Level:       LevelAllow,
+		Description: "管理 API 调试工具中的接口树与分组 (增删改查)",
+		AuditFunc:   g.auditApiManager,
+	}
 
 	g.rules["skill_load"] = ToolRule{ToolName: "skill_load", Level: LevelAllow, Description: "加载技能包 SOP"}
 	g.rules["skill_list"] = ToolRule{ToolName: "skill_list", Level: LevelAllow, Description: "列出可用技能包"}
-
-	g.rules["memory_save"] = ToolRule{ToolName: "memory_save", Level: LevelAllow, Description: "保存长期语义记忆"}
-	g.rules["memory_recall"] = ToolRule{ToolName: "memory_recall", Level: LevelAllow, Description: "检索召回事实记忆"}
 
 	g.rules["ask_user"] = ToolRule{ToolName: "ask_user", Level: LevelAllow, Description: "向用户发起交互询问"}
 }
@@ -725,6 +724,25 @@ func (g *PolicyGuard) auditContainerExecCommand(ctx context.Context, inputJSON s
 
 	// 3. 其它带有修改/写倾向的命令要求确认
 	return LevelConfirm, fmt.Sprintf("执行容器内 Exec 命令 (%s) 具有状态变更潜在风险，需人工审批确认", strings.TrimSpace(innerCmd))
+}
+
+func (g *PolicyGuard) auditApiManager(ctx context.Context, input string) (PermissionLevel, string) {
+	var payload struct {
+		Action string `json:"action"`
+		ID     string `json:"id"`
+		Name   string `json:"name"`
+	}
+	if err := json.Unmarshal([]byte(input), &payload); err == nil {
+		action := strings.ToLower(strings.TrimSpace(payload.Action))
+		if action == "delete" {
+			target := payload.ID
+			if target == "" {
+				target = payload.Name
+			}
+			return LevelConfirm, fmt.Sprintf("删除 API 接口或分组 (ID/名称: %s)", target)
+		}
+	}
+	return LevelAllow, ""
 }
 
 func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input string, defaultLevel PermissionLevel) (PermissionLevel, string) {

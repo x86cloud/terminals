@@ -13,13 +13,11 @@ import (
 	"terminal/agent/events"
 	"terminal/agent/executor"
 	"terminal/agent/guard"
-	"terminal/agent/memory"
 	"terminal/agent/planner"
 	"terminal/agent/skills"
 	"terminal/agent/store"
 	"terminal/agent/tools"
 	"terminal/agent/verifier"
-	"terminal/agent/workflow"
 	"terminal/core"
 	"terminal/db"
 	"terminal/docker"
@@ -29,15 +27,16 @@ import (
 )
 
 func setupTestStore(t *testing.T) (*store.Store, func()) {
-	tmpDir, err := os.MkdirTemp("", "xagent_test_*")
+	tmpDir, err := os.MkdirTemp("", "agent_test_*")
 	if err != nil {
 		t.Fatalf("创建临时目录失败: %v", err)
 	}
-	dbPath := filepath.Join(tmpDir, "test_xagent.db")
+	dbPath := filepath.Join(tmpDir, "test_agent.db")
 	st, err := store.NewStore(dbPath)
 	if err != nil {
-		t.Fatalf("创建测试数据库失败: %v", err)
+		t.Fatalf("初始化测试存储失败: %v", err)
 	}
+
 	cleanup := func() {
 		_ = st.Close()
 		_ = os.RemoveAll(tmpDir)
@@ -62,19 +61,6 @@ func TestStoreCRUD(t *testing.T) {
 	msgs, err := st.ListMessages("test_sess_1")
 	if err != nil || len(msgs) != 1 || msgs[0].Content != "你好，这是一条测试消息" {
 		t.Fatalf("读取消息失败: %v", err)
-	}
-
-	// 2. Memory
-	if err := st.SaveMemory(store.MemoryItem{
-		Kind:    "semantic",
-		Content: "Redis 运行在 6379 端口",
-		Tags:    "redis,port",
-	}); err != nil {
-		t.Fatalf("保存记忆失败: %v", err)
-	}
-	mems, err := st.QueryMemories("Redis", "", 5)
-	if err != nil || len(mems) == 0 {
-		t.Fatalf("检索记忆失败: %v", err)
 	}
 }
 
@@ -167,31 +153,6 @@ func TestSkillsRegistry(t *testing.T) {
 	list := sk.List()
 	if len(list) != 1 {
 		t.Fatalf("期望技能包 1 个，实际 %d", len(list))
-	}
-}
-
-func TestWorkflowEngine(t *testing.T) {
-	st, cleanup := setupTestStore(t)
-	defer cleanup()
-
-	eb := events.NewEventBus()
-	wfEng := workflow.NewWorkflowEngine(eb)
-	wfEng.SetStore(st)
-
-	// Save a workflow
-	err := st.SaveWorkflow(store.WorkflowItem{
-		Name:        "diag_flow",
-		Description: "系统诊断工作流",
-		Script:      `{"name":"diag_flow","steps":[{"name":"step1","tool_name":"ping","args":{"host":"127.0.0.1"}}]}`,
-		Version:     1,
-	})
-	if err != nil {
-		t.Fatalf("保存工作流失败: %v", err)
-	}
-
-	wf, err := st.GetWorkflow("diag_flow")
-	if err != nil || wf == nil || wf.Name != "diag_flow" {
-		t.Fatalf("读取工作流失败: %v", err)
 	}
 }
 
@@ -326,36 +287,6 @@ func TestAskManager(t *testing.T) {
 	}
 }
 
-func TestMemoryRecall(t *testing.T) {
-	st, cleanup := setupTestStore(t)
-	defer cleanup()
-
-	memSys := memory.NewMemorySystem(st)
-
-	// Save episodic and semantic memories
-	err := memSys.SaveEpisodic("sess_100", "用户已排查完 MySQL 连接数告警并调整了最大连接参数", "mysql,connections")
-	if err != nil {
-		t.Fatalf("SaveEpisodic 失败: %v", err)
-	}
-
-	err = memSys.SaveFact("semantic", "MySQL 实例端口为 3306", "mysql,port", "sess_100")
-	if err != nil {
-		t.Fatalf("SaveFact 失败: %v", err)
-	}
-
-	// Recall with query
-	results := memSys.Recall(context.Background(), "MySQL", 5)
-	if len(results) < 2 {
-		t.Fatalf("期望检索到至少 2 条记忆，实际 %d", len(results))
-	}
-
-	// Recall with source filter
-	filtered := memSys.RecallWithSource(context.Background(), "MySQL", "sess_100", 5)
-	if len(filtered) < 2 {
-		t.Fatalf("期望按 source 检索到至少 2 条记忆，实际 %d", len(filtered))
-	}
-}
-
 func TestRenderStepArgsAndActionExecution(t *testing.T) {
 	st, cleanup := setupTestStore(t)
 	defer cleanup()
@@ -367,10 +298,7 @@ func TestRenderStepArgsAndActionExecution(t *testing.T) {
 	ex := executor.NewExecutor(tb, vr, eb)
 
 	askMgr := ask.NewAskManager(eb)
-	wf := workflow.NewWorkflowEngine(eb)
-	wf.SetStore(st)
-
-	ex.SetManagers(wf, askMgr)
+	ex.SetAskManager(askMgr)
 
 	// 1. Test template rendering
 	stepOutputs := map[string]any{

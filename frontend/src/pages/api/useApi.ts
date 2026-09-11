@@ -66,16 +66,16 @@ export function useApi() {
     const [apiTree, setApiTree] = useState<ApiTreeNode[]>([])
     const hasLoadedFileRef = useRef(false)
 
-    // 首次挂载时从本地文件 apis.json 加载
-    useEffect(() => {
-        let isMounted = true
+    const isExternalSyncRef = useRef(false)
+
+    const reloadApiTree = useCallback(() => {
         API.loadApiTree()
             .then((raw) => {
-                if (!isMounted) return
                 if (raw && raw.trim()) {
                     try {
                         const parsed = JSON.parse(raw)
                         if (Array.isArray(parsed) && parsed.length > 0) {
+                            isExternalSyncRef.current = true
                             setApiTree(parsed)
                         }
                     } catch (e) {
@@ -88,14 +88,26 @@ export function useApi() {
                 console.error('加载本地接口数据失败:', e)
                 hasLoadedFileRef.current = true
             })
-        return () => {
-            isMounted = false
-        }
     }, [])
+
+    // 首次挂载时从本地文件 apis.json 加载，并监听全局同步事件
+    useEffect(() => {
+        reloadApiTree()
+        const unsub = subscribe('api:tree-updated', () => {
+            reloadApiTree()
+        })
+        return () => {
+            unsub()
+        }
+    }, [reloadApiTree])
 
     // 监听接口树变更，自动防抖持久化至本地文件
     useEffect(() => {
         if (!hasLoadedFileRef.current) return
+        if (isExternalSyncRef.current) {
+            isExternalSyncRef.current = false
+            return
+        }
 
         const timer = setTimeout(() => {
             API.saveApiTree(JSON.stringify(apiTree, null, 2)).catch((e) => {

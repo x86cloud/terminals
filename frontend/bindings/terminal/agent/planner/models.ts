@@ -20,7 +20,7 @@ export interface PlanStep {
     "id": string;
 
     /**
-     * tool_call | subagent | job | workflow | ask_user
+     * tool_call | subagent | job | ask_user
      */
     "action": string;
     "tool_name"?: string;

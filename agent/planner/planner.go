@@ -25,7 +25,7 @@ const (
 
 type PlanStep struct {
 	ID          string          `json:"id"`
-	Action      string          `json:"action"` // tool_call | subagent | job | workflow | ask_user
+	Action      string          `json:"action"` // tool_call | subagent | job | ask_user
 	ToolName    string          `json:"tool_name,omitempty"`
 	Args        json.RawMessage `json:"args"`
 	Description string          `json:"description"`
