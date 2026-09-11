@@ -12,6 +12,7 @@ import * as ApiService from '../bindings/terminal/services/apiservice'
 import * as AgentService from '../bindings/terminal/services/agentservice'
 import * as DockerService from '../bindings/terminal/services/dockerservice'
 import * as K8sService from '../bindings/terminal/services/k8sservice'
+import * as WikiService from '../bindings/terminal/services/wikiservice'
 
 import type {
     DirListing,
@@ -70,6 +71,8 @@ import type {
     K8sDeleteResult,
     AppVersionInfo,
     UpdateCheckResult,
+    WikiNode,
+    WikiCatalogItem,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -841,6 +844,21 @@ export const API = {
         (K8sService as any).K8sOfflineOrchestration(serverId, recordId, deleteLocalFile).then((r: any) => r || []),
     k8sDeleteOrchestrationRecordOnly: (recordId: string): Promise<void> =>
         (K8sService as any).K8sDeleteOrchestrationRecordOnly(recordId),
+
+    // Wiki 知识库 (LLM Wiki)
+    wikiGetDir: (): Promise<string> => WikiService.GetWikiDir(),
+    wikiOpenDir: (): Promise<void> => WikiService.OpenWikiDir(),
+    wikiListTree: (): Promise<WikiNode[]> => WikiService.ListWikiTree().then(r => (r || []) as any),
+    wikiGetCatalog: (): Promise<WikiCatalogItem[]> => WikiService.GetWikiCatalog().then(r => (r || []) as any),
+    wikiReadPage: (relPath: string): Promise<string> => WikiService.ReadWikiPage(relPath),
+    wikiSavePage: (relPath: string, content: string): Promise<void> => WikiService.SaveWikiPage(relPath, content),
+    wikiCreateNode: (parentPath: string, name: string, isFolder: boolean): Promise<string> =>
+        WikiService.CreateWikiNode(parentPath, name, isFolder),
+    wikiRenameNode: (oldRelPath: string, newRelPath: string): Promise<void> =>
+        WikiService.RenameWikiNode(oldRelPath, newRelPath),
+    wikiDeleteNode: (relPath: string): Promise<void> => WikiService.DeleteWikiNode(relPath),
+    wikiCompileSession: (sessionId: string, messages: FrontendMessage[]): Promise<string> =>
+        WikiService.CompileSessionToWiki(sessionId, messages as any),
 }
 
 /* ------------------------------------------------------------------ */

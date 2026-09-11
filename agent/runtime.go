@@ -169,6 +169,7 @@ func (rt *AgentRuntime) SetManagers(
 	_ = tools.RegisterMqttTools(rt.ToolBus, mq)
 	_ = tools.RegisterHttpTools(rt.ToolBus)
 	_ = tools.RegisterApiManagerTool(rt.ToolBus)
+	_ = tools.RegisterWikiTools(rt.ToolBus, rt.Router)
 	_ = tools.RegisterOrchestrationTools(rt.ToolBus, tools.OrchestrationManagers{
 		SkillsReg: rt.SkillsReg,
 		AskMgr:    rt.AskMgr,

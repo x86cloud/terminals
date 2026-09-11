@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { BarChart2, Link as LinkIcon } from 'lucide-react'
+import { BarChart2, Link as LinkIcon, BookOpen } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import TabBar, { TabItem } from '@/components/common/TabBar'
 import { ConnType } from '@/types'
@@ -14,6 +14,7 @@ export default function SessionTabs() {
         if (!activeTarget) return null
         if (activeTarget.kind === 'devtools') return 'devtools'
         if (activeTarget.kind === 'api') return 'api'
+        if (activeTarget.kind === 'wiki') return 'wiki'
         return `${activeTarget.kind}:${activeTarget.id}`
     }, [activeTarget])
 
@@ -129,6 +130,15 @@ export default function SessionTabs() {
             })
         }
 
+        if (tools.wiki.open) {
+            list.push({
+                key: 'wiki',
+                label: '知识库',
+                icon: <BookOpen size={13} />,
+                closable: true,
+            })
+        }
+
         return list
     }, [sessions, tools])
 
@@ -140,6 +150,10 @@ export default function SessionTabs() {
         }
         if (key === 'api') {
             activateTab('api')
+            return
+        }
+        if (key === 'wiki') {
+            activateTab('wiki')
             return
         }
 
@@ -159,6 +173,10 @@ export default function SessionTabs() {
         }
         if (key === 'api') {
             closeTool('api')
+            return
+        }
+        if (key === 'wiki') {
+            closeTool('wiki')
             return
         }
 

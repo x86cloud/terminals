@@ -11,6 +11,7 @@ import {
     Bot,
     BarChart2,
     Link as LinkIcon,
+    BookOpen,
 } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import ContextMenu, { closedMenu, MenuState, MenuItem } from '@/components/ContextMenu'
@@ -55,6 +56,7 @@ interface Props {
     onOpenAiAgent?: () => void
     onOpenApi?: () => void
     onOpenDevTools?: () => void
+    onOpenWiki?: () => void
     onFocusSession?: (id: string, kind: ConnType) => void
 }
 
@@ -92,6 +94,7 @@ export default function Sidebar({
     onOpenAiAgent,
     onOpenApi,
     onOpenDevTools,
+    onOpenWiki,
     onFocusSession,
 }: Props) {
     const { sessions: ctxSessions, activeTarget, openTool, activateTab, aiSidebarOpen, toggleAiSidebar, sidebarOpen } = useSession()
@@ -504,6 +507,14 @@ export default function Sidebar({
                         className={s.toolBtn}
                     >
                         API 调试
+                    </Button>
+                    <Button
+                        type="text"
+                        icon={<BookOpen size={15} />}
+                        onClick={onOpenWiki || (() => openTool('wiki'))}
+                        className={s.toolBtn}
+                    >
+                        知识库
                     </Button>
                 </div>
             </div>

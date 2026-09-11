@@ -118,6 +118,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     <Space size={8}>
                         <Button
                             danger
+                            type='primary'
                             icon={<Trash2 size={14} />}
                             onClick={() => {
                                 setPruneReport(null)
@@ -126,7 +127,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                         >
                             系统清理 (Prune)
                         </Button>
-                        <Button icon={<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />} onClick={onRefresh}>
+                        <Button type='primary' icon={<RefreshCw size={14} className={loading ? 'animate-spin' : ''} />} onClick={onRefresh}>
                             刷新概览
                         </Button>
                     </Space>

@@ -203,6 +203,7 @@ export function getAllOpenTabs(
     }
     if (tools.devtools.open) list.push({ kind: 'devtools', id: null })
     if (tools.api.open) list.push({ kind: 'api', id: null })
+    if (tools.wiki.open) list.push({ kind: 'wiki', id: null })
     return list
 }
 

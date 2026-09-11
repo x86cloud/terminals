@@ -14,7 +14,7 @@ import {
 import { API, ActiveConnectionInfo } from '@/api'
 import { disconnectHelper, getAllOpenTabs, pickAdjacentFallback } from './sessionHelpers'
 
-export type ToolKind = 'api' | 'devtools' | 'aiAgent'
+export type ToolKind = 'api' | 'devtools' | 'aiAgent' | 'wiki'
 export type TabKind = ConnType | ToolKind
 
 export interface ActiveTarget {
@@ -37,6 +37,7 @@ export interface SessionsState {
 export interface ToolsState {
     api: { open: boolean; active: boolean }
     devtools: { open: boolean; active: boolean }
+    wiki: { open: boolean; active: boolean }
     aiAgent: { open: boolean; active: boolean }
 }
 
@@ -73,6 +74,7 @@ const initialSessionsState: SessionsState = {
 const initialToolsState: ToolsState = {
     api: { open: false, active: false },
     devtools: { open: false, active: false },
+    wiki: { open: false, active: false },
     aiAgent: { open: false, active: false },
 }
 
@@ -237,6 +239,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             setTools((prev) => ({
                 api: { ...prev.api, active: false },
                 devtools: { ...prev.devtools, active: false },
+                wiki: { ...prev.wiki, active: false },
                 aiAgent: prev.aiAgent,
             }))
             return
@@ -247,11 +250,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             return
         }
 
-        if (kind === 'api' || kind === 'devtools') {
+        if (kind === 'api' || kind === 'devtools' || kind === 'wiki') {
             setActiveTarget({ kind, id: null })
             setTools((prev) => ({
                 api: { open: kind === 'api' ? true : prev.api.open, active: kind === 'api' },
                 devtools: { open: kind === 'devtools' ? true : prev.devtools.open, active: kind === 'devtools' },
+                wiki: { open: kind === 'wiki' ? true : prev.wiki.open, active: kind === 'wiki' },
                 aiAgent: prev.aiAgent,
             }))
         } else {
@@ -259,6 +263,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             setTools((prev) => ({
                 api: { ...prev.api, active: false },
                 devtools: { ...prev.devtools, active: false },
+                wiki: { ...prev.wiki, active: false },
                 aiAgent: prev.aiAgent,
             }))
         }
@@ -284,7 +289,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setTools((prev) => ({
             ...prev,
             [tool]: { open: false, active: false },
-            ...(fallback?.kind === 'api' || fallback?.kind === 'devtools'
+            ...(fallback?.kind === 'api' || fallback?.kind === 'devtools' || fallback?.kind === 'wiki'
                 ? { [fallback.kind]: { ...prev[fallback.kind], active: true } }
                 : {}),
         }))
@@ -342,11 +347,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             return curr
         })
 
-        if (fallback?.kind === 'api' || fallback?.kind === 'devtools') {
+        if (fallback?.kind === 'api' || fallback?.kind === 'devtools' || fallback?.kind === 'wiki') {
             setTools((prev) => ({
                 ...prev,
                 api: { ...prev.api, active: fallback.kind === 'api' },
                 devtools: { ...prev.devtools, active: fallback.kind === 'devtools' },
+                wiki: { ...prev.wiki, active: fallback.kind === 'wiki' },
                 aiAgent: prev.aiAgent,
             }))
         }

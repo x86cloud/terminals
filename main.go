@@ -29,6 +29,7 @@ func main() {
 	agentSvc := services.NewAgentService()
 	dockerSvc := services.NewDockerService()
 	k8sSvc := services.NewK8sService()
+	wikiSvc := services.NewWikiService()
 
 	app := application.New(application.Options{
 		Name:        "xClient",
@@ -47,6 +48,7 @@ func main() {
 			application.NewService(agentSvc),
 			application.NewService(dockerSvc),
 			application.NewService(k8sSvc),
+			application.NewService(wikiSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

@@ -12,6 +12,7 @@ import SqliteClient from '@/pages/sqlite/SqliteClient'
 import DockerClient from '@/pages/docker/DockerClient'
 import K8sClient from '@/pages/k8s/K8sClient'
 import ApiClient from '@/pages/api/ApiClient'
+import WikiClient from '@/pages/wiki/WikiClient'
 import DevTools from '@/components/DevTools'
 import g from '@/styles/global.module.less'
 import a from '@/components/app/Stage.module.less'
@@ -65,7 +66,8 @@ export default function Stage({
         sessions.mongo.length === 0 &&
         sessions.sqlite.length === 0 &&
         !tools.devtools.open &&
-        !tools.api.open
+        !tools.api.open &&
+        !tools.wiki.open
 
     return (
         <div className={a.stage}>
@@ -182,6 +184,14 @@ export default function Stage({
                 <div style={activeTarget?.kind === 'api' ? shownPane : hiddenPane}>
                     <ErrorBoundary title="API 页面渲染异常" onClose={() => closeTool('api')}>
                         <ApiClient onClose={() => closeTool('api')} />
+                    </ErrorBoundary>
+                </div>
+            )}
+
+            {tools.wiki.open && (
+                <div style={activeTarget?.kind === 'wiki' ? shownPane : hiddenPane}>
+                    <ErrorBoundary title="知识库页面渲染异常" onClose={() => closeTool('wiki')}>
+                        <WikiClient onClose={() => closeTool('wiki')} />
                     </ErrorBoundary>
                 </div>
             )}

@@ -15,6 +15,7 @@ import (
 	"terminal/agent/events"
 	"terminal/agent/router"
 	"terminal/agent/store"
+	"terminal/agent/wiki"
 	"terminal/core"
 	"terminal/ssh"
 
@@ -230,6 +231,17 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 			sysPrompt = fmt.Sprintf("%s\n客户端当前已建立连通的 SSH 服务器会话: [%s]。",
 				sysPrompt, strings.Join(activeHosts, ", "))
 		}
+	}
+
+	// 动态感知本地 Wiki 知识库目录 (LLM Wiki 模式)
+	catalog, cErr := wiki.GetCatalog()
+	if cErr == nil && len(catalog) > 0 {
+		var wikiList []string
+		for _, it := range catalog {
+			wikiList = append(wikiList, fmt.Sprintf("- [%s] (%s): %s", it.RelPath, it.Title, it.Summary))
+		}
+		sysPrompt = fmt.Sprintf("%s\n\n【本地 Wiki 知识库 (LLM Wiki)】:\n系统维护有本地 Markdown 知识库，包含以下页面资产：\n%s\n提示：若需深入查阅具体配置或排障经验，请使用 `wiki_read` 工具读取；若用户要求将排障结论或环境参数写入/更新知识库，可使用 `wiki_write` 或 `wiki_update` 工具。",
+			sysPrompt, strings.Join(wikiList, "\n"))
 	}
 
 	if strings.TrimSpace(sysPrompt) != "" {

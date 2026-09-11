@@ -325,6 +325,11 @@ func (g *PolicyGuard) initDefaultRules() {
 	g.rules["skill_load"] = ToolRule{ToolName: "skill_load", Level: LevelAllow, Description: "加载技能包 SOP"}
 	g.rules["skill_list"] = ToolRule{ToolName: "skill_list", Level: LevelAllow, Description: "列出可用技能包"}
 
+	g.rules["wiki_list"] = ToolRule{ToolName: "wiki_list", Level: LevelAllow, Description: "查看 Wiki 知识库目录清单与摘要"}
+	g.rules["wiki_read"] = ToolRule{ToolName: "wiki_read", Level: LevelAllow, Description: "读取 Wiki 文档完整内容"}
+	g.rules["wiki_write"] = ToolRule{ToolName: "wiki_write", Level: LevelAllow, Description: "创建新 Wiki 文档或全量覆写"}
+	g.rules["wiki_update"] = ToolRule{ToolName: "wiki_update", Level: LevelAllow, Description: "增量修补/融合更新已有 Wiki 文档"}
+
 	g.rules["ask_user"] = ToolRule{ToolName: "ask_user", Level: LevelAllow, Description: "向用户发起交互询问"}
 }
 

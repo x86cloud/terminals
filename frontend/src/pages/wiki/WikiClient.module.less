@@ -1,0 +1,235 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.wikiContainer {
+    .fill();
+    display: flex;
+    flex-direction: row;
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: @bg-1;
+    min-width: 0;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 左侧目录树侧边栏 */
+.sidebar {
+    width: 270px;
+    min-width: 240px;
+    max-width: 380px;
+    height: 100%;
+    background: @bg-elev;
+    border-right: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.sidebarHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px 6px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.headerTitle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: @text;
+
+    .icon {
+        color: @accent;
+    }
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.searchWrap {
+    padding: 8px 12px;
+}
+
+.treeWrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 6px;
+}
+
+.sidebarFooter {
+    padding: 8px 12px;
+    font-size: @font-size-xs;
+    color: @text-dim;
+    border-top: 1px solid rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(0, 0, 0, 0.01);
+}
+
+.footerPath {
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover {
+        color: @accent;
+        text-decoration: underline;
+    }
+}
+
+/* 右侧主工作区 */
+.mainArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: @bg-1;
+    height: 100%;
+    overflow: hidden;
+}
+
+.topBar {
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+    flex-shrink: 0;
+}
+
+.docMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.docTitle {
+    font-size: 14px;
+    font-weight: 600;
+    color: @text;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.docPath {
+    font-size: @font-size-xs;
+    color: @text-faint;
+    font-family: @font-mono;
+}
+
+.dirtyDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: @accent;
+    display: inline-block;
+}
+
+.topActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.metaInfo {
+    font-size: @font-size-xs;
+    color: @text-dim;
+    margin-right: 4px;
+}
+
+.workArea {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+.previewOnly {
+    flex: 1;
+    height: 100%;
+    overflow-y: auto;
+    padding: 24px 32px;
+}
+
+.editOnly {
+    flex: 1;
+    height: 100%;
+    overflow: hidden;
+}
+
+.splitContainer {
+    display: flex;
+    width: 100%;
+    height: 100%;
+}
+
+.splitEdit {
+    flex: 1;
+    height: 100%;
+    border-right: 1px solid @border;
+    overflow: hidden;
+}
+
+.splitPreview {
+    flex: 1;
+    height: 100%;
+    overflow-y: auto;
+    padding: 20px 28px;
+    background: @bg-elev;
+}
+
+/* 空状态 */
+.emptyState {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: @text-dim;
+    gap: 16px;
+    padding: 40px;
+    text-align: center;
+}
+
+.emptyIcon {
+    color: @text-faint;
+    opacity: 0.7;
+}
+
+.emptyTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: @text;
+}
+
+.emptyDesc {
+    font-size: 13px;
+    max-width: 480px;
+    line-height: 1.6;
+    color: @text-dim;
+}
+
+.emptyActions {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}

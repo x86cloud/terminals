@@ -130,7 +130,7 @@ export default function DockerClient({ session, onClose }: Props) {
                 <div className={s.headerLeft}>
                     <div className={s.titleArea}>
                         <ClientIcon kind="docker" size={20} />
-                        <span>{session.title || 'Docker 容器管理'}</span>
+                        {/* <span>{session.title || 'Docker 容器管理'}</span> */}
                     </div>
 
                     <div className={s.targetBadge} title={session.target}>
@@ -139,13 +139,13 @@ export default function DockerClient({ session, onClose }: Props) {
                         <span style={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {session.target}
                         </span>
-                    </div>
 
-                    {pingLatency !== null && (
-                        <Tag color={pingLatency < 80 ? 'success' : pingLatency < 300 ? 'warning' : 'default'} style={{ margin: 0 }}>
-                            {pingLatency} ms
-                        </Tag>
-                    )}
+                        {pingLatency !== null && (
+                            <Tag color={pingLatency < 80 ? 'success' : pingLatency < 300 ? 'warning' : 'default'} style={{ margin: 0 }}>
+                                {pingLatency} ms
+                            </Tag>
+                        )}
+                    </div>
                 </div>
 
                 <div className={s.headerRight}>
@@ -157,6 +157,7 @@ export default function DockerClient({ session, onClose }: Props) {
                     />
 
                     <Button
+                        type='primary'
                         size="small"
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         onClick={() => fetchOverview(false)}

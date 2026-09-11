@@ -14,6 +14,7 @@ import * as SftpService from "./sftpservice.js";
 import * as SqliteService from "./sqliteservice.js";
 import * as SshService from "./sshservice.js";
 import * as SystemService from "./systemservice.js";
+import * as WikiService from "./wikiservice.js";
 export {
     AgentService,
     ApiService,
@@ -27,7 +28,8 @@ export {
     SftpService,
     SqliteService,
     SshService,
-    SystemService
+    SystemService,
+    WikiService
 };
 
 export type {

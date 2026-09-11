@@ -1204,4 +1204,21 @@ export interface UpdateCheckResult {
     errorMessage?: string
 }
 
+export interface WikiCatalogItem {
+    rel_path: string
+    title: string
+    summary: string
+    updated_at: number
+}
+
+export interface WikiNode {
+    id: string
+    name: string
+    rel_path: string
+    is_folder: boolean
+    size?: number
+    updated_at: number
+    children?: WikiNode[] | null
+}
+
 
