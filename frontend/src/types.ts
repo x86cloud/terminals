@@ -997,6 +997,16 @@ export interface SSHCronItem {
     comment: string
 }
 
+export interface AiModelItem {
+    id: string
+    name: string
+    model: string
+    baseUrl: string
+    apiKey: string
+    contextTokens: number
+    temperature?: number
+}
+
 export interface AppSettings {
     themeMode: 'light' | 'dark' | 'system'
     fontFamily: string
@@ -1007,6 +1017,8 @@ export interface AppSettings {
     aiBaseUrl?: string
     aiApiKey?: string
     aiModel?: string
+    aiModels?: AiModelItem[]
+    activeModelId?: string
     aiTemperature?: number
     aiModelContextTokens?: number
     aiContextCompressRatio?: number
@@ -1104,9 +1116,13 @@ export interface AgentPlan {
     id: string
     session_id: string
     objective: string
-    steps: AgentPlanStep[]
-    risk_level: 'low' | 'medium' | 'high'
-    need_confirm: boolean
+    content: string
+    file_path?: string
+    status?: 'proposed' | 'approved' | 'rejected' | 'expired'
+    is_update?: boolean
+    steps?: AgentPlanStep[]
+    risk_level?: 'low' | 'medium' | 'high'
+    need_confirm?: boolean
     executing?: boolean
     summary?: string
     reasoning_content?: string

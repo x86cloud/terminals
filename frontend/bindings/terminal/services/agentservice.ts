@@ -20,6 +20,9 @@ import * as planner$0 from "../agent/planner/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as skills$0 from "../agent/skills/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as store$0 from "../agent/store/models.js";
 
 export function AgentAnswerAsk(askID: string, answer: string): $CancellablePromise<boolean> {
     return $Call.ByID(4268168758, askID, answer);
@@ -41,8 +44,20 @@ export function AgentConfirmTool(confirmID: string, approved: boolean): $Cancell
     return $Call.ByID(214643347, confirmID, approved);
 }
 
+export function AgentCreateSession(title: string): $CancellablePromise<store$0.SessionItem> {
+    return $Call.ByID(526240329, title);
+}
+
 export function AgentDecideApproval(confirmID: string, approved: boolean, remember: boolean, reason: string): $CancellablePromise<boolean> {
     return $Call.ByID(2014994780, confirmID, approved, remember, reason);
+}
+
+export function AgentDeleteSession(sessionID: string): $CancellablePromise<void> {
+    return $Call.ByID(2187831712, sessionID);
+}
+
+export function AgentGenerateSessionTitle(sessionID: string): $CancellablePromise<string> {
+    return $Call.ByID(3259194106, sessionID);
 }
 
 export function AgentGetActiveConnection(): $CancellablePromise<agent$0.ActiveConnectionInfo | null> {
@@ -75,6 +90,10 @@ export function AgentGetSkillsDir(): $CancellablePromise<string> {
 
 export function AgentGetWorkspaceDir(): $CancellablePromise<string> {
     return $Call.ByID(2272406089);
+}
+
+export function AgentListSessions(): $CancellablePromise<store$0.SessionItem[] | null> {
+    return $Call.ByID(1371193518);
 }
 
 export function AgentListSkills(): $CancellablePromise<skills$0.Skill[] | null> {
@@ -123,4 +142,8 @@ export function AgentSetWorkspaceDir(dir: string): $CancellablePromise<string> {
 
 export function AgentStopSend(sessionID: string): $CancellablePromise<boolean> {
     return $Call.ByID(3629755689, sessionID);
+}
+
+export function AgentUpdateSessionTitle(sessionID: string, title: string): $CancellablePromise<void> {
+    return $Call.ByID(2101487052, sessionID, title);
 }

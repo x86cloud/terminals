@@ -1,12 +1,13 @@
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Checkbox, Tooltip, message } from 'antd'
 import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload } from 'lucide-react'
-import ContextMenu, {closedMenu, MenuItem, MenuState} from '@/components/ContextMenu'
-import {ConfirmModal, ConfirmState, PromptModal, PromptState} from '@/components/Modal'
+import ContextMenu, { closedMenu, MenuItem, MenuState } from '@/components/ContextMenu'
+import { ConfirmModal, ConfirmState, PromptModal, PromptState } from '@/components/Modal'
 import FileEditorModal from '@/pages/ssh/file/FileEditorModal'
-import {API, subscribe} from '@/api'
-import {FileItem} from '@/types'
-import {bytesToBase64, errorMessage, formatSize, formatTime, parentRemote} from '@/utils'
+import TransferBar from '@/components/TransferBar'
+import { API, subscribe } from '@/api'
+import { FileItem, Transfer } from '@/types'
+import { bytesToBase64, errorMessage, formatSize, formatTime, parentRemote } from '@/utils'
 import g from '@/styles/global.module.less'
 import fp from '@/pages/ssh/file/FilePanel.module.less'
 
@@ -17,10 +18,10 @@ interface Props {
     onPathChange: (path: string) => void
 }
 
-const emptyPrompt: PromptState = {open: false, title: '', value: ''}
-const emptyConfirm: ConfirmState = {open: false, title: '', message: ''}
+const emptyPrompt: PromptState = { open: false, title: '', value: '' }
+const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
 
-export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange}: Props) {
+export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange }: Props) {
     const [path, setPath] = useState(homeDir || '/')
     const [pathInput, setPathInput] = useState(homeDir || '/')
     const [items, setItems] = useState<FileItem[]>([])
@@ -75,6 +76,41 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange}
             }
         })
     }, [sessionId, path, load])
+
+    // ---- 会话专属的传输任务管理 ----
+    const [transfers, setTransfers] = useState<Transfer[]>([])
+
+    useEffect(() => {
+        const handleTransfer = (t: Transfer) => {
+            if (!t || !t.id || t.sessionId !== sessionId) return
+            setTransfers((prev) => {
+                const idx = prev.findIndex((x) => x.id === t.id)
+                if (idx >= 0) {
+                    const next = [...prev]
+                    next[idx] = t
+                    return next
+                }
+                return [...prev, t]
+            })
+        }
+        const offTransferProgress = subscribe('transfer:progress', handleTransfer)
+        const offTransferUpdate = subscribe('transfer:update', handleTransfer)
+
+        API.listTransfers()
+            .then((list) => {
+                if (list && list.length) {
+                    setTransfers(list.filter((x) => x.sessionId === sessionId))
+                } else {
+                    setTransfers([])
+                }
+            })
+            .catch(() => undefined)
+
+        return () => {
+            offTransferProgress()
+            offTransferUpdate()
+        }
+    }, [sessionId])
 
     const visible = useMemo(() => {
         const kw = filter.trim().toLowerCase()
@@ -235,27 +271,27 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange}
 
     const itemMenu = (item: FileItem, targets: string[]): MenuItem[] => [
         ...(item.isDir
-            ? [{key: 'open', label: '打开', icon: 'folder' as const, onClick: () => load(item.path)}]
-            : [{key: 'edit', label: '编辑文件', icon: 'edit' as const, disabled: targets.length > 1, onClick: () => askEdit(item)}]),
-        {key: 'download', label: `下载${targets.length > 1 ? ` (${targets.length})` : ''}`, icon: 'download', onClick: () => download(targets)},
-        {key: 'rename', label: '重命名', icon: 'edit', disabled: targets.length > 1, onClick: () => askRename(item)},
-        {key: 'copy', label: '复制路径', icon: 'copy', onClick: () => copyText(targets.join('\n'))},
-        {key: 'd1', label: '', divider: true},
-        {key: 'upload', label: '上传到当前目录', icon: 'upload', onClick: uploadViaDialog},
-        {key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile},
-        {key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder},
-        {key: 'd2', label: '', divider: true},
-        {key: 'delete', label: '删除', icon: 'trash', danger: true, onClick: () => askDelete(targets)},
+            ? [{ key: 'open', label: '打开', icon: 'folder' as const, onClick: () => load(item.path) }]
+            : [{ key: 'edit', label: '编辑文件', icon: 'edit' as const, disabled: targets.length > 1, onClick: () => askEdit(item) }]),
+        { key: 'download', label: `下载${targets.length > 1 ? ` (${targets.length})` : ''}`, icon: 'download', onClick: () => download(targets) },
+        { key: 'rename', label: '重命名', icon: 'edit', disabled: targets.length > 1, onClick: () => askRename(item) },
+        { key: 'copy', label: '复制路径', icon: 'copy', onClick: () => copyText(targets.join('\n')) },
+        { key: 'd1', label: '', divider: true },
+        { key: 'upload', label: '上传到当前目录', icon: 'upload', onClick: uploadViaDialog },
+        { key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile },
+        { key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder },
+        { key: 'd2', label: '', divider: true },
+        { key: 'delete', label: '删除', icon: 'trash', danger: true, onClick: () => askDelete(targets) },
     ]
 
     const blankMenu = (): MenuItem[] => [
-        {key: 'upload', label: '上传文件', icon: 'upload', onClick: uploadViaDialog},
-        {key: 'uploadDir', label: '上传文件夹', icon: 'folder', onClick: uploadFolderViaDialog},
-        {key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile},
-        {key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder},
-        {key: 'd1', label: '', divider: true},
-        {key: 'copy', label: '复制当前路径', icon: 'copy', onClick: () => copyText(path)},
-        {key: 'refresh', label: '刷新', icon: 'refresh', onClick: () => load(path)},
+        { key: 'upload', label: '上传文件', icon: 'upload', onClick: uploadViaDialog },
+        { key: 'uploadDir', label: '上传文件夹', icon: 'folder', onClick: uploadFolderViaDialog },
+        { key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile },
+        { key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder },
+        { key: 'd1', label: '', divider: true },
+        { key: 'copy', label: '复制当前路径', icon: 'copy', onClick: () => copyText(path) },
+        { key: 'refresh', label: '刷新', icon: 'refresh', onClick: () => load(path) },
     ]
 
     /* ---------------- 浏览器降级拖拽 ---------------- */
@@ -358,7 +394,7 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange}
                 onContextMenu={(e) => {
                     e.preventDefault()
                     setSelected([])
-                    setMenu({open: true, x: e.clientX, y: e.clientY, items: blankMenu()})
+                    setMenu({ open: true, x: e.clientX, y: e.clientY, items: blankMenu() })
                 }}
                 onMouseDown={(e) => {
                     if (e.target === e.currentTarget) setSelected([])
@@ -387,12 +423,12 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange}
                                 e.stopPropagation()
                                 const targets = selected.includes(item.path) ? selected : [item.path]
                                 if (!selected.includes(item.path)) setSelected([item.path])
-                                setMenu({open: true, x: e.clientX, y: e.clientY, items: itemMenu(item, targets)})
+                                setMenu({ open: true, x: e.clientX, y: e.clientY, items: itemMenu(item, targets) })
                             }}
                         >
                             <span className={fp.colName}>
                                 <span className={`${fp.fileIcon}${item.isDir ? ' ' + fp.dir : ''}`}>
-                                    {item.isLink ? <LinkIcon size={16}/> : item.isDir ? <Folder size={16}/> : <FileText size={16}/>}
+                                    {item.isLink ? <LinkIcon size={16} /> : item.isDir ? <Folder size={16} /> : <FileText size={16} />}
                                 </span>
                                 <span className={fp.fileName} title={item.path}>{item.name}</span>
                             </span>
@@ -403,21 +439,31 @@ export default function FilePanel({sessionId, homeDir, nativeDrop, onPathChange}
                     ))}
             </div>
 
+
+
+            <TransferBar
+                transfers={transfers}
+                onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
+                onClear={() => {
+                    API.clearFinishedTransfers()
+                        .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
+                        .catch(() => undefined)
+                }}
+            />
             <div className={fp.fileStatus}>
                 <span>{visible.length} 项</span>
                 {selectedItems.length > 0 && <span>已选 {selectedItems.length}</span>}
-                <span className={g.spacer}/>
+                <span className={g.spacer} />
                 <span className={fp.hint}>双击/右键编辑文件 · 拖拽上传</span>
             </div>
-
             <div className={fp.dropHint}>
-                <Upload size={28}/>
+                <Upload size={28} />
                 <span>释放以上传到 {path}</span>
             </div>
 
-            <ContextMenu state={menu} onClose={() => setMenu(closedMenu)}/>
-            <PromptModal state={prompt} onCancel={() => setPrompt(emptyPrompt)}/>
-            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)}/>
+            <ContextMenu state={menu} onClose={() => setMenu(closedMenu)} />
+            <PromptModal state={prompt} onCancel={() => setPrompt(emptyPrompt)} />
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
             <FileEditorModal
                 open={!!editFilePath}
                 sessionId={sessionId}

@@ -2,6 +2,7 @@
 @import (reference) '@/styles/mixins.less';
 
 .composerBox {
+    position: relative;
     border: 1px solid @border;
     border-radius: 8px;
     background: @bg-2;
@@ -13,10 +14,77 @@
     .editorWrapper {
         width: 100%;
         min-height: 48px;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .commandPill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 2px 6px 2px 8px;
+        border-radius: 4px;
+        font-size: 12.5px;
+        line-height: 1.5;
+        flex-shrink: 0;
+        margin-top: 3px;
+        user-select: none;
+        transition: all 0.15s ease;
+
+        &.plan {
+            background: rgba(43, 144, 238, 0.12);
+            border: 1px solid rgba(43, 144, 238, 0.35);
+            color: #2b90ee;
+
+            .commandPillText {
+                color: #2b90ee;
+            }
+        }
+
+        &.grillMe {
+            background: rgba(168, 85, 247, 0.12);
+            border: 1px solid rgba(168, 85, 247, 0.35);
+            color: #a855f7;
+
+            .commandPillText {
+                color: #a855f7;
+            }
+        }
+
+        .commandPillIcon {
+            display: flex;
+            align-items: center;
+        }
+
+        .commandPillText {
+            font-family: 'JetBrains Mono', Consolas, monospace;
+            font-weight: 600;
+            font-size: 12px;
+        }
+
+        .commandPillClose {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            color: @text-dim;
+            border-radius: 50%;
+            padding: 1px;
+            margin-left: 2px;
+            transition: all 0.15s ease;
+
+            &:hover {
+                color: #ff4d4f;
+                background: rgba(255, 77, 79, 0.15);
+            }
+        }
     }
 
     .textareaInput {
-        width: 100%;
+        flex: 1;
+        min-width: 0;
         background: transparent !important;
         border: none !important;
         outline: none !important;
@@ -54,20 +122,6 @@
         gap: 8px;
         min-width: 0;
         flex: 1;
-
-        :global {
-            .ant-radio-group {
-                flex-shrink: 0;
-                display: inline-flex;
-            }
-            .ant-radio-button-wrapper {
-                white-space: nowrap;
-                padding: 0 8px;
-                font-size: 12px;
-                line-height: 22px;
-                height: 24px;
-            }
-        }
     }
 
     .footerRight {
@@ -138,6 +192,82 @@
     }
 }
 
+.modelIndicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 2px 8px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: @text-dim;
+    cursor: pointer;
+    user-select: none;
+    max-width: 180px;
+    transition: all 0.15s ease;
+
+    &:hover {
+        border-color: @accent;
+        color: @text;
+        background: @bg-2;
+    }
+
+    .modelName {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .modelCaret {
+        color: @text-dim;
+        flex-shrink: 0;
+        transition: transform 0.2s ease;
+    }
+}
+
+.modelDropdownItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 180px;
+    padding: 2px 0;
+
+    .modelItemMain {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        overflow: hidden;
+
+        .modelItemName {
+            font-size: 13px;
+            font-weight: 500;
+            color: @text;
+            line-height: 1.3;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .modelItemId {
+            font-size: 11px;
+            color: @text-dim;
+            line-height: 1.2;
+            font-family: @font-mono;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    .modelItemCheck {
+        color: @accent;
+        flex-shrink: 0;
+    }
+}
+
 .tokenInfo {
     display: flex;
     align-items: center;
@@ -153,4 +283,3 @@
     white-space: nowrap;
     font-family: @font-mono;
 }
-

@@ -7,6 +7,7 @@ import s from './AiSidebar.module.less'
 
 interface AiSidebarProps {
     settings: AppSettings
+    onUpdateSettings?: (newSettings: AppSettings) => Promise<void>
 }
 
 const STORAGE_KEY = 'ai_sidebar_width'
@@ -14,7 +15,7 @@ const DEFAULT_WIDTH = 440
 const MIN_WIDTH = 340
 const MAX_WIDTH = 800
 
-export default function AiSidebar({ settings }: AiSidebarProps) {
+export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps) {
     const { aiSidebarOpen, setAiSidebarOpen } = useSession()
 
     const [width, setWidth] = useState<number>(() => {
@@ -116,6 +117,7 @@ export default function AiSidebar({ settings }: AiSidebarProps) {
                 >
                     <AiAgentPanel
                         settings={settings}
+                        onUpdateSettings={onUpdateSettings}
                         onClose={() => setAiSidebarOpen(false)}
                     />
                 </ErrorBoundary>

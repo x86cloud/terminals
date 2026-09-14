@@ -684,6 +684,56 @@ func fillAiDefaults(settings *AppSettings) {
 	if settings.AiSystemPrompt == "" {
 		settings.AiSystemPrompt = "你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。"
 	}
+
+	// 多模型自动迁移与初始化
+	if len(settings.AiModels) == 0 {
+		name := settings.AiModel
+		if name == "" {
+			name = "默认模型"
+		}
+		settings.AiModels = []AiModelItem{
+			{
+				ID:            "model_default",
+				Name:          name,
+				Model:         settings.AiModel,
+				BaseURL:       settings.AiBaseURL,
+				APIKey:        settings.AiAPIKey,
+				ContextTokens: settings.AiModelContextTokens,
+				Temperature:   settings.AiTemperature,
+			},
+		}
+		settings.ActiveModelID = "model_default"
+	} else {
+		// 校验并同步活跃模型参数至顶层字段
+		if settings.ActiveModelID == "" {
+			settings.ActiveModelID = settings.AiModels[0].ID
+		}
+		var found bool
+		for _, m := range settings.AiModels {
+			if m.ID == settings.ActiveModelID {
+				found = true
+				if m.Model != "" {
+					settings.AiModel = m.Model
+				}
+				if m.BaseURL != "" {
+					settings.AiBaseURL = m.BaseURL
+				}
+				if m.APIKey != "" {
+					settings.AiAPIKey = m.APIKey
+				}
+				if m.ContextTokens > 0 {
+					settings.AiModelContextTokens = m.ContextTokens
+				}
+				if m.Temperature > 0 {
+					settings.AiTemperature = m.Temperature
+				}
+				break
+			}
+		}
+		if !found && len(settings.AiModels) > 0 {
+			settings.ActiveModelID = settings.AiModels[0].ID
+		}
+	}
 }
 
 func (s *Store) GetSettings() AppSettings {

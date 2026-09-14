@@ -71,12 +71,13 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 />
 
                 {/* Flat Markdown Viewer */}
-                {message.content && <MarkdownViewer content={message.content} />}
+                {message.content && !message.plan && <MarkdownViewer content={message.content} />}
 
                 {/* Embedded Plan Card */}
                 {message.plan && (
                     <MessagePlanCard
                         plan={message.plan}
+                        isGenerating={isStreaming}
                         onApprove={onApprovePlan}
                         onCancel={onCancelPlan}
                         onRetryStep={onRetryPlanStep}

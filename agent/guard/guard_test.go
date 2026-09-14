@@ -2,6 +2,7 @@ package guard_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -144,5 +145,40 @@ func TestHitlManager_ContextCancellation(t *testing.T) {
 	}
 	if approved {
 		t.Fatalf("expected approved = false on cancel")
+	}
+}
+
+func TestPolicyGuard_PlanningMode_ReadWriteAudit(t *testing.T) {
+	g := guard.NewPolicyGuard(true, true, nil)
+	planCtx := guard.WithPlanningMode(context.Background(), true)
+
+	// 1. Read-only tools should be allowed
+	lvl, _ := g.Audit(planCtx, "s1", "read_file", `{"path":"main.go"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("expected LevelAllow for read_file in planning mode, got %s", lvl)
+	}
+
+	lvl, _ = g.Audit(planCtx, "s1", "db_mysql_query", `{"sql":"SELECT * FROM users"}`, guard.LevelAllow)
+	if lvl != guard.LevelAllow {
+		t.Fatalf("expected LevelAllow for SELECT query in planning mode, got %s", lvl)
+	}
+
+	// 2. Write and execute tools should be LevelForbidden in planning mode
+	lvl, reason := g.Audit(planCtx, "s1", "create_file", `{"path":"foo.txt","content":"hello"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("expected LevelForbidden for create_file in planning mode, got %s", lvl)
+	}
+	if reason == "" || !strings.Contains(reason, "技术方案规划调研阶段") {
+		t.Fatalf("expected friendly plan mode notice, got: %s", reason)
+	}
+
+	lvl, reason = g.Audit(planCtx, "s1", "execute", `{"command":"npm run build"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("expected LevelForbidden for execute in planning mode, got %s", lvl)
+	}
+
+	lvl, reason = g.Audit(planCtx, "s1", "db_mysql_query", `{"sql":"INSERT INTO users (name) VALUES ('alice')"}`, guard.LevelAllow)
+	if lvl != guard.LevelForbidden {
+		t.Fatalf("expected LevelForbidden for INSERT query in planning mode, got %s", lvl)
 	}
 }

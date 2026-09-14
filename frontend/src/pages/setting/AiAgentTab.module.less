@@ -306,3 +306,71 @@
     gap: 8px;
 }
 
+/* 模型管理列表项样式 */
+.modelList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.modelCard {
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    transition: all 0.15s ease;
+
+    &:hover {
+        border-color: @accent;
+    }
+
+    &.modelCardActive {
+        border-color: @accent;
+        background: @bg-2;
+        box-shadow: 0 0 0 1px @accent;
+    }
+
+    .modelCardLeft {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+        min-width: 0;
+
+        .modelNameRow {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+
+            .modelName {
+                font-size: 13px;
+                font-weight: 600;
+                color: @text;
+            }
+        }
+
+        .modelUrlText {
+            font-size: 11px;
+            color: @text-dim;
+            font-family: @font-mono;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    .modelCardRight {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+    }
+}
+
+

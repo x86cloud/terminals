@@ -20,7 +20,11 @@ export function useAgentComposer({
     const [images, setImages] = useState<string[]>([])
     const [isGenerating, setIsGenerating] = useState<boolean>(false)
     const [activeReasoning, setActiveReasoning] = useState<string>('')
-    const [activeMode, setActiveMode] = useState<'chat' | 'plan'>('chat')
+    const [activeCommand, setActiveCommand] = useState<'plan' | 'grill-me' | null>(null)
+    const activeMode: 'chat' | 'plan' = activeCommand === 'plan' ? 'plan' : 'chat'
+    const setActiveMode = useCallback((mode: 'chat' | 'plan') => {
+        setActiveCommand(mode === 'plan' ? 'plan' : null)
+    }, [])
     const [workspaceDir, setWorkspaceDir] = useState<string>('')
 
     const chatEndRef = useRef<HTMLDivElement | null>(null)
@@ -76,16 +80,30 @@ export function useAgentComposer({
 
     const handleApprovePlan = useCallback(
         async (planId: string) => {
+            if (isGenerating) return
+
+            // 1. 本地更新消息中对应 plan 的状态为 approved，并将更早未批准方案标记为 expired
             setMessages((current) => {
                 const copy = current.map((msg) => {
-                    if (msg.plan && msg.plan.id === planId) {
-                        return {
-                            ...msg,
-                            plan: {
-                                ...msg.plan,
-                                need_confirm: false,
-                                executing: true,
-                            },
+                    if (msg.plan) {
+                        if (msg.plan.id === planId) {
+                            return {
+                                ...msg,
+                                plan: {
+                                    ...msg.plan,
+                                    status: 'approved' as const,
+                                    need_confirm: false,
+                                },
+                            }
+                        } else if (msg.plan.status !== 'approved') {
+                            return {
+                                ...msg,
+                                plan: {
+                                    ...msg.plan,
+                                    status: 'expired' as const,
+                                    need_confirm: false,
+                                },
+                            }
                         }
                     }
                     return msg
@@ -94,29 +112,80 @@ export function useAgentComposer({
                 return copy
             })
 
+            // 2. 调用后端标记批准
             try {
                 await API.agentApprovePlan(planId)
             } catch (err: any) {
-                const errMsg = err?.message || String(err)
-                setNoticeText(`执行规划失败: ${errMsg}`)
-                setMessages((current) => {
-                    const copy = current.map((msg) => {
-                        if (msg.plan && msg.plan.id === planId) {
-                            return {
-                                ...msg,
-                                plan: {
-                                    ...msg.plan,
-                                    executing: false,
-                                },
+                // ignore
+            }
+
+            // 3. 自动切换为对话模式
+            setActiveMode('chat')
+
+            // 4. 自动向智能体发送执行指令，启动自主执行循环
+            const userMsg: AiMessage = {
+                role: 'user',
+                content: '已批准实施方案，请按步骤开始执行并进行验证。',
+                timestamp: Date.now(),
+            }
+
+            const assistantMsg: AiMessage = {
+                role: 'assistant',
+                content: '',
+                reasoning_content: '',
+                process_steps: [],
+                timestamp: Date.now(),
+            }
+
+            setMessages((curr) => {
+                const updatedHistory = [...curr, userMsg, assistantMsg]
+                setIsGenerating(true)
+                setActiveReasoning('')
+                setNoticeText('')
+
+                API.agentSend(activeSessionId, updatedHistory.slice(0, -1)).then((resp) => {
+                    setMessages((finalCurr) => {
+                        const copy = [...finalCurr]
+                        const last = copy[copy.length - 1]
+                        if (last && last.role === 'assistant') {
+                            if (!last.content) {
+                                last.content = resp || (last.reasoning_content ? '已完成实施方案执行。' : '方案执行完毕。')
+                            }
+                            if (last.process_steps) {
+                                last.process_steps = last.process_steps.map((st) => ({
+                                    ...st,
+                                    status: 'completed',
+                                }))
                             }
                         }
-                        return msg
+                        API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
+                        return copy
                     })
-                    return copy
+                }).catch((err: any) => {
+                    const errMsg = err?.message || String(err)
+                    setNoticeText(`方案执行失败: ${errMsg}`)
+                    setMessages((finalCurr) => {
+                        const copy = [...finalCurr]
+                        const last = copy[copy.length - 1]
+                        if (last && last.role === 'assistant') {
+                            if (!last.content) last.content = `执行中断: ${errMsg}`
+                            if (last.process_steps) {
+                                last.process_steps = last.process_steps.map((st) =>
+                                    st.status === 'running' ? { ...st, status: 'failed' } : st
+                                )
+                            }
+                        }
+                        return copy
+                    })
+                }).finally(() => {
+                    setIsGenerating(false)
+                    setActiveReasoning('')
                 })
-            }
+
+                return updatedHistory
+            })
         },
-        [activeSessionId, setMessages, setNoticeText]
+        [activeSessionId, setMessages, setNoticeText, setActiveMode, setIsGenerating, setActiveReasoning]
     )
 
     const handleCancelPlan = useCallback(
@@ -154,7 +223,7 @@ export function useAgentComposer({
                 const updatedStep = await API.agentRetryPlanStep(planId, stepId)
                 setMessages((current) => {
                     const copy = current.map((msg) => {
-                        if (msg.plan && msg.plan.id === planId) {
+                        if (msg.plan && msg.plan.id === planId && msg.plan.steps) {
                             const nextSteps = msg.plan.steps.map((st) =>
                                 st.id === stepId ? { ...st, ...updatedStep } : st
                             )
@@ -184,34 +253,26 @@ export function useAgentComposer({
         if (!trimmed && images.length === 0) return
         if (isGenerating) return
 
-        // Check if user typed /plan or in Plan mode
-        if (activeMode === 'plan' || trimmed.startsWith('/plan ')) {
+        const isPlan = activeCommand === 'plan' || trimmed.startsWith('/plan ') || trimmed === '/plan'
+        const isGrillMe = activeCommand === 'grill-me' || trimmed.startsWith('/grill-me ') || trimmed === '/grill-me'
+
+        // 1. Plan Mode
+        if (isPlan) {
             const objective = trimmed.replace(/^\/plan\s*/, '').trim()
             if (!objective) return
 
             const userMsg: AiMessage = {
                 role: 'user',
-                content: trimmed,
+                content: `/plan ${objective}`,
                 images: images.length > 0 ? [...images] : undefined,
                 timestamp: Date.now(),
             }
 
             const assistantMsg: AiMessage = {
                 role: 'assistant',
-                content: '正在深度分析目标并生成 DAG 步骤规划...',
-                reasoning_content:
-                    '正在结合系统环境、可用工具、权限策略与依赖关系拓扑生成高可靠执行规划...',
-                process_steps: [
-                    {
-                        id: `plan_think_${Date.now()}`,
-                        type: 'think',
-                        title: '目标规划与拓扑推演',
-                        summary: `正在为目标 "${objective}" 构建步骤规划...`,
-                        content: '',
-                        status: 'running',
-                        timestamp: Date.now(),
-                    },
-                ],
+                content: '',
+                reasoning_content: '',
+                process_steps: [],
                 timestamp: Date.now(),
             }
 
@@ -219,21 +280,39 @@ export function useAgentComposer({
             setMessages(updatedHistory)
             setInput('')
             setImages([])
+            setActiveCommand(null)
             setIsGenerating(true)
-            setActiveReasoning(
-                '正在结合系统环境、可用工具、权限策略与依赖关系拓扑生成高可靠执行规划...'
-            )
+            setActiveReasoning('')
             setNoticeText('')
+
+            // 先行将截至 userMsg 的历史存盘，供后端 AgentProposePlan 提取完整会话上下文与多轮演进基线
+            API.agentSaveSessionMessages(activeSessionId, updatedHistory.slice(0, -1)).catch(() => { })
 
             try {
                 const plan: AgentPlan = await API.agentProposePlan(activeSessionId, objective)
                 setMessages((current) => {
-                    const copy = [...current]
+                    // 将历史中此前所有未执行的旧方案自动标记为 expired (已被新方案覆盖)
+                    const copy = current.map((msg, idx) => {
+                        if (idx < current.length - 1 && msg.plan && msg.plan.status !== 'approved') {
+                            return {
+                                ...msg,
+                                plan: {
+                                    ...msg.plan,
+                                    status: 'expired' as const,
+                                },
+                            }
+                        }
+                        return msg
+                    })
                     const last = copy[copy.length - 1]
                     if (last && last.role === 'assistant') {
-                        last.content =
-                            '已为您生成执行规划，请核对各步骤依赖与工具调用，并在确认后点击批准执行：'
-                        last.plan = plan
+                        last.content = plan?.is_update
+                            ? '已根据您的修改意见更新技术实施方案，请审阅确认后点击批准执行：'
+                            : '已为您制定技术实施方案，请审阅确认后点击批准执行：'
+                        last.plan = {
+                            ...plan,
+                            status: 'proposed' as const,
+                        }
                         const reasoning =
                             plan?.reasoning_content || last.reasoning_content || ''
                         if (reasoning) {
@@ -247,9 +326,11 @@ export function useAgentComposer({
                                     st.type === 'think'
                                         ? reasoning ||
                                         st.content ||
-                                        '已完成目标分析与拓扑步骤依赖推演。'
+                                        '已完成现场调研与实施方案推演。'
                                         : st.content,
-                                summary: `成功生成包含 ${plan?.steps?.length || 0} 个步骤的执行规划`,
+                                summary: plan?.is_update
+                                    ? '已更新技术实施方案 (implementation_plan.md)'
+                                    : '已生成技术实施方案 (implementation_plan.md)',
                             }))
                         }
                     }
@@ -280,6 +361,80 @@ export function useAgentComposer({
             return
         }
 
+        // 2. Grill-me Mode
+        if (isGrillMe) {
+            const objective = trimmed.replace(/^\/grill-me\s*/, '').trim()
+            if (!objective) return
+
+            const userMsg: AiMessage = {
+                role: 'user',
+                content: `/grill-me ${objective}`,
+                images: images.length > 0 ? [...images] : undefined,
+                timestamp: Date.now(),
+            }
+
+            const assistantMsg: AiMessage = {
+                role: 'assistant',
+                content: '',
+                reasoning_content: '',
+                process_steps: [],
+                timestamp: Date.now(),
+            }
+
+            const updatedHistory = [...messages, userMsg, assistantMsg]
+            setMessages(updatedHistory)
+            setInput('')
+            setImages([])
+            setActiveCommand(null)
+            setIsGenerating(true)
+            setActiveReasoning('')
+            setNoticeText('')
+
+            try {
+                const resp = await API.agentSend(activeSessionId, updatedHistory.slice(0, -1))
+                setMessages((current) => {
+                    const copy = [...current]
+                    const last = copy[copy.length - 1]
+                    if (last && last.role === 'assistant') {
+                        if (!last.content) {
+                            last.content = resp || (last.reasoning_content ? '已完成访谈与推演。' : '请根据提问继续确认。')
+                        }
+                        if (last.process_steps) {
+                            last.process_steps = last.process_steps.map((st) => ({
+                                ...st,
+                                status: 'completed',
+                            }))
+                        }
+                    }
+                    API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
+                    return copy
+                })
+            } catch (err: any) {
+                const errMsg = err?.message || String(err)
+                setNoticeText(`发送失败: ${errMsg}`)
+                setMessages((current) => {
+                    const copy = [...current]
+                    const last = copy[copy.length - 1]
+                    if (last && last.role === 'assistant') {
+                        if (!last.content) {
+                            last.content = `执行中断: ${errMsg}`
+                        }
+                        if (last.process_steps) {
+                            last.process_steps = last.process_steps.map((st) =>
+                                st.status === 'running' ? { ...st, status: 'failed' } : st
+                            )
+                        }
+                    }
+                    return copy
+                })
+            } finally {
+                setIsGenerating(false)
+                setActiveReasoning('')
+            }
+            return
+        }
+
+        // 3. Regular Chat Mode
         const userMsg: AiMessage = {
             role: 'user',
             content: trimmed,
@@ -299,6 +454,7 @@ export function useAgentComposer({
         setMessages(updatedHistory)
         setInput('')
         setImages([])
+        setActiveCommand(null)
         setIsGenerating(true)
         setActiveReasoning('')
         setNoticeText('')
@@ -352,7 +508,7 @@ export function useAgentComposer({
         input,
         images,
         isGenerating,
-        activeMode,
+        activeCommand,
         messages,
         activeSessionId,
         setMessages,
@@ -389,6 +545,8 @@ export function useAgentComposer({
         setIsGenerating,
         activeReasoning,
         setActiveReasoning,
+        activeCommand,
+        setActiveCommand,
         activeMode,
         setActiveMode,
         workspaceDir,

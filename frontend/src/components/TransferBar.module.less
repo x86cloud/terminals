@@ -3,46 +3,70 @@
 
 .transferBar {
     border-top: 1px solid @border;
-    background: @bg;
-
-    &.open {
-        /* 展开态由父级高度控制，这里仅作占位以便组合 */
-    }
+    background: @bg-1;
+    flex: none;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .transferHead {
     display: flex;
     align-items: center;
-    gap: @space-md;
-    padding: 6px 10px;
+    gap: 8px;
+    padding: 5px 10px;
     cursor: pointer;
     color: @text-dim;
+    font-size: 11.5px;
+    user-select: none;
 
     &:hover {
         color: @text;
+        background: @bg-2;
     }
 }
 
 .badge {
-    padding: 1px 7px;
+    padding: 0 6px;
     background: @bg-3;
     border-radius: 10px;
-    font-size: 11px;
+    font-size: 10.5px;
+    white-space: nowrap;
+}
+
+.headProgress {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: 2px;
+    min-width: 0;
+    flex: 1;
+}
+
+.headProgressText {
+    font-size: 10.5px;
+    color: @text-dim;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .transferList {
-    max-height: 190px;
-    overflow: auto;
-    padding: 0 6px 6px;
+    max-height: 160px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 6px 6px;
+    border-top: 1px solid @border;
+    background: @bg;
 }
 
 .transferItem {
     display: grid;
-    grid-template-columns: 20px minmax(90px, 1fr) minmax(150px, 1.4fr) 76px 26px;
+    grid-template-columns: 16px minmax(60px, 1.2fr) minmax(80px, 1.4fr) auto auto;
     align-items: center;
-    gap: @space-md;
-    padding: 5px 6px;
-    border-radius: 5px;
+    gap: 6px;
+    padding: 4px 6px;
+    border-radius: 4px;
+    min-width: 0;
 
     &:hover {
         background: @bg-2;
@@ -64,26 +88,32 @@
 
 .tKind {
     display: flex;
+    align-items: center;
+    justify-content: center;
     color: @text-dim;
+    flex-shrink: 0;
 }
 
 .tName {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    min-width: 0;
+    font-size: 11.5px;
 }
 
 .tProgress {
     display: flex;
     align-items: center;
-    gap: @space-md;
+    gap: 6px;
+    min-width: 0;
 }
 
 .tBar {
     flex: 1;
-    height: 5px;
+    height: 4px;
     background: @bg-3;
-    border-radius: 3px;
+    border-radius: 2px;
     overflow: hidden;
 }
 
@@ -94,14 +124,29 @@
     transition: width .15s linear;
 }
 
-.tSize, .tStatus {
+.tSize {
+    font-size: 10.5px;
+    color: @text-dim;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.tStatus {
     font-size: 11px;
     color: @text-dim;
     white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .tAction {
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
+}
+
+.chevron {
+    font-size: 11px;
+    color: @text-faint;
+    margin-left: 2px;
 }

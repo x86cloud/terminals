@@ -1,0 +1,127 @@
+@import (reference) '@/styles/variables.less';
+
+.modalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+.topBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sessionList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+        width: 5px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background: rgba(120, 120, 120, 0.2);
+        border-radius: 4px;
+    }
+}
+
+.sessionItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 12px;
+    border-radius: 6px;
+    background: @bg-2;
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all 0.18s ease;
+
+    &:hover {
+        background: @bg-3;
+        border-color: @border;
+
+        .itemActions {
+            opacity: 1;
+        }
+    }
+
+    &.active {
+        border-color: rgba(43, 144, 238, 0.4);
+        background: rgba(43, 144, 238, 0.08);
+
+        .itemIcon {
+            color: #2b90ee;
+        }
+
+        .itemTitle {
+            color: #2b90ee;
+            font-weight: 600;
+        }
+    }
+}
+
+.itemLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.itemIcon {
+    flex-shrink: 0;
+    color: @text-dim;
+    display: flex;
+    align-items: center;
+}
+
+.itemContent {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1;
+}
+
+.itemTitleRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.itemTitle {
+    font-size: 13px;
+    color: @text;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.itemTime {
+    font-size: 11px;
+    color: @text-dim;
+}
+
+.itemActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.editRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+}

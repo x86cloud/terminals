@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"log"
 	"terminal/agent/events"
+	"terminal/agent/guard"
+	"terminal/agent/planner"
 	"terminal/agent/router"
 	"terminal/agent/store"
 	"terminal/agent/wiki"
@@ -50,6 +52,7 @@ type FrontendMessage struct {
 	ToolCalls        []ToolCallItem `json:"tool_calls,omitempty"`
 	ToolCallID       string         `json:"tool_call_id,omitempty"`
 	Name             string         `json:"name,omitempty"`
+	Plan             *planner.Plan  `json:"plan,omitempty"`
 	Timestamp        int64          `json:"timestamp,omitempty"`
 }
 
@@ -77,12 +80,17 @@ func (s *Storage) LoadHistory() ([]FrontendMessage, error) {
 		if m.ProcessSteps != "" {
 			_ = json.Unmarshal([]byte(m.ProcessSteps), &ps)
 		}
+		var pl *planner.Plan
+		if m.Plan != "" {
+			_ = json.Unmarshal([]byte(m.Plan), &pl)
+		}
 		out = append(out, FrontendMessage{
 			Role:             m.Role,
 			Content:          m.Content,
 			ReasoningContent: m.Reasoning,
 			ToolCalls:        tc,
 			ProcessSteps:     ps,
+			Plan:             pl,
 			Timestamp:        m.CreatedAt,
 		})
 	}
@@ -97,6 +105,10 @@ func (s *Storage) SaveHistory(messages []FrontendMessage) error {
 	for _, m := range messages {
 		tcBytes, _ := json.Marshal(m.ToolCalls)
 		psBytes, _ := json.Marshal(m.ProcessSteps)
+		var plBytes []byte
+		if m.Plan != nil {
+			plBytes, _ = json.Marshal(m.Plan)
+		}
 		dbMsgs = append(dbMsgs, store.MessageItem{
 			SessionID:    "ai_agent_default",
 			Role:         m.Role,
@@ -104,6 +116,7 @@ func (s *Storage) SaveHistory(messages []FrontendMessage) error {
 			Reasoning:    m.ReasoningContent,
 			ToolCalls:    string(tcBytes),
 			ProcessSteps: string(psBytes),
+			Plan:         string(plBytes),
 			CreatedAt:    m.Timestamp,
 		})
 	}
@@ -179,7 +192,7 @@ func (m *AgentManager) InitOrUpdate(cfg core.AppSettings) error {
 	return nil
 }
 
-func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt string) []*schema.Message {
+func (m *AgentManager) buildSchemaMessages(ctx context.Context, sessionID string, messages []FrontendMessage, sysPrompt string) []*schema.Message {
 	var out []*schema.Message
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
 	sysPrompt = fmt.Sprintf("%s\n系统: %s, 当前时间为: [%s]。", runtime.GOOS, sysPrompt, currentTime)
@@ -190,6 +203,18 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 当面对用户需求模糊、缺少关键上下文参数（如目标数据库类型、具体主机会话、文件路径、镜像版本号、等）或需要二选一确认时，必须主动调用 `ask_user` 工具向用户发起提问获取澄清与确认，禁止盲目猜测假设。", sysPrompt)
 	sysPrompt = fmt.Sprintf("%s\n【人机交互规范】: 合理规划工具使用，避免频繁向用户提问。", sysPrompt)
 	sysPrompt = fmt.Sprintf("%s\n【排障与方案处理规范】: 当用户询问运维管理、数据库操作等问题怎么处理时，必须先进行分析，给出解决方案，主动调用`ask_user`询问是否需要帮用户处理问题。", sysPrompt)
+
+	// 检查是否有 /grill-me 访谈指令
+	var hasGrillMe bool
+	for i := len(messages) - 1; i >= 0; i-- {
+		if messages[i].Role == "user" && strings.Contains(messages[i].Content, "/grill-me") {
+			hasGrillMe = true
+			break
+		}
+	}
+	if hasGrillMe {
+		sysPrompt = fmt.Sprintf("%s\n\n=== 【深度交互访谈模式 (/grill-me)】 ===\n用户对当前任务发起了交互式深度访谈（/grill-me）。你现在的核心任务是作为架构师彻底理清方案与需求的所有细节：\n1. 请优先调用 `ask_user` 工具向用户发起提问，每次【仅提一个最核心的关键问题】，并提供清晰的推荐选项（options）和简要理由，等待用户确认。\n2. 禁止一次性抛出大段长篇大论或把多个问题堆在一起问；必须递进式问答，直到关键决策和边界完全达成共识。\n3. 在所有关键细节明确后，再向用户汇报最终方案与行动建议。", sysPrompt)
+	}
 	activeConn := DefaultRuntime.GetActiveConnection()
 	if activeConn != nil && (activeConn.ID != "" || activeConn.Name != "" || activeConn.Protocol != "") {
 		var activeDetail strings.Builder
@@ -242,6 +267,39 @@ func (m *AgentManager) buildSchemaMessages(messages []FrontendMessage, sysPrompt
 		}
 		sysPrompt = fmt.Sprintf("%s\n\n【本地 Wiki 知识库 (LLM Wiki)】:\n系统维护有本地 Markdown 知识库，包含以下页面资产：\n%s\n提示：若需深入查阅具体配置或排障经验，请使用 `wiki_read` 工具读取；若用户要求将排障结论或环境参数写入/更新知识库，可使用 `wiki_write` 或 `wiki_update` 工具。",
 			sysPrompt, strings.Join(wikiList, "\n"))
+	}
+
+	// 规划模式 (Plan Mode) 与方案演进感知
+	if guard.IsPlanningMode(ctx) {
+		existingPlan := planner.GetExistingPlan(sessionID)
+		var planSysPrompt strings.Builder
+		planSysPrompt.WriteString("\n\n=== 【技术方案规划调研模式 (PLAN MODE)】 ===\n")
+		planSysPrompt.WriteString("你当前处于「技术方案规划与调研阶段 (Plan Mode)」，你的核心职责是充分利用只读工具深入调研现场代码、配置、网络与数据库等环境状态，为用户制定严谨、详尽、可执行的 Markdown 技术实施方案。\n\n")
+		planSysPrompt.WriteString("【行为守则与约束】:\n")
+		planSysPrompt.WriteString("1. **严禁执行写操作**: 当前阶段严禁执行任何写入、修改、删除或重启等破坏性操作（系统策略拦截器会阻断所有写工具）。请仅使用只读工具进行现场调研（例如查看文件、列出目录、查询数据库只读表、检查容器/集群状态等）。\n")
+		planSysPrompt.WriteString("2. **深入探查现状**: 在输出方案前，必须主动使用只读工具排查项目现状、目录结构、关键配置或数据表结构，切忌仅凭空想猜测。\n")
+		planSysPrompt.WriteString("3. **最终产出规范**: 调研完成后，直接输出规范的 Markdown 技术实施方案，必须包含以下结构：\n")
+		planSysPrompt.WriteString("   # [方案主标题]\n")
+		planSysPrompt.WriteString("   ## 目标与背景\n")
+		planSysPrompt.WriteString("   ## 关键架构与设计决策\n")
+		planSysPrompt.WriteString("   ## 拟变更清单 (文件/配置/SQL/命令)\n")
+		planSysPrompt.WriteString("   ## 验证计划 (自动化检查与人工确认)\n")
+
+		if existingPlan != "" {
+			planSysPrompt.WriteString("\n【现有实施方案基线 (implementation_plan.md)】:\n")
+			planSysPrompt.WriteString("当前会话已经存在一份已生成的实施方案如下：\n")
+			planSysPrompt.WriteString("```markdown\n")
+			planSysPrompt.WriteString(existingPlan)
+			planSysPrompt.WriteString("\n```\n")
+			planSysPrompt.WriteString("【增量演进与方案修改指令】:\n")
+			planSysPrompt.WriteString("用户提出了修改、补充或优化要求。请在上述现有实施方案基线的基础上，结合增量只读调研，对方案进行相应调整、更新与完善，并在最终输出中提供【修改完善后的完整技术实施方案】（包含所有必要章节，而非仅仅只给出差异片段），以便系统自动覆盖更新 implementation_plan.md。\n")
+		}
+		sysPrompt = fmt.Sprintf("%s\n%s", sysPrompt, planSysPrompt.String())
+	} else {
+		// 非规划模式（对话或批准后的方案执行态），若本地存在已落盘的实施方案，自动注入为基准
+		if existingPlan := planner.GetExistingPlan(sessionID); existingPlan != "" {
+			sysPrompt = fmt.Sprintf("%s\n\n【会话当前生效的技术实施方案 (implementation_plan.md)】:\n```markdown\n%s\n```\n提示：当用户要求开始执行方案、汇报进度或验证结果时，请严格依据上述技术实施方案分步开展操作与验证。", sysPrompt, existingPlan)
+		}
 	}
 
 	if strings.TrimSpace(sysPrompt) != "" {
@@ -411,7 +469,11 @@ func (m *AgentManager) StreamChat(
 	cfg := m.cfg
 	m.mu.RUnlock()
 
-	resolved, err := DefaultRuntime.Router.Resolve(ctx, router.RoleDefault)
+	targetRole := router.RoleDefault
+	if guard.IsPlanningMode(ctx) {
+		targetRole = router.RolePlanner
+	}
+	resolved, err := DefaultRuntime.Router.Resolve(ctx, targetRole)
 	if err != nil || resolved == nil || resolved.Model == nil {
 		return "", "", "", errors.New("AI Agent 未配置或 API Key 为空，请在设置中配置 API Key")
 	}
@@ -430,7 +492,7 @@ func (m *AgentManager) StreamChat(
 	}()
 
 	compressedMsgs, notice := m.applyContextCompression(chatCtx, messages)
-	schemaMsgs := m.buildSchemaMessages(compressedMsgs, cfg.AiSystemPrompt)
+	schemaMsgs := m.buildSchemaMessages(chatCtx, sessionID, compressedMsgs, cfg.AiSystemPrompt)
 
 	toolInfos := DefaultRuntime.ToolBus.ConvertToToolInfos(chatCtx)
 
@@ -739,4 +801,82 @@ func (m *AgentManager) StreamChat(
 	}
 
 	return finalContent, reasoningResp.String(), notice, nil
+}
+
+// GenerateSessionTitle 根据用户首条消息及助手回复，利用 LLM 概括生成简短精炼的会话标题（4-10字）。
+func (m *AgentManager) GenerateSessionTitle(ctx context.Context, firstUserMsg, firstAssistantMsg string) (string, error) {
+	m.mu.RLock()
+	cm := m.cm
+	m.mu.RUnlock()
+
+	userQ := strings.TrimSpace(firstUserMsg)
+	if userQ == "" {
+		return "新会话", nil
+	}
+
+	fallbackTitle := func() string {
+		runes := []rune(userQ)
+		if len(runes) > 10 {
+			return string(runes[:10]) + "..."
+		}
+		return string(runes)
+	}
+
+	if cm == nil {
+		return fallbackTitle(), nil
+	}
+
+	// 截取避免过长
+	if len(userQ) > 300 {
+		userQ = string([]rune(userQ)[:300])
+	}
+	assistantA := strings.TrimSpace(firstAssistantMsg)
+	if len(assistantA) > 300 {
+		assistantA = string([]rune(assistantA)[:300])
+	}
+
+	prompt := fmt.Sprintf(`请根据以下用户的首条提问及助手的回复，概括一个简短贴切的会话主题作为标题。
+要求：
+1. 语言简练，严格控制在 4 到 10 个字以内；
+2. 不要包含任何标点符号、书名号、引号；
+3. 不要包含“会话标题”、“主题”等前缀词；
+4. 直接输出标题文本本身，不要附加任何解释或换行。
+
+用户提问：%s
+助手回复：%s`, userQ, assistantA)
+
+	genCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+
+	resp, err := cm.Generate(genCtx, []*schema.Message{
+		{
+			Role:    schema.System,
+			Content: "你是一个专业的对话标题提炼助手，只输出极简的会话标题名称。",
+		},
+		{
+			Role:    schema.User,
+			Content: prompt,
+		},
+	})
+	if err != nil || resp == nil || strings.TrimSpace(resp.Content) == "" {
+		return fallbackTitle(), nil
+	}
+
+	title := strings.TrimSpace(resp.Content)
+	// 清理可能的引号、标点、前缀
+	title = strings.Trim(title, "\"`'“”‘’《》【】[]()")
+	title = strings.TrimPrefix(title, "标题：")
+	title = strings.TrimPrefix(title, "会话标题：")
+	title = strings.TrimPrefix(title, "主题：")
+	title = strings.TrimSpace(title)
+
+	// 限制在 12 个字符以内
+	runes := []rune(title)
+	if len(runes) > 12 {
+		title = string(runes[:12])
+	}
+	if title == "" {
+		return fallbackTitle(), nil
+	}
+	return title, nil
 }

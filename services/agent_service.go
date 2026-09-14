@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -99,6 +100,9 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 		},
 	})
 
+	// 异步自动起名逻辑：若为新会话且尚无自定义标题，自动由 Agent 提炼会话名称
+	go s.tryAutoGenerateTitle(sessionID, messages, fullText)
+
 	return fullText, nil
 }
 
@@ -142,20 +146,103 @@ func (s *AgentService) AgentProposePlan(sessionID, objective string) (*planner.P
 	if sessionID == "" {
 		sessionID = "ai_agent_default"
 	}
+
 	c := GetContainer()
+	cfg := c.Store.GetSettings()
 	if c.Store != nil {
 		agent.DefaultRuntime.SetCoreStore(c.Store)
 	}
+	agent.DefaultManager.SetSSHManager(c.Sessions)
 	agent.DefaultRuntime.SetManagers(c.Sessions, c.RedisMgr, c.MysqlMgr, c.PostgresMgr, c.MongoMgr, c.SqliteMgr, c.MqttMgr, c.DockerMgr, c.K8sMgr)
-	toolsList := agent.DefaultRuntime.ToolBus.List()
-	var descBuilder strings.Builder
-	for _, t := range toolsList {
-		descBuilder.WriteString(fmt.Sprintf("- %s: %s\n", t.Name, t.Description))
+	_ = agent.DefaultManager.InitOrUpdate(cfg)
+	_ = agent.DefaultRuntime.InitOrUpdate(cfg)
+
+	// Fetch message history from store
+	var messages []agent.FrontendMessage
+	if agent.DefaultRuntime.Store != nil {
+		dbMsgs, err := agent.DefaultRuntime.Store.ListMessages(sessionID)
+		if err == nil && len(dbMsgs) > 0 {
+			for _, m := range dbMsgs {
+				var tc []agent.ToolCallItem
+				if m.ToolCalls != "" {
+					_ = json.Unmarshal([]byte(m.ToolCalls), &tc)
+				}
+				var ps []agent.ProcessStep
+				if m.ProcessSteps != "" {
+					_ = json.Unmarshal([]byte(m.ProcessSteps), &ps)
+				}
+				messages = append(messages, agent.FrontendMessage{
+					Role:             m.Role,
+					Content:          m.Content,
+					ReasoningContent: m.Reasoning,
+					ToolCalls:        tc,
+					ProcessSteps:     ps,
+					Timestamp:        m.CreatedAt,
+				})
+			}
+		}
 	}
-	plan, err := agent.DefaultRuntime.Planner.GeneratePlan(context.Background(), sessionID, objective, descBuilder.String())
+
+	// Ensure current user message with objective is present
+	if len(messages) == 0 || messages[len(messages)-1].Role != "user" || messages[len(messages)-1].Content != objective {
+		messages = append(messages, agent.FrontendMessage{
+			Role:      "user",
+			Content:   objective,
+			Timestamp: time.Now().UnixMilli(),
+		})
+	}
+
+	// Enable Planning Mode in Context
+	planCtx := guard.WithPlanningMode(context.Background(), true)
+
+	fullText, reasoningText, notice, err := agent.DefaultManager.StreamChat(
+		planCtx,
+		sessionID,
+		messages,
+		func(chunk string) {},
+		func(chunk string) {},
+	)
+
+	if notice != "" {
+		agent.DefaultRuntime.EventBus.Emit(events.Event{
+			Type:      events.EventNotice,
+			SessionID: sessionID,
+			Payload:   notice,
+		})
+	}
+
 	if err != nil {
+		if err.Error() == "用户手动停止了推导" {
+			stoppedText := fullText
+			if strings.TrimSpace(stoppedText) != "" {
+				stoppedText += "\n\n⏹️ [用户手动停止了推导]"
+			} else {
+				stoppedText = "⏹️ [用户手动停止了推导]"
+			}
+			agent.DefaultRuntime.EventBus.Emit(events.Event{
+				Type:      events.EventDone,
+				SessionID: sessionID,
+				Payload: events.DonePayload{
+					Content:          stoppedText,
+					ReasoningContent: reasoningText,
+				},
+			})
+			return nil, err
+		}
+		agent.DefaultRuntime.EventBus.Emit(events.Event{
+			Type:      events.EventError,
+			SessionID: sessionID,
+			Payload:   err.Error(),
+		})
 		return nil, err
 	}
+
+	// Save Markdown plan to %APPDATA%/xClient/plans/<sessionId>/implementation_plan.md
+	plan, saveErr := planner.SavePlanMarkdown(sessionID, objective, fullText)
+	if saveErr != nil {
+		return nil, saveErr
+	}
+	plan.ReasoningContent = reasoningText
 	agent.DefaultRuntime.PlanGate.Submit(plan)
 
 	agent.DefaultRuntime.EventBus.Emit(events.Event{
@@ -163,6 +250,18 @@ func (s *AgentService) AgentProposePlan(sessionID, objective string) (*planner.P
 		SessionID: sessionID,
 		Payload:   plan,
 	})
+
+	go s.tryAutoGenerateTitle(sessionID, messages, fullText)
+
+	agent.DefaultRuntime.EventBus.Emit(events.Event{
+		Type:      events.EventDone,
+		SessionID: sessionID,
+		Payload: events.DonePayload{
+			Content:          "",
+			ReasoningContent: reasoningText,
+		},
+	})
+
 	return plan, nil
 }
 
@@ -170,6 +269,11 @@ func (s *AgentService) AgentApprovePlan(planID string) (bool, error) {
 	plan, ok := agent.DefaultRuntime.PlanGate.Approve(planID)
 	if !ok || plan == nil {
 		return false, errors.New("规划不存在或已批准")
+	}
+	plan.Status = "approved"
+
+	if len(plan.Steps) == 0 {
+		return true, nil
 	}
 
 	traceID := fmt.Sprintf("trace_%d", time.Now().UnixNano())
@@ -388,6 +492,7 @@ func (s *AgentService) AgentGetSessionMessages(sessionID string) ([]agent.Fronte
 		return []agent.FrontendMessage{}, nil
 	}
 	var out []agent.FrontendMessage
+	hasPlan := false
 	for _, m := range dbMsgs {
 		var tc []agent.ToolCallItem
 		if m.ToolCalls != "" {
@@ -397,15 +502,47 @@ func (s *AgentService) AgentGetSessionMessages(sessionID string) ([]agent.Fronte
 		if m.ProcessSteps != "" {
 			_ = json.Unmarshal([]byte(m.ProcessSteps), &ps)
 		}
+		var pl *planner.Plan
+		if m.Plan != "" {
+			_ = json.Unmarshal([]byte(m.Plan), &pl)
+			if pl != nil {
+				hasPlan = true
+			}
+		}
 		out = append(out, agent.FrontendMessage{
 			Role:             m.Role,
 			Content:          m.Content,
 			ReasoningContent: m.Reasoning,
 			ToolCalls:        tc,
 			ProcessSteps:     ps,
+			Plan:             pl,
 			Timestamp:        m.CreatedAt,
 		})
 	}
+
+	// 智能兜底恢复：如果历史消息中未保存 Plan 实体，但本地 implementation_plan.md 真实存在，
+	// 自动将其挂载到最后一条 assistant 消息上，确保重启应用后绝不丢失 Implementation Plan 显示！
+	if !hasPlan && len(out) > 0 {
+		if existingPlanContent := planner.GetExistingPlan(sessionID); existingPlanContent != "" {
+			plansDir, _ := planner.GetPlansDir(sessionID)
+			filePath := filepath.Join(plansDir, "implementation_plan.md")
+			for i := len(out) - 1; i >= 0; i-- {
+				if out[i].Role == "assistant" {
+					out[i].Plan = &planner.Plan{
+						ID:          fmt.Sprintf("plan_%s", sessionID),
+						SessionID:   sessionID,
+						Objective:   "技术实施方案",
+						Content:     existingPlanContent,
+						FilePath:    filePath,
+						Status:      "proposed",
+						NeedConfirm: true,
+					}
+					break
+				}
+			}
+		}
+	}
+
 	return out, nil
 }
 
@@ -420,6 +557,10 @@ func (s *AgentService) AgentSaveSessionMessages(sessionID string, messages []age
 	for _, m := range messages {
 		tcBytes, _ := json.Marshal(m.ToolCalls)
 		psBytes, _ := json.Marshal(m.ProcessSteps)
+		var plBytes []byte
+		if m.Plan != nil {
+			plBytes, _ = json.Marshal(m.Plan)
+		}
 		dbMsgs = append(dbMsgs, store.MessageItem{
 			SessionID:    sessionID,
 			Role:         m.Role,
@@ -427,10 +568,23 @@ func (s *AgentService) AgentSaveSessionMessages(sessionID string, messages []age
 			Reasoning:    m.ReasoningContent,
 			ToolCalls:    string(tcBytes),
 			ProcessSteps: string(psBytes),
+			Plan:         string(plBytes),
 			CreatedAt:    m.Timestamp,
 		})
 	}
-	return agent.DefaultRuntime.Store.ReplaceMessages(sessionID, dbMsgs)
+	err := agent.DefaultRuntime.Store.ReplaceMessages(sessionID, dbMsgs)
+	if err == nil {
+		if sess, _ := agent.DefaultRuntime.Store.GetSession(sessionID); sess == nil {
+			title := "新会话"
+			if sessionID == "ai_agent_default" {
+				title = "默认会话"
+			}
+			_, _ = agent.DefaultRuntime.Store.CreateSession(sessionID, title)
+		} else {
+			_ = agent.DefaultRuntime.Store.TouchSession(sessionID)
+		}
+	}
+	return err
 }
 
 func (s *AgentService) AgentConfirmTool(confirmID string, approved bool) bool {
@@ -509,4 +663,124 @@ func (s *AgentService) AgentClearHistory() error {
 		_ = agent.DefaultRuntime.Store.ClearSessionMessages("ai_agent_default")
 	}
 	return agent.DefaultManager.Storage().ClearHistory()
+}
+
+// ---------- Agent 多会话管理 ----------
+
+func (s *AgentService) AgentListSessions() ([]store.SessionItem, error) {
+	if agent.DefaultRuntime.Store == nil {
+		return []store.SessionItem{}, nil
+	}
+	return agent.DefaultRuntime.Store.ListSessions()
+}
+
+func (s *AgentService) AgentCreateSession(title string) (store.SessionItem, error) {
+	if agent.DefaultRuntime.Store == nil {
+		return store.SessionItem{}, errors.New("存储层未就绪")
+	}
+	id := fmt.Sprintf("sess_%d", time.Now().UnixMilli())
+	if strings.TrimSpace(title) == "" {
+		title = "新会话"
+	}
+	return agent.DefaultRuntime.Store.CreateSession(id, title)
+}
+
+func (s *AgentService) AgentUpdateSessionTitle(sessionID, title string) error {
+	if agent.DefaultRuntime.Store == nil {
+		return errors.New("存储层未就绪")
+	}
+	err := agent.DefaultRuntime.Store.UpdateSessionTitle(sessionID, title)
+	if err == nil {
+		core.EmitEvent("agent:session_updated", map[string]string{
+			"id":    sessionID,
+			"title": strings.TrimSpace(title),
+		})
+	}
+	return err
+}
+
+func (s *AgentService) AgentDeleteSession(sessionID string) error {
+	if agent.DefaultRuntime.Store == nil {
+		return errors.New("存储层未就绪")
+	}
+	// 联动清理方案目录
+	_ = planner.DeletePlan(sessionID)
+	err := agent.DefaultRuntime.Store.DeleteSession(sessionID)
+	if err == nil {
+		core.EmitEvent("agent:session_deleted", sessionID)
+	}
+	return err
+}
+
+func (s *AgentService) AgentGenerateSessionTitle(sessionID string) (string, error) {
+	if agent.DefaultRuntime.Store == nil {
+		return "", errors.New("存储层未就绪")
+	}
+	msgs, err := s.AgentGetSessionMessages(sessionID)
+	if err != nil || len(msgs) == 0 {
+		return "新会话", nil
+	}
+	var firstUserQ, firstAssistantA string
+	for _, m := range msgs {
+		if m.Role == "user" && firstUserQ == "" {
+			firstUserQ = m.Content
+		} else if m.Role == "assistant" && firstAssistantA == "" {
+			firstAssistantA = m.Content
+		}
+		if firstUserQ != "" && firstAssistantA != "" {
+			break
+		}
+	}
+	title, err := agent.DefaultManager.GenerateSessionTitle(context.Background(), firstUserQ, firstAssistantA)
+	if err != nil {
+		return "", err
+	}
+	_ = agent.DefaultRuntime.Store.UpdateSessionTitle(sessionID, title)
+	core.EmitEvent("agent:session_updated", map[string]string{
+		"id":    sessionID,
+		"title": title,
+	})
+	return title, nil
+}
+
+func (s *AgentService) tryAutoGenerateTitle(sessionID string, messages []agent.FrontendMessage, assistantReply string) {
+	if agent.DefaultRuntime.Store == nil {
+		return
+	}
+	sess, err := agent.DefaultRuntime.Store.GetSession(sessionID)
+	if err != nil || sess == nil {
+		// 如果会话不存在则自动创建
+		newSess, createErr := agent.DefaultRuntime.Store.CreateSession(sessionID, "新会话")
+		if createErr == nil {
+			sess = &newSess
+		} else {
+			return
+		}
+	}
+	// 仅当会话标题为默认通用名称（新会话、默认会话或空）时，才在首轮问答后自动起名
+	t := strings.TrimSpace(sess.Title)
+	if t != "新会话" && t != "默认会话" && t != "" {
+		return
+	}
+
+	// 提取首条用户问题
+	var firstUserQ string
+	for _, m := range messages {
+		if m.Role == "user" && strings.TrimSpace(m.Content) != "" {
+			firstUserQ = m.Content
+			break
+		}
+	}
+	if firstUserQ == "" {
+		return
+	}
+
+	title, genErr := agent.DefaultManager.GenerateSessionTitle(context.Background(), firstUserQ, assistantReply)
+	if genErr == nil && title != "" && title != "新会话" {
+		_ = agent.DefaultRuntime.Store.UpdateSessionTitle(sessionID, title)
+		core.EmitEvent("agent:session_updated", map[string]string{
+			"id":    sessionID,
+			"title": title,
+		})
+	}
 }

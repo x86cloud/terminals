@@ -329,6 +329,7 @@ export function useAgentEvents({
                             const copy = prev.map((msg) => {
                                 if (
                                     msg.plan &&
+                                    msg.plan.steps &&
                                     (!event.payload.plan_id ||
                                         msg.plan.id === event.payload.plan_id)
                                 ) {

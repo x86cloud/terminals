@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Button } from 'antd'
 import { ArrowLeft, Palette, Bot, Info } from 'lucide-react'
-import { AppSettings } from '@/types'
+import { AppSettings, AiModelItem } from '@/types'
 import { applyThemeMode, applyGlobalFont } from '@/utils/theme'
 import AppearanceTab from '@/pages/setting/AppearanceTab'
 import AiAgentTab from '@/pages/setting/AiAgentTab'
@@ -25,6 +25,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const [aiBaseUrl, setAiBaseUrl] = useState('https://api.deepseek.com')
     const [aiApiKey, setAiApiKey] = useState('')
     const [aiModel, setAiModel] = useState('deepseek-v4-flash')
+    const [aiModels, setAiModels] = useState<AiModelItem[]>([])
+    const [activeModelId, setActiveModelId] = useState<string>('')
     const [aiTemperature, setAiTemperature] = useState(0.7)
     const [aiModelContextTokens, setAiModelContextTokens] = useState(65536)
     const [aiContextCompressRatio, setAiContextCompressRatio] = useState(80)
@@ -51,6 +53,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             setAiBaseUrl(settings.aiBaseUrl || 'https://api.deepseek.com')
             setAiApiKey(settings.aiApiKey || '')
             setAiModel(settings.aiModel || 'deepseek-v4-flash')
+            setAiModels(settings.aiModels || [])
+            setActiveModelId(settings.activeModelId || '')
             setAiTemperature(settings.aiTemperature ?? 0.7)
             setAiModelContextTokens(modelTokens)
             setAiContextCompressRatio(ratio)
@@ -90,6 +94,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiBaseUrl,
             aiApiKey,
             aiModel,
+            aiModels,
+            activeModelId,
             aiTemperature,
             aiModelContextTokens,
             aiContextCompressRatio,
@@ -130,6 +136,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         if (fields.aiBaseUrl !== undefined) setAiBaseUrl(fields.aiBaseUrl)
         if (fields.aiApiKey !== undefined) setAiApiKey(fields.aiApiKey)
         if (fields.aiModel !== undefined) setAiModel(fields.aiModel)
+        if (fields.aiModels !== undefined) setAiModels(fields.aiModels)
+        if (fields.activeModelId !== undefined) setActiveModelId(fields.activeModelId)
         if (fields.aiTemperature !== undefined) setAiTemperature(fields.aiTemperature)
         if (fields.aiModelContextTokens !== undefined) {
             nextModelTokens = fields.aiModelContextTokens
@@ -224,6 +232,8 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         aiBaseUrl={aiBaseUrl}
                         aiApiKey={aiApiKey}
                         aiModel={aiModel}
+                        aiModels={aiModels}
+                        activeModelId={activeModelId}
                         aiTemperature={aiTemperature}
                         aiModelContextTokens={aiModelContextTokens}
                         aiContextCompressRatio={aiContextCompressRatio}

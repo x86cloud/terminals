@@ -33,6 +33,22 @@ const (
 	LevelForbidden PermissionLevel = "forbidden"
 )
 
+type contextKey string
+
+const ContextKeyPlanningMode contextKey = "is_planning_mode"
+
+func WithPlanningMode(ctx context.Context, isPlanning bool) context.Context {
+	return context.WithValue(ctx, ContextKeyPlanningMode, isPlanning)
+}
+
+func IsPlanningMode(ctx context.Context) bool {
+	if ctx == nil {
+		return false
+	}
+	v, ok := ctx.Value(ContextKeyPlanningMode).(bool)
+	return ok && v
+}
+
 type ToolRule struct {
 	ToolName    string
 	Level       PermissionLevel
@@ -750,6 +766,64 @@ func (g *PolicyGuard) auditApiManager(ctx context.Context, input string) (Permis
 	return LevelAllow, ""
 }
 
+func isPlanModeForbidden(toolName string, input string) bool {
+	writeTools := map[string]bool{
+		"create_file":        true,
+		"apply_file_patch":   true,
+		"move_file":          true,
+		"delete_file":        true,
+		"execute":            true,
+		"ssh_write_file":     true,
+		"ssh_delete_file":    true,
+		"ssh_upload_file":    true,
+		"ssh_exec_command":   true,
+		"wiki_write":         true,
+		"wiki_update":        true,
+		"docker_execute":     true,
+		"docker_orchestrate": true,
+		"k8s_apply":          true,
+		"k8s_delete":         true,
+		"k8s_orchestrate":    true,
+		"k8s_exec":           true,
+	}
+	if writeTools[toolName] {
+		return true
+	}
+
+	// 针对数据库执行写操作 SQL 进行拦截
+	if strings.HasPrefix(toolName, "db_") && strings.HasSuffix(toolName, "_query") {
+		clean := strings.TrimSpace(input)
+		var obj struct {
+			SQL string `json:"sql"`
+		}
+		if err := json.Unmarshal([]byte(clean), &obj); err == nil && obj.SQL != "" {
+			clean = obj.SQL
+		}
+		upper := strings.ToUpper(clean)
+		writeKeywords := []string{"INSERT", "UPDATE", "DELETE", "DROP", "ALTER", "CREATE", "TRUNCATE", "REPLACE"}
+		for _, kw := range writeKeywords {
+			if strings.HasPrefix(upper, kw+" ") || strings.Contains(upper, " "+kw+" ") {
+				return true
+			}
+		}
+	}
+
+	// 针对 api_management 进行检查
+	if toolName == "api_management" {
+		var payload struct {
+			Action string `json:"action"`
+		}
+		if err := json.Unmarshal([]byte(input), &payload); err == nil {
+			act := strings.ToLower(strings.TrimSpace(payload.Action))
+			if act == "create" || act == "save" || act == "update" || act == "delete" || act == "import" {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
 func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input string, defaultLevel PermissionLevel) (PermissionLevel, string) {
 	g.mu.RLock()
 	enabled := g.enableGuard
@@ -757,6 +831,13 @@ func (g *PolicyGuard) Audit(ctx context.Context, sessionID, toolName, input stri
 
 	if !enabled {
 		return LevelAllow, ""
+	}
+
+	// 规划模式 (Plan Mode)：全面阻断所有写入与破坏性操作，引导模型专注于只读调研与方案输出
+	if IsPlanningMode(ctx) {
+		if isPlanModeForbidden(toolName, input) {
+			return LevelForbidden, "当前处于技术方案规划调研阶段，禁止执行写操作或修改操作。请继续使用只读工具进行现场调研，或直接输出技术实施方案。"
+		}
 	}
 
 	rule, ok := g.rules[toolName]

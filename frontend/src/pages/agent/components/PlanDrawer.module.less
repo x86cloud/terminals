@@ -1,0 +1,29 @@
+@import (reference) '@/styles/variables.less';
+@import (reference) '@/styles/mixins.less';
+
+.filePathBadge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    color: @text-faint;
+    font-family: @font-mono;
+    cursor: pointer;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: @bg-elev;
+    border: 1px solid @border;
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: @accent;
+        border-color: @accent;
+        background: @bg-1;
+    }
+}
+
+.drawerBody {
+    padding: 8px 4px 24px 4px;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: @text;
+}

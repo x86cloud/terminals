@@ -44,11 +44,46 @@
         font-weight: 600;
         font-size: 14px;
         line-height: 1;
+        min-width: 0;
+        flex: 1;
 
         :global(.ant-tag) {
             margin: 0;
             line-height: 20px;
             height: 22px;
+            flex-shrink: 0;
+        }
+
+        .sessionTitleWrapper {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+            max-width: 220px;
+        }
+
+        .sessionTitleText {
+            font-size: 13px;
+            font-weight: 500;
+            color: @text;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            cursor: pointer;
+            padding: 2px 6px;
+            border-radius: 4px;
+            transition: all 0.15s ease;
+
+            &:hover {
+                background: @bg-2;
+                color: #2b90ee;
+            }
+        }
+
+        .titleInput {
+            height: 22px;
+            font-size: 12px;
+            padding: 0 6px;
+            width: 140px;
         }
 
         .modelTag {
@@ -58,6 +93,7 @@
             background: @bg-2;
             color: @text-dim;
             border: 1px solid @border;
+            flex-shrink: 0;
         }
 
         .badgeThinking {
@@ -67,6 +103,7 @@
             background: rgba(138, 43, 226, 0.15);
             color: #a855f7;
             border: 1px solid rgba(138, 43, 226, 0.3);
+            flex-shrink: 0;
         }
     }
 

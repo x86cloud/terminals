@@ -22,12 +22,10 @@ import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import SessionTabs from '@/components/app/SessionTabs'
 import Stage from '@/components/app/Stage'
 import AiSidebar from '@/components/app/AiSidebar'
-import TransferBar from '@/components/TransferBar'
 import { API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop } from '@/api'
 import {
     ServerConfig,
     ServerGroup,
-    Transfer,
     AppSettings,
 } from '@/types'
 import { errorMessage } from '@/utils'
@@ -62,7 +60,6 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
 
     // ---- 设置与弹窗 ----
     const [settingsOpen, setSettingsOpen] = useState(false)
-    const [transfers, setTransfers] = useState<Transfer[]>([])
     const [dialog, setDialog] = useState<{ open: boolean; initial: ServerConfig | null }>({
         open: false,
         initial: null,
@@ -152,17 +149,6 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     }, [reloadServers, reloadGroups])
 
     useEffect(() => {
-        const offTransfer = subscribe('transfer:progress', (t: Transfer) => {
-            setTransfers((prev) => {
-                const idx = prev.findIndex((x) => x.id === t.id)
-                if (idx >= 0) {
-                    const next = [...prev]
-                    next[idx] = t
-                    return next
-                }
-                return [...prev, t]
-            })
-        })
         const offClosed = subscribe('session:closed', (sessionId: string) => {
             void closeSession('ssh', sessionId)
         })
@@ -170,8 +156,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             setPendingAsk(question)
             openTool('aiAgent')
         })
+
         return () => {
-            offTransfer()
             offClosed()
             offAsk()
         }
@@ -349,20 +335,10 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                             onPathChange={handlePathChange}
                             onNewServer={addServer}
                         />
-
-                        <TransferBar
-                            transfers={transfers}
-                            onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
-                            onClear={() => {
-                                API.clearFinishedTransfers()
-                                    .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
-                                    .catch(() => undefined)
-                            }}
-                        />
                     </div>
                 </main>
 
-                <AiSidebar settings={settings} />
+                <AiSidebar settings={settings} onUpdateSettings={onUpdateSettings} />
             </div>
 
             <ServerDialog

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Button, Modal, Tag, Space, Tooltip } from 'antd'
-import { Bot, Trash2, AlertTriangle, PanelRightClose } from 'lucide-react'
+import { Button, Modal, Tag, Space, Tooltip, Input } from 'antd'
+import { Bot, Trash2, AlertTriangle, PanelRightClose, Plus, History } from 'lucide-react'
 import { API } from '@/api'
 import { AppSettings, AgentHitlConfirmRequest } from '@/types'
 import { useAgentSessions } from './hooks/useAgentSessions'
@@ -10,25 +10,32 @@ import { ChatMessageList } from './components/ChatMessageList'
 import { ApprovalDock } from './components/ApprovalDock'
 import { AskUserDock } from './components/AskUserDock'
 import { HitlConfirmModal } from './components/HitlConfirmModal'
+import { HistorySessionsModal } from './components/HistorySessionsModal'
 import { Composer } from './components/Composer'
 import s from '@/pages/agent/AiAgentPanel.module.less'
 
 interface Props {
     settings: AppSettings
+    onUpdateSettings?: (newSettings: AppSettings) => Promise<void>
     onClose?: () => void
 }
 
-export default function AiAgentPanel({ settings, onClose }: Props) {
+export default function AiAgentPanel({ settings, onUpdateSettings, onClose }: Props) {
     const [noticeText, setNoticeText] = useState<string>('')
     const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
     const [pendingAsk, setPendingAsk] = useState<any>(null)
     const [pendingHitl, setPendingHitl] = useState<AgentHitlConfirmRequest | null>(null)
     const [pendingPlan, setPendingPlan] = useState<any>(null)
     const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false)
+    const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false)
+    const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false)
+    const [editingTitleValue, setEditingTitleValue] = useState<string>('')
 
-    // 1. Single Session Hook
+    // 1. Session Hook
     const {
+        sessions,
         activeSessionId,
+        currentSession,
         messages,
         setMessages,
         visibleMessages,
@@ -36,7 +43,23 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
         remainingRounds,
         loadMoreHistory,
         clearMessages,
+        createSession,
+        switchSession,
+        renameSession,
+        deleteSession,
     } = useAgentSessions()
+
+    const handleStartEditTitle = () => {
+        setEditingTitleValue(currentSession?.title || '新会话')
+        setIsEditingTitle(true)
+    }
+
+    const handleSaveTitle = () => {
+        if (editingTitleValue.trim() && editingTitleValue.trim() !== currentSession?.title) {
+            renameSession(activeSessionId, editingTitleValue.trim())
+        }
+        setIsEditingTitle(false)
+    }
 
 
 
@@ -50,8 +73,8 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
         setIsGenerating,
         activeReasoning,
         setActiveReasoning,
-        activeMode,
-        setActiveMode,
+        activeCommand,
+        setActiveCommand,
         workspaceDir,
         chatEndRef,
         textareaRef,
@@ -189,6 +212,32 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
     const maxTokens = settings.aiModelContextTokens || 65536
     const percent = Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10)
 
+    const handleSelectModel = async (modelId: string) => {
+        const models = settings.aiModels || []
+        const target = models.find((m) => m.id === modelId)
+        if (!target) return
+
+        const newSettings: AppSettings = {
+            ...settings,
+            activeModelId: modelId,
+            aiModel: target.model,
+            aiBaseUrl: target.baseUrl,
+            aiApiKey: target.apiKey,
+            aiModelContextTokens: target.contextTokens,
+            aiTemperature: target.temperature ?? settings.aiTemperature,
+        }
+
+        if (onUpdateSettings) {
+            await onUpdateSettings(newSettings)
+        } else {
+            try {
+                await API.saveAppSettings(newSettings)
+            } catch (err) {
+                console.error('Failed to save settings on model switch', err)
+            }
+        }
+    }
+
     return (
         <div className={s.workbenchLayout}>
             {/* Center Main Workspace */}
@@ -197,10 +246,50 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
                 <div className={s.headerBar}>
                     <div className={s.titleSection}>
                         <Bot size={18} color="#2b90ee" />
-                        {settings.aiModel && <Tag color="blue">{settings.aiModel}</Tag>}
+                        <div className={s.sessionTitleWrapper}>
+                            {isEditingTitle ? (
+                                <Input
+                                    size="small"
+                                    value={editingTitleValue}
+                                    autoFocus
+                                    onChange={(e) => setEditingTitleValue(e.target.value)}
+                                    onBlur={handleSaveTitle}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') handleSaveTitle()
+                                        if (e.key === 'Escape') setIsEditingTitle(false)
+                                    }}
+                                    className={s.titleInput}
+                                />
+                            ) : (
+                                <Tooltip title="点击重命名会话">
+                                    <span
+                                        className={s.sessionTitleText}
+                                        onClick={handleStartEditTitle}
+                                    >
+                                        {currentSession?.title || '新会话'}
+                                    </span>
+                                </Tooltip>
+                            )}
+                        </div>
                     </div>
 
                     <div className={s.actions}>
+                        <Tooltip title="新增会话">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<Plus size={14} />}
+                                onClick={() => createSession()}
+                            />
+                        </Tooltip>
+                        <Tooltip title="历史会话">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<History size={14} />}
+                                onClick={() => setShowHistoryModal(true)}
+                            />
+                        </Tooltip>
                         <Tooltip title="清空会话历史">
                             <Button
                                 size="small"
@@ -254,11 +343,15 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
                         input={input}
                         setInput={setInput}
                         textareaRef={textareaRef}
-                        activeMode={activeMode}
-                        setActiveMode={setActiveMode}
+                        activeCommand={activeCommand}
+                        setActiveCommand={setActiveCommand}
                         workspaceDir={workspaceDir}
                         onSelectWorkspace={handleSelectWorkspace}
                         onClearWorkspace={handleClearWorkspace}
+                        aiModel={settings.aiModel}
+                        aiModels={settings.aiModels}
+                        activeModelId={settings.activeModelId}
+                        onSelectModel={handleSelectModel}
                         usedTokens={usedTokens}
                         maxTokens={maxTokens}
                         percent={percent}
@@ -299,6 +392,18 @@ export default function AiAgentPanel({ settings, onClose }: Props) {
             <HitlConfirmModal
                 pendingHitl={pendingHitl}
                 onResolve={handleResolveHitl}
+            />
+
+            {/* History Sessions Modal */}
+            <HistorySessionsModal
+                open={showHistoryModal}
+                sessions={sessions}
+                activeSessionId={activeSessionId}
+                onSelectSession={switchSession}
+                onCreateSession={() => createSession()}
+                onRenameSession={renameSession}
+                onDeleteSession={deleteSession}
+                onClose={() => setShowHistoryModal(false)}
             />
         </div>
     )

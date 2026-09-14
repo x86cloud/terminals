@@ -123,6 +123,7 @@ func (tm *TransferManager) emit(t *Transfer, force bool) {
 
 	snapshot.UpdatedAt = now.UnixMilli()
 	core.EmitEvent("transfer:update", snapshot)
+	core.EmitEvent("transfer:progress", snapshot)
 }
 
 func (tm *TransferManager) addProgress(t *Transfer, n int64) {
@@ -436,6 +437,9 @@ func (m *SessionManager) StartUpload(tm *TransferManager, sessionID, remoteDir, 
 	remotePath := path.Join(remoteDir, name)
 
 	t, ctx := tm.create(sessionID, "upload", name, localPath, remotePath)
+	if !info.IsDir() {
+		tm.setSize(t, info.Size())
+	}
 
 	go func() {
 		var err error
@@ -445,7 +449,6 @@ func (m *SessionManager) StartUpload(tm *TransferManager, sessionID, remoteDir, 
 			}
 			err = m.uploadTree(tm, ctx, client, localPath, remotePath, t)
 		} else {
-			tm.setSize(t, info.Size())
 			err = m.uploadFile(tm, ctx, client, localPath, remotePath, t)
 		}
 		tm.finish(t, err)
@@ -547,6 +550,9 @@ func (m *SessionManager) StartDownload(tm *TransferManager, sessionID, remotePat
 	localPath := filepath.Join(localDir, name)
 
 	t, ctx := tm.create(sessionID, "download", name, localPath, remotePath)
+	if !st.IsDir() {
+		tm.setSize(t, st.Size())
+	}
 
 	go func() {
 		var err error
@@ -554,7 +560,6 @@ func (m *SessionManager) StartDownload(tm *TransferManager, sessionID, remotePat
 			tm.setSize(t, remoteTreeSize(client, remotePath))
 			err = m.downloadTree(tm, ctx, client, remotePath, localPath, t)
 		} else {
-			tm.setSize(t, st.Size())
 			err = m.downloadFile(tm, ctx, client, remotePath, localPath, t)
 		}
 		tm.finish(t, err)

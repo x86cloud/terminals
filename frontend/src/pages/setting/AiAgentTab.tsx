@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Card, Input, InputNumber, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, message } from 'antd'
-import { Bot, Server, Shield, Sparkles, Layers, FolderOpen, BookOpen, Eye } from 'lucide-react'
-import { AppSettings, AgentSkillItem } from '@/types'
+import { Card, Input, InputNumber, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, Popconfirm, message } from 'antd'
+import { Bot, Server, Shield, Sparkles, Layers, FolderOpen, BookOpen, Eye, Plus, Edit2, Trash2, Check } from 'lucide-react'
+import { AppSettings, AgentSkillItem, AiModelItem } from '@/types'
 import { API } from '@/api'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
+import { ModelEditModal } from './components/ModelEditModal'
 import s from './AiAgentTab.module.less'
 
 const { Text } = Typography
@@ -13,6 +14,8 @@ interface Props {
     aiBaseUrl: string
     aiApiKey: string
     aiModel: string
+    aiModels?: AiModelItem[]
+    activeModelId?: string
     aiTemperature: number
     aiModelContextTokens?: number
     aiContextCompressRatio?: number
@@ -34,6 +37,8 @@ export default function AiAgentTab({
     aiBaseUrl,
     aiApiKey,
     aiModel,
+    aiModels,
+    activeModelId,
     aiTemperature,
     aiModelContextTokens = 65536,
     aiContextCompressRatio = 80,
@@ -52,6 +57,96 @@ export default function AiAgentTab({
     const [skills, setSkills] = useState<AgentSkillItem[]>([])
     const [skillsLoading, setSkillsLoading] = useState(false)
     const [selectedSkill, setSelectedSkill] = useState<AgentSkillItem | null>(null)
+    const [editModalOpen, setEditModalOpen] = useState<boolean>(false)
+    const [editingModel, setEditingModel] = useState<AiModelItem | null>(null)
+
+    const currentModels: AiModelItem[] = (aiModels && aiModels.length > 0) ? aiModels : [
+        {
+            id: 'model_default',
+            name: aiModel || '默认模型',
+            model: aiModel || 'deepseek-v4-flash',
+            baseUrl: aiBaseUrl || 'https://api.deepseek.com',
+            apiKey: aiApiKey || '',
+            contextTokens: aiModelContextTokens || 65536,
+            temperature: aiTemperature ?? 0.7,
+        },
+    ]
+    const activeModel = currentModels.find((m) => m.id === activeModelId) || currentModels[0]
+
+    const handleAddModel = () => {
+        setEditingModel(null)
+        setEditModalOpen(true)
+    }
+
+    const handleEditModel = (item: AiModelItem) => {
+        setEditingModel(item)
+        setEditModalOpen(true)
+    }
+
+    const handleDeleteModel = (id: string) => {
+        if (currentModels.length <= 1) {
+            message.warning('至少需要保留一个模型配置')
+            return
+        }
+        const nextModels = currentModels.filter((m) => m.id !== id)
+        let nextActiveId = activeModelId
+        let activeChanged = false
+
+        if (activeModelId === id) {
+            nextActiveId = nextModels[0].id
+            activeChanged = true
+        }
+
+        const targetActive = nextModels.find((m) => m.id === nextActiveId) || nextModels[0]
+
+        const updates: Partial<AppSettings> = {
+            aiModels: nextModels,
+            activeModelId: nextActiveId,
+        }
+
+        if (activeChanged) {
+            updates.aiModel = targetActive.model
+            updates.aiBaseUrl = targetActive.baseUrl
+            updates.aiApiKey = targetActive.apiKey
+            updates.aiModelContextTokens = targetActive.contextTokens
+            updates.aiTemperature = targetActive.temperature ?? aiTemperature
+        }
+
+        onChange(updates)
+        message.success('已删除模型')
+    }
+
+    const handleSaveModelItem = (item: AiModelItem) => {
+        const existingIndex = currentModels.findIndex((m) => m.id === item.id)
+        let nextModels: AiModelItem[]
+        let nextActiveId = activeModelId
+
+        if (existingIndex >= 0) {
+            nextModels = [...currentModels]
+            nextModels[existingIndex] = item
+        } else {
+            nextModels = [...currentModels, item]
+            nextActiveId = activeModelId || item.id
+        }
+
+        const targetActive = nextModels.find((m) => m.id === nextActiveId) || nextModels[0]
+        const isTargetActive = targetActive.id === item.id
+
+        onChange({
+            aiModels: nextModels,
+            activeModelId: nextActiveId,
+            ...(isTargetActive
+                ? {
+                      aiModel: targetActive.model,
+                      aiBaseUrl: targetActive.baseUrl,
+                      aiApiKey: targetActive.apiKey,
+                      aiModelContextTokens: targetActive.contextTokens,
+                      aiTemperature: targetActive.temperature ?? aiTemperature,
+                  }
+                : {}),
+        })
+        message.success(existingIndex >= 0 ? '模型配置已更新' : '已添加新模型')
+    }
 
     const loadSkills = async () => {
         setSkillsLoading(true)
@@ -77,38 +172,6 @@ export default function AiAgentTab({
             message.error(`打开技能目录失败: ${err?.message || err}`)
         }
     }
-    const handlePreset = (preset: 'deepseek' | 'openai' | 'qwen' | 'ollama') => {
-        switch (preset) {
-            case 'deepseek':
-                onChange({
-                    aiBaseUrl: 'https://api.deepseek.com',
-                    aiModel: 'deepseek-v4-flash',
-                    aiModelContextTokens: 65536,
-                })
-                break
-            case 'openai':
-                onChange({
-                    aiBaseUrl: 'https://api.openai.com/v1',
-                    aiModel: 'gpt-4o-mini',
-                    aiModelContextTokens: 128000,
-                })
-                break
-            case 'qwen':
-                onChange({
-                    aiBaseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-                    aiModel: 'qwen-turbo',
-                    aiModelContextTokens: 131072,
-                })
-                break
-            case 'ollama':
-                onChange({
-                    aiBaseUrl: 'http://localhost:11434/v1',
-                    aiModel: 'llama3',
-                    aiModelContextTokens: 32768,
-                })
-                break
-        }
-    }
 
     const calculatedTriggerTokens = Math.round((aiModelContextTokens * aiContextCompressRatio) / 100)
 
@@ -120,115 +183,100 @@ export default function AiAgentTab({
                     <span>AI 智能体设置</span>
                 </div>
                 <div className={s.sectionDesc}>
-                    配置大模型 API 接入、上下文窗口、历史长文本压缩方式与安全管控。
+                    配置大模型 API 接入、多模型管理、上下文窗口、历史长文本压缩方式与安全管控。
                 </div>
             </div>
 
-            {/* 卡片 1：模型服务与接入 */}
+            {/* 卡片 1：多模型服务配置与管理（当前页面直接增删改查） */}
             <Card
                 size="small"
                 title={
                     <Space size={8}>
                         <Server size={15} />
-                        <span>模型服务与接入</span>
+                        <span>大模型接入管理</span>
                     </Space>
                 }
                 extra={
-                    <Space size={6}>
-                        <Tag style={{ cursor: 'pointer' }} color="blue" onClick={() => handlePreset('deepseek')}>DeepSeek (64K)</Tag>
-                        <Tag style={{ cursor: 'pointer' }} color="green" onClick={() => handlePreset('openai')}>OpenAI (128K)</Tag>
-                        <Tag style={{ cursor: 'pointer' }} color="orange" onClick={() => handlePreset('qwen')}>通义千问 (128K)</Tag>
-                        <Tag style={{ cursor: 'pointer' }} color="purple" onClick={() => handlePreset('ollama')}>Ollama (32K)</Tag>
-                    </Space>
+                    <Button
+                        type="primary"
+                        size="small"
+                        icon={<Plus size={13} />}
+                        onClick={handleAddModel}
+                    >
+                        添加模型
+                    </Button>
                 }
                 style={{ borderRadius: 8 }}
             >
-                <Space orientation="vertical" size={14} style={{ width: '100%' }}>
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>API Base URL</div>
-                        <Input
-                            placeholder="https://api.deepseek.com / https://api.openai.com/v1"
-                            value={aiBaseUrl}
-                            onChange={(e) => onChange({ aiBaseUrl: e.target.value })}
-                        />
-                    </div>
+                <div className={s.modelList}>
+                    {currentModels.map((item) => {
+                        const isActive = item.id === (activeModel?.id || currentModels[0]?.id)
+                        return (
+                            <div
+                                key={item.id}
+                                className={`${s.modelCard} ${isActive ? s.modelCardActive : ''}`}
+                            >
+                                <div className={s.modelCardLeft}>
+                                    <div className={s.modelNameRow}>
+                                        <span className={s.modelName}>{item.name || item.model}</span>
+                                        <Tag color="blue">{item.model}</Tag>
+                                        <Tag color="cyan">
+                                            {Math.round((item.contextTokens || 65536) / 1024)}K 上下文
+                                        </Tag>
+                                        {isActive ? (
+                                            <Tag
+                                                color="success"
+                                                icon={<Check size={12} style={{ verticalAlign: -1, marginRight: 2 }} />}
+                                            >
+                                                当前使用
+                                            </Tag>
+                                        ) : null}
+                                    </div>
+                                    <div className={s.modelUrlText}>
+                                        API Base URL: {item.baseUrl}
+                                    </div>
+                                </div>
 
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>API Key (访问凭证)</div>
-                        <Input.Password
-                            placeholder="sk-..."
-                            value={aiApiKey}
-                            onChange={(e) => onChange({ aiApiKey: e.target.value })}
-                        />
-                    </div>
-
-                    <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 4 }}>默认模型 (Model Name)</div>
-                        <Input
-                            placeholder="deepseek-v4-flash / gpt-4o / qwen-plus"
-                            value={aiModel}
-                            onChange={(e) => onChange({ aiModel: e.target.value })}
-                        />
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ flex: 1, marginRight: 16 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 2 }}>
-                                模型上下文总长度 (Context Window)
-                            </div>
-                            <Space size={4} wrap style={{ marginTop: 2 }}>
-                                {[
-                                    { label: '4K', value: 4096 },
-                                    { label: '8K', value: 8192 },
-                                    { label: '16K', value: 16384 },
-                                    { label: '32K', value: 32768 },
-                                    { label: '64K', value: 65536 },
-                                    { label: '128K', value: 131072 },
-                                    { label: '200K', value: 204800 },
-                                ].map((p) => (
-                                    <Tag
-                                        key={p.value}
-                                        color={aiModelContextTokens === p.value ? 'blue' : undefined}
-                                        style={{ cursor: 'pointer', margin: 0, fontSize: 11, padding: '0 6px' }}
-                                        onClick={() => onChange({ aiModelContextTokens: p.value })}
+                                <div className={s.modelCardRight}>
+                                    <Button
+                                        size="small"
+                                        icon={<Edit2 size={13} />}
+                                        onClick={() => handleEditModel(item)}
                                     >
-                                        {p.label}
-                                    </Tag>
-                                ))}
-                            </Space>
-                        </div>
-                        <div style={{ width: 220, flexShrink: 0 }}>
-                            <InputNumber
-                                style={{ width: '100%' }}
-                                min={1024}
-                                max={2097152}
-                                step={1024}
-                                addonAfter="Tokens"
-                                value={aiModelContextTokens}
-                                onChange={(val) => onChange({ aiModelContextTokens: val || 65536 })}
-                            />
-                        </div>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>Temperature (多样性: {aiTemperature})</div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                较低的值更专注确定，较高的值更具创造性
-                            </Text>
-                        </div>
-                        <div style={{ width: 220 }}>
-                            <Slider
-                                min={0}
-                                max={2}
-                                step={0.1}
-                                value={aiTemperature}
-                                onChange={(val) => onChange({ aiTemperature: val })}
-                            />
-                        </div>
-                    </div>
-                </Space>
+                                        编辑
+                                    </Button>
+                                    {currentModels.length > 1 && (
+                                        <Popconfirm
+                                            title="确定删除此模型配置吗？"
+                                            description={isActive ? '该模型当前正在使用，删除后将自动切换为其他模型。' : undefined}
+                                            okText="确定"
+                                            cancelText="取消"
+                                            okButtonProps={{ danger: true }}
+                                            onConfirm={() => handleDeleteModel(item.id)}
+                                        >
+                                            <Button
+                                                size="small"
+                                                danger
+                                                icon={<Trash2 size={13} />}
+                                            />
+                                        </Popconfirm>
+                                    )}
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
             </Card>
+
+            <ModelEditModal
+                open={editModalOpen}
+                initialData={editingModel}
+                onSave={handleSaveModelItem}
+                onClose={() => {
+                    setEditModalOpen(false)
+                    setEditingModel(null)
+                }}
+            />
 
             {/* 卡片 2：上下文与长文本管理 */}
             <Card

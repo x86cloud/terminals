@@ -5,12 +5,43 @@
 // @ts-ignore: Unused imports
 import * as json$0 from "../../../encoding/json/models.js";
 
+/**
+ * Plan 规划方案实体 (对齐 Antigravity IDE 规范，以 Markdown 为核心资产)
+ */
 export interface Plan {
     "id": string;
     "session_id": string;
     "objective": string;
-    "steps": PlanStep[] | null;
-    "risk_level": RiskLevel;
+
+    /**
+     * Markdown 格式完整实施方案
+     */
+    "content": string;
+
+    /**
+     * 本地落盘路径 (%APPDATA%/xClient/plans/<sessionId>/implementation_plan.md)
+     */
+    "file_path": string;
+
+    /**
+     * proposed | approved | rejected
+     */
+    "status": string;
+
+    /**
+     * 是否是对已有方案的更新版本
+     */
+    "is_update"?: boolean;
+
+    /**
+     * 兼容字段
+     */
+    "steps"?: PlanStep[] | null;
+
+    /**
+     * 兼容字段
+     */
+    "risk_level"?: RiskLevel;
     "need_confirm": boolean;
     "reasoning_content"?: string;
     "created_at": number;
@@ -24,7 +55,7 @@ export interface PlanStep {
      */
     "action": string;
     "tool_name"?: string;
-    "args": json$0.RawMessage;
+    "args"?: json$0.RawMessage;
     "description": string;
     "depends_on"?: string[] | null;
     "expected_out"?: string;

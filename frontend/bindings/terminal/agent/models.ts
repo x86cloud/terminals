@@ -3,6 +3,9 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as planner$0 from "./planner/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as tools$0 from "./tools/models.js";
 
 export type ActiveConnectionInfo = tools$0.ActiveConnectionInfo;
@@ -16,6 +19,7 @@ export interface FrontendMessage {
     "tool_calls"?: ToolCallItem[] | null;
     "tool_call_id"?: string;
     "name"?: string;
+    "plan"?: planner$0.Plan | null;
     "timestamp"?: number;
 }
 

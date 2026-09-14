@@ -1,0 +1,71 @@
+@import (reference) '../../../styles/variables.less';
+@import (reference) '../../../styles/mixins.less';
+
+.modalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 8px;
+}
+
+.presetSection {
+    background: @bg-1;
+    border: 1px dashed @border;
+    border-radius: @radius-sm;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    .presetHeader {
+        font-size: 12px;
+        color: @text-dim;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .presetButtons {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+}
+
+.formGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.formItem {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .label {
+        font-size: 12px;
+        font-weight: 500;
+        color: @text;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+
+        .required {
+            color: #ef4444;
+            margin-left: 2px;
+        }
+
+        .hint {
+            font-size: 11px;
+            font-weight: normal;
+            color: @text-dim;
+        }
+    }
+}
+
+.rowTwoCols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
