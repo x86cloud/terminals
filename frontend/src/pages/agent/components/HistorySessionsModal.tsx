@@ -91,7 +91,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
             }
             onCancel={onClose}
             footer={null}
-            width={520}
+            width={640}
             centered
             destroyOnClose
         >
@@ -180,9 +180,11 @@ export const HistorySessionsModal: React.FC<Props> = ({
                                             ) : (
                                                 <>
                                                     <div className={s.itemTitleRow}>
-                                                        <span className={s.itemTitle}>{item.title || '新会话'}</span>
+                                                        <Tooltip title={item.title || '新会话'} placement="topLeft" mouseEnterDelay={0.3}>
+                                                            <span className={s.itemTitle}>{item.title || '新会话'}</span>
+                                                        </Tooltip>
                                                         {isActive && (
-                                                            <Tag color="processing" style={{ margin: 0, padding: '0 4px', fontSize: 11, lineHeight: '18px' }}>
+                                                            <Tag color="processing" style={{ margin: 0, padding: '0 4px', fontSize: 11, lineHeight: '18px', flexShrink: 0 }}>
                                                                 当前
                                                             </Tag>
                                                         )}

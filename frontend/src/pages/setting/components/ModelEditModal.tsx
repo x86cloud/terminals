@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Button, Input, InputNumber, Slider, Space, Tag, message } from 'antd'
+import { Modal, Button, Input, InputNumber, Slider, Space, Tag, Switch, message } from 'antd'
 import { Sparkles, Server } from 'lucide-react'
 import { AiModelItem } from '@/types'
 import s from './ModelEditModal.module.less'
@@ -21,10 +21,11 @@ const PRESETS = [
             baseUrl: 'https://api.deepseek.com',
             contextTokens: 65536,
             temperature: 0.7,
+            enableMultimodal: false,
         },
     },
     {
-        label: 'OpenAI (128K)',
+        label: 'OpenAI (128K 视觉)',
         color: 'green',
         data: {
             name: 'GPT-4o mini',
@@ -32,6 +33,7 @@ const PRESETS = [
             baseUrl: 'https://api.openai.com/v1',
             contextTokens: 128000,
             temperature: 0.7,
+            enableMultimodal: true,
         },
     },
     {
@@ -43,6 +45,7 @@ const PRESETS = [
             baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
             contextTokens: 131072,
             temperature: 0.7,
+            enableMultimodal: false,
         },
     },
     {
@@ -54,6 +57,7 @@ const PRESETS = [
             baseUrl: 'http://localhost:11434/v1',
             contextTokens: 32768,
             temperature: 0.7,
+            enableMultimodal: false,
         },
     },
 ]
@@ -70,6 +74,7 @@ export const ModelEditModal: React.FC<Props> = ({
     const [apiKey, setApiKey] = useState('')
     const [contextTokens, setContextTokens] = useState<number>(65536)
     const [temperature, setTemperature] = useState<number>(0.7)
+    const [enableMultimodal, setEnableMultimodal] = useState<boolean>(false)
 
     const isEdit = !!initialData?.id
 
@@ -82,6 +87,7 @@ export const ModelEditModal: React.FC<Props> = ({
                 setApiKey(initialData.apiKey || '')
                 setContextTokens(initialData.contextTokens || 65536)
                 setTemperature(initialData.temperature ?? 0.7)
+                setEnableMultimodal(!!initialData.enableMultimodal)
             } else {
                 setName('')
                 setModel('')
@@ -89,6 +95,7 @@ export const ModelEditModal: React.FC<Props> = ({
                 setApiKey('')
                 setContextTokens(65536)
                 setTemperature(0.7)
+                setEnableMultimodal(false)
             }
         }
     }, [open, initialData])
@@ -100,6 +107,9 @@ export const ModelEditModal: React.FC<Props> = ({
         setContextTokens(presetData.contextTokens)
         if (presetData.temperature !== undefined) {
             setTemperature(presetData.temperature)
+        }
+        if (presetData.enableMultimodal !== undefined) {
+            setEnableMultimodal(presetData.enableMultimodal)
         }
         message.success(`已应用 ${presetData.name} 预设模板`)
     }
@@ -126,6 +136,7 @@ export const ModelEditModal: React.FC<Props> = ({
             apiKey: apiKey.trim(),
             contextTokens: contextTokens || 65536,
             temperature: temperature ?? 0.7,
+            enableMultimodal: !!enableMultimodal,
         }
 
         onSave(item)
@@ -257,6 +268,19 @@ export const ModelEditModal: React.FC<Props> = ({
                                 onChange={(val) => setTemperature(val)}
                             />
                         </div>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px dashed var(--border)', marginTop: 4 }}>
+                        <div>
+                            <div style={{ fontSize: 13, fontWeight: 500 }}>多模态视觉能力 (Multimodal)</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                                允许发送并解析图片附件（如截图、架构图、日志图片）
+                            </div>
+                        </div>
+                        <Switch
+                            checked={enableMultimodal}
+                            onChange={(checked) => setEnableMultimodal(checked)}
+                        />
                     </div>
                 </div>
             </div>

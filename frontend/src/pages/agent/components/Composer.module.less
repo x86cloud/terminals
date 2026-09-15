@@ -10,6 +10,103 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &.dragging {
+        border-color: @accent;
+        border-style: dashed;
+        background: rgba(51, 112, 255, 0.05);
+    }
+
+    .dropOverlay {
+        position: absolute;
+        inset: 0;
+        z-index: 40;
+        background: var(--bg-1, rgba(25, 30, 40, 0.92));
+        border-radius: 7px;
+        border: 2px dashed @accent;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        color: @accent;
+        font-size: 13px;
+        font-weight: 500;
+        pointer-events: none;
+        animation: dropFadeIn 0.15s ease;
+
+        .dropIcon {
+            color: @accent;
+            animation: dropBounce 1s infinite alternate ease-in-out;
+        }
+    }
+
+    .imagesPreviewBar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(127, 127, 127, 0.12);
+
+        .imageThumbCard {
+            position: relative;
+            width: 56px;
+            height: 56px;
+            border-radius: 6px;
+            background: @bg-1;
+            border: 1px solid @border;
+            flex-shrink: 0;
+            transition: border-color 0.15s ease;
+
+            &:hover {
+                border-color: @accent;
+            }
+
+            :global(.ant-image) {
+                width: 100%;
+                height: 100%;
+                border-radius: 6px;
+                overflow: hidden;
+                display: block;
+            }
+
+            :global(.ant-image-img) {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                border-radius: 6px;
+                display: block;
+            }
+
+            .thumbRemoveBtn {
+                position: absolute;
+                top: -6px;
+                right: -6px;
+                width: 18px;
+                height: 18px;
+                border-radius: 50%;
+                background: rgba(30, 30, 30, 0.85);
+                border: 1px solid rgba(255, 255, 255, 0.25);
+                color: #eee;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                padding: 0;
+                z-index: 10;
+                transition: all 0.15s ease;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+
+                &:hover {
+                    background: #ff4d4f;
+                    border-color: #ff4d4f;
+                    color: #fff;
+                    transform: scale(1.1);
+                }
+            }
+        }
+    }
 
     .editorWrapper {
         width: 100%;

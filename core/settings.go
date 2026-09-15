@@ -1,13 +1,14 @@
 package core
 
 type AiModelItem struct {
-	ID            string  `json:"id"`
-	Name          string  `json:"name"`
-	Model         string  `json:"model"`
-	BaseURL       string  `json:"baseUrl"`
-	APIKey        string  `json:"apiKey"`
-	ContextTokens int     `json:"contextTokens"`
-	Temperature   float64 `json:"temperature"`
+	ID               string  `json:"id"`
+	Name             string  `json:"name"`
+	Model            string  `json:"model"`
+	BaseURL          string  `json:"baseUrl"`
+	APIKey           string  `json:"apiKey"`
+	ContextTokens    int     `json:"contextTokens"`
+	Temperature      float64 `json:"temperature"`
+	EnableMultimodal bool    `json:"enableMultimodal"`
 }
 
 type AppSettings struct {
@@ -46,8 +47,9 @@ func DefaultAppSettings() AppSettings {
 		Model:         "deepseek-v4-flash",
 		BaseURL:       "https://api.deepseek.com",
 		APIKey:        "",
-		ContextTokens: 65536,
-		Temperature:   0.7,
+		ContextTokens:    65536,
+		Temperature:      0.7,
+		EnableMultimodal: false,
 	}
 
 	return AppSettings{

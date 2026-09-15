@@ -212,6 +212,9 @@ export default function AiAgentPanel({ settings, onUpdateSettings, onClose }: Pr
     const maxTokens = settings.aiModelContextTokens || 65536
     const percent = Math.min(100, Math.round((usedTokens / maxTokens) * 1000) / 10)
 
+    const activeModel = settings.aiModels?.find((m) => m.id === settings.activeModelId)
+    const isMultimodalEnabled = activeModel ? !!activeModel.enableMultimodal : !!settings.aiEnableMultimodal
+
     const handleSelectModel = async (modelId: string) => {
         const models = settings.aiModels || []
         const target = models.find((m) => m.id === modelId)
@@ -225,6 +228,7 @@ export default function AiAgentPanel({ settings, onUpdateSettings, onClose }: Pr
             aiApiKey: target.apiKey,
             aiModelContextTokens: target.contextTokens,
             aiTemperature: target.temperature ?? settings.aiTemperature,
+            aiEnableMultimodal: !!target.enableMultimodal,
         }
 
         if (onUpdateSettings) {
@@ -358,6 +362,8 @@ export default function AiAgentPanel({ settings, onUpdateSettings, onClose }: Pr
                         noticeText={noticeText}
                         isGenerating={isGenerating}
                         images={images}
+                        setImages={setImages}
+                        enableMultimodal={isMultimodalEnabled}
                         onStop={handleStop}
                         onSend={handleSend}
                         onKeyDown={handleKeyDown}

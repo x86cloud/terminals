@@ -1,27 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Segmented, Button, Input, Pagination, Tooltip, message, Space, Tag, Dropdown, MenuProps } from 'antd'
+import { Segmented, Button, Input, Pagination, Tooltip, message, Space, Tag, Dropdown, MenuProps, Popconfirm } from 'antd'
 import {
     RotateCw,
     Plus,
     Save,
     Trash2,
-    Download,
     Copy,
     Filter,
-    X,
     Key,
-    Link2,
     Loader2,
-    Database,
     Table as TableIcon,
-    Layers,
-    Code,
-    Shield,
-    Check,
+    ArrowUp,
+    ArrowDown,
+    ArrowUpDown,
 } from 'lucide-react'
 import { API } from '@/api'
 import { isSameCellValue, coerceCellValue } from '@/utils'
-import ResizableTable, { ColDef } from '@/components/ResizableTable'
+import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
 import { MysqlColumn, MysqlIndex, MysqlConstraint } from './mysqlTypes'
 import CellEditorInline from './CellEditorInline'
 import my from './DataTab.module.less'
@@ -30,7 +25,6 @@ import sh from '@/pages/mysql/mysqlShared.module.less'
 
 const ROW_ACT_W = 48
 const ROW_NUM_W = 46
-const DEFAULT_COL_W = 130
 
 export default function DataTab({
     serverId,
@@ -77,7 +71,12 @@ export default function DataTab({
         setColWidths({})
     }, [tableName, columns.join(',')])
 
-    const getColW = (key: string) => colWidths[key] ?? DEFAULT_COL_W
+    const getColW = (key: string, isPk = false) => {
+        if (colWidths[key] !== undefined) {
+            return colWidths[key]
+        }
+        return calcColWidthFromName(key, { isPk, minWidth: 70 })
+    }
 
     const handleColResize = (key: string, newWidth: number) => {
         setColWidths((prev) => ({ ...prev, [key]: newWidth }))
@@ -192,19 +191,25 @@ export default function DataTab({
     }
 
     // 加载数据
-    const loadData = async (targetPage = page, targetSize = pageSize, where = activeWhere) => {
+    const loadData = async (
+        targetPage = page,
+        targetSize = pageSize,
+        where = activeWhere,
+        targetSortCol = sortCol,
+        targetSortOrder = sortOrder
+    ) => {
         setLoading(true)
         try {
             const offset = (targetPage - 1) * targetSize
             let res: any
-            if (where.trim() || sortCol) {
+            if (where.trim() || targetSortCol) {
                 let sql = `SELECT * FROM \`${tableName}\``
                 if (where.trim()) {
                     const cleanWhere = where.trim().replace(/^WHERE\s+/i, '')
                     sql += ` WHERE ${cleanWhere}`
                 }
-                if (sortCol) {
-                    sql += ` ORDER BY \`${sortCol}\` ${sortOrder}`
+                if (targetSortCol) {
+                    sql += ` ORDER BY \`${targetSortCol}\` ${targetSortOrder}`
                 }
                 sql += ` LIMIT ${targetSize} OFFSET ${offset}`
                 res = await API.mysqlRun(serverId, dbName, sql)
@@ -228,6 +233,26 @@ export default function DataTab({
         } finally {
             setLoading(false)
         }
+    }
+
+    // 列头点击排序循环切换：未排序 -> ASC -> DESC -> 取消排序
+    const handleHeaderSort = (colName: string) => {
+        let nextSortCol = colName
+        let nextSortOrder: 'ASC' | 'DESC' = 'ASC'
+
+        if (sortCol === colName) {
+            if (sortOrder === 'ASC') {
+                nextSortOrder = 'DESC'
+            } else {
+                nextSortCol = ''
+                nextSortOrder = 'ASC'
+            }
+        }
+
+        setSortCol(nextSortCol)
+        setSortOrder(nextSortOrder)
+        setPage(1)
+        loadData(1, pageSize, activeWhere, nextSortCol, nextSortOrder)
     }
 
     useEffect(() => {
@@ -379,16 +404,36 @@ export default function DataTab({
             },
             ...columns.map((c) => {
                 const isPk = pkList.includes(c)
+                const isSorted = sortCol === c
                 return {
                     key: c,
+                    isPk,
                     label: (
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 2, whiteSpace: 'nowrap' }}>
-                            <span>{c}</span>
-                            {isPk && <span className={my.pkBadge}>PK</span>}
+                        <div
+                            className={my.headerCol}
+                            onClick={() => handleHeaderSort(c)}
+                            title={isSorted ? `当前按 ${c} ${sortOrder === 'ASC' ? '升序' : '降序'}排列 (点击切换)` : `点击按 ${c} 排序`}
+                        >
+                            {isPk ? (
+                                <span className={my.pkBadge} title="主键 (Primary Key)">{c}</span>
+                            ) : (
+                                <span className={my.headerColText}>{c}</span>
+                            )}
+                            <span className={`${my.sortIconWrap} ${isSorted ? my.sortActive : my.sortIdle}`}>
+                                {isSorted ? (
+                                    sortOrder === 'ASC' ? (
+                                        <ArrowUp size={12} />
+                                    ) : (
+                                        <ArrowDown size={12} />
+                                    )
+                                ) : (
+                                    <ArrowUpDown size={12} />
+                                )}
+                            </span>
                         </div>
                     ),
-                    width: getColW(c),
-                    minWidth: 60,
+                    width: getColW(c, isPk),
+                    minWidth: 70,
                 }
             }),
             {
@@ -401,7 +446,7 @@ export default function DataTab({
             },
         ]
         return cols
-    }, [columns, pkList, colWidths])
+    }, [columns, pkList, colWidths, sortCol, sortOrder, rows.length])
 
     return (
         <div className={my.dataWrap}>
@@ -619,15 +664,26 @@ export default function DataTab({
                                             )
                                         })}
                                         <td className={my.rowact}>
-                                            <Tooltip title="删除该行">
-                                                <Button
-                                                    type="text"
-                                                    danger
-                                                    size="small"
-                                                    icon={<Trash2 size={13} />}
-                                                    disabled={loading || saving}
-                                                    onClick={() => handleDeleteRow(rIdx)}
-                                                />
+                                            <Tooltip title={pkList.length === 0 ? '该表未定义主键，无法删除行' : '删除该行'}>
+                                                <span style={{ display: 'inline-flex' }}>
+                                                    <Popconfirm
+                                                        title="确定删除此行数据吗？"
+                                                        okText="确定"
+                                                        cancelText="取消"
+                                                        okButtonProps={{ danger: true }}
+                                                        placement="left"
+                                                        disabled={loading || saving || pkList.length === 0}
+                                                        onConfirm={() => handleDeleteRow(rIdx)}
+                                                    >
+                                                        <Button
+                                                            type="text"
+                                                            danger
+                                                            size="small"
+                                                            icon={<Trash2 size={13} />}
+                                                            disabled={loading || saving || pkList.length === 0}
+                                                        />
+                                                    </Popconfirm>
+                                                </span>
                                             </Tooltip>
                                         </td>
                                     </tr>

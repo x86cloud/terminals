@@ -698,8 +698,9 @@ func fillAiDefaults(settings *AppSettings) {
 				Model:         settings.AiModel,
 				BaseURL:       settings.AiBaseURL,
 				APIKey:        settings.AiAPIKey,
-				ContextTokens: settings.AiModelContextTokens,
-				Temperature:   settings.AiTemperature,
+				ContextTokens:    settings.AiModelContextTokens,
+				Temperature:      settings.AiTemperature,
+				EnableMultimodal: settings.AiEnableMultimodal,
 			},
 		}
 		settings.ActiveModelID = "model_default"
@@ -727,6 +728,7 @@ func fillAiDefaults(settings *AppSettings) {
 				if m.Temperature > 0 {
 					settings.AiTemperature = m.Temperature
 				}
+				settings.AiEnableMultimodal = m.EnableMultimodal
 				break
 			}
 		}

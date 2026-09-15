@@ -183,16 +183,17 @@
 }
 
 .pkBadge {
-    display: inline-block;
-    margin-left: 4px;
-    font-size: 10px;
-    font-weight: 700;
-    line-height: 1;
-    padding: 1px 4px;
+    display: inline-flex;
+    align-items: center;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.3;
+    padding: 1px 5px;
     border-radius: 3px;
     background: @accent;
     color: #fff;
-    vertical-align: middle;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .fkBadge {
@@ -255,3 +256,48 @@
         transform: rotate(360deg);
     }
 }
+
+.headerCol {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    max-width: 100%;
+    padding: 2px 0;
+    transition: color 0.15s ease;
+
+    &:hover {
+        color: @accent;
+
+        .sortIdle {
+            opacity: 0.6;
+        }
+    }
+}
+
+.headerColText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sortIconWrap {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+
+    &.sortActive {
+        color: @accent;
+        opacity: 1;
+    }
+
+    &.sortIdle {
+        color: @text-dim;
+        opacity: 0;
+    }
+}
+

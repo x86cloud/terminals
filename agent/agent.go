@@ -816,8 +816,8 @@ func (m *AgentManager) GenerateSessionTitle(ctx context.Context, firstUserMsg, f
 
 	fallbackTitle := func() string {
 		runes := []rune(userQ)
-		if len(runes) > 10 {
-			return string(runes[:10]) + "..."
+		if len(runes) > 35 {
+			return string(runes[:35]) + "..."
 		}
 		return string(runes)
 	}
@@ -835,9 +835,9 @@ func (m *AgentManager) GenerateSessionTitle(ctx context.Context, firstUserMsg, f
 		assistantA = string([]rune(assistantA)[:300])
 	}
 
-	prompt := fmt.Sprintf(`请根据以下用户的首条提问及助手的回复，概括一个简短贴切的会话主题作为标题。
+	prompt := fmt.Sprintf(`请根据以下用户的首条提问及助手的回复，概括一个贴切清晰的会话主题作为标题。
 要求：
-1. 语言简练，严格控制在 4 到 10 个字以内；
+1. 语言简练，控制在 15 到 35 个字以内，简明完整概括用户任务与核心操作细节；
 2. 不要包含任何标点符号、书名号、引号；
 3. 不要包含“会话标题”、“主题”等前缀词；
 4. 直接输出标题文本本身，不要附加任何解释或换行。
@@ -851,7 +851,7 @@ func (m *AgentManager) GenerateSessionTitle(ctx context.Context, firstUserMsg, f
 	resp, err := cm.Generate(genCtx, []*schema.Message{
 		{
 			Role:    schema.System,
-			Content: "你是一个专业的对话标题提炼助手，只输出极简的会话标题名称。",
+			Content: "你是一个专业的对话标题提炼助手，只输出准确精炼的会话标题名称。",
 		},
 		{
 			Role:    schema.User,
@@ -870,10 +870,10 @@ func (m *AgentManager) GenerateSessionTitle(ctx context.Context, firstUserMsg, f
 	title = strings.TrimPrefix(title, "主题：")
 	title = strings.TrimSpace(title)
 
-	// 限制在 12 个字符以内
+	// 限制在 40 个字符以内
 	runes := []rune(title)
-	if len(runes) > 12 {
-		title = string(runes[:12])
+	if len(runes) > 40 {
+		title = string(runes[:40])
 	}
 	if title == "" {
 		return fallbackTitle(), nil

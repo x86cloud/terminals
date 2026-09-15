@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react'
-import { Button, Tooltip, Input, Dropdown } from 'antd'
+import React, { useState, useMemo, useRef } from 'react'
+import { Button, Tooltip, Input, Dropdown, Image as AntdImage, message } from 'antd'
 import type { MenuProps } from 'antd'
-import { Folder, Square, X, FileText, MessageSquare, ChevronUp, Check } from 'lucide-react'
+import { Folder, Square, X, FileText, MessageSquare, ChevronUp, Check, Image as ImageIcon } from 'lucide-react'
 import { SlashCommandMenu, SlashCommandType, SLASH_COMMANDS } from './SlashCommandMenu'
 import { AiModelItem } from '@/types'
 import s from './Composer.module.less'
@@ -27,9 +27,20 @@ interface ComposerProps {
     noticeText?: string
     isGenerating: boolean
     images: string[]
+    setImages?: React.Dispatch<React.SetStateAction<string[]>>
+    enableMultimodal?: boolean
     onStop: () => void
     onSend: () => void
     onKeyDown?: (e: any) => void
+}
+
+const readFileAsDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsDataURL(file)
+    })
 }
 
 const formatTokenK = (tokens: number): string => {
@@ -67,12 +78,96 @@ export const Composer: React.FC<ComposerProps> = ({
     noticeText,
     isGenerating,
     images,
+    setImages,
+    enableMultimodal,
     onStop,
     onSend,
     onKeyDown,
 }) => {
     const [isComposing, setIsComposing] = useState(false)
     const [selectedMenuIndex, setSelectedMenuIndex] = useState(0)
+    const [isDragging, setIsDragging] = useState(false)
+    const dragCounterRef = useRef(0)
+
+    const processImageFiles = async (files: File[]) => {
+        const imageFiles = files.filter((f) => f.type.startsWith('image/'))
+        if (imageFiles.length === 0) return
+
+        if (!enableMultimodal) {
+            message.warning('当前模型未开启多模态视觉能力，请先在模型设置中启用')
+            return
+        }
+
+        try {
+            const base64List = await Promise.all(imageFiles.map(readFileAsDataURL))
+            setImages?.((prev) => [...prev, ...base64List])
+        } catch (err) {
+            console.error('Failed to read image files', err)
+            message.error('读取图片文件失败')
+        }
+    }
+
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const clipboardData = e.clipboardData
+        if (!clipboardData) return
+
+        const items = Array.from(clipboardData.items || [])
+        const imageFiles: File[] = []
+        for (const item of items) {
+            if (item.type.startsWith('image/')) {
+                const file = item.getAsFile()
+                if (file) imageFiles.push(file)
+            }
+        }
+
+        if (imageFiles.length > 0) {
+            e.preventDefault()
+            processImageFiles(imageFiles)
+        }
+    }
+
+    const handleDragEnter = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        dragCounterRef.current += 1
+        if (e.dataTransfer?.items && e.dataTransfer.items.length > 0) {
+            setIsDragging(true)
+        }
+    }
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        dragCounterRef.current -= 1
+        if (dragCounterRef.current <= 0) {
+            dragCounterRef.current = 0
+            setIsDragging(false)
+        }
+    }
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        if (e.dataTransfer) {
+            e.dataTransfer.dropEffect = 'copy'
+        }
+    }
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault()
+        e.stopPropagation()
+        dragCounterRef.current = 0
+        setIsDragging(false)
+
+        const files = Array.from(e.dataTransfer?.files || [])
+        if (files.length > 0) {
+            processImageFiles(files)
+        }
+    }
+
+    const handleRemoveImage = (index: number) => {
+        setImages?.((prev) => prev.filter((_, idx) => idx !== index))
+    }
 
     const activeModel = useMemo(() => {
         if (!aiModels || aiModels.length === 0) return null
@@ -230,7 +325,22 @@ export const Composer: React.FC<ComposerProps> = ({
     )
 
     return (
-        <div className={s.composerBox}>
+        <div
+            className={`${s.composerBox} ${isDragging ? s.dragging : ''}`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onPaste={handlePaste}
+        >
+            {/* Drop overlay feedback */}
+            {isDragging && (
+                <div className={s.dropOverlay}>
+                    <ImageIcon size={22} className={s.dropIcon} />
+                    <span>释放以添加图片</span>
+                </div>
+            )}
+
             {/* Slash Command Popup Menu */}
             <SlashCommandMenu
                 visible={isSlashPrefix}
@@ -239,6 +349,32 @@ export const Composer: React.FC<ComposerProps> = ({
                 onSelect={handleSelectCommand}
                 onClose={() => setInput('')}
             />
+
+            {/* Attached Images Preview */}
+            {images && images.length > 0 && (
+                <div className={s.imagesPreviewBar}>
+                    {images.map((imgSrc, idx) => (
+                        <div key={idx} className={s.imageThumbCard}>
+                            <AntdImage
+                                src={imgSrc}
+                                alt="preview"
+                                preview={{ mask: null }}
+                            />
+                            <button
+                                type="button"
+                                className={s.thumbRemoveBtn}
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleRemoveImage(idx)
+                                }}
+                                title="移除图片"
+                            >
+                                <X size={11} />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+            )}
 
             {/* Input & Active Command Pill */}
             <div className={s.editorWrapper}>

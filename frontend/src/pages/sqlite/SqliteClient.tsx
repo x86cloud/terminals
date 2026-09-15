@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Segmented, Space, Tooltip, Pagination, Tag, Input } from 'antd'
 import { Database, Plus, Folder, FileText, PanelLeft, Table, RotateCw, Trash2, X, Eraser } from 'lucide-react'
-import ResizableTable, { ColDef } from '@/components/ResizableTable'
+import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
 import { API } from '@/api'
 import { errorMessage, isSameCellValue } from '@/utils'
 import { SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteIndexInfo } from '@/types'
@@ -12,7 +12,6 @@ import sq from '@/pages/sqlite/SqliteClient.module.less'
 import db from '@/pages/mysql/dbTable.module.less'
 import sh from '@/pages/mysql/mysqlShared.module.less'
 
-const DEFAULT_COL_W = 120
 const ROW_ACT_W = 50
 
 interface Props {
@@ -597,12 +596,12 @@ export default function SqliteClient({ session, onClose }: Props) {
                     {selected && dataView === 'data' && (
                         <div className={sq.sqliteDataWrap}>
                             {(() => {
-                                const getColW = (key: string) => colWidths[key] ?? DEFAULT_COL_W
+                                const getColW = (key: string) => colWidths[key] ?? calcColWidthFromName(key, { minWidth: 70 })
                                 const handleColResize = (key: string, w: number) =>
                                     setColWidths((prev) => ({ ...prev, [key]: w }))
 
                                 const sqCols: ColDef[] = [
-                                    ...columns.map((c) => ({ key: c, label: c, width: getColW(c), minWidth: 50 })),
+                                    ...columns.map((c) => ({ key: c, label: c, width: getColW(c), minWidth: 70 })),
                                     { key: '__act__', label: '操作', width: ROW_ACT_W, minWidth: 38 },
                                 ]
 

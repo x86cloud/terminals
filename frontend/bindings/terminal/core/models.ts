@@ -9,6 +9,7 @@ export interface AiModelItem {
     "apiKey": string;
     "contextTokens": number;
     "temperature": number;
+    "enableMultimodal": boolean;
 }
 
 export interface AppSettings {

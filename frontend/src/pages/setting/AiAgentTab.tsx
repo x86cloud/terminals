@@ -110,6 +110,7 @@ export default function AiAgentTab({
             updates.aiApiKey = targetActive.apiKey
             updates.aiModelContextTokens = targetActive.contextTokens
             updates.aiTemperature = targetActive.temperature ?? aiTemperature
+            updates.aiEnableMultimodal = !!targetActive.enableMultimodal
         }
 
         onChange(updates)
@@ -142,6 +143,7 @@ export default function AiAgentTab({
                       aiApiKey: targetActive.apiKey,
                       aiModelContextTokens: targetActive.contextTokens,
                       aiTemperature: targetActive.temperature ?? aiTemperature,
+                      aiEnableMultimodal: !!targetActive.enableMultimodal,
                   }
                 : {}),
         })
@@ -223,6 +225,9 @@ export default function AiAgentTab({
                                         <Tag color="cyan">
                                             {Math.round((item.contextTokens || 65536) / 1024)}K 上下文
                                         </Tag>
+                                        {item.enableMultimodal && (
+                                            <Tag color="purple">多模态</Tag>
+                                        )}
                                         {isActive ? (
                                             <Tag
                                                 color="success"
@@ -410,19 +415,6 @@ export default function AiAgentTab({
                         <Switch
                             checked={aiEnableWebSearch}
                             onChange={(checked) => onChange({ aiEnableWebSearch: checked })}
-                        />
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <div style={{ fontWeight: 500, fontSize: 13 }}>多模态图文识别 (Multimodal)</div>
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                                允许上传系统错误截图进行自动视觉解析
-                            </Text>
-                        </div>
-                        <Switch
-                            checked={aiEnableMultimodal}
-                            onChange={(checked) => onChange({ aiEnableMultimodal: checked })}
                         />
                     </div>
 

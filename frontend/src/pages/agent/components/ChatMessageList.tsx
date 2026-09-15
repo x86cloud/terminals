@@ -97,7 +97,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
             {messages.length === 0 ? (
                 <div className={s.emptyState}>
                     <Bot size={48} className={s.emptyIcon} />
-                    <div className={s.emptyTitle}>xAgent 2.0 智能助手</div>
+                    <div className={s.emptyTitle}>智能助手</div>
                     <div className={s.emptySub}>
                         支持 SSH、MySQL、Redis、MongoDB、SQLite、MQTT 运维诊断与多协议操作，集成 Plan-Execute-Verify 自动化规划推演引擎。
                     </div>
