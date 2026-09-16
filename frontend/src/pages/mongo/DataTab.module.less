@@ -211,11 +211,24 @@
 }
 
 .jsonCell {
-    color: @accent;
+    color: var(--primary, #3b82f6);
     cursor: pointer;
     font-family: @font-mono;
+    font-weight: 500;
+    font-size: 11.5px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.15s ease;
+    user-select: none;
 
     &:hover {
-        text-decoration: underline;
+        background: rgba(59, 130, 246, 0.18);
+        border-color: rgba(59, 130, 246, 0.45);
+        color: var(--primary, #2563eb);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
 }

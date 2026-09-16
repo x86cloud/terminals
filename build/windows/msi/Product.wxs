@@ -14,8 +14,8 @@
 
   <Product Id="*"
            Name="Terminal v3"
-           Language="1033"
-           Codepage="1252"
+           Language="2052"
+           Codepage="936"
            Version="$(var.ProductVersion)"
            Manufacturer="Terminal"
            UpgradeCode="4B80E621-3F7A-4D78-90A7-0E0C49F308A5">
@@ -23,29 +23,81 @@
     <Package InstallerVersion="405"
              Compressed="yes"
              InstallScope="perMachine"
-             Description="Terminal v3 Installer"
-             Comments="Terminal v3 Application"
+             Description="Terminal v3 安装程序"
+             Comments="Terminal v3 桌面终端管理平台"
              Platform="x64" />
 
     <!-- ============================================================ -->
-    <!-- 步骤 2：旧版本检查与平滑升级策略                             -->
+    <!-- 步骤 1：旧版本检查、降级拦截与平滑升级策略                   -->
     <!-- ============================================================ -->
     <MajorUpgrade AllowSameVersionUpgrades="yes"
                   Schedule="afterInstallInitialize"
-                  DowngradeErrorMessage="A newer version of Terminal is already installed." />
+                  DowngradeErrorMessage="检测到计算机上已安装更高版本的 Terminal。如需降级安装，请先在 Windows 设置或控制面板中卸载现有版本。" />
 
     <!-- 介质封装：压缩到单个 MSI 文件内 -->
     <MediaTemplate EmbedCab="yes" />
 
-    <!-- 产品图标配置 -->
+    <!-- 产品图标与控制面板卸载信息配置 -->
     <Icon Id="AppIcon.ico" SourceFile="..\icon.ico" />
     <Property Id="ARPPRODUCTICON" Value="AppIcon.ico" />
     <Property Id="ARPHELPLINK" Value="https://github.com/x86cloud/terminals" />
     <Property Id="ARPNOREPAIR" Value="yes" Secure="yes" />
+    <Property Id="ARPNOMODIFY" Value="yes" Secure="yes" />
 
     <!-- ============================================================ -->
-    <!-- 步骤 3：安装位置定义（默认 C:\Program Files\Terminal）       -->
+    <!-- 步骤 2：运行中进程检测（发现占用时弹出中文提示关闭）         -->
     <!-- ============================================================ -->
+    <util:CloseApplication Id="CloseTerminalV3"
+                           Target="terminal-v3.exe"
+                           CloseMessage="yes"
+                           PromptToContinue="yes"
+                           Description="检测到 Terminal 正在运行。为确保安装/卸载顺利完成，请点击【确定】关闭程序，或手动保存工作并退出后再继续。"
+                           RebootPrompt="no" />
+
+    <util:CloseApplication Id="CloseTerminalOld"
+                           Target="terminal.exe"
+                           CloseMessage="yes"
+                           PromptToContinue="yes"
+                           Description="检测到旧版 Terminal 正在运行。为确保升级顺利完成，请点击【确定】关闭程序，或手动保存工作并退出后再继续。"
+                           RebootPrompt="no" />
+
+    <!-- ============================================================ -->
+    <!-- 步骤 3：安装位置定义与现有目录自动检测                       -->
+    <!-- 优先检测本机已安装的路径，若存在则默认安装至该目录          -->
+    <!-- ============================================================ -->
+    <Property Id="EXISTING_INSTALLDIR">
+      <RegistrySearch Id="SearchInstallDirHKLM"
+                      Root="HKLM"
+                      Key="Software\Terminal\terminal_v3"
+                      Name="InstallDir"
+                      Type="raw"
+                      Win64="yes" />
+    </Property>
+    <Property Id="EXISTING_INSTALLDIR_HKCU">
+      <RegistrySearch Id="SearchInstallDirHKCU"
+                      Root="HKCU"
+                      Key="Software\Terminal\terminal_v3"
+                      Name="InstallDir"
+                      Type="raw" />
+    </Property>
+    <Property Id="EXISTING_INSTALLDIR_COMP">
+      <ComponentSearch Id="SearchExistingComponent"
+                       Guid="3E4D69B4-9F8C-4B1C-B647-9CF6318E2789"
+                       Type="file">
+        <DirectorySearch Id="SearchExistingDir" AssignToProperty="yes" />
+      </ComponentSearch>
+    </Property>
+
+    <CustomAction Id="SetInstallFolderFromHKLM"
+                  Property="INSTALLFOLDER"
+                  Value="[EXISTING_INSTALLDIR]" />
+    <CustomAction Id="SetInstallFolderFromHKCU"
+                  Property="INSTALLFOLDER"
+                  Value="[EXISTING_INSTALLDIR_HKCU]" />
+    <CustomAction Id="SetInstallFolderFromComp"
+                  Property="INSTALLFOLDER"
+                  Value="[EXISTING_INSTALLDIR_COMP]" />
+
     <Directory Id="TARGETDIR" Name="SourceDir">
       <!-- 64位系统 Program Files 目录 -->
       <Directory Id="ProgramFiles64Folder">
@@ -56,10 +108,13 @@
       <Directory Id="ProgramMenuFolder">
         <Directory Id="ApplicationProgramsFolder" Name="Terminal" />
       </Directory>
+
+      <!-- 桌面快捷方式目录 -->
+      <Directory Id="DesktopFolder" Name="Desktop" />
     </Directory>
 
     <!-- ============================================================ -->
-    <!-- 步骤 4：主程序组件与快捷方式配置                             -->
+    <!-- 步骤 4：主程序文件与快捷方式组件配置                         -->
     <!-- ============================================================ -->
     <DirectoryRef Id="INSTALLFOLDER">
       <Component Id="MainExecutable" Guid="3E4D69B4-9F8C-4B1C-B647-9CF6318E2789" Win64="yes">
@@ -67,6 +122,22 @@
               Source="$(var.BinaryPath)"
               KeyPath="yes"
               Vital="yes" />
+        <!-- 将安装目录登记至注册表，供后续升级自动检测并继承 -->
+        <RegistryValue Root="HKLM"
+                       Key="Software\Terminal\terminal_v3"
+                       Name="InstallDir"
+                       Type="string"
+                       Value="[INSTALLFOLDER]" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Terminal\terminal_v3"
+                       Name="InstallDir"
+                       Type="string"
+                       Value="[INSTALLFOLDER]" />
+        <RegistryValue Root="HKLM"
+                       Key="Software\Terminal\terminal_v3"
+                       Name="Version"
+                       Type="string"
+                       Value="$(var.ProductVersion)" />
       </Component>
     </DirectoryRef>
 
@@ -75,11 +146,11 @@
       <Component Id="ApplicationShortcut" Guid="7B9F1A2C-5D3E-4A6B-9871-0CF491A235D6">
         <Shortcut Id="ApplicationStartMenuShortcut"
                   Name="Terminal"
-                  Description="Terminal v3"
+                  Description="Terminal v3 桌面终端管理平台"
                   Target="[INSTALLFOLDER]terminal-v3.exe"
                   WorkingDirectory="INSTALLFOLDER"
                   Icon="AppIcon.ico" />
-        <RemoveFolder Id="CleanUpShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
+        <RemoveFolder Id="CleanUpStartMenuShortCut" Directory="ApplicationProgramsFolder" On="uninstall" />
         <RegistryValue Root="HKCU"
                        Key="Software\Terminal\terminal_v3"
                        Name="installed"
@@ -89,24 +160,129 @@
       </Component>
     </DirectoryRef>
 
+    <!-- 桌面快捷方式 -->
+    <DirectoryRef Id="DesktopFolder">
+      <Component Id="ApplicationDesktopShortcut" Guid="8C1E47B2-2A3D-4F5E-9B6C-1DE842A174F8">
+        <Shortcut Id="AppDesktopShortcut"
+                  Name="Terminal"
+                  Description="Terminal v3 桌面终端管理平台"
+                  Target="[INSTALLFOLDER]terminal-v3.exe"
+                  WorkingDirectory="INSTALLFOLDER"
+                  Icon="AppIcon.ico" />
+        <RemoveFolder Id="CleanUpDesktopShortCut" Directory="DesktopFolder" On="uninstall" />
+        <RegistryValue Root="HKCU"
+                       Key="Software\Terminal\terminal_v3"
+                       Name="desktopShortcut"
+                       Type="integer"
+                       Value="1"
+                       KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
     <Feature Id="ProductFeature" Title="Terminal v3" Level="1">
       <ComponentRef Id="MainExecutable" />
       <ComponentRef Id="ApplicationShortcut" />
+      <ComponentRef Id="ApplicationDesktopShortcut" />
     </Feature>
 
     <!-- ============================================================ -->
-    <!-- 步骤 1 & 3 & 5：安装向导交互界面（WixUI_InstallDir）          -->
-    <!-- 1. 协议许可 (License)                                        -->
-    <!-- 2. 旧版本检查 (MajorUpgrade 自动执行)                        -->
-    <!-- 3. 安装位置选择 (InstallDir)                                  -->
-    <!-- 4. 安装进度 (Progress)                                       -->
-    <!-- 5. 结束 (ExitDialog，不自动运行)                             -->
+    <!-- 步骤 5：卸载提示与用户配置数据清理策略                       -->
+    <!-- ============================================================ -->
+    <CustomAction Id="PromptUninstallData" Script="vbscript" Return="check">
+      <![CDATA[
+        Dim res
+        ' 35 = vbYesNoCancel (3) + vbQuestion (32)
+        res = MsgBox("您即将卸载 Terminal。" & vbCrLf & vbCrLf & _
+                     "是否保留本地保存的连接配置与个性化数据？" & vbCrLf & vbCrLf & _
+                     "• 点击【是(Yes)】：仅卸载主程序，安全保留所有连接与配置（推荐）" & vbCrLf & _
+                     "• 点击【否(No)】：卸载主程序，并彻底清除本地所有连接配置与缓存数据" & vbCrLf & _
+                     "• 点击【取消(Cancel)】：取消本次卸载操作并退出", _
+                     35, "Terminal 卸载向导")
+        If res = 2 Then
+            ' 用户取消卸载
+            Session.Property("UNINSTALL_CANCELLED") = "1"
+        ElseIf res = 7 Then
+            ' 用户选择彻底删除配置数据
+            Session.Property("CLEAN_USER_DATA") = "1"
+        Else
+            ' 用户选择保留配置数据
+            Session.Property("CLEAN_USER_DATA") = "0"
+        End If
+      ]]>
+    </CustomAction>
+
+    <CustomAction Id="AbortUninstall" Error="卸载操作已被用户取消。" />
+
+    <!-- 彻底清理用户数据（%APPDATA%\xClient、%APPDATA%\Terminal、%LOCALAPPDATA%\terminal-v3.exe） -->
+    <CustomAction Id="CleanUserData" Script="vbscript" Return="ignore">
+      <![CDATA[
+        On Error Resume Next
+        If Session.Property("CLEAN_USER_DATA") = "1" Then
+            Dim sh, fso, appData, localAppData
+            Set sh = CreateObject("WScript.Shell")
+            Set fso = CreateObject("Scripting.FileSystemObject")
+            appData = sh.ExpandEnvironmentStrings("%APPDATA%")
+            localAppData = sh.ExpandEnvironmentStrings("%LOCALAPPDATA%")
+
+            If fso.FolderExists(appData & "\xClient") Then
+                fso.DeleteFolder appData & "\xClient", True
+            End If
+            If fso.FolderExists(appData & "\Terminal") Then
+                fso.DeleteFolder appData & "\Terminal", True
+            End If
+            If fso.FolderExists(localAppData & "\terminal-v3.exe") Then
+                fso.DeleteFolder localAppData & "\terminal-v3.exe", True
+            End If
+        End If
+      ]]>
+    </CustomAction>
+
+    <!-- ============================================================ -->
+    <!-- 步骤 6：安装向导交互界面与自启动配置                         -->
     <!-- ============================================================ -->
     <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="license.rtf" />
 
-    <UIRef Id="WixUI_InstallDir" />
-    <UIRef Id="WixUI_ErrorProgressText" />
+    <!-- 安装完成立即运行配置 -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="立即运行 Terminal" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <Property Id="WixShellExecTarget" Value="[#TerminalExe]" />
+    <CustomAction Id="LaunchApplication" BinaryKey="WixCA" DllEntry="WixShellExec" Impersonate="yes" />
+
+    <UI>
+      <UIRef Id="WixUI_InstallDir" />
+      <UIRef Id="WixUI_ErrorProgressText" />
+
+      <!-- 在 ExitDialog 点击 Finish 时若勾选则启动主程序 -->
+      <Publish Dialog="ExitDialog"
+               Control="Finish"
+               Event="DoAction"
+               Value="LaunchApplication">WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed</Publish>
+    </UI>
+
+    <!-- 执行序列定义 -->
+    <InstallUISequence>
+      <!-- 现有目录检测 -->
+      <Custom Action="SetInstallFolderFromHKLM" After="AppSearch">EXISTING_INSTALLDIR</Custom>
+      <Custom Action="SetInstallFolderFromHKCU" After="SetInstallFolderFromHKLM">EXISTING_INSTALLDIR_HKCU AND NOT EXISTING_INSTALLDIR</Custom>
+      <Custom Action="SetInstallFolderFromComp" After="SetInstallFolderFromHKCU">EXISTING_INSTALLDIR_COMP AND NOT EXISTING_INSTALLDIR AND NOT EXISTING_INSTALLDIR_HKCU</Custom>
+
+      <!-- 卸载提示 -->
+      <Custom Action="PromptUninstallData" Before="CostInitialize">Installed AND REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND UILevel &gt;= 4</Custom>
+      <Custom Action="AbortUninstall" After="PromptUninstallData">UNINSTALL_CANCELLED = "1"</Custom>
+    </InstallUISequence>
+
+    <InstallExecuteSequence>
+      <!-- 现有目录检测 -->
+      <Custom Action="SetInstallFolderFromHKLM" After="AppSearch">EXISTING_INSTALLDIR</Custom>
+      <Custom Action="SetInstallFolderFromHKCU" After="SetInstallFolderFromHKLM">EXISTING_INSTALLDIR_HKCU AND NOT EXISTING_INSTALLDIR</Custom>
+      <Custom Action="SetInstallFolderFromComp" After="SetInstallFolderFromHKCU">EXISTING_INSTALLDIR_COMP AND NOT EXISTING_INSTALLDIR AND NOT EXISTING_INSTALLDIR_HKCU</Custom>
+
+      <!-- 卸载提示与清理 -->
+      <Custom Action="PromptUninstallData" Before="CostInitialize">Installed AND REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND UILevel &gt;= 4 AND NOT UNINSTALL_CANCELLED</Custom>
+      <Custom Action="AbortUninstall" After="PromptUninstallData">UNINSTALL_CANCELLED = "1"</Custom>
+      <Custom Action="CleanUserData" Before="InstallFinalize">Installed AND REMOVE="ALL" AND NOT UPGRADINGPRODUCTCODE AND CLEAN_USER_DATA = "1"</Custom>
+    </InstallExecuteSequence>
 
   </Product>
 </Wix>

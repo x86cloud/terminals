@@ -99,6 +99,17 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
     const [editorBusy, setEditorBusy] = useState(false)
     const [editorError, setEditorError] = useState('')
 
+    // 单元格对象/数组详情与在线编辑弹窗状态
+    const [cellModal, setCellModal] = useState<{
+        open: boolean
+        colKey: string
+        docId: any
+        rawRow: any
+        text: string
+    } | null>(null)
+    const [cellModalBusy, setCellModalBusy] = useState(false)
+    const [cellModalError, setCellModalError] = useState('')
+
     // 导出弹窗与统计弹窗
     const [ioExportOpen, setIoExportOpen] = useState(false)
     const [statsModalOpen, setStatsModalOpen] = useState(false)
@@ -335,7 +346,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
     }, [colWidths, dynamicColumns, filters])
 
     // 单元格格式化与渲染
-    const renderCellContent = (val: any) => {
+    const renderCellContent = (val: any, row?: any, colKey?: string) => {
         if (val === null || val === undefined) {
             return <span className={d.nullCell}>null</span>
         }
@@ -347,21 +358,114 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
         }
         if (typeof val === 'object') {
             const isArr = Array.isArray(val)
-            let summary = ''
+            let fullStr = ''
             try {
-                summary = JSON.stringify(val)
+                fullStr = JSON.stringify(val, null, 2)
             } catch {
-                summary = isArr ? '[Array]' : '[Object]'
+                fullStr = isArr ? '[Array]' : '[Object]'
             }
+
+            // 固定 150 字符截断，结尾追加提示，避免 Tooltip 撑爆或溢出
+            let preview = fullStr
+            if (preview.length > 150) {
+                preview = preview.slice(0, 150) + '\n... 点击查看完整内容与编辑'
+            }
+
+            const label = isArr ? `Array(${val.length})` : Object.keys(val).length ? '{ ... }' : '{}'
+
             return (
-                <Tooltip title={summary} mouseEnterDelay={0.3}>
-                    <span className={d.jsonCell}>
-                        {isArr ? `Array(${val.length})` : Object.keys(val).length ? '{...}' : '{}'}
+                <Tooltip
+                    title={
+                        <pre
+                            style={{
+                                margin: 0,
+                                maxHeight: 180,
+                                maxWidth: 420,
+                                overflow: 'hidden',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-all',
+                                fontSize: 11.5,
+                                fontFamily: 'monospace',
+                            }}
+                        >
+                            {preview}
+                        </pre>
+                    }
+                    mouseEnterDelay={0.25}
+                >
+                    <span
+                        className={d.jsonCell}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            if (row && colKey) {
+                                setCellModal({
+                                    open: true,
+                                    colKey,
+                                    docId: row._id,
+                                    rawRow: row,
+                                    text: fullStr,
+                                })
+                                setCellModalError('')
+                            }
+                        }}
+                    >
+                        {label}
                     </span>
                 </Tooltip>
             )
         }
         return <span className={d.cellText}>{String(val)}</span>
+    }
+
+    // 保存单元格字段在线修改 ($set)
+    const handleSaveCellModal = async () => {
+        if (!cellModal) return
+        setCellModalBusy(true)
+        setCellModalError('')
+        try {
+            let parsedVal: any = undefined
+            try {
+                parsedVal = JSON.parse(cellModal.text)
+            } catch (err: any) {
+                setCellModalError(`JSON 语法解析失败: ${err?.message || '请检查语法格式'}`)
+                setCellModalBusy(false)
+                return
+            }
+
+            let filterSpec = '{}'
+            if (cellModal.docId !== undefined) {
+                filterSpec = JSON.stringify({ _id: cellModal.docId })
+            } else if (cellModal.rawRow) {
+                try {
+                    const obj = JSON.parse(cellModal.rawRow.__raw || '{}')
+                    if (obj._id !== undefined) {
+                        filterSpec = JSON.stringify({ _id: obj._id })
+                    } else {
+                        filterSpec = cellModal.rawRow.__raw
+                    }
+                } catch {
+                    filterSpec = '{}'
+                }
+            }
+
+            const updateDoc = {
+                $set: {
+                    [cellModal.colKey]: parsedVal,
+                },
+            }
+            const updateSpec = JSON.stringify(updateDoc)
+
+            const res = await API.mongoUpdateOne(id, db, collection, filterSpec, updateSpec, false)
+            message.success(
+                `已更新字段 ${cellModal.colKey}（匹配 ${res.matchedCount ?? 1} 条，更新 ${res.modifiedCount ?? 1} 条）`
+            )
+            setCellModal(null)
+            void runQuery(page, pageSize)
+        } catch (e) {
+            setCellModalError(errorMessage(e))
+        } finally {
+            setCellModalBusy(false)
+        }
     }
 
     // 增删改操作
@@ -554,13 +658,13 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
             },
             ...(idStr
                 ? [
-                      {
-                          key: 'copy-id',
-                          icon: <Copy size={13} />,
-                          label: `复制 _id (${idStr})`,
-                          onClick: () => copyTextToClipboard(idStr, '已复制 _id 到剪贴板'),
-                      },
-                  ]
+                    {
+                        key: 'copy-id',
+                        icon: <Copy size={13} />,
+                        label: `复制 _id (${idStr})`,
+                        onClick: () => copyTextToClipboard(idStr, '已复制 _id 到剪贴板'),
+                    },
+                ]
                 : []),
             {
                 key: 'clone-doc',
@@ -779,69 +883,69 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                         setColWidths((prev) => ({ ...prev, [colKey]: newW }))
                                     }
                                 >
-                                <tbody>
-                                    {parsedRows.map((row, rIdx) => {
-                                        const isSelected = selectedIdx === rIdx
-                                        return (
-                                            <tr
-                                                key={rIdx}
-                                                style={{
-                                                    background: isSelected ? 'var(--bg-active, rgba(59,130,246,0.08))' : undefined,
-                                                    cursor: 'pointer',
-                                                }}
-                                                onClick={() => setSelectedIdx(rIdx)}
-                                                onDoubleClick={() => openUpdate(row.__raw)}
-                                                onContextMenu={(e) => {
-                                                    e.preventDefault()
-                                                    setSelectedIdx(rIdx)
-                                                    setContextMenu({
-                                                        open: true,
-                                                        x: e.clientX,
-                                                        y: e.clientY,
-                                                        rowIdx: rIdx,
-                                                    })
-                                                }}
-                                            >
-                                                {/* 序号列 */}
-                                                <td
+                                    <tbody>
+                                        {parsedRows.map((row, rIdx) => {
+                                            const isSelected = selectedIdx === rIdx
+                                            return (
+                                                <tr
+                                                    key={rIdx}
                                                     style={{
-                                                        textAlign: 'center',
-                                                        color: 'var(--text-faint)',
-                                                        fontSize: 11,
-                                                        userSelect: 'none',
+                                                        background: isSelected ? 'var(--bg-active, rgba(59,130,246,0.08))' : undefined,
+                                                        cursor: 'pointer',
+                                                    }}
+                                                    onClick={() => setSelectedIdx(rIdx)}
+                                                    onDoubleClick={() => openUpdate(row.__raw)}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault()
+                                                        setSelectedIdx(rIdx)
+                                                        setContextMenu({
+                                                            open: true,
+                                                            x: e.clientX,
+                                                            y: e.clientY,
+                                                            rowIdx: rIdx,
+                                                        })
                                                     }}
                                                 >
-                                                    {(page - 1) * pageSize + rIdx + 1}
-                                                </td>
-                                                {/* 动态字段数据列 */}
-                                                {dynamicColumns.map((colKey) => {
-                                                    const cellVal = row[colKey]
-                                                    return (
-                                                        <td
-                                                            key={colKey}
-                                                            onContextMenu={(e) => {
-                                                                e.preventDefault()
-                                                                e.stopPropagation()
-                                                                setSelectedIdx(rIdx)
-                                                                setContextMenu({
-                                                                    open: true,
-                                                                    x: e.clientX,
-                                                                    y: e.clientY,
-                                                                    rowIdx: rIdx,
-                                                                    col: colKey,
-                                                                })
-                                                            }}
-                                                        >
-                                                            {renderCellContent(cellVal)}
-                                                        </td>
-                                                    )
-                                                })}
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </ResizableTable>
-                        ))}
+                                                    {/* 序号列 */}
+                                                    <td
+                                                        style={{
+                                                            textAlign: 'center',
+                                                            color: 'var(--text-faint)',
+                                                            fontSize: 11,
+                                                            userSelect: 'none',
+                                                        }}
+                                                    >
+                                                        {(page - 1) * pageSize + rIdx + 1}
+                                                    </td>
+                                                    {/* 动态字段数据列 */}
+                                                    {dynamicColumns.map((colKey) => {
+                                                        const cellVal = row[colKey]
+                                                        return (
+                                                            <td
+                                                                key={colKey}
+                                                                onContextMenu={(e) => {
+                                                                    e.preventDefault()
+                                                                    e.stopPropagation()
+                                                                    setSelectedIdx(rIdx)
+                                                                    setContextMenu({
+                                                                        open: true,
+                                                                        x: e.clientX,
+                                                                        y: e.clientY,
+                                                                        rowIdx: rIdx,
+                                                                        col: colKey,
+                                                                    })
+                                                                }}
+                                                            >
+                                                                {renderCellContent(cellVal, row, colKey)}
+                                                            </td>
+                                                        )
+                                                    })}
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </ResizableTable>
+                            ))}
 
                         {viewMode === 'json' && (
                             <div className={d.jsonViewWrap}>
@@ -948,8 +1052,8 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                         editOpen.mode === 'insert'
                             ? '添加新文档'
                             : editOpen.mode === 'replace'
-                            ? '替换完整文档'
-                            : '更新文档（支持 $set 等修改器）'
+                                ? '替换完整文档'
+                                : '更新文档（支持 $set 等修改器）'
                     }
                     onCancel={() => setEditOpen(null)}
                     onOk={handleSaveDocModal}
@@ -1022,6 +1126,87 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     filter={combinedFilterJSON}
                     onClose={() => setIoExportOpen(false)}
                 />
+            )}
+
+            {/* 单元格对象/数组详情与在线编辑弹窗 */}
+            {cellModal && (
+                <Modal
+                    title={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>字段详情与在线编辑</span>
+                            <Tag color="blue" style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                                {cellModal.colKey}
+                            </Tag>
+                            {cellModal.docId !== undefined && (
+                                <Tag color="default" style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                                    _id: {JSON.stringify(cellModal.docId)}
+                                </Tag>
+                            )}
+                        </div>
+                    }
+                    open={cellModal.open}
+                    width={760}
+                    destroyOnClose
+                    onCancel={() => setCellModal(null)}
+                    footer={[
+                        <Button
+                            key="copy"
+                            icon={<Copy size={13} />}
+                            onClick={() => {
+                                copyTextToClipboard(cellModal.text, '完整字段内容')
+                            }}
+                        >
+                            复制内容
+                        </Button>,
+                        <Button
+                            key="format"
+                            onClick={() => {
+                                try {
+                                    const parsed = JSON.parse(cellModal.text)
+                                    setCellModal((prev) =>
+                                        prev ? { ...prev, text: JSON.stringify(parsed, null, 2) } : null
+                                    )
+                                    setCellModalError('')
+                                    message.success('JSON 已格式化')
+                                } catch (e: any) {
+                                    setCellModalError(`格式化失败: ${e?.message}`)
+                                }
+                            }}
+                        >
+                            格式化 JSON
+                        </Button>,
+                        <Button key="cancel" onClick={() => setCellModal(null)}>
+                            取消
+                        </Button>,
+                        <Button
+                            key="save"
+                            type="primary"
+                            loading={cellModalBusy}
+                            onClick={handleSaveCellModal}
+                        >
+                            保存修改 ($set)
+                        </Button>,
+                    ]}
+                >
+                    {cellModalError && (
+                        <Alert
+                            type="error"
+                            showIcon
+                            message={cellModalError}
+                            style={{ marginBottom: 10 }}
+                        />
+                    )}
+
+                    <CodeEditor
+                        lang="json"
+                        height="380px"
+                        value={cellModal.text}
+                        onChange={(v) =>
+                            setCellModal((prev) => (prev ? { ...prev, text: v } : null))
+                        }
+                        onModEnter={handleSaveCellModal}
+                    />
+                </Modal>
             )}
 
             {/* 二次确认模态框 */}

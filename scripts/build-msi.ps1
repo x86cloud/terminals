@@ -138,6 +138,7 @@ if ($candle -and $light) {
         "-nologo",
         "-ext", "WixUIExtension",
         "-ext", "WixUtilExtension",
+        "-cultures:zh-CN;en-US",
         "-sval",
         "-out", "$OutputFile",
         "$WixObjFile"
@@ -169,6 +170,7 @@ if ($candle -and $light) {
             -d BinaryPath="$ResolvedBinary" `
             -ext WixToolset.UI.wixext `
             -ext WixToolset.Util.wixext `
+            -culture zh-CN `
             -out "$OutputFile" `
             "$WxsFile"
 
