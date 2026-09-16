@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Segmented, Button, Input, Pagination, Tooltip, message, Space, Tag, Dropdown, MenuProps, Popconfirm } from 'antd'
+import { Segmented, Button, Input, Pagination, Tooltip, message, Space, Tag, Dropdown, MenuProps, Popconfirm, Modal } from 'antd'
 import {
     RotateCw,
     Plus,
@@ -13,17 +13,26 @@ import {
     ArrowUp,
     ArrowDown,
     ArrowUpDown,
+    FileCode,
+    Code,
+    Slash,
+    CopyPlus,
 } from 'lucide-react'
 import { API } from '@/api'
 import { isSameCellValue, coerceCellValue } from '@/utils'
 import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
+import ColumnFilterPopover, {
+    ColumnFilterState,
+    buildMysqlWhereClause,
+    OP_LABELS,
+} from '@/components/ColumnFilterPopover'
+import { buildInsertSql, buildUpdateSql, copyTextToClipboard } from '@/utils/sqlExport'
 import { MysqlColumn, MysqlIndex, MysqlConstraint } from './mysqlTypes'
 import CellEditorInline from './CellEditorInline'
 import my from './DataTab.module.less'
 import db from '@/pages/mysql/dbTable.module.less'
 import sh from '@/pages/mysql/mysqlShared.module.less'
 
-const ROW_ACT_W = 48
 const ROW_NUM_W = 46
 
 export default function DataTab({
@@ -44,11 +53,36 @@ export default function DataTab({
     const [totalRows, setTotalRows] = useState(0)
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(100)
-    const [whereInput, setWhereInput] = useState('')
-    const [activeWhere, setActiveWhere] = useState('')
+    const [filters, setFilters] = useState<Record<string, ColumnFilterState>>({})
     const [sortCol, setSortCol] = useState('')
     const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC')
     const [countingRows, setCountingRows] = useState(false)
+
+    const activeWhere = useMemo(() => buildMysqlWhereClause(filters), [filters])
+    const activeFilterEntries = useMemo(() => {
+        return Object.entries(filters).filter(([_, f]) => !!f)
+    }, [filters])
+
+    const handleFilterChange = (col: string, filter: ColumnFilterState | null) => {
+        setFilters((prev) => {
+            const next = { ...prev }
+            if (filter) {
+                next[col] = filter
+            } else {
+                delete next[col]
+            }
+            const newWhere = buildMysqlWhereClause(next)
+            setPage(1)
+            loadData(1, pageSize, newWhere)
+            return next
+        })
+    }
+
+    const handleClearAllFilters = () => {
+        setFilters({})
+        setPage(1)
+        loadData(1, pageSize, '')
+    }
 
     // 列宽状态
     const [colWidths, setColWidths] = useState<Record<string, number>>({})
@@ -72,10 +106,11 @@ export default function DataTab({
     }, [tableName, columns.join(',')])
 
     const getColW = (key: string, isPk = false) => {
+        const minW = calcColWidthFromName(key, { isPk, hasFilter: true, minWidth: 95 })
         if (colWidths[key] !== undefined) {
-            return colWidths[key]
+            return Math.max(minW, colWidths[key])
         }
-        return calcColWidthFromName(key, { isPk, minWidth: 70 })
+        return minW
     }
 
     const handleColResize = (key: string, newWidth: number) => {
@@ -224,10 +259,21 @@ export default function DataTab({
 
             // 统计总行数
             setCountingRows(true)
-            API.mysqlCount(serverId, dbName, tableName)
-                .then((cnt) => setTotalRows(cnt))
-                .catch(() => { })
-                .finally(() => setCountingRows(false))
+            if (where.trim()) {
+                const cleanWhere = where.trim().replace(/^WHERE\s+/i, '')
+                API.mysqlRun(serverId, dbName, `SELECT COUNT(*) AS total FROM \`${tableName}\` WHERE ${cleanWhere}`)
+                    .then((cntRes: any) => {
+                        const total = Number(cntRes?.rows?.[0]?.total ?? cntRes?.rows?.[0]?.TOTAL ?? 0)
+                        setTotalRows(total)
+                    })
+                    .catch(() => { })
+                    .finally(() => setCountingRows(false))
+            } else {
+                API.mysqlCount(serverId, dbName, tableName)
+                    .then((cnt) => setTotalRows(cnt))
+                    .catch(() => { })
+                    .finally(() => setCountingRows(false))
+            }
         } catch (e: any) {
             message.error('查询数据失败: ' + (e.message || e))
         } finally {
@@ -256,6 +302,10 @@ export default function DataTab({
     }
 
     useEffect(() => {
+        setFilters({})
+        setSortCol('')
+        setSortOrder('ASC')
+        setPage(1)
         loadStructure()
         loadData(1, pageSize, '')
     }, [serverId, dbName, tableName])
@@ -391,7 +441,192 @@ export default function DataTab({
         setNewRows((prev) => [...prev, initRow])
     }
 
-    // 构造数据列定义
+    // 右键上下文菜单状态
+    const [contextMenu, setContextMenu] = useState<{
+        open: boolean
+        x: number
+        y: number
+        rowIdx: number
+        colKey?: string
+        isNewRow?: boolean
+    } | null>(null)
+
+    const handleCellContextMenu = (
+        e: React.MouseEvent,
+        rowIdx: number,
+        colKey?: string,
+        isNewRow = false
+    ) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setContextMenu({
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            rowIdx,
+            colKey,
+            isNewRow,
+        })
+    }
+
+    const getContextMenuItems = (): MenuProps['items'] => {
+        if (!contextMenu) return []
+        const { rowIdx, colKey, isNewRow } = contextMenu
+        const targetRow = isNewRow ? newRows[rowIdx] : rows[rowIdx]
+        if (!targetRow) return []
+
+        const cellVal = colKey
+            ? isNewRow
+                ? targetRow[colKey]
+                : (rowDrafts[rowIdx] && rowDrafts[rowIdx][colKey] !== undefined ? rowDrafts[rowIdx][colKey] : targetRow[colKey])
+            : undefined
+
+        const items: MenuProps['items'] = []
+
+        // 1. 复制单元格值
+        if (colKey) {
+            items.push({
+                key: 'copy-cell',
+                icon: <Copy size={13} />,
+                label: `复制`,
+                onClick: () => {
+                    const str = cellVal === null || cellVal === undefined
+                        ? ''
+                        : (typeof cellVal === 'object' ? JSON.stringify(cellVal) : String(cellVal))
+                    copyTextToClipboard(str, `已复制`)
+                },
+            })
+        }
+
+        // 2. 复制为 INSERT 语句
+        items.push({
+            key: 'copy-insert',
+            icon: <FileCode size={13} />,
+            label: '复制为 INSERT 语句',
+            onClick: () => {
+                const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
+                const sql = buildInsertSql({
+                    dialect: 'mysql',
+                    table: tableName,
+                    columns,
+                    rowData: fullRow,
+                })
+                copyTextToClipboard(sql, '已复制 INSERT 语句到剪贴板')
+            },
+        })
+
+        // 3. 复制为 UPDATE 语句 (仅针对已持久化行且存在主键)
+        if (!isNewRow && pkList.length > 0) {
+            items.push({
+                key: 'copy-update',
+                icon: <FileCode size={13} />,
+                label: '复制为 UPDATE 语句',
+                onClick: () => {
+                    const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
+                    const sql = buildUpdateSql({
+                        dialect: 'mysql',
+                        table: tableName,
+                        columns,
+                        rowData: fullRow,
+                        pkList,
+                    })
+                    copyTextToClipboard(sql, '已复制 UPDATE 语句到剪贴板')
+                },
+            })
+        }
+
+        // 4. 复制整行为 JSON
+        items.push({
+            key: 'copy-json',
+            icon: <Code size={13} />,
+            label: '复制整行为 JSON',
+            onClick: () => {
+                const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
+                const json = JSON.stringify(fullRow, null, 2)
+                copyTextToClipboard(json, '已复制整行 JSON 到剪贴板')
+            },
+        })
+
+        items.push({ type: 'divider' })
+
+        // 5. 复制并新增 (克隆行)
+        items.push({
+            key: 'clone-row',
+            icon: <CopyPlus size={13} />,
+            label: '克隆当前行并新增',
+            onClick: () => {
+                const cloned: Record<string, any> = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
+                // 自增主键置为 null
+                pkList.forEach((pk) => {
+                    cloned[pk] = null
+                })
+                setNewRows((prev) => [cloned, ...prev])
+                message.success('已克隆数据并插入到新增行草稿')
+            },
+        })
+
+        // 6. 将单元格设为 NULL
+        if (colKey) {
+            items.push({
+                key: 'set-null',
+                icon: <Slash size={13} />,
+                label: `设为 NULL`,
+                onClick: () => {
+                    if (isNewRow) {
+                        handleCommitNewCell(rowIdx, colKey, '', true)
+                    } else {
+                        handleCommitCell(rowIdx, colKey, '', true)
+                    }
+                    message.info(`已将 [${colKey}] 标记为 NULL`)
+                },
+            })
+        }
+
+        items.push({ type: 'divider' })
+
+        // 7. 删除行
+        if (isNewRow) {
+            items.push({
+                key: 'delete-row',
+                icon: <Trash2 size={13} />,
+                danger: true,
+                label: '移除该新增行草稿',
+                onClick: () => {
+                    setNewRows((prev) => prev.filter((_, i) => i !== rowIdx))
+                    message.info('已移除新增行草稿')
+                },
+            })
+        } else {
+            items.push({
+                key: 'delete-row',
+                icon: <Trash2 size={13} />,
+                danger: true,
+                disabled: pkList.length === 0,
+                label: pkList.length === 0 ? '删除该行 (表缺少主键)' : '删除该行',
+                onClick: () => {
+                    if (pkList.length === 0) {
+                        message.warning('该表未定义主键，无法执行精确物理删除')
+                        return
+                    }
+                    const pkSummary = pkList.map((pk) => `${pk} = ${targetRow[pk]}`).join(', ')
+                    Modal.confirm({
+                        title: '确定删除选中的数据行吗？',
+                        content: `定位主键: [ ${pkSummary} ]。物理删除后不可撤销，请确认！`,
+                        okText: '确定删除',
+                        cancelText: '取消',
+                        okButtonProps: { danger: true },
+                        onOk: async () => {
+                            await handleDeleteRow(rowIdx)
+                        },
+                    })
+                },
+            })
+        }
+
+        return items
+    }
+
+    // 构造数据列定义（已去除“操作”列）
     const dataCols: ColDef[] = useMemo(() => {
         const cols: ColDef[] = [
             {
@@ -405,9 +640,16 @@ export default function DataTab({
             ...columns.map((c) => {
                 const isPk = pkList.includes(c)
                 const isSorted = sortCol === c
+                const activeFilter = filters[c]
+                const headerMinW = calcColWidthFromName(c, {
+                    isPk,
+                    hasFilter: true,
+                    minWidth: 95,
+                })
                 return {
                     key: c,
                     isPk,
+                    hasFilter: true,
                     label: (
                         <div
                             className={my.headerCol}
@@ -430,23 +672,20 @@ export default function DataTab({
                                     <ArrowUpDown size={12} />
                                 )}
                             </span>
+                            <ColumnFilterPopover
+                                col={c}
+                                activeFilter={activeFilter}
+                                onApply={(f) => handleFilterChange(c, f)}
+                            />
                         </div>
                     ),
                     width: getColW(c, isPk),
-                    minWidth: 70,
+                    minWidth: headerMinW,
                 }
             }),
-            {
-                key: '__rowact__',
-                label: '操作',
-                width: ROW_ACT_W,
-                minWidth: 42,
-                resizable: false,
-                align: 'center',
-            },
         ]
         return cols
-    }, [columns, pkList, colWidths, sortCol, sortOrder, rows.length])
+    }, [columns, pkList, colWidths, sortCol, sortOrder, filters, rows.length])
 
     return (
         <div className={my.dataWrap}>
@@ -488,6 +727,37 @@ export default function DataTab({
                         'SQL'
                     )}
                 </span>
+
+                {viewMode === 'data' && activeFilterEntries.length > 0 && (
+                    <div className={my.activeFiltersWrap}>
+                        <Filter size={12} className={my.activeFilterIcon} />
+                        <span className={my.activeFilterLabel}>已筛选:</span>
+                        <div className={my.activeFilterTags}>
+                            {activeFilterEntries.map(([col, f]) => (
+                                <Tag
+                                    key={col}
+                                    closable
+                                    className={my.filterTag}
+                                    onClose={() => handleFilterChange(col, null)}
+                                >
+                                    <span className={my.filterTagCol}>{col}</span>
+                                    <span className={my.filterTagOp}>{OP_LABELS[f.op]}</span>
+                                    {f.op !== 'is_null' && f.op !== 'is_not_null' && (
+                                        <span className={my.filterTagVal}>'{f.value}'</span>
+                                    )}
+                                </Tag>
+                            ))}
+                        </div>
+                        <Button
+                            size="small"
+                            type="link"
+                            className={my.clearAllBtn}
+                            onClick={handleClearAllFilters}
+                        >
+                            清除全部
+                        </Button>
+                    </div>
+                )}
 
                 <div className={my.crudActions}>
                     {viewMode === 'data' && (
@@ -533,48 +803,6 @@ export default function DataTab({
             {/* 数据视图 */}
             {viewMode === 'data' && (
                 <>
-                    {/* WHERE 过滤条件栏 */}
-                    <div className={my.filterBar}>
-                        <Filter size={14} style={{ color: 'var(--text-dim)', flexShrink: 0 }} />
-                        <Input
-                            size="small"
-                            style={{ flex: 1, fontFamily: 'monospace', fontSize: 12 }}
-                            placeholder="输入过滤条件 (例如: id > 100 AND status = 'active')"
-                            value={whereInput}
-                            onChange={(e) => setWhereInput(e.target.value)}
-                            onPressEnter={() => {
-                                setActiveWhere(whereInput.trim())
-                                setPage(1)
-                                loadData(1, pageSize, whereInput.trim())
-                            }}
-                        />
-                        <Button
-                            size="small"
-                            type="primary"
-                            onClick={() => {
-                                setActiveWhere(whereInput.trim())
-                                setPage(1)
-                                loadData(1, pageSize, whereInput.trim())
-                            }}
-                        >
-                            筛选
-                        </Button>
-                        {activeWhere && (
-                            <Button
-                                size="small"
-                                onClick={() => {
-                                    setWhereInput('')
-                                    setActiveWhere('')
-                                    setPage(1)
-                                    loadData(1, pageSize, '')
-                                }}
-                            >
-                                清除
-                            </Button>
-                        )}
-                    </div>
-
-
                     {/* 表格主体：使用 ResizableTable 渲染 */}
                     <ResizableTable
                         cols={dataCols}
@@ -585,8 +813,18 @@ export default function DataTab({
                         <tbody>
                             {/* 渲染未保存的新增行 */}
                             {newRows.map((newRow, nIdx) => (
-                                <tr key={'new_' + nIdx} className={my.rowNew}>
-                                    <td className={my.rownum} style={{ color: '#52c41a', fontWeight: 700 }}>+</td>
+                                <tr
+                                    key={'new_' + nIdx}
+                                    className={my.rowNew}
+                                    onContextMenu={(e) => handleCellContextMenu(e, nIdx, undefined, true)}
+                                >
+                                    <td
+                                        className={my.rownum}
+                                        style={{ color: '#52c41a', fontWeight: 700 }}
+                                        onContextMenu={(e) => handleCellContextMenu(e, nIdx, undefined, true)}
+                                    >
+                                        +
+                                    </td>
                                     {columns.map((c) => {
                                         const isEditing = editingNewCell?.rowIdx === nIdx && editingNewCell?.col === c
                                         const val = newRow[c]
@@ -594,7 +832,8 @@ export default function DataTab({
                                             <td
                                                 key={c}
                                                 onClick={() => !isEditing && setEditingNewCell({ rowIdx: nIdx, col: c })}
-                                                title="点击编辑"
+                                                onContextMenu={(e) => handleCellContextMenu(e, nIdx, c, true)}
+                                                title="点击编辑，右键更多操作"
                                             >
                                                 {isEditing ? (
                                                     <CellEditorInline
@@ -613,17 +852,6 @@ export default function DataTab({
                                             </td>
                                         )
                                     })}
-                                    <td className={my.rowact}>
-                                        <Tooltip title="移除该新增行">
-                                            <Button
-                                                type="text"
-                                                danger
-                                                size="small"
-                                                icon={<Trash2 size={13} />}
-                                                onClick={() => setNewRows((prev) => prev.filter((_, i) => i !== nIdx))}
-                                            />
-                                        </Tooltip>
-                                    </td>
                                 </tr>
                             ))}
 
@@ -631,8 +859,16 @@ export default function DataTab({
                             {rows.map((row, rIdx) => {
                                 const isRowDirty = !!rowDrafts[rIdx]
                                 return (
-                                    <tr key={rIdx}>
-                                        <td className={my.rownum}>{(page - 1) * pageSize + rIdx + 1}</td>
+                                    <tr
+                                        key={rIdx}
+                                        onContextMenu={(e) => handleCellContextMenu(e, rIdx, undefined, false)}
+                                    >
+                                        <td
+                                            className={my.rownum}
+                                            onContextMenu={(e) => handleCellContextMenu(e, rIdx, undefined, false)}
+                                        >
+                                            {(page - 1) * pageSize + rIdx + 1}
+                                        </td>
                                         {columns.map((c) => {
                                             const isEditing = editingCell?.rowIdx === rIdx && editingCell?.col === c
                                             const isCellDirty = rowDrafts[rIdx] && rowDrafts[rIdx][c] !== undefined
@@ -644,7 +880,8 @@ export default function DataTab({
                                                     key={c}
                                                     className={(isCellDirty ? my.cellDirty : '') + (isNull ? (' ' + my.cellNull) : '')}
                                                     onClick={() => !isEditing && setEditingCell({ rowIdx: rIdx, col: c })}
-                                                    title="点击编辑"
+                                                    onContextMenu={(e) => handleCellContextMenu(e, rIdx, c, false)}
+                                                    title="点击编辑，右键更多操作"
                                                 >
                                                     {isEditing ? (
                                                         <CellEditorInline
@@ -663,36 +900,13 @@ export default function DataTab({
                                                 </td>
                                             )
                                         })}
-                                        <td className={my.rowact}>
-                                            <Tooltip title={pkList.length === 0 ? '该表未定义主键，无法删除行' : '删除该行'}>
-                                                <span style={{ display: 'inline-flex' }}>
-                                                    <Popconfirm
-                                                        title="确定删除此行数据吗？"
-                                                        okText="确定"
-                                                        cancelText="取消"
-                                                        okButtonProps={{ danger: true }}
-                                                        placement="left"
-                                                        disabled={loading || saving || pkList.length === 0}
-                                                        onConfirm={() => handleDeleteRow(rIdx)}
-                                                    >
-                                                        <Button
-                                                            type="text"
-                                                            danger
-                                                            size="small"
-                                                            icon={<Trash2 size={13} />}
-                                                            disabled={loading || saving || pkList.length === 0}
-                                                        />
-                                                    </Popconfirm>
-                                                </span>
-                                            </Tooltip>
-                                        </td>
                                     </tr>
                                 )
                             })}
 
                             {!rows.length && !newRows.length && (
                                 <tr>
-                                    <td colSpan={columns.length + 2} className={db.dbEmpty}>
+                                    <td colSpan={columns.length + 1} className={db.dbEmpty}>
                                         {loading ? '加载数据中...' : '暂无数据，可点击「新增行」插入数据'}
                                     </td>
                                 </tr>
@@ -870,6 +1084,26 @@ export default function DataTab({
                     </div>
                     <pre className={my.ddlViewer}>{ddlText}</pre>
                 </div>
+            )}
+
+            {/* 行右键上下文菜单 */}
+            {contextMenu && (
+                <Dropdown
+                    menu={{ items: getContextMenuItems() }}
+                    open={contextMenu.open}
+                    onOpenChange={(v) => !v && setContextMenu(null)}
+                >
+                    <span
+                        style={{
+                            position: 'fixed',
+                            left: contextMenu.x,
+                            top: contextMenu.y,
+                            width: 1,
+                            height: 1,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                </Dropdown>
             )}
         </div>
     )

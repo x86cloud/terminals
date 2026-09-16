@@ -2,6 +2,18 @@
 
 export type MongoTabKey = 'documents' | 'aggregate' | 'indexes' | 'schema' | 'monitor' | 'stream'
 
+export type MongoTabType = 'status' | 'query' | 'data'
+
+export interface MongoTabItem {
+    key: string
+    label: string
+    type: MongoTabType
+    dbName: string
+    collection?: string
+    subTab?: 'documents' | 'indexes' | 'schema' | 'stream'
+    closable: boolean
+}
+
 // 美化 Extended JSON 字符串（已是 JSON，直接格式化）
 export function prettyJSON(text: string): string {
     if (!text) return ''

@@ -11,6 +11,7 @@ export interface ColDef {
     align?: 'left' | 'center' | 'right'
     isPk?: boolean
     isFk?: boolean
+    hasFilter?: boolean
 }
 
 interface Props {
@@ -74,18 +75,19 @@ function extractCellValueString(val: any): string {
 }
 
 /**
- * 根据列名文本长度及表头必要修饰元素（PK角标/FK标签/排序图标/单元格内边距）自动计算列宽
+ * 根据列名文本长度及表头必要修饰元素（PK角标/FK标签/排序图标/列筛选搜索按钮/单元格内边距）自动计算列宽
  */
 export function calcColWidthFromName(
     colName: string,
     options?: {
         isPk?: boolean
         isFk?: boolean
+        hasFilter?: boolean
         minWidth?: number
         maxWidth?: number
     }
 ): number {
-    const minW = options?.minWidth ?? DEFAULT_GLOBAL_MIN_W
+    const minW = options?.minWidth ?? (options?.hasFilter ? 95 : DEFAULT_GLOBAL_MIN_W)
     const maxW = options?.maxWidth ?? DEFAULT_GLOBAL_MAX_W
 
     if (!colName) return minW
@@ -99,8 +101,8 @@ export function calcColWidthFromName(
     // 表头基础必需空间：
     // th 左右 padding 20px (10px * 2)
     // 排序按钮宽度与间隙 16px (12px + 4px)
-    // 拖拽手柄与子像素渲染安全冗余 12px
-    let extraBuffer = 48
+    // 拖拽手柄与子像素渲染安全冗余 14px
+    let extraBuffer = 50
 
     // 若为主键列，pkBadge 左右内边距额外占据 10px (5px * 2)
     if (options?.isPk) {
@@ -110,6 +112,11 @@ export function calcColWidthFromName(
     // 若为外键列，fkBadge 占据约 27px (margin 4px + "FK" 文本约 15px + padding 8px)
     if (options?.isFk) {
         extraBuffer += 27
+    }
+
+    // 若包含列筛选/搜索按钮，额外占据 26px (按钮 18px + 间距 4px + 边距与防挤压冗余 4px)
+    if (options?.hasFilter) {
+        extraBuffer += 26
     }
 
     const calculatedW = Math.ceil(textW + extraBuffer)
@@ -130,7 +137,7 @@ export function calculateColumnOptimalWidth(
         return col.width || 50
     }
 
-    const minW = col.minWidth ?? defaultMinW
+    const minW = col.minWidth ?? (col.hasFilter ? 95 : defaultMinW)
     const maxW = col.maxWidth ?? defaultMaxW
 
     // 1. 基于列名长度自动计算表头宽度
@@ -145,6 +152,7 @@ export function calculateColumnOptimalWidth(
         const headerW = calcColWidthFromName(labelStr, {
             isPk: col.isPk,
             isFk: col.isFk,
+            hasFilter: col.hasFilter,
             minWidth: minW,
             maxWidth: maxW,
         })
@@ -224,8 +232,9 @@ export default function ResizableTable({
     useEffect(() => {
         const newWidths: Record<string, number> = {}
         for (const c of cols) {
+            const colMin = c.minWidth ?? (c.hasFilter ? 95 : defaultMinWidth)
             if (manualWidthsRef.current[c.key] !== undefined) {
-                newWidths[c.key] = manualWidthsRef.current[c.key]
+                newWidths[c.key] = Math.max(colMin, manualWidthsRef.current[c.key])
             } else {
                 newWidths[c.key] = calculateColumnOptimalWidth(c, effectiveRows, defaultMinWidth, defaultMaxWidth)
             }
@@ -249,16 +258,17 @@ export default function ResizableTable({
 
     const getColRenderWidth = useCallback(
         (c: ColDef): number => {
+            const colMin = c.minWidth ?? (c.hasFilter ? 95 : defaultMinWidth)
             if (resizingCol && resizingCol.key === c.key) {
-                return resizingCol.width
+                return Math.max(colMin, resizingCol.width)
             }
             if (computedWidths[c.key] !== undefined) {
-                return computedWidths[c.key]
+                return Math.max(colMin, computedWidths[c.key])
             }
             if (c.width && c.width > 0) {
-                return c.width
+                return Math.max(colMin, c.width)
             }
-            return defaultMinWidth
+            return colMin
         },
         [resizingCol, computedWidths, defaultMinWidth]
     )
@@ -269,7 +279,7 @@ export default function ResizableTable({
             e.stopPropagation()
 
             const currentW = getColRenderWidth(col)
-            const minW = col.minWidth ?? defaultMinWidth
+            const minW = col.minWidth ?? (col.hasFilter ? 95 : defaultMinWidth)
             const maxW = col.maxWidth ?? defaultMaxWidth
             dragRef.current = {
                 key: col.key,

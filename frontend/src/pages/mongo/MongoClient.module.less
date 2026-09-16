@@ -1,188 +1,139 @@
 @import (reference) '../../styles/variables.less';
 @import (reference) '../../styles/mixins.less';
 
-/* 容器布局：仅保留 MongoClient 顶层框架类，子组件样式已拆分到各自 co-located 模块 */
-
-.mongoPane {
-    flex: 1;
-    .fill();
+.client {
     display: flex;
-}
-
-.mongoSide {
-    width: 240px;
-    min-width: 210px;
-    border-right: 1px solid @border;
-    display: flex;
-    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
     background: @bg-1;
 }
 
-.mongoDbHead {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 10px;
-    border-bottom: 1px solid @border;
-    color: @text-dim;
-}
-
-.mongoDbSelect {
-    flex: 1;
-    .fill();
-    .input-base();
-}
-
-.mongoDbActions {
-    display: flex;
-    gap: 6px;
-    padding: 6px 10px;
-    border-bottom: 1px solid @border;
-}
-
-.mongoTree {
-    flex: 1;
-    .fill();
-    overflow: auto;
-    padding: 6px;
-}
-
-.mongoDbGroup {
-    margin-bottom: 4px;
-}
-
-.mongoDbItem {
-    .row();
-    width: 100%;
-    gap: 6px;
-    padding: 5px 8px;
-    background: transparent;
-    border: none;
-    border-radius: @radius-md;
-    color: @text;
-    cursor: pointer;
-    font-size: 13px;
-    text-align: left;
-
-    &:hover {
-        background: @bg-2;
-    }
-
-    &.active {
-        background: @bg-2;
-        color: @accent;
-    }
-}
-
-.mongoCollList {
-    padding: 2px 0 4px 18px;
-}
-
-.mongoCollRow {
-    .row();
-    width: 100%;
-    gap: 6px;
-    padding: 4px 8px;
-    background: transparent;
-    border: none;
-    border-radius: @radius-md;
-    color: @text;
-    cursor: pointer;
-    font-size: 12.5px;
-    text-align: left;
-
-    &:hover {
-        background: @bg-2;
-    }
-
-    &.active {
-        background: @bg-2;
-        color: @accent;
-    }
-}
-
-.mongoCollMenu {
-    display: flex;
-    gap: 2px;
-    margin-left: auto;
-    opacity: 0;
-    transition: opacity 0.15s;
-}
-
-.mongoCollRow:hover .mongoCollMenu {
-    opacity: 1;
-}
-
-.mongoMain {
-    flex: 1;
-    min-width: 0;
+.sideTree {
+    width: 280px;
+    min-width: 220px;
+    max-width: 480px;
+    border-right: 1px solid @border;
+    background: @bg-2;
     display: flex;
     flex-direction: column;
-}
-
-.mongoToolbar {
-    display: flex;
-    align-items: center;
-    gap: @space-md;
-    padding: 8px 12px;
-    border-bottom: 1px solid @border;
-
-    .btn, .iconBtn {
-        flex-shrink: 0;
-    }
-}
-
-.mongoConnTitle {
-    font-weight: 600;
-    font-size: 13px;
-    .ellipsis();
-    min-width: 0;
-}
-
-.mongoError {
-    color: @danger;
-    font-size: 12px;
-    background: color-mix(in srgb, @danger 12%, transparent);
-    padding: 3px 8px;
-    border-radius: @radius-md;
-    min-width: 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.mongoTabs {
-    display: flex;
-    align-items: center;
-    gap: 2px;
-    padding: 0 12px;
-    border-bottom: 1px solid @border;
-    background: @bg-elev;
+    height: 100%;
     flex-shrink: 0;
 }
 
-.mongoTab {
-    padding: 8px 14px;
-    background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: @text-dim;
-    cursor: pointer;
+.sideHead {
+    height: 36px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.sideTitle {
     font-size: 13px;
+    font-weight: 700;
+    color: @text;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+}
 
-    &:hover {
-        color: @text;
-    }
+.treeWrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 4px;
+    min-height: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
 
-    &.active {
-        color: @accent;
-        border-bottom-color: @accent;
+    &::-webkit-scrollbar {
+        display: none;
     }
 }
 
-.mongoContent {
+.mainArea {
     flex: 1;
-    .fill();
-    overflow: auto;
-    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.tabBar {
+    height: 36px;
+    min-height: 36px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-shrink: 0;
+    gap: 0;
+    box-sizing: border-box;
+
+    &::-webkit-scrollbar {
+        height: 3px;
+    }
+}
+
+.tabContent {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+    background: @bg-1;
+}
+
+.nodeTitleWrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    padding: 2px 4px;
+    border-radius: @radius-sm;
+    user-select: none;
+    overflow: hidden;
+}
+
+.nodeMain {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+    min-width: 0;
+    flex: 1;
+}
+
+.nodeText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+    display: inline-block;
+}
+
+.nodeMeta {
+    font-size: 11px;
+    color: @text-faint;
+    font-variant-numeric: tabular-nums;
+    margin-left: 6px;
+    flex-shrink: 0;
 }

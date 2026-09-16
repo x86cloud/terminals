@@ -13,12 +13,8 @@ import {
     Network,
     Code2,
     Trash2,
-    Edit2,
     Download,
     Upload,
-    Copy,
-    FileCode,
-    X,
     Eraser,
 } from 'lucide-react'
 import { API } from '@/api'

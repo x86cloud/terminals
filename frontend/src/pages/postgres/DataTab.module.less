@@ -73,38 +73,82 @@
     flex-shrink: 0;
 }
 
-/* WHERE 过滤条件栏：统一融入工作区纯白操作层，不再呈现灰色夹层 */
-.filterBar {
-    display: flex;
+.activeFiltersWrap {
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 6px 12px;
-    background: @bg-1;
-    border-bottom: 1px solid color-mix(in srgb, @border 65%, transparent);
+    gap: 6px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: color-mix(in srgb, @accent 8%, transparent);
+    border: 1px solid color-mix(in srgb, @accent 22%, transparent);
+    max-width: 480px;
+    overflow: hidden;
+    flex-shrink: 1;
+}
+
+.activeFilterIcon {
+    color: @accent;
     flex-shrink: 0;
+}
 
-    :global {
-        .ant-input {
-            height: 24px !important;
-            line-height: 22px;
-            box-sizing: border-box;
-            background: @bg-elev;
-            border-color: color-mix(in srgb, @border 75%, transparent);
-            transition: all @transition-fast ease;
+.activeFilterLabel {
+    font-size: 11px;
+    font-weight: 500;
+    color: @accent;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
 
-            &:hover, &:focus {
-                background: @bg-1;
-                border-color: @accent;
-            }
-        }
+.activeFilterTags {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    max-width: 340px;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
 
-        .ant-btn {
-            height: 24px !important;
-            box-sizing: border-box;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-        }
+.filterTag {
+    margin: 0 !important;
+    padding: 0 5px !important;
+    height: 20px !important;
+    line-height: 18px !important;
+    font-size: 11px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 3px !important;
+    background: @bg-1 !important;
+    border-color: color-mix(in srgb, @accent 35%, transparent) !important;
+    color: @text !important;
+
+    .filterTagCol {
+        font-weight: 600;
+        color: @accent;
+    }
+
+    .filterTagOp {
+        color: @text-dim;
+    }
+
+    .filterTagVal {
+        font-family: monospace;
+        color: @text;
+    }
+}
+
+.clearAllBtn {
+    padding: 0 !important;
+    height: auto !important;
+    font-size: 11px !important;
+    color: @text-dim !important;
+    white-space: nowrap !important;
+    flex-shrink: 0 !important;
+    &:hover {
+        color: @danger !important;
     }
 }
 

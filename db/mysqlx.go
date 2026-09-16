@@ -209,16 +209,37 @@ func (m *MysqlManagerEx) SetContext(ctx context.Context) {
 	m.ctx = ctx
 }
 
+func isSameMysqlConfig(a, b core.ServerConfig) bool {
+	return a.Host == b.Host &&
+		a.DisplayPort() == b.DisplayPort() &&
+		a.Username == b.Username &&
+		a.Password == b.Password &&
+		a.Database == b.Database &&
+		a.MysqlTLS == b.MysqlTLS &&
+		a.MysqlSSLEnabled == b.MysqlSSLEnabled &&
+		a.MysqlSSHEnabled == b.MysqlSSHEnabled &&
+		a.MysqlSSHHost == b.MysqlSSHHost &&
+		a.MysqlSSHHostPort == b.MysqlSSHHostPort &&
+		a.MysqlSSHUser == b.MysqlSSHUser &&
+		a.MysqlSSHKeyPath == b.MysqlSSHKeyPath &&
+		a.MysqlSSHKeyData == b.MysqlSSHKeyData &&
+		a.MysqlSSHPassphrase == b.MysqlSSHPassphrase
+}
+
 func (m *MysqlManagerEx) Open(id string, cfg core.ServerConfig) error {
 	m.mu.Lock()
-	if old, ok := m.conns[id]; ok {
-		old.db.Close()
-		if old.tunnel != nil {
-			old.tunnel.close()
-		}
-		delete(m.conns, id)
-	}
+	old, hasOld := m.conns[id]
 	m.mu.Unlock()
+
+	// 如果现有连接存在且存活，并且核心配置未发生变更，直接复用连接，避免空窗期和重复握手
+	if hasOld && old != nil && old.db != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		err := old.db.PingContext(ctx)
+		cancel()
+		if err == nil && isSameMysqlConfig(old.cfg, cfg) {
+			return nil
+		}
+	}
 
 	dsn, tunnel, err := buildMysqlDSNExtended(cfg)
 	if err != nil {
@@ -250,9 +271,19 @@ func (m *MysqlManagerEx) Open(id string, cfg core.ServerConfig) error {
 		return fmt.Errorf("连接 MySQL 失败: %w", err)
 	}
 	mc := &mysqlConnEx{db: db, cfg: cfg, curDb: cfg.Database, tunnel: tunnel}
+
+	// 原子替换：直到新连接完全建立并 Ping 成功后，再更新 map 并清理旧连接，彻底消除空窗期
 	m.mu.Lock()
+	toClose := m.conns[id]
 	m.conns[id] = mc
 	m.mu.Unlock()
+
+	if toClose != nil {
+		_ = toClose.db.Close()
+		if toClose.tunnel != nil {
+			toClose.tunnel.close()
+		}
+	}
 	return nil
 }
 

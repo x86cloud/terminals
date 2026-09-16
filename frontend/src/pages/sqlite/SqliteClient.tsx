@@ -1,18 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Segmented, Space, Tooltip, Pagination, Tag, Input } from 'antd'
-import { Database, Plus, Folder, FileText, PanelLeft, Table, RotateCw, Trash2, X, Eraser } from 'lucide-react'
+import { Button, Segmented, Space, Tooltip, Pagination, Tag, Input, Dropdown, MenuProps, message } from 'antd'
+import { Database, Plus, Folder, FileText, PanelLeft, Table, RotateCw, Trash2, X, Eraser, FileCode, Code, Slash, CopyPlus, Copy } from 'lucide-react'
 import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
 import { API } from '@/api'
 import { errorMessage, isSameCellValue } from '@/utils'
 import { SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteIndexInfo } from '@/types'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import { buildInsertSql, buildUpdateSql, copyTextToClipboard } from '@/utils/sqlExport'
 import ObjModal from '@/pages/mysql/ObjModal'
 import g from '@/styles/global.module.less'
 import sq from '@/pages/sqlite/SqliteClient.module.less'
 import db from '@/pages/mysql/dbTable.module.less'
 import sh from '@/pages/mysql/mysqlShared.module.less'
-
-const ROW_ACT_W = 50
 
 interface Props {
     session: SqliteSessionInfo
@@ -363,7 +362,176 @@ export default function SqliteClient({ session, onClose }: Props) {
         })
     }
 
-    // ---- 新建表操作 (CREATE TABLE) ----
+    // ---- 右键上下文菜单状态 ----
+    const [contextMenu, setContextMenu] = useState<{
+        open: boolean
+        x: number
+        y: number
+        rowIdx: number
+        colKey?: string
+        isNewRow?: boolean
+    } | null>(null)
+
+    const handleCellContextMenu = (
+        e: React.MouseEvent,
+        rowIdx: number,
+        colKey?: string,
+        isNewRow = false
+    ) => {
+        e.preventDefault()
+        e.stopPropagation()
+        setContextMenu({
+            open: true,
+            x: e.clientX,
+            y: e.clientY,
+            rowIdx,
+            colKey,
+            isNewRow,
+        })
+    }
+
+    const getContextMenuItems = (): MenuProps['items'] => {
+        if (!contextMenu || !selected) return []
+        const { rowIdx, colKey, isNewRow } = contextMenu
+        const targetRow = isNewRow ? newRows[rowIdx] : rows[rowIdx]
+        if (!targetRow) return []
+
+        const cellVal = colKey ? (
+            isNewRow
+                ? targetRow[colKey]
+                : (drafts[rowIdx] && drafts[rowIdx][colKey] !== undefined ? drafts[rowIdx][colKey] : targetRow[colKey])
+        ) : undefined
+
+        const pkNames = structData.filter((c) => c.pk > 0).map((c) => c.name)
+
+        const items: MenuProps['items'] = []
+
+        // 1. 复制单元格值
+        if (colKey) {
+            items.push({
+                key: 'copy-cell',
+                icon: <Copy size={13} />,
+                label: `复制`,
+                onClick: () => {
+                    const str = cellVal === null || cellVal === undefined ? '' : String(cellVal)
+                    copyTextToClipboard(str, `已复制`)
+                },
+            })
+        }
+
+        // 2. 复制为 INSERT 语句
+        items.push({
+            key: 'copy-insert',
+            icon: <FileCode size={13} />,
+            label: '复制为 INSERT 语句',
+            onClick: () => {
+                const fullRow = { ...targetRow, ...(drafts[rowIdx] || {}) }
+                const sql = buildInsertSql({
+                    dialect: 'sqlite',
+                    table: selected,
+                    columns,
+                    rowData: fullRow,
+                })
+                copyTextToClipboard(sql, '已复制 INSERT 语句到剪贴板')
+            },
+        })
+
+        // 3. 复制为 UPDATE 语句
+        if (!isNewRow) {
+            items.push({
+                key: 'copy-update',
+                icon: <FileCode size={13} />,
+                label: '复制为 UPDATE 语句',
+                onClick: () => {
+                    const fullRow = { ...targetRow, ...(drafts[rowIdx] || {}) }
+                    const sql = buildUpdateSql({
+                        dialect: 'sqlite',
+                        table: selected,
+                        columns,
+                        rowData: fullRow,
+                        pkList: pkNames,
+                    })
+                    copyTextToClipboard(sql, '已复制 UPDATE 语句到剪贴板')
+                },
+            })
+        }
+
+        // 4. 复制整行为 JSON
+        items.push({
+            key: 'copy-json',
+            icon: <Code size={13} />,
+            label: '复制整行为 JSON',
+            onClick: () => {
+                const fullRow = { ...targetRow, ...(drafts[rowIdx] || {}) }
+                const json = JSON.stringify(fullRow, null, 2)
+                copyTextToClipboard(json, '已复制整行 JSON 到剪贴板')
+            },
+        })
+
+        items.push({ type: 'divider' })
+
+        // 5. 复制并新增 (克隆行)
+        items.push({
+            key: 'clone-row',
+            icon: <CopyPlus size={13} />,
+            label: '克隆当前行并新增',
+            onClick: () => {
+                const cloned: Record<string, any> = { ...targetRow, ...(drafts[rowIdx] || {}) }
+                pkNames.forEach((pk) => {
+                    cloned[pk] = ''
+                })
+                setNewRows((prev) => [cloned, ...prev])
+                message.success('已克隆数据并插入到新增行草稿')
+            },
+        })
+
+        // 6. 将单元格设为 NULL
+        if (colKey) {
+            items.push({
+                key: 'set-null',
+                icon: <Slash size={13} />,
+                label: `设为 NULL`,
+                onClick: () => {
+                    if (isNewRow) {
+                        updateNewCell(rowIdx, colKey, null as any)
+                    } else {
+                        updateDraft(rowIdx, colKey, null as any)
+                    }
+                    message.info(`已将 [${colKey}] 标记为 NULL`)
+                },
+            })
+        }
+
+        items.push({ type: 'divider' })
+
+        // 7. 删除行
+        if (isNewRow) {
+            items.push({
+                key: 'delete-row',
+                icon: <Trash2 size={13} />,
+                danger: true,
+                label: '移除该新增行草稿',
+                onClick: () => {
+                    removeNewRow(rowIdx)
+                    message.info('已移除新增行草稿')
+                },
+            })
+        } else {
+            items.push({
+                key: 'delete-row',
+                icon: <Trash2 size={13} />,
+                danger: true,
+                label: '删除该行',
+                onClick: () => {
+                    confirmDeleteRow(rowIdx)
+                },
+            })
+        }
+
+        return items
+    }
+
+    // ---- 打开新建表弹窗 ----
     const handleOpenCreateModal = () => {
         setCreateTableName('')
         setCreateColDefs('"id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT')
@@ -602,7 +770,6 @@ export default function SqliteClient({ session, onClose }: Props) {
 
                                 const sqCols: ColDef[] = [
                                     ...columns.map((c) => ({ key: c, label: c, width: getColW(c), minWidth: 70 })),
-                                    { key: '__act__', label: '操作', width: ROW_ACT_W, minWidth: 38 },
                                 ]
 
                                 return columns.length > 0 ? (
@@ -610,9 +777,17 @@ export default function SqliteClient({ session, onClose }: Props) {
                                         <tbody>
                                             {/* 草稿新增行 */}
                                             {newRows.map((nr, idx) => (
-                                                <tr key={`new_${idx}`} className={sq.rowNew}>
+                                                <tr
+                                                    key={`new_${idx}`}
+                                                    className={sq.rowNew}
+                                                    onContextMenu={(e) => handleCellContextMenu(e, idx, undefined, true)}
+                                                >
                                                     {columns.map((c) => (
-                                                        <td key={c}>
+                                                        <td
+                                                            key={c}
+                                                            onContextMenu={(e) => handleCellContextMenu(e, idx, c, true)}
+                                                            title="点击编辑，右键更多操作"
+                                                        >
                                                             <input
                                                                 className={sq.cellInput}
                                                                 value={nr[c] ?? ''}
@@ -624,22 +799,14 @@ export default function SqliteClient({ session, onClose }: Props) {
                                                             />
                                                         </td>
                                                     ))}
-                                                    <td className={sq.centerCell}>
-                                                        <Tooltip title="移除此新增行">
-                                                            <Button
-                                                                size="small"
-                                                                type="text"
-                                                                danger
-                                                                icon={<Trash2 size={12} />}
-                                                                onClick={() => removeNewRow(idx)}
-                                                            />
-                                                        </Tooltip>
-                                                    </td>
                                                 </tr>
                                             ))}
                                             {/* 现存数据行 */}
                                             {rows.map((r, i) => (
-                                                <tr key={i}>
+                                                <tr
+                                                    key={i}
+                                                    onContextMenu={(e) => handleCellContextMenu(e, i, undefined, false)}
+                                                >
                                                     {columns.map((c) => {
                                                         const isEd = editing?.row === i && editing?.col === c
                                                         const dirty = isDirty(i, c)
@@ -650,7 +817,8 @@ export default function SqliteClient({ session, onClose }: Props) {
                                                                 key={c}
                                                                 className={`${dirty ? db.dbDirtyCell : ''} ${isn && !isEd ? db.dbNullCell : ''} ${sq.editableCell}`}
                                                                 onClick={() => !isEd && setEditing({ row: i, col: c })}
-                                                                title="点击可编辑"
+                                                                onContextMenu={(e) => handleCellContextMenu(e, i, c, false)}
+                                                                title="点击编辑，右键更多操作"
                                                             >
                                                                 {isEd ? (
                                                                     <input
@@ -669,21 +837,10 @@ export default function SqliteClient({ session, onClose }: Props) {
                                                             </td>
                                                         )
                                                     })}
-                                                    <td className={sq.centerCell}>
-                                                        <Tooltip title="删除整行数据">
-                                                            <Button
-                                                                size="small"
-                                                                type="text"
-                                                                danger
-                                                                icon={<Trash2 size={12} />}
-                                                                onClick={() => confirmDeleteRow(i)}
-                                                            />
-                                                        </Tooltip>
-                                                    </td>
                                                 </tr>
                                             ))}
                                             {!rows.length && !newRows.length && (
-                                                <tr><td colSpan={columns.length + 1} className={db.dbEmpty}>该表暂无数据</td></tr>
+                                                <tr><td colSpan={columns.length} className={db.dbEmpty}>该表暂无数据</td></tr>
                                             )}
                                         </tbody>
                                     </ResizableTable>
@@ -771,6 +928,26 @@ export default function SqliteClient({ session, onClose }: Props) {
                     )}
                 </div>
             </div>
+
+            {/* 行右键上下文菜单 */}
+            {contextMenu && (
+                <Dropdown
+                    menu={{ items: getContextMenuItems() }}
+                    open={contextMenu.open}
+                    onOpenChange={(v) => !v && setContextMenu(null)}
+                >
+                    <span
+                        style={{
+                            position: 'fixed',
+                            left: contextMenu.x,
+                            top: contextMenu.y,
+                            width: 1,
+                            height: 1,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                </Dropdown>
+            )}
         </div>
     )
 }

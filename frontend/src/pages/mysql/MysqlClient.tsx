@@ -58,6 +58,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const [expandedKeys, setExpandedKeys] = useState<string[]>([])
     const [loadingTree, setLoadingTree] = useState(false)
     const [loadingDbs, setLoadingDbs] = useState<Record<string, boolean>>({})
+    const [isReady, setIsReady] = useState(false)
 
     // 工作区标签栏管理
     const [tabs, setTabs] = useState<MysqlTabItem[]>([
@@ -113,6 +114,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     // 连接初始化
     const initConnection = useCallback(async () => {
         setLoadingTree(true)
+        setIsReady(false)
         try {
             await API.mysqlConnect(serverId)
             const dbs = await API.mysqlDatabases(serverId)
@@ -123,6 +125,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 await loadTables(targetDb)
                 setExpandedKeys([`db_${targetDb}`, `tbls_${targetDb}`])
             }
+            setIsReady(true)
         } catch (e: any) {
             message.error(`连接 MySQL 失败: ${e.message || e}`)
         } finally {
@@ -479,9 +482,10 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     }
 
     useEffect(() => {
+        if (!isReady) return
         if (activeTabKey === 'status') loadStatus()
         if (activeTabKey === 'users') loadUsers()
-    }, [activeTabKey, loadStatus, loadUsers])
+    }, [isReady, activeTabKey, loadStatus, loadUsers])
 
     // 构造左侧树数据
     const treeData = useMemo(() => {

@@ -1,0 +1,99 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.statusWrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    overflow-y: auto;
+    background: @bg-1;
+    padding: 14px 16px;
+    gap: 14px;
+    box-sizing: border-box;
+}
+
+.kpiRow {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.kpiCard {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+        border-color: @accent;
+    }
+}
+
+.kpiLabel {
+    font-size: 11.5px;
+    color: @text-dim;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.kpiValue {
+    font-size: 18px;
+    font-weight: 700;
+    font-family: @font-mono;
+    color: @text;
+    line-height: 1.2;
+}
+
+.kpiSub {
+    font-size: 11px;
+    color: @text-faint;
+}
+
+.sectionBox {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    color: @text;
+}
+
+.kvTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+
+    th {
+        text-align: left;
+        padding: 6px 8px;
+        color: @text-dim;
+        font-weight: 500;
+        border-bottom: 1px solid color-mix(in srgb, @border 40%, transparent);
+        width: 35%;
+    }
+
+    td {
+        padding: 6px 8px;
+        font-family: @font-mono;
+        color: @text;
+        border-bottom: 1px solid color-mix(in srgb, @border 40%, transparent);
+        word-break: break-all;
+    }
+}

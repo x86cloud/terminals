@@ -1,0 +1,221 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.dataWrap {
+    flex: 1;
+    .fill();
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.tableHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 12px;
+    border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
+    background: @bg-1;
+    flex-wrap: wrap;
+    min-height: 42px;
+    flex-shrink: 0;
+}
+
+.tableNameWrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.dbTag {
+    font-size: 11px;
+    color: @text-dim;
+    background: @bg-elev;
+    padding: 1px 6px;
+    border-radius: @radius-sm;
+    border: 1px solid color-mix(in srgb, @border 60%, transparent);
+    font-family: @font-mono;
+}
+
+.collName {
+    font-weight: 700;
+    font-family: @font-mono;
+    font-size: 13px;
+    color: @accent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.countBadge {
+    font-size: 12px;
+    color: @text-dim;
+    white-space: nowrap;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.crudActions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.filterBuilder {
+    padding: 10px 14px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.filterGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 10px;
+    align-items: start;
+}
+
+.filterField {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    span {
+        font-size: 11.5px;
+        color: @text-dim;
+        font-weight: 500;
+    }
+}
+
+.viewArea {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.jsonViewWrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.jsonCard {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.15s ease;
+
+    &:hover {
+        border-color: @accent;
+    }
+}
+
+.jsonCardHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    color: @text-dim;
+    border-bottom: 1px solid color-mix(in srgb, @border 40%, transparent);
+    padding-bottom: 6px;
+}
+
+.jsonCardCode {
+    font-family: @font-mono;
+    font-size: 12px;
+    line-height: 1.5;
+    color: @text;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 280px;
+    overflow-y: auto;
+    margin: 0;
+}
+
+.paginationFooter {
+    height: 38px;
+    padding: 0 12px;
+    border-top: 1px solid @border;
+    background: @bg-1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+}
+
+.headerCol {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    min-width: 0;
+}
+
+.headerColText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.pkBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #eab308;
+    background: rgba(234, 179, 8, 0.15);
+    border: 1px solid rgba(234, 179, 8, 0.35);
+    padding: 0 4px;
+    height: 16px;
+    border-radius: 3px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.cellText {
+    font-family: @font-mono;
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.nullCell {
+    color: @text-faint;
+    font-style: italic;
+}
+
+.jsonCell {
+    color: @accent;
+    cursor: pointer;
+    font-family: @font-mono;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
