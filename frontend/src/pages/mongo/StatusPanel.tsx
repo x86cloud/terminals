@@ -52,6 +52,14 @@ function fmtBytes(bytes: number): string {
     return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
+function fmtMb(mb?: number): string {
+    if (mb === undefined || mb === null || isNaN(mb) || mb <= 0) return '-'
+    if (mb >= 1024) {
+        return `${(mb / 1024).toFixed(2)} GB`
+    }
+    return `${mb} MB`
+}
+
 export default function StatusPanel({ session }: Props) {
     const id = session.id
     const [subTab, setSubTab] = useState<'overview' | 'currentOps' | 'serverStatus'>('overview')
@@ -172,8 +180,9 @@ export default function StatusPanel({ session }: Props) {
     // KPI 数据推导
     const connCurrent = status?.connections?.current ?? client.activeConn ?? 0
     const connAvailable = status?.connections?.available ?? client.maxPoolSize ?? 0
-    const memResident = status?.mem?.resident ?? 0
-    const memVirtual = status?.mem?.virtual ?? 0
+    const memResident = Number(status?.mem?.resident) || 0
+    const memVirtual = Number(status?.mem?.virtual) || 0
+    const wtCacheUsed = Number(status?.wiredTiger?.cache?.['bytes currently in the cache']) || 0
     const opQuery = status?.opcounters?.query ?? 0
     const opInsert = status?.opcounters?.insert ?? 0
     const opUpdate = status?.opcounters?.update ?? 0
@@ -248,10 +257,12 @@ export default function StatusPanel({ session }: Props) {
                         <HardDrive size={13} style={{ color: '#eab308' }} />
                     </div>
                     <div className={s.kpiValue}>
-                        {memResident ? `${memResident} MB` : '-'}
+                        {memResident > 0 ? fmtMb(memResident) : (wtCacheUsed > 0 ? fmtBytes(wtCacheUsed) : '-')}
                     </div>
                     <div className={s.kpiSub}>
-                        虚拟内存: {memVirtual ? `${memVirtual} MB` : '-'}
+                        {memVirtual > 0
+                            ? `虚拟内存: ${fmtMb(memVirtual)}`
+                            : (wtCacheUsed > 0 ? `WT 缓存: ${fmtBytes(wtCacheUsed)}` : '虚拟内存: -')}
                     </div>
                 </div>
 
@@ -305,15 +316,15 @@ export default function StatusPanel({ session }: Props) {
                                 <span>连接池与全局状态</span>
                                 <Tag color="blue">{status.host}</Tag>
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
                                 <div>
                                     <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-dim)' }}>
                                         连接状态 (Connections)
                                     </h4>
                                     <table className={s.kvTable}>
                                         <tbody>
-                                            <tr><th>当前活跃 (current)</th><td>{String(status.connections?.current ?? '-')}</td></tr>
-                                            <tr><th>可用余量 (available)</th><td>{String(status.connections?.available ?? '-')}</td></tr>
+                                            <tr><th>当前活跃 (current)</th><td>{String(status.connections?.current ?? client.activeConn ?? '-')}</td></tr>
+                                            <tr><th>可用余量 (available)</th><td>{String(status.connections?.available ?? client.maxPoolSize ?? '-')}</td></tr>
                                             <tr><th>历史创建累计</th><td>{String(status.connections?.totalCreated ?? '-')}</td></tr>
                                             <tr><th>运行进程名称</th><td>{status.process || 'mongod'}</td></tr>
                                             <tr><th>正常运行时间 (uptime)</th><td>{status.uptime ? `${Math.floor(status.uptime / 3600)}h ${Math.floor((status.uptime % 3600) / 60)}m` : '-'}</td></tr>
@@ -331,6 +342,20 @@ export default function StatusPanel({ session }: Props) {
                                             <tr><th>请求总数 (numRequests)</th><td>{String(status.network?.numRequests ?? '-')}</td></tr>
                                             <tr><th>全局读锁</th><td>{String(status.globalLock?.currentQueue?.readers ?? 0)}</td></tr>
                                             <tr><th>全局写锁</th><td>{String(status.globalLock?.currentQueue?.writers ?? 0)}</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div>
+                                    <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-dim)' }}>
+                                        内存与引擎缓存 (Memory & Engine)
+                                    </h4>
+                                    <table className={s.kvTable}>
+                                        <tbody>
+                                            <tr><th>物理常驻 (Resident)</th><td>{fmtMb(status.mem?.resident)}</td></tr>
+                                            <tr><th>虚拟内存 (Virtual)</th><td>{fmtMb(status.mem?.virtual)}</td></tr>
+                                            <tr><th>WiredTiger 缓存已用</th><td>{fmtBytes(status.wiredTiger?.cache?.['bytes currently in the cache'])}</td></tr>
+                                            <tr><th>WiredTiger 缓存上限</th><td>{fmtBytes(status.wiredTiger?.cache?.['maximum bytes configured'])}</td></tr>
+                                            <tr><th>缺页异常 (Page Faults)</th><td>{String(status.extra_info?.page_faults ?? '-')}</td></tr>
                                         </tbody>
                                     </table>
                                 </div>

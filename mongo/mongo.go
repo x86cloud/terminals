@@ -747,6 +747,63 @@ func serverVersion(ctx context.Context, cli *mongo.Client) string {
 	return ""
 }
 
+// normalizeBsonValue 递归将 bson.D / bson.M / bson.A 转换为标准 map[string]any 和 []any，
+// 确保能够正确进行 JSON 序列化并彻底解决嵌套 bson.D 强转 .(bson.M) 失败的问题。
+func normalizeBsonValue(v any) any {
+	if v == nil {
+		return nil
+	}
+	switch val := v.(type) {
+	case bson.D:
+		m := make(map[string]any, len(val))
+		for _, elem := range val {
+			m[elem.Key] = normalizeBsonValue(elem.Value)
+		}
+		return m
+	case []bson.D:
+		res := make([]any, len(val))
+		for i, item := range val {
+			res[i] = normalizeBsonValue(item)
+		}
+		return res
+	case bson.A:
+		res := make([]any, len(val))
+		for i, item := range val {
+			res[i] = normalizeBsonValue(item)
+		}
+		return res
+	case []any:
+		res := make([]any, len(val))
+		for i, item := range val {
+			res[i] = normalizeBsonValue(item)
+		}
+		return res
+	case map[string]any:
+		m := make(map[string]any, len(val))
+		for k, item := range val {
+			m[k] = normalizeBsonValue(item)
+		}
+		return m
+	case bson.M:
+		m := make(map[string]any, len(val))
+		for k, item := range val {
+			m[k] = normalizeBsonValue(item)
+		}
+		return m
+	default:
+		return val
+	}
+}
+
+// toBsonMap 统一将任意 BSON 文档（bson.D / bson.M / map[string]any）转为 map[string]any
+func toBsonMap(v any) map[string]any {
+	norm := normalizeBsonValue(v)
+	if m, ok := norm.(map[string]any); ok {
+		return m
+	}
+	return nil
+}
+
 // MongoServerStatus 返回 serverStatus 关键指标，用于性能监控。
 func (m *MongoManager) MongoServerStatus(id string) (map[string]any, error) {
 	mc, err := m.mustMongo(id)
@@ -759,34 +816,20 @@ func (m *MongoManager) MongoServerStatus(id string) (map[string]any, error) {
 	start := time.Now()
 	var st bson.M
 	err = mc.client.Database("admin").RunCommand(ctx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&st)
+	if err != nil && mc.cfg.Database != "" && mc.cfg.Database != "admin" {
+		err = mc.client.Database(mc.cfg.Database).RunCommand(ctx, bson.D{{Key: "serverStatus", Value: 1}}).Decode(&st)
+	}
 	mc.track(start, err)
 	if err != nil {
 		return nil, err
 	}
 
-	out := map[string]any{
-		"host":    st["host"],
-		"version": st["version"],
-		"uptime":  st["uptime"],
-		"process": st["process"],
-		"client":  mc.stats.snapshot(),
+	norm := toBsonMap(st)
+	if norm == nil {
+		norm = make(map[string]any)
 	}
-	if conns, ok := st["connections"].(bson.M); ok {
-		out["connections"] = conns
-	}
-	if net, ok := st["network"].(bson.M); ok {
-		out["network"] = net
-	}
-	if op, ok := st["opcounters"].(bson.M); ok {
-		out["opcounters"] = op
-	}
-	if mem, ok := st["mem"].(bson.M); ok {
-		out["mem"] = mem
-	}
-	if gl, ok := st["globalLock"].(bson.M); ok {
-		out["globalLock"] = gl
-	}
-	return out, nil
+	norm["client"] = mc.stats.snapshot()
+	return norm, nil
 }
 
 // MongoClientStats 仅返回客户端侧统计（无需服务端权限）。
@@ -887,7 +930,7 @@ func (m *MongoManager) MongoCollections(id, db string) ([]map[string]any, error)
 			"name": spec["name"],
 			"type": spec["type"],
 		}
-		if opts, ok := spec["options"].(bson.M); ok {
+		if opts := toBsonMap(spec["options"]); opts != nil {
 			if _, has := opts["validator"]; has {
 				item["hasValidator"] = true
 			}
@@ -1006,7 +1049,7 @@ func (m *MongoManager) MongoCollectionStats(id, db, coll string) (map[string]any
 		}
 	}
 	out := map[string]any{}
-	if ss, ok := res["storageStats"].(bson.M); ok {
+	if ss := toBsonMap(res["storageStats"]); ss != nil {
 		out["count"] = ss["count"]
 		out["size"] = ss["size"]
 		out["avgObjSize"] = ss["avgObjSize"]
@@ -1098,7 +1141,7 @@ func (m *MongoManager) MongoInferSchema(id, db, coll string, sampleSize int) ([]
 }
 
 // collectFields 递归遍历文档，回调每个字段路径及其 BSON 类型。
-func collectFields(prefix string, doc bson.M, emit func(path, typ string)) {
+func collectFields(prefix string, doc map[string]any, emit func(path, typ string)) {
 	for k, v := range doc {
 		path := k
 		if prefix != "" {
@@ -1106,7 +1149,7 @@ func collectFields(prefix string, doc bson.M, emit func(path, typ string)) {
 		}
 		emit(path, bsonTypeName(v))
 		// 只下钻一层嵌套对象，避免字段爆炸
-		if sub, ok := v.(bson.M); ok && strings.Count(path, ".") < 2 {
+		if sub := toBsonMap(v); sub != nil && strings.Count(path, ".") < 2 {
 			collectFields(path, sub, emit)
 		}
 	}
@@ -1167,7 +1210,7 @@ func (m *MongoManager) MongoGetValidator(id, db, coll string) (map[string]any, e
 		if err := cur.Decode(&spec); err != nil {
 			return nil, err
 		}
-		if opts, ok := spec["options"].(bson.M); ok {
+		if opts := toBsonMap(spec["options"]); opts != nil {
 			if v, has := opts["validator"]; has {
 				out["validator"] = docToJSON(v)
 			}

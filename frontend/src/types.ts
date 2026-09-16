@@ -841,6 +841,9 @@ export interface MongoServerStatus {
     opcounters?: any
     mem?: any
     globalLock?: any
+    wiredTiger?: any
+    extra_info?: any
+    [key: string]: any
     client: {
         ops: number
         failures: number
