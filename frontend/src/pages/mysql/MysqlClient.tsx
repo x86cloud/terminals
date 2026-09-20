@@ -25,8 +25,9 @@ import ClientIcon from '@/components/ClientIcon'
 import { MysqlSessionInfo } from '@/types'
 import { MysqlTabItem, Schema } from './mysqlTypes'
 import TabBar, { TabItem } from '@/components/common/TabBar'
-import DataTab from './DataTab'
-import SqlEditor from './SqlEditor'
+import DbDataTab from '@/components/db/DataTab'
+import DbSqlEditor from '@/components/db/SqlEditor'
+import { createMysqlAdapter, createMysqlSqlAdapter } from '@/components/db/adapters'
 import StatusPanel from './StatusPanel'
 import UsersPanel from './UsersPanel'
 import ErDiagram from './ErDiagram'
@@ -866,11 +867,9 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
                         if (t.type === 'data' && t.table) {
                             return (
-                                <DataTab
+                                <DbDataTab
                                     key={t.key}
-                                    serverId={serverId}
-                                    dbName={t.dbName}
-                                    tableName={t.table}
+                                    adapter={createMysqlAdapter(serverId, t.dbName, t.table)}
                                     onClose={() => handleCloseTab(t.key)}
                                 />
                             )
@@ -878,10 +877,9 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
                         if (t.type === 'sql') {
                             return (
-                                <SqlEditor
+                                <DbSqlEditor
                                     key={t.key}
-                                    serverId={serverId}
-                                    dbName={t.dbName || currentDb || 'mysql'}
+                                    adapter={createMysqlSqlAdapter(serverId, t.dbName || currentDb || 'mysql')}
                                 />
                             )
                         }

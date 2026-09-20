@@ -198,3 +198,18 @@
 .rowNew td {
     background: rgba(72, 199, 116, 0.08);
 }
+
+.tabBarWrap {
+    flex-shrink: 0;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+}
+
+.tabContent {
+    flex: 1;
+    .fill();
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}

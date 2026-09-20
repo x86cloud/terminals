@@ -1,46 +1,58 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Segmented, Space, Tooltip, Pagination, Tag, Input, Dropdown, MenuProps, message } from 'antd'
-import { Database, Plus, Folder, FileText, PanelLeft, Table, RotateCw, Trash2, X, Eraser, FileCode, Code, Slash, CopyPlus, Copy } from 'lucide-react'
-import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
+import { Button, Space, Tooltip, Input, Dropdown, MenuProps, message } from 'antd'
+import {
+    Database,
+    Plus,
+    Folder,
+    FileText,
+    Table,
+    RotateCw,
+    Trash2,
+    Eraser,
+    Play,
+    Code,
+    X,
+} from 'lucide-react'
+import TabBar, { TabItem } from '@/components/common/TabBar'
+import DbDataTab from '@/components/db/DataTab'
+import DbSqlEditor from '@/components/db/SqlEditor'
+import { createSqliteAdapter, createSqliteSqlAdapter } from '@/components/db/adapters'
 import { API } from '@/api'
-import { errorMessage, isSameCellValue } from '@/utils'
-import { SqliteSessionInfo, SqliteTableInfo, SqliteColumnInfo, SqliteIndexInfo } from '@/types'
+import { errorMessage } from '@/utils'
+import { SqliteSessionInfo, SqliteTableInfo } from '@/types'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
-import { buildInsertSql, buildUpdateSql, copyTextToClipboard } from '@/utils/sqlExport'
 import ObjModal from '@/pages/mysql/ObjModal'
-import g from '@/styles/global.module.less'
-import sq from '@/pages/sqlite/SqliteClient.module.less'
-import db from '@/pages/mysql/dbTable.module.less'
-import sh from '@/pages/mysql/mysqlShared.module.less'
+import sq from './SqliteClient.module.less'
 
 interface Props {
     session: SqliteSessionInfo
     onClose: () => void
 }
 
-const PAGE_SIZE = 100
+interface SqliteTabItem {
+    key: string
+    label: string
+    type: 'data' | 'sql'
+    table?: string
+    sqlText?: string
+    closable?: boolean
+}
+
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
 
 function quoteIdent(s: string): string {
     return `"${s.replace(/"/g, '""')}"`
 }
 
-function sqlVal(v: any): string {
-    if (v === null || v === undefined) return 'NULL'
-    if (typeof v === 'number') return String(v)
-    if (typeof v === 'boolean') return v ? '1' : '0'
-    const str = String(v)
-    return `'${str.replace(/'/g, "''")}'`
-}
-
 export default function SqliteClient({ session, onClose }: Props) {
     const [tables, setTables] = useState<SqliteTableInfo[]>([])
-    const [selected, setSelected] = useState<string | null>(null)
-    const [dataView, setDataView] = useState<'data' | 'struct' | 'index'>('data')
+    const [filterText, setFilterText] = useState('')
     const [busy, setBusy] = useState(false)
-    const [saving, setSaving] = useState(false)
     const [error, setError] = useState('')
-    const [info, setInfo] = useState<{ path: string; size: number }>({ path: session.path, size: session.size })
+    const [info, setInfo] = useState<{ path: string; size: number }>({
+        path: session.path,
+        size: session.size,
+    })
     const [pathError, setPathError] = useState('')
     const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
 
@@ -51,23 +63,16 @@ export default function SqliteClient({ session, onClose }: Props) {
     const [createBusy, setCreateBusy] = useState(false)
     const [createMsg, setCreateMsg] = useState('')
 
-    // 数据态
-    const [rows, setRows] = useState<Record<string, any>[]>([])
-    const [columns, setColumns] = useState<string[]>([])
-    const [page, setPage] = useState(1)
-    const [totalRows, setTotalRows] = useState(0)
-
-    // 草稿修改态 (行行内编辑 & 新建行)
-    const [newRows, setNewRows] = useState<Record<string, any>[]>([])
-    const [drafts, setDrafts] = useState<Record<number, Record<string, any>>>({})
-    const [editing, setEditing] = useState<{ row: number; col: string } | null>(null)
-
-    // 结构态与索引态
-    const [structData, setStructData] = useState<SqliteColumnInfo[]>([])
-    const [indexData, setIndexData] = useState<SqliteIndexInfo[]>([])
-
-    // 列宽状态 — 切换表时重置
-    const [colWidths, setColWidths] = useState<Record<string, number>>({})
+    // 标签页状态：默认打开一个 SQL 编辑器 Tab
+    const [tabs, setTabs] = useState<SqliteTabItem[]>([
+        {
+            key: 'sql_main',
+            label: 'SQL 编辑器',
+            type: 'sql',
+            closable: false,
+        },
+    ])
+    const [activeTabKey, setActiveTabKey] = useState<string>('sql_main')
 
     const id = session.id
 
@@ -107,16 +112,6 @@ export default function SqliteClient({ session, onClose }: Props) {
             setPathError('')
             const ok = await API.sqliteConnect(id, path)
             if (!ok) throw new Error('无法打开该 SQLite 文件')
-            setSelected(null)
-            setRows([])
-            setColumns([])
-            setStructData([])
-            setIndexData([])
-            setNewRows([])
-            setDrafts({})
-            setEditing(null)
-            setTotalRows(0)
-            setPage(1)
             await Promise.all([loadTables(), loadInfo()])
         } catch (e) {
             setPathError(errorMessage(e))
@@ -126,412 +121,90 @@ export default function SqliteClient({ session, onClose }: Props) {
         }
     }
 
-    const loadTableData = async (table: string, toPage = 1) => {
-        setSelected(table)
-        setDataView('data')
-        setBusy(true)
-        setError('')
-        setNewRows([])
-        setDrafts({})
-        setEditing(null)
-        setColWidths({})  // reset column widths on table switch
-        try {
-            const [data, cnt, struct] = await Promise.all([
-                API.sqliteSelect(id, table, PAGE_SIZE, (toPage - 1) * PAGE_SIZE),
-                API.sqliteCount(id, table),
-                API.sqliteDescribe(id, table).catch(() => []),
-            ])
-            if (data.rows.length === 0 && toPage > 1) {
-                setBusy(false)
-                await loadTableData(table, 1)
-                return
-            }
-            setRows(data.rows)
-            setColumns(data.columns)
-            setStructData(struct)
-            setTotalRows(cnt)
-            setPage(toPage)
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
+    // 打开数据表 Tab
+    const openTableTab = (tableName: string) => {
+        const tabKey = `tbl_${tableName}`
+        const existing = tabs.find((t) => t.key === tabKey)
+        if (existing) {
+            setActiveTabKey(tabKey)
+            return
+        }
+
+        const newTab: SqliteTabItem = {
+            key: tabKey,
+            label: tableName,
+            type: 'data',
+            table: tableName,
+            closable: true,
+        }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabKey(tabKey)
+    }
+
+    // 打开/激活 SQL 编辑器 Tab
+    const openSqlEditor = (initialSql?: string) => {
+        const existing = tabs.find((t) => t.type === 'sql')
+        if (existing) {
+            setActiveTabKey(existing.key)
+            return
+        }
+        const newTab: SqliteTabItem = {
+            key: 'sql_main',
+            label: 'SQL 编辑器',
+            type: 'sql',
+            sqlText: initialSql,
+            closable: true,
+        }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabKey('sql_main')
+    }
+
+    // 关闭 Tab
+    const handleCloseTab = (key: string) => {
+        if (tabs.length <= 1) return
+        const nextTabs = tabs.filter((t) => t.key !== key)
+        setTabs(nextTabs)
+        if (activeTabKey === key && nextTabs.length > 0) {
+            const closedIdx = tabs.findIndex((t) => t.key === key)
+            const nextActive = nextTabs[Math.min(closedIdx, nextTabs.length - 1)]
+            if (nextActive) setActiveTabKey(nextActive.key)
         }
     }
 
-    const openTable = useCallback((table: string, toPage = 1) => loadTableData(table, toPage), [id])
-
-    const viewStruct = useCallback(async (table: string) => {
-        setSelected(table)
-        setDataView('struct')
-        setBusy(true)
-        setError('')
-        try {
-            setStructData(await API.sqliteDescribe(id, table))
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
-    }, [id])
-
-    const viewIndex = useCallback(async (table: string) => {
-        setSelected(table)
-        setDataView('index')
-        setBusy(true)
-        setError('')
-        try {
-            setIndexData(await API.sqliteIndexes(id, table))
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
-        }
-    }, [id])
-
-    // ---- 草稿变动计算 ----
-    const dirtyCount = useMemo(() => {
-        let count = newRows.length
-        for (const rowIdx in drafts) {
-            count += Object.keys(drafts[rowIdx]).length
-        }
-        return count
-    }, [newRows, drafts])
-
-    // ---- 单元格编辑辅助 ----
-    const getEditValue = (rowIdx: number, col: string): string => {
-        if (drafts[rowIdx] && drafts[rowIdx][col] !== undefined) {
-            const v = drafts[rowIdx][col]
-            return v === null || v === undefined ? '' : String(v)
-        }
-        const orig = rows[rowIdx]?.[col]
-        return orig === null || orig === undefined ? '' : String(orig)
+    const handleCloseAllTabs = () => {
+        if (tabs.length <= 1) return
+        const first = tabs[0]
+        setTabs([first])
+        setActiveTabKey(first.key)
     }
 
-    const getDisplayValue = (rowIdx: number, col: string): string => {
-        if (drafts[rowIdx] && drafts[rowIdx][col] !== undefined) {
-            const v = drafts[rowIdx][col]
-            return v === null || v === undefined ? '' : String(v)
-        }
-        const orig = rows[rowIdx]?.[col]
-        return orig === null || orig === undefined ? '' : String(orig)
+    const handleCloseLeftTabs = (targetKey: string) => {
+        const idx = tabs.findIndex((t) => t.key === targetKey)
+        if (idx <= 0) return
+        const nextTabs = tabs.slice(idx)
+        setTabs(nextTabs)
+        setActiveTabKey(targetKey)
     }
 
-    const isNull = (rowIdx: number, col: string): boolean => {
-        if (drafts[rowIdx] && drafts[rowIdx][col] !== undefined) {
-            return drafts[rowIdx][col] === null || drafts[rowIdx][col] === undefined
-        }
-        const orig = rows[rowIdx]?.[col]
-        return orig === null || orig === undefined
+    const handleCloseRightTabs = (targetKey: string) => {
+        const idx = tabs.findIndex((t) => t.key === targetKey)
+        if (idx < 0 || idx >= tabs.length - 1) return
+        const nextTabs = tabs.slice(0, idx + 1)
+        setTabs(nextTabs)
+        setActiveTabKey(targetKey)
     }
 
-    const isDirty = (rowIdx: number, col: string): boolean => {
-        if (!drafts[rowIdx]) return false
-        return drafts[rowIdx][col] !== undefined
-    }
+    // TabBar 展示项
+    const tabItems: TabItem[] = useMemo(() => {
+        return tabs.map((t) => ({
+            key: t.key,
+            label: t.label,
+            icon: t.type === 'sql' ? <Code size={12} /> : <Table size={12} />,
+            closable: t.closable !== false && tabs.length > 1,
+        }))
+    }, [tabs])
 
-    const updateDraft = (rowIdx: number, col: string, rawVal: string) => {
-        const orig = rows[rowIdx]?.[col]
-        setDrafts((prev) => {
-            const rowDraft = { ...(prev[rowIdx] || {}) }
-            if (isSameCellValue(orig, rawVal)) {
-                delete rowDraft[col]
-            } else {
-                rowDraft[col] = rawVal
-            }
-            const next = { ...prev }
-            if (Object.keys(rowDraft).length === 0) {
-                delete next[rowIdx]
-            } else {
-                next[rowIdx] = rowDraft
-            }
-            return next
-        })
-    }
-
-    // ---- 新建行操作 ----
-    const handleAddRow = () => {
-        const emptyRow: Record<string, any> = {}
-        for (const c of columns) {
-            emptyRow[c] = ''
-        }
-        setNewRows((prev) => [...prev, emptyRow])
-    }
-
-    const updateNewCell = (idx: number, col: string, val: string) => {
-        setNewRows((prev) => {
-            const next = [...prev]
-            next[idx] = { ...next[idx], [col]: val }
-            return next
-        })
-    }
-
-    const removeNewRow = (idx: number) => {
-        setNewRows((prev) => prev.filter((_, i) => i !== idx))
-    }
-
-    // ---- 生成安全的 SQLite WHERE 条件 ----
-    const buildWhereClause = (row: Record<string, any>): string => {
-        const pkNames = structData.filter((c) => c.pk > 0).map((c) => c.name)
-        const targetCols = pkNames.length > 0 ? pkNames : columns
-        const parts: string[] = []
-        for (const c of targetCols) {
-            const v = row[c]
-            if (v === null || v === undefined) {
-                parts.push(`${quoteIdent(c)} IS NULL`)
-            } else {
-                parts.push(`${quoteIdent(c)} = ${sqlVal(v)}`)
-            }
-        }
-        return parts.join(' AND ')
-    }
-
-    // ---- 删除整行数据 ----
-    const confirmDeleteRow = (rowIdx: number) => {
-        if (!selected) return
-        const targetRow = rows[rowIdx]
-        setConfirmState({
-            open: true,
-            title: '删除整行数据',
-            danger: true,
-            message: `确认删除当前选中的第 ${rowIdx + 1} 行数据吗？该操作不可撤销。`,
-            onConfirm: async () => {
-                setConfirmState(emptyConfirm)
-                setSaving(true)
-                try {
-                    const whereSql = buildWhereClause(targetRow)
-                    const sql = `DELETE FROM ${quoteIdent(selected)} WHERE ${whereSql}`
-                    await API.sqliteRun(id, sql)
-                    await openTable(selected, page)
-                } catch (e) {
-                    setError(errorMessage(e))
-                } finally {
-                    setSaving(false)
-                }
-            },
-        })
-    }
-
-    // ---- 清空表数据 (DELETE FROM table) ----
-    const confirmTruncateTable = (tableName: string) => {
-        setConfirmState({
-            open: true,
-            title: '清空表数据',
-            danger: true,
-            message: `确认清空表 "${tableName}" 吗？表中所有数据将被清空且不可恢复！`,
-            onConfirm: async () => {
-                setConfirmState(emptyConfirm)
-                setBusy(true)
-                try {
-                    await API.sqliteRun(id, `DELETE FROM ${quoteIdent(tableName)}`)
-                    if (selected === tableName) {
-                        await openTable(tableName, 1)
-                    }
-                } catch (e) {
-                    setError(errorMessage(e))
-                } finally {
-                    setBusy(false)
-                }
-            },
-        })
-    }
-
-    // ---- 删除表 (DROP TABLE table) ----
-    const confirmDropTable = (tableName: string) => {
-        setConfirmState({
-            open: true,
-            title: '删除表 (Drop Table)',
-            danger: true,
-            message: `确认删除表 "${tableName}" 吗？该表及其结构将被永久删除且不可恢复！`,
-            onConfirm: async () => {
-                setConfirmState(emptyConfirm)
-                setBusy(true)
-                try {
-                    await API.sqliteRun(id, `DROP TABLE ${quoteIdent(tableName)}`)
-                    if (selected === tableName) {
-                        setSelected(null)
-                        setRows([])
-                        setColumns([])
-                    }
-                    await loadTables()
-                } catch (e) {
-                    setError(errorMessage(e))
-                } finally {
-                    setBusy(false)
-                }
-            },
-        })
-    }
-
-    // ---- 右键上下文菜单状态 ----
-    const [contextMenu, setContextMenu] = useState<{
-        open: boolean
-        x: number
-        y: number
-        rowIdx: number
-        colKey?: string
-        isNewRow?: boolean
-    } | null>(null)
-
-    const handleCellContextMenu = (
-        e: React.MouseEvent,
-        rowIdx: number,
-        colKey?: string,
-        isNewRow = false
-    ) => {
-        e.preventDefault()
-        e.stopPropagation()
-        setContextMenu({
-            open: true,
-            x: e.clientX,
-            y: e.clientY,
-            rowIdx,
-            colKey,
-            isNewRow,
-        })
-    }
-
-    const getContextMenuItems = (): MenuProps['items'] => {
-        if (!contextMenu || !selected) return []
-        const { rowIdx, colKey, isNewRow } = contextMenu
-        const targetRow = isNewRow ? newRows[rowIdx] : rows[rowIdx]
-        if (!targetRow) return []
-
-        const cellVal = colKey ? (
-            isNewRow
-                ? targetRow[colKey]
-                : (drafts[rowIdx] && drafts[rowIdx][colKey] !== undefined ? drafts[rowIdx][colKey] : targetRow[colKey])
-        ) : undefined
-
-        const pkNames = structData.filter((c) => c.pk > 0).map((c) => c.name)
-
-        const items: MenuProps['items'] = []
-
-        // 1. 复制单元格值
-        if (colKey) {
-            items.push({
-                key: 'copy-cell',
-                icon: <Copy size={13} />,
-                label: `复制`,
-                onClick: () => {
-                    const str = cellVal === null || cellVal === undefined ? '' : String(cellVal)
-                    copyTextToClipboard(str, `已复制`)
-                },
-            })
-        }
-
-        // 2. 复制为 INSERT 语句
-        items.push({
-            key: 'copy-insert',
-            icon: <FileCode size={13} />,
-            label: '复制为 INSERT 语句',
-            onClick: () => {
-                const fullRow = { ...targetRow, ...(drafts[rowIdx] || {}) }
-                const sql = buildInsertSql({
-                    dialect: 'sqlite',
-                    table: selected,
-                    columns,
-                    rowData: fullRow,
-                })
-                copyTextToClipboard(sql, '已复制 INSERT 语句到剪贴板')
-            },
-        })
-
-        // 3. 复制为 UPDATE 语句
-        if (!isNewRow) {
-            items.push({
-                key: 'copy-update',
-                icon: <FileCode size={13} />,
-                label: '复制为 UPDATE 语句',
-                onClick: () => {
-                    const fullRow = { ...targetRow, ...(drafts[rowIdx] || {}) }
-                    const sql = buildUpdateSql({
-                        dialect: 'sqlite',
-                        table: selected,
-                        columns,
-                        rowData: fullRow,
-                        pkList: pkNames,
-                    })
-                    copyTextToClipboard(sql, '已复制 UPDATE 语句到剪贴板')
-                },
-            })
-        }
-
-        // 4. 复制整行为 JSON
-        items.push({
-            key: 'copy-json',
-            icon: <Code size={13} />,
-            label: '复制整行为 JSON',
-            onClick: () => {
-                const fullRow = { ...targetRow, ...(drafts[rowIdx] || {}) }
-                const json = JSON.stringify(fullRow, null, 2)
-                copyTextToClipboard(json, '已复制整行 JSON 到剪贴板')
-            },
-        })
-
-        items.push({ type: 'divider' })
-
-        // 5. 复制并新增 (克隆行)
-        items.push({
-            key: 'clone-row',
-            icon: <CopyPlus size={13} />,
-            label: '克隆当前行并新增',
-            onClick: () => {
-                const cloned: Record<string, any> = { ...targetRow, ...(drafts[rowIdx] || {}) }
-                pkNames.forEach((pk) => {
-                    cloned[pk] = ''
-                })
-                setNewRows((prev) => [cloned, ...prev])
-                message.success('已克隆数据并插入到新增行草稿')
-            },
-        })
-
-        // 6. 将单元格设为 NULL
-        if (colKey) {
-            items.push({
-                key: 'set-null',
-                icon: <Slash size={13} />,
-                label: `设为 NULL`,
-                onClick: () => {
-                    if (isNewRow) {
-                        updateNewCell(rowIdx, colKey, null as any)
-                    } else {
-                        updateDraft(rowIdx, colKey, null as any)
-                    }
-                    message.info(`已将 [${colKey}] 标记为 NULL`)
-                },
-            })
-        }
-
-        items.push({ type: 'divider' })
-
-        // 7. 删除行
-        if (isNewRow) {
-            items.push({
-                key: 'delete-row',
-                icon: <Trash2 size={13} />,
-                danger: true,
-                label: '移除该新增行草稿',
-                onClick: () => {
-                    removeNewRow(rowIdx)
-                    message.info('已移除新增行草稿')
-                },
-            })
-        } else {
-            items.push({
-                key: 'delete-row',
-                icon: <Trash2 size={13} />,
-                danger: true,
-                label: '删除该行',
-                onClick: () => {
-                    confirmDeleteRow(rowIdx)
-                },
-            })
-        }
-
-        return items
-    }
-
-    // ---- 打开新建表弹窗 ----
+    // 打开新建表弹窗
     const handleOpenCreateModal = () => {
         setCreateTableName('')
         setCreateColDefs('"id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT')
@@ -553,7 +226,7 @@ export default function SqliteClient({ session, onClose }: Props) {
             await API.sqliteRun(id, sql)
             setCreateMsg(`已成功创建表 ${tName}`)
             await loadTables()
-            await openTable(tName)
+            openTableTab(tName)
             setTimeout(() => {
                 setCreateModalOpen(false)
                 setCreateBusy(false)
@@ -564,61 +237,49 @@ export default function SqliteClient({ session, onClose }: Props) {
         }
     }
 
-    // ---- 批量保存更改 ----
-    const handleSaveAll = async () => {
-        if (!selected || dirtyCount === 0) return
-        setSaving(true)
-        setError('')
-        try {
-            // 1. 提交草稿新增行 (INSERT)
-            for (const nr of newRows) {
-                const validCols: string[] = []
-                const validVals: string[] = []
-                for (const c of columns) {
-                    if (nr[c] !== undefined && nr[c] !== '') {
-                        validCols.push(quoteIdent(c))
-                        validVals.push(sqlVal(nr[c]))
-                    }
-                }
-                if (validCols.length > 0) {
-                    const sql = `INSERT INTO ${quoteIdent(selected)} (${validCols.join(', ')}) VALUES (${validVals.join(', ')})`
+    // 删除表
+    const handleDropTable = (table: SqliteTableInfo) => {
+        setConfirmState({
+            open: true,
+            title: `删除${table.type === 'view' ? '视图' : '表'}`,
+            danger: true,
+            message: `确定要彻底删除 ${table.type === 'view' ? '视图' : '表'}「${table.name}」吗？此操作不可逆。`,
+            onConfirm: async () => {
+                setConfirmState(emptyConfirm)
+                try {
+                    const sql =
+                        table.type === 'view'
+                            ? `DROP VIEW ${quoteIdent(table.name)}`
+                            : `DROP TABLE ${quoteIdent(table.name)}`
                     await API.sqliteRun(id, sql)
+                    message.success(`已删除 ${table.name}`)
+                    handleCloseTab(`tbl_${table.name}`)
+                    await loadTables()
+                } catch (e) {
+                    message.error(`删除失败: ${errorMessage(e)}`)
                 }
-            }
-
-            // 2. 提交单元格修改 (UPDATE)
-            for (const rowIdxStr in drafts) {
-                const rowIdx = Number(rowIdxStr)
-                const origRow = rows[rowIdx]
-                const rowDraft = drafts[rowIdx]
-                if (!origRow || !rowDraft) continue
-
-                const setParts: string[] = []
-                for (const col in rowDraft) {
-                    setParts.push(`${quoteIdent(col)} = ${sqlVal(rowDraft[col])}`)
-                }
-                if (setParts.length > 0) {
-                    const whereSql = buildWhereClause(origRow)
-                    const sql = `UPDATE ${quoteIdent(selected)} SET ${setParts.join(', ')} WHERE ${whereSql}`
-                    await API.sqliteRun(id, sql)
-                }
-            }
-
-            // 重新刷新
-            await openTable(selected, page)
-        } catch (e) {
-            setError(errorMessage(e))
-        } finally {
-            setSaving(false)
-        }
+            },
+        })
     }
 
-    const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE))
-    const goPage = (p: number) => {
-        if (!selected || busy) return
-        const target = Math.min(Math.max(1, p), totalPages)
-        if (target === page) return
-        void openTable(selected, target)
+    // 清空表
+    const handleTruncateTable = (table: SqliteTableInfo) => {
+        setConfirmState({
+            open: true,
+            title: '清空表数据',
+            danger: true,
+            message: `确定要清空表「${table.name}」的所有数据吗？此操作不可逆。`,
+            onConfirm: async () => {
+                setConfirmState(emptyConfirm)
+                try {
+                    await API.sqliteRun(id, `DELETE FROM ${quoteIdent(table.name)}`)
+                    message.success(`已清空表 ${table.name}`)
+                    await loadTables()
+                } catch (e) {
+                    message.error(`清空失败: ${errorMessage(e)}`)
+                }
+            },
+        })
     }
 
     const fmtSize = (n: number) => {
@@ -632,6 +293,19 @@ export default function SqliteClient({ session, onClose }: Props) {
         }
         return `${v.toFixed(v >= 10 || i === 0 ? 0 : 1)} ${units[i]}`
     }
+
+    const filteredTables = useMemo(() => {
+        if (!filterText.trim()) return tables
+        const q = filterText.toLowerCase()
+        return tables.filter((t) => t.name.toLowerCase().includes(q))
+    }, [tables, filterText])
+
+    // 当前活跃的数据表名
+    const activeTableName = useMemo(() => {
+        const active = tabs.find((t) => t.key === activeTabKey)
+        if (active && active.type === 'data') return active.table
+        return null
+    }, [tabs, activeTabKey])
 
     return (
         <div className={sq.sqlitePane}>
@@ -652,302 +326,170 @@ export default function SqliteClient({ session, onClose }: Props) {
                 />
             )}
 
-            <div className={sq.sqliteSide}>
-                <div className={sq.sqliteHead} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 10px' }}>
-                    <Database size={14} />
-                    <span className={sq.sqliteTitle} style={{ fontWeight: 600 }}>SQLite</span>
-                    <span className={g.spacer} />
-                    <Button size="small" icon={<Plus size={12} />} onClick={handleOpenCreateModal} disabled={busy}>
-                        新建表
-                    </Button>
-                    <Button size="small" icon={<Folder size={12} />} onClick={switchFile} disabled={busy}>
-                        切换
-                    </Button>
+            {/* 左侧侧边栏 */}
+            <aside className={sq.sqliteSide}>
+                <div className={sq.sqliteHead}>
+                    <Database size={15} style={{ color: '#faad14' }} />
+                    <span className={sq.sqliteTitle} title={session.title || 'SQLite'}>
+                        {session.title || 'SQLite'}
+                    </span>
+                    <Space size={2} style={{ marginLeft: 'auto' }}>
+                        <Tooltip title="切换文件">
+                            <Button size="small" type="text" icon={<Folder size={12} />} onClick={switchFile} />
+                        </Tooltip>
+                        <Tooltip title="新建数据表">
+                            <Button size="small" type="text" icon={<Plus size={12} />} onClick={handleOpenCreateModal} />
+                        </Tooltip>
+                        <Tooltip title="SQL 编辑器">
+                            <Button size="small" type="text" icon={<Code size={12} />} onClick={() => openSqlEditor()} />
+                        </Tooltip>
+                        <Tooltip title="重新加载">
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<RotateCw size={12} />}
+                                loading={busy}
+                                onClick={() => {
+                                    void loadTables()
+                                    void loadInfo()
+                                }}
+                            />
+                        </Tooltip>
+                        {onClose && (
+                            <Tooltip title="关闭会话">
+                                <Button size="small" type="text" icon={<X size={12} />} onClick={onClose} />
+                            </Tooltip>
+                        )}
+                    </Space>
                 </div>
+
                 <div className={sq.sqlitePath} title={info.path}>
                     <FileText size={12} />
-                    <span>{info.path ? info.path.split(/[\\/]/).pop() : '未选择文件'}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {info.path || '未选择文件'}
+                    </span>
                 </div>
+
                 <div className={sq.sqliteStatus}>
-                    <span className={`${g.dot}${session.connected ? ' ' + g.on : ''}`} />
-                    {session.connected ? `已连接 · ${fmtSize(info.size)}` : '未连接'}
+                    <span>大小：{fmtSize(info.size)}</span>
+                    <span style={{ marginLeft: 'auto' }}>
+                        共 {tables.length} {tables.length === 1 ? '张表' : '张表/视图'}
+                    </span>
                     {pathError && <span className={sq.pathErr}>{pathError}</span>}
                 </div>
-                <div className={sq.sqliteTables}>
-                    {tables.length === 0 && !busy && (
-                        <div className={`${sh.mongoEmpty} ${sh.small}`}>暂无表</div>
-                    )}
-                    {tables.map((t) => (
-                        <div
-                            key={t.name}
-                            className={`${sq.sqliteTableRow}${selected === t.name ? ' ' + sq.active : ''}`}
-                            onClick={() => openTable(t.name)}
-                        >
-                            {t.type === 'view' ? <PanelLeft size={13} className={sq.tableIcon} /> : <Table size={13} className={sq.tableIcon} />}
-                            <span className={sq.tableName} title={t.name}>{t.name}</span>
-                            {t.type === 'view' && <Tag color="cyan" style={{ margin: 0, padding: '0 4px', fontSize: 10, lineHeight: '16px' }}>视图</Tag>}
-                            <div className={sq.sqliteTableMenu} onClick={(e) => e.stopPropagation()}>
-                                <Tooltip title="清空表数据">
-                                    <Button
-                                        size="small"
-                                        type="text"
-                                        icon={<Eraser size={12} />}
-                                        onClick={() => confirmTruncateTable(t.name)}
-                                    />
-                                </Tooltip>
-                                <Tooltip title="删除表 (Drop)">
-                                    <Button
-                                        size="small"
-                                        type="text"
-                                        danger
-                                        icon={<Trash2 size={12} />}
-                                        onClick={() => confirmDropTable(t.name)}
-                                    />
-                                </Tooltip>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
 
-            <div className={sq.sqliteMain}>
-                <div className={sq.sqliteToolbar} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px' }}>
-                    <span className={sq.sqliteConnTitle} style={{ fontWeight: 600 }}>
-                        {selected ? `${selected} · ${totalRows} 行` : `${session.title || (info.path ? info.path.split(/[\\/]/).pop() : 'SQLite')} 浏览器`}
-                    </span>
-                    <span className={g.spacer} />
-                    {error && <span className={sq.sqliteError}>{error}</span>}
-                    <Tooltip title="关闭">
-                        <Button size="small" type="text" icon={<X size={15} />} onClick={onClose} />
-                    </Tooltip>
-                </div>
-
-                <div className={sq.sqliteTabs} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 12px', borderBottom: '1px solid var(--border)' }}>
-                    <Segmented
+                <div style={{ padding: '6px 8px 4px' }}>
+                    <Input
                         size="small"
-                        value={dataView}
-                        disabled={!selected}
-                        onChange={(v) => {
-                            if (!selected) return
-                            const nextV = v as 'data' | 'struct' | 'index'
-                            setDataView(nextV)
-                            if (nextV === 'data') void openTable(selected, page)
-                            else if (nextV === 'struct') void viewStruct(selected)
-                            else void viewIndex(selected)
-                        }}
-                        options={[
-                            { label: '数据预览', value: 'data' },
-                            { label: '表结构', value: 'struct' },
-                            { label: '索引', value: 'index' },
-                        ]}
+                        placeholder="过滤表名..."
+                        value={filterText}
+                        onChange={(e) => setFilterText(e.target.value)}
+                        allowClear
                     />
-                    {selected && dataView === 'data' && (
-                        <Space size={6}>
-                            <Button size="small" icon={<Plus size={12} />} disabled={busy || saving} onClick={handleAddRow}>
-                                新建行
-                            </Button>
-                            <Button size="small" type="primary" disabled={busy || saving || dirtyCount === 0} onClick={handleSaveAll}>
-                                {saving ? '保存中…' : `保存${dirtyCount ? ` (${dirtyCount})` : ''}`}
-                            </Button>
-                            <Tooltip title="刷新表格数据">
-                                <Button size="small" icon={<RotateCw size={12} />} disabled={busy || saving} onClick={() => openTable(selected, page)} />
-                            </Tooltip>
-                        </Space>
-                    )}
                 </div>
 
-                <div className={sq.sqliteContent}>
-                    {!selected && (
-                        <div className={`${sh.mongoEmpty}`}>请选择左侧的表或视图以查看数据</div>
+                <div className={sq.sqliteTables}>
+                    {filteredTables.map((t) => {
+                        const isActive = activeTableName === t.name
+                        const menuItems: MenuProps['items'] = [
+                            {
+                                key: 'open',
+                                label: '打开数据表',
+                                icon: <Table size={12} />,
+                                onClick: () => openTableTab(t.name),
+                            },
+                            {
+                                key: 'new_query',
+                                label: '打开 SQL 编辑器',
+                                icon: <Code size={12} />,
+                                onClick: () => {
+                                    openSqlEditor(`SELECT * FROM ${quoteIdent(t.name)} LIMIT 50;`)
+                                },
+                            },
+                            { type: 'divider' },
+                            {
+                                key: 'truncate',
+                                label: '清空表数据',
+                                icon: <Eraser size={12} />,
+                                danger: true,
+                                disabled: t.type === 'view',
+                                onClick: () => handleTruncateTable(t),
+                            },
+                            {
+                                key: 'drop',
+                                label: `删除${t.type === 'view' ? '视图' : '表'}`,
+                                icon: <Trash2 size={12} />,
+                                danger: true,
+                                onClick: () => handleDropTable(t),
+                            },
+                        ]
+
+                        return (
+                            <Dropdown key={t.name} menu={{ items: menuItems }} trigger={['contextMenu']}>
+                                <div
+                                    className={`${sq.sqliteTableRow} ${isActive ? sq.active : ''}`}
+                                    onClick={() => openTableTab(t.name)}
+                                    title={`${t.name} (${t.type === 'view' ? '视图' : '表'})`}
+                                >
+                                    <Table size={13} className={sq.tableIcon} />
+                                    <span className={sq.tableName}>{t.name}</span>
+                                    {t.type === 'view' && <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>VIEW</span>}
+                                </div>
+                            </Dropdown>
+                        )
+                    })}
+                    {filteredTables.length === 0 && (
+                        <div style={{ color: 'var(--text-dim)', fontSize: 12, padding: 12, textAlign: 'center' }}>
+                            {filterText ? '无匹配表' : '暂无数据表'}
+                        </div>
                     )}
+                </div>
+            </aside>
 
-                    {selected && dataView === 'data' && (
-                        <div className={sq.sqliteDataWrap}>
-                            {(() => {
-                                const getColW = (key: string) => colWidths[key] ?? calcColWidthFromName(key, { minWidth: 70 })
-                                const handleColResize = (key: string, w: number) =>
-                                    setColWidths((prev) => ({ ...prev, [key]: w }))
+            {/* 右侧主区域：多标签页体系 */}
+            <main className={sq.sqliteMain}>
+                <div className={sq.tabBarWrap}>
+                    <TabBar
+                        items={tabItems}
+                        activeKey={activeTabKey}
+                        onChange={setActiveTabKey}
+                        onClose={handleCloseTab}
+                        onCloseAll={handleCloseAllTabs}
+                        onCloseLeft={handleCloseLeftTabs}
+                        onCloseRight={handleCloseRightTabs}
+                        size="small"
+                    />
+                </div>
 
-                                const sqCols: ColDef[] = [
-                                    ...columns.map((c) => ({ key: c, label: c, width: getColW(c), minWidth: 70 })),
-                                ]
+                <div className={sq.tabContent}>
+                    {tabs.map((t) => {
+                        const isVisible = t.key === activeTabKey
+                        if (!isVisible) return null
 
-                                return columns.length > 0 ? (
-                                    <ResizableTable cols={sqCols} data={rows} onColResize={handleColResize}>
-                                        <tbody>
-                                            {/* 草稿新增行 */}
-                                            {newRows.map((nr, idx) => (
-                                                <tr
-                                                    key={`new_${idx}`}
-                                                    className={sq.rowNew}
-                                                    onContextMenu={(e) => handleCellContextMenu(e, idx, undefined, true)}
-                                                >
-                                                    {columns.map((c) => (
-                                                        <td
-                                                            key={c}
-                                                            onContextMenu={(e) => handleCellContextMenu(e, idx, c, true)}
-                                                            title="点击编辑，右键更多操作"
-                                                        >
-                                                            <input
-                                                                className={sq.cellInput}
-                                                                value={nr[c] ?? ''}
-                                                                onChange={(e) => updateNewCell(idx, c, e.target.value)}
-                                                                placeholder="NULL"
-                                                                onKeyDown={(e) => {
-                                                                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
-                                                                }}
-                                                            />
-                                                        </td>
-                                                    ))}
-                                                </tr>
-                                            ))}
-                                            {/* 现存数据行 */}
-                                            {rows.map((r, i) => (
-                                                <tr
-                                                    key={i}
-                                                    onContextMenu={(e) => handleCellContextMenu(e, i, undefined, false)}
-                                                >
-                                                    {columns.map((c) => {
-                                                        const isEd = editing?.row === i && editing?.col === c
-                                                        const dirty = isDirty(i, c)
-                                                        const isn = isNull(i, c)
-                                                        const disp = getDisplayValue(i, c)
-                                                        return (
-                                                            <td
-                                                                key={c}
-                                                                className={`${dirty ? db.dbDirtyCell : ''} ${isn && !isEd ? db.dbNullCell : ''} ${sq.editableCell}`}
-                                                                onClick={() => !isEd && setEditing({ row: i, col: c })}
-                                                                onContextMenu={(e) => handleCellContextMenu(e, i, c, false)}
-                                                                title="点击编辑，右键更多操作"
-                                                            >
-                                                                {isEd ? (
-                                                                    <input
-                                                                        className={sq.cellInput}
-                                                                        autoFocus
-                                                                        value={getEditValue(i, c)}
-                                                                        onChange={(e) => updateDraft(i, c, e.target.value)}
-                                                                        onBlur={() => setEditing(null)}
-                                                                        onKeyDown={(e) => {
-                                                                            if (e.key === 'Enter' || e.key === 'Escape') {
-                                                                                setEditing(null)
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                ) : isn ? 'NULL' : disp}
-                                                            </td>
-                                                        )
-                                                    })}
-                                                </tr>
-                                            ))}
-                                            {!rows.length && !newRows.length && (
-                                                <tr><td colSpan={columns.length} className={db.dbEmpty}>该表暂无数据</td></tr>
-                                            )}
-                                        </tbody>
-                                    </ResizableTable>
-                                ) : (
-                                    <div className={db.dbEmpty}>该表暂无数据</div>
-                                )
-                            })()}
-                            <div className={sq.pager} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px' }}>
-                                <span className={sq.pageInfo} style={{ fontSize: 12, color: 'var(--text-dim)' }}>共 {totalRows} 行 · 第 {page} / {totalPages} 页</span>
-                                <Pagination
-                                    size="small"
-                                    current={page}
-                                    pageSize={PAGE_SIZE}
-                                    total={totalRows}
-                                    disabled={busy}
-                                    showSizeChanger={false}
-                                    onChange={(p) => goPage(p)}
+                        if (t.type === 'data' && t.table) {
+                            return (
+                                <DbDataTab
+                                    key={t.key}
+                                    adapter={createSqliteAdapter(id, t.table, session.title || 'sqlite')}
+                                    onClose={() => handleCloseTab(t.key)}
                                 />
-                            </div>
-                        </div>
-                    )}
+                            )
+                        }
 
-                    {selected && dataView === 'struct' && (
-                        <div className={sq.sqliteDataWrap}>
-                            {structData.length > 0 ? (
-                                <div className={db.dbTableScroll}>
-                                    <table className={db.dbTable}>
-                                        <thead>
-                                            <tr>
-                                                <th>列名</th>
-                                                <th>类型</th>
-                                                <th>非空</th>
-                                                <th>默认值</th>
-                                                <th>主键</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {structData.map((c) => (
-                                                <tr key={c.cid}>
-                                                    <td>{c.name}</td>
-                                                    <td>{c.type || ''}</td>
-                                                    <td>{c.notnull ? '是' : ''}</td>
-                                                    <td>{c.default === null || c.default === undefined ? '' : String(c.default)}</td>
-                                                    <td>{c.pk > 0 ? '是' : ''}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className={`${sh.mongoEmpty} ${sh.small}`}>无结构信息</div>
-                            )}
-                        </div>
-                    )}
+                        if (t.type === 'sql') {
+                            return (
+                                <DbSqlEditor
+                                    key={t.key}
+                                    adapter={createSqliteSqlAdapter(id, session.title || 'sqlite')}
+                                    initialSql={t.sqlText}
+                                />
+                            )
+                        }
 
-                    {selected && dataView === 'index' && (
-                        <div className={sq.sqliteDataWrap}>
-                            {indexData.length > 0 ? (
-                                <div className={db.dbTableScroll}>
-                                    <table className={db.dbTable}>
-                                        <thead>
-                                            <tr>
-                                                <th>索引名</th>
-                                                <th>唯一</th>
-                                                <th>来源</th>
-                                                <th>部分索引</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {indexData.map((ix) => (
-                                                <tr key={ix.name}>
-                                                    <td>{ix.name}</td>
-                                                    <td>{ix.unique ? '是' : ''}</td>
-                                                    <td>{ix.origin || ''}</td>
-                                                    <td>{ix.partial ? '是' : ''}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <div className={`${sh.mongoEmpty} ${sh.small}`}>该表暂无索引</div>
-                            )}
-                        </div>
-                    )}
+                        return null
+                    })}
                 </div>
-            </div>
-
-            {/* 行右键上下文菜单 */}
-            {contextMenu && (
-                <Dropdown
-                    menu={{ items: getContextMenuItems() }}
-                    open={contextMenu.open}
-                    onOpenChange={(v) => !v && setContextMenu(null)}
-                >
-                    <span
-                        style={{
-                            position: 'fixed',
-                            left: contextMenu.x,
-                            top: contextMenu.y,
-                            width: 1,
-                            height: 1,
-                            pointerEvents: 'none',
-                        }}
-                    />
-                </Dropdown>
-            )}
+            </main>
         </div>
     )
 }

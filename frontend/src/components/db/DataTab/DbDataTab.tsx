@@ -1,5 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Segmented, Button, Input, Pagination, Tooltip, message, Space, Tag, Dropdown, MenuProps, Popconfirm, Modal } from 'antd'
+import {
+    Segmented,
+    Button,
+    Pagination,
+    Tooltip,
+    message,
+    Space,
+    Tag,
+    Dropdown,
+    MenuProps,
+    Modal,
+} from 'antd'
 import {
     RotateCw,
     Plus,
@@ -14,41 +25,31 @@ import {
     ArrowUp,
     ArrowDown,
     ArrowUpDown,
-    FileCode,
     Code,
     Slash,
     CopyPlus,
 } from 'lucide-react'
-import { API } from '@/api'
 import { isSameCellValue, coerceCellValue } from '@/utils'
 import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
 import ColumnFilterPopover, {
     ColumnFilterState,
-    buildPgWhereClause,
     OP_LABELS,
 } from '@/components/ColumnFilterPopover'
 import { buildInsertSql, buildUpdateSql, copyTextToClipboard } from '@/utils/sqlExport'
-import { PgColumn, PgIndex, PgConstraint, PgQueryResult } from './postgresTypes'
-import CellEditorInline from './CellEditorInline'
-import pg from './DataTab.module.less'
-import db from '@/pages/mysql/dbTable.module.less'
-import sh from '@/pages/mysql/mysqlShared.module.less'
+import CellEditorInline from '@/components/common/CellEditorInline'
+import { DbAdapter, DbTableStructure } from '../types'
+import s from './DbDataTab.module.less'
 
 const ROW_NUM_W = 46
 
-export default function DataTab({
-    serverId,
-    dbName,
-    schema,
-    tableName,
-    onClose,
-}: {
-    serverId: string
-    dbName: string
-    schema: string
-    tableName: string
+export interface DbDataTabProps {
+    adapter: DbAdapter
     onClose?: () => void
-}) {
+}
+
+export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
+    const { serverId, dbName, schema, tableName } = adapter
+
     const [viewMode, setViewMode] = useState<'data' | 'struct' | 'index' | 'constraints' | 'ddl'>('data')
     const [loading, setLoading] = useState(false)
     const [rows, setRows] = useState<Record<string, any>[]>([])
@@ -61,42 +62,11 @@ export default function DataTab({
     const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC')
     const [countingRows, setCountingRows] = useState(false)
 
-    const activeWhere = useMemo(() => buildPgWhereClause(filters), [filters])
-    const activeFilterEntries = useMemo(() => {
-        return Object.entries(filters).filter(([_, f]) => !!f)
-    }, [filters])
-
-    const handleFilterChange = (col: string, filter: ColumnFilterState | null) => {
-        setFilters((prev) => {
-            const next = { ...prev }
-            if (filter) {
-                next[col] = filter
-            } else {
-                delete next[col]
-            }
-            const newWhere = buildPgWhereClause(next)
-            setPage(1)
-            loadData(1, pageSize, newWhere)
-            return next
-        })
-    }
-
-    const handleClearAllFilters = () => {
-        setFilters({})
-        setPage(1)
-        loadData(1, pageSize, '')
-    }
-
     // 列宽状态
     const [colWidths, setColWidths] = useState<Record<string, number>>({})
 
     // 描述与结构
-    const [describeData, setDescribeData] = useState<{
-        columns: PgColumn[]
-        indexes: PgIndex[]
-        constraints: PgConstraint[]
-        primaryKeys: Record<string, boolean>
-    } | null>(null)
+    const [structure, setStructure] = useState<DbTableStructure | null>(null)
     const [ddlText, setDdlText] = useState('')
 
     // 编辑与脏数据管理
@@ -105,6 +75,33 @@ export default function DataTab({
     const [newRows, setNewRows] = useState<Record<string, any>[]>([])
     const [editingNewCell, setEditingNewCell] = useState<{ rowIdx: number; col: string } | null>(null)
     const [saving, setSaving] = useState(false)
+
+    // 右键上下文菜单
+    const [contextMenu, setContextMenu] = useState<{
+        open: boolean
+        x: number
+        y: number
+        rowIdx: number
+        colKey?: string
+        isNewRow?: boolean
+    } | null>(null)
+
+    const activeWhere = useMemo(() => adapter.buildWhereClause(filters), [filters, adapter])
+    const activeFilterEntries = useMemo(() => {
+        return Object.entries(filters).filter(([_, f]) => !!f)
+    }, [filters])
+
+    const pkList = useMemo(() => {
+        if (!structure) return []
+        return structure.columns.filter((c) => c.isPrimaryKey).map((c) => c.name)
+    }, [structure])
+
+    const fkList = useMemo(() => {
+        if (!structure) return []
+        return structure.columns.filter((c) => c.isForeignKey).map((c) => c.name)
+    }, [structure])
+
+    const dirtyCount = Object.keys(rowDrafts).length + newRows.length
 
     useEffect(() => {
         setColWidths({})
@@ -122,30 +119,11 @@ export default function DataTab({
         setColWidths((prev) => ({ ...prev, [key]: newWidth }))
     }
 
-    const pkList = useMemo(() => {
-        if (!describeData) return []
-        return describeData.columns.filter((c) => c.isPrimaryKey).map((c) => c.name)
-    }, [describeData])
-
-    const fkList = useMemo(() => {
-        if (!describeData) return []
-        return describeData.columns.filter((c) => c.isForeignKey).map((c) => c.name)
-    }, [describeData])
-
-    const dirtyCount = Object.keys(rowDrafts).length + newRows.length
-
     // 加载表结构与元数据
     const loadStructure = async () => {
         try {
-            const desc = await API.postgresDescribe(serverId, dbName, schema, tableName)
-            if (desc) {
-                setDescribeData({
-                    columns: desc.columns || [],
-                    indexes: desc.indexes || [],
-                    constraints: desc.constraints || [],
-                    primaryKeys: desc.primaryKeys || {},
-                })
-            }
+            const data = await adapter.loadStructure()
+            setStructure(data)
         } catch (e: any) {
             console.error('加载结构失败:', e)
         }
@@ -154,7 +132,7 @@ export default function DataTab({
     // 加载 DDL
     const loadDDL = async () => {
         try {
-            const ddl = await API.postgresTableDDL(serverId, dbName, schema, tableName)
+            const ddl = await adapter.loadDDL()
             setDdlText(ddl || '')
         } catch (e: any) {
             setDdlText('-- 获取 DDL 失败: ' + (e.message || e))
@@ -171,18 +149,13 @@ export default function DataTab({
     ) => {
         setLoading(true)
         try {
-            const offset = (targetPage - 1) * targetSize
-            const res: PgQueryResult = await API.postgresSelect(
-                serverId,
-                dbName,
-                schema,
-                tableName,
-                targetSize,
-                offset,
-                targetSortCol,
-                targetSortOrder,
-                where
-            )
+            const res = await adapter.loadData({
+                page: targetPage,
+                pageSize: targetSize,
+                where,
+                sortCol: targetSortCol,
+                sortOrder: targetSortOrder,
+            })
             setColumns(res.columns || [])
             setRows(res.rows || [])
             setRowDrafts({})
@@ -190,15 +163,37 @@ export default function DataTab({
 
             // 统计总数
             setCountingRows(true)
-            API.postgresCount(serverId, dbName, schema, tableName, where)
+            adapter
+                .countData(where)
                 .then((cnt) => setTotalRows(cnt))
-                .catch(() => { })
+                .catch(() => {})
                 .finally(() => setCountingRows(false))
         } catch (e: any) {
-            message.error('查询失败: ' + (e.message || e))
+            message.error('查询数据失败: ' + (e.message || e))
         } finally {
             setLoading(false)
         }
+    }
+
+    const handleFilterChange = (col: string, filter: ColumnFilterState | null) => {
+        setFilters((prev) => {
+            const next = { ...prev }
+            if (filter) {
+                next[col] = filter
+            } else {
+                delete next[col]
+            }
+            const newWhere = adapter.buildWhereClause(next)
+            setPage(1)
+            loadData(1, pageSize, newWhere)
+            return next
+        })
+    }
+
+    const handleClearAllFilters = () => {
+        setFilters({})
+        setPage(1)
+        loadData(1, pageSize, '')
     }
 
     // 列头点击排序循环切换：未排序 -> ASC -> DESC -> 取消排序
@@ -287,45 +282,31 @@ export default function DataTab({
 
         setSaving(true)
         try {
-            // 1. 保存修改行
-            for (const [rowIdxStr, patch] of Object.entries(rowDrafts)) {
-                const rowIdx = Number(rowIdxStr)
-                const origRow = rows[rowIdx]
-                const pkCols = pkList
-                const pkVals = pkList.map((pk) => origRow[pk])
-
-                const setCols = Object.keys(patch)
-                const setVals = Object.values(patch)
-
-                await API.postgresUpdate(
-                    serverId,
-                    dbName,
-                    schema,
-                    tableName,
-                    setCols,
-                    setVals,
-                    pkCols,
-                    pkVals
-                )
+            if (Object.keys(rowDrafts).length > 0) {
+                await adapter.updateRows(rowDrafts, rows, pkList)
             }
-
-            // 2. 保存新增行
-            for (const newRow of newRows) {
-                const cols = Object.keys(newRow).filter((k) => newRow[k] !== undefined)
-                const vals = cols.map((k) => newRow[k])
-                if (cols.length > 0) {
-                    await API.postgresInsert(serverId, dbName, schema, tableName, cols, vals)
-                }
+            if (newRows.length > 0) {
+                await adapter.insertRows(newRows)
             }
 
             setRowDrafts({})
             setNewRows([])
+            message.success('数据已成功保存')
             loadData(page, pageSize, activeWhere)
         } catch (e: any) {
             message.error('保存失败: ' + (e.message || e))
         } finally {
             setSaving(false)
         }
+    }
+
+    // 放弃所有草稿修改
+    const handleDiscardAll = () => {
+        setRowDrafts({})
+        setNewRows([])
+        setEditingCell(null)
+        setEditingNewCell(null)
+        message.info('已放弃所有未保存修改')
     }
 
     // 删除单行
@@ -335,57 +316,41 @@ export default function DataTab({
             return
         }
         const row = rows[rowIdx]
-        const pkCols = pkList
-        const pkVals = pkList.map((pk) => row[pk])
-
         try {
-            await API.postgresDelete(serverId, dbName, schema, tableName, pkCols, pkVals)
+            await adapter.deleteRow(row, pkList)
+            message.success('已删除数据行')
             loadData(page, pageSize, activeWhere)
         } catch (e: any) {
             message.error('删除失败: ' + (e.message || e))
         }
     }
 
+    // 新增一行草稿
+    const handleAddNewRow = () => {
+        const initRow: Record<string, any> = {}
+        columns.forEach((c) => {
+            initRow[c] = null
+        })
+        setNewRows((prev) => [...prev, initRow])
+    }
+
     // 导出文件
     const handleExport = async (mode: 'csv' | 'json') => {
+        if (!adapter.exportToFile) {
+            message.info('当前适配器不支持直接导出到文件')
+            return
+        }
         try {
-            const savedPath = await API.postgresExportToFile(
-                serverId,
-                dbName,
-                schema,
-                mode,
-                'table',
-                tableName,
-                '',
-                0
-            )
+            const savedPath = await adapter.exportToFile(mode, 0)
             if (savedPath) {
-                message.success('导出成功: ' + savedPath)
+                message.success(`已导出到: ${savedPath}`)
             }
         } catch (e: any) {
-            message.error('导出失败: ' + (e.message || e))
+            message.error(`导出失败: ${e.message || e}`)
         }
     }
 
-    // 新增行
-    const handleAddRow = () => {
-        const defaultNew: Record<string, any> = {}
-        columns.forEach((c) => {
-            defaultNew[c] = undefined
-        })
-        setNewRows((prev) => [defaultNew, ...prev])
-    }
-
-    // 右键上下文菜单状态
-    const [contextMenu, setContextMenu] = useState<{
-        open: boolean
-        x: number
-        y: number
-        rowIdx: number
-        colKey?: string
-        isNewRow?: boolean
-    } | null>(null)
-
+    // 右键上下文菜单事件
     const handleCellContextMenu = (
         e: React.MouseEvent,
         rowIdx: number,
@@ -410,38 +375,34 @@ export default function DataTab({
         const targetRow = isNewRow ? newRows[rowIdx] : rows[rowIdx]
         if (!targetRow) return []
 
-        const cellVal = colKey
-            ? isNewRow
-                ? targetRow[colKey]
-                : (rowDrafts[rowIdx] && rowDrafts[rowIdx][colKey] !== undefined ? rowDrafts[rowIdx][colKey] : targetRow[colKey])
-            : undefined
-
-        const items: MenuProps['items'] = []
+        const items: NonNullable<MenuProps['items']> = []
 
         // 1. 复制单元格值
         if (colKey) {
+            const isDraft = !isNewRow && rowDrafts[rowIdx] && rowDrafts[rowIdx][colKey] !== undefined
+            const currentVal = isDraft
+                ? rowDrafts[rowIdx][colKey]
+                : isNewRow
+                ? targetRow[colKey]
+                : targetRow[colKey]
+            const valStr = currentVal === null || currentVal === undefined ? '' : String(currentVal)
             items.push({
                 key: 'copy-cell',
                 icon: <Copy size={13} />,
-                label: `复制`,
-                onClick: () => {
-                    const str = cellVal === null || cellVal === undefined
-                        ? ''
-                        : (typeof cellVal === 'object' ? JSON.stringify(cellVal) : String(cellVal))
-                    copyTextToClipboard(str, `已复制`)
-                },
+                label: `复制单元格值 [${colKey}]`,
+                onClick: () => copyTextToClipboard(valStr, '已复制单元格值'),
             })
         }
 
-        // 2. 复制为 INSERT 语句
+        // 2. 复制整行作为 INSERT SQL
         items.push({
             key: 'copy-insert',
-            icon: <FileCode size={13} />,
-            label: '复制为 INSERT 语句',
+            icon: <Code size={13} />,
+            label: '复制整行为 INSERT SQL',
             onClick: () => {
                 const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                 const sql = buildInsertSql({
-                    dialect: 'postgres',
+                    dialect: adapter.dialect,
                     table: tableName,
                     columns,
                     rowData: fullRow,
@@ -450,16 +411,16 @@ export default function DataTab({
             },
         })
 
-        // 3. 复制为 UPDATE 语句 (仅针对已持久化行且存在主键)
+        // 3. 复制整行作为 UPDATE SQL
         if (!isNewRow && pkList.length > 0) {
             items.push({
                 key: 'copy-update',
-                icon: <FileCode size={13} />,
-                label: '复制为 UPDATE 语句',
+                icon: <Code size={13} />,
+                label: '复制整行为 UPDATE SQL',
                 onClick: () => {
                     const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                     const sql = buildUpdateSql({
-                        dialect: 'postgres',
+                        dialect: adapter.dialect,
                         table: tableName,
                         columns,
                         rowData: fullRow,
@@ -491,7 +452,6 @@ export default function DataTab({
             label: '克隆当前行并新增',
             onClick: () => {
                 const cloned: Record<string, any> = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
-                // 主键列置为 undefined
                 pkList.forEach((pk) => {
                     cloned[pk] = undefined
                 })
@@ -561,7 +521,7 @@ export default function DataTab({
         return items
     }
 
-    // 构建数据列定义 (ColDef) 用于 ResizableTable（已去除“操作”列）
+    // 构建数据列定义 (ColDef) 用于 ResizableTable
     const dataCols: ColDef[] = useMemo(() => {
         const cols: ColDef[] = [
             {
@@ -590,17 +550,23 @@ export default function DataTab({
                     hasFilter: true,
                     label: (
                         <div
-                            className={pg.headerCol}
+                            className={s.headerCol}
                             onClick={() => handleHeaderSort(c)}
-                            title={isSorted ? `当前按 ${c} ${sortOrder === 'ASC' ? '升序' : '降序'}排列 (点击切换)` : `点击按 ${c} 排序`}
+                            title={
+                                isSorted
+                                    ? `当前按 ${c} ${sortOrder === 'ASC' ? '升序' : '降序'}排列 (点击切换)`
+                                    : `点击按 ${c} 排序`
+                            }
                         >
                             {isPk ? (
-                                <span className={pg.pkBadge} title="主键 (Primary Key)">{c}</span>
+                                <span className={s.pkBadge} title="主键 (Primary Key)">
+                                    {c}
+                                </span>
                             ) : (
-                                <span className={pg.headerColText}>{c}</span>
+                                <span className={s.headerColText}>{c}</span>
                             )}
-                            {isFk && <span className={pg.fkBadge}>FK</span>}
-                            <span className={`${pg.sortIconWrap} ${isSorted ? pg.sortActive : pg.sortIdle}`}>
+                            {isFk && <span className={s.fkBadge}>FK</span>}
+                            <span className={`${s.sortIconWrap} ${isSorted ? s.sortActive : s.sortIdle}`}>
                                 {isSorted ? (
                                     sortOrder === 'ASC' ? (
                                         <ArrowUp size={12} />
@@ -641,18 +607,20 @@ export default function DataTab({
     ]
 
     return (
-        <div className={pg.dataWrap}>
+        <div className={s.dataWrap}>
             {/* 顶部工具栏 */}
-            <div className={pg.tableHead}>
-                <div className={pg.tableNameWrap}>
+            <div className={s.tableHead}>
+                <div className={s.tableNameWrap}>
                     <TableIcon size={15} style={{ color: '#52c41a', flexShrink: 0 }} />
-                    <span className={pg.schemaTag}>{schema}</span>
-                    <span className={pg.tableName} title={tableName}>{tableName}</span>
+                    {schema && <span className={s.schemaTag}>{schema}</span>}
+                    <span className={s.tableName} title={tableName}>
+                        {tableName}
+                    </span>
                 </div>
 
                 <Segmented
                     size="small"
-                    className={pg.segmented}
+                    className={s.segmented}
                     value={viewMode}
                     onChange={(v) => setViewMode(v as any)}
                     options={[
@@ -664,39 +632,44 @@ export default function DataTab({
                     ]}
                 />
 
-                <span className={pg.countBadge}>
+                <span className={s.countBadge}>
                     {viewMode === 'data' ? (
                         <>
-                            {countingRows && <Loader2 size={11} className={pg.spinning} style={{ color: 'var(--accent)' }} />}
-                            <span>{rows.length} 行{newRows.length ? (' +' + newRows.length + ' 新增') : ''}{dirtyCount > 0 ? (' *' + dirtyCount + ' 待保存') : ''}</span>
+                            {countingRows && (
+                                <Loader2 size={11} className={s.spinning} style={{ color: 'var(--accent)' }} />
+                            )}
+                            <span>
+                                {rows.length} 行{newRows.length ? ' +' + newRows.length + ' 新增' : ''}
+                                {dirtyCount > 0 ? ' *' + dirtyCount + ' 待保存' : ''}
+                            </span>
                         </>
                     ) : viewMode === 'struct' ? (
-                        (describeData?.columns?.length ?? 0) + ' 列'
+                        (structure?.columns?.length ?? 0) + ' 列'
                     ) : viewMode === 'index' ? (
-                        (describeData?.indexes?.length ?? 0) + ' 个索引'
+                        (structure?.indexes?.length ?? 0) + ' 个索引'
                     ) : viewMode === 'constraints' ? (
-                        (describeData?.constraints?.length ?? 0) + ' 条约束'
+                        (structure?.constraints?.length ?? 0) + ' 条约束'
                     ) : (
                         'SQL'
                     )}
                 </span>
 
                 {viewMode === 'data' && activeFilterEntries.length > 0 && (
-                    <div className={pg.activeFiltersWrap}>
-                        <Filter size={12} className={pg.activeFilterIcon} />
-                        <span className={pg.activeFilterLabel}>已筛选:</span>
-                        <div className={pg.activeFilterTags}>
+                    <div className={s.activeFiltersWrap}>
+                        <Filter size={12} className={s.activeFilterIcon} />
+                        <span className={s.activeFilterLabel}>已筛选:</span>
+                        <div className={s.activeFilterTags}>
                             {activeFilterEntries.map(([col, f]) => (
                                 <Tag
                                     key={col}
                                     closable
-                                    className={pg.filterTag}
+                                    className={s.filterTag}
                                     onClose={() => handleFilterChange(col, null)}
                                 >
-                                    <span className={pg.filterTagCol}>{col}</span>
-                                    <span className={pg.filterTagOp}>{OP_LABELS[f.op]}</span>
+                                    <span className={s.filterTagCol}>{col}</span>
+                                    <span className={s.filterTagOp}>{OP_LABELS[f.op]}</span>
                                     {f.op !== 'is_null' && f.op !== 'is_not_null' && (
-                                        <span className={pg.filterTagVal}>'{f.value}'</span>
+                                        <span className={s.filterTagVal}>'{f.value}'</span>
                                     )}
                                 </Tag>
                             ))}
@@ -704,7 +677,7 @@ export default function DataTab({
                         <Button
                             size="small"
                             type="link"
-                            className={pg.clearAllBtn}
+                            className={s.clearAllBtn}
                             onClick={handleClearAllFilters}
                         >
                             清除全部
@@ -712,14 +685,14 @@ export default function DataTab({
                     </div>
                 )}
 
-                <div className={pg.crudActions}>
+                <div className={s.crudActions}>
                     {viewMode === 'data' && (
                         <Space size={6}>
                             <Button
                                 size="small"
                                 icon={<Plus size={13} />}
                                 disabled={loading || saving}
-                                onClick={handleAddRow}
+                                onClick={handleAddNewRow}
                             >
                                 新增行
                             </Button>
@@ -732,14 +705,22 @@ export default function DataTab({
                                 loading={saving}
                                 onClick={handleSaveAll}
                             >
-                                保存修改 {dirtyCount > 0 ? ('(' + dirtyCount + ')') : ''}
+                                保存修改 {dirtyCount > 0 ? '(' + dirtyCount + ')' : ''}
                             </Button>
 
-                            <Dropdown menu={{ items: exportMenuItems }}>
-                                <Button size="small" icon={<Download size={13} />}>
-                                    导出
+                            {dirtyCount > 0 && (
+                                <Button size="small" onClick={handleDiscardAll} disabled={saving}>
+                                    放弃
                                 </Button>
-                            </Dropdown>
+                            )}
+
+                            {adapter.exportToFile && (
+                                <Dropdown menu={{ items: exportMenuItems }}>
+                                    <Button size="small" icon={<Download size={13} />}>
+                                        导出
+                                    </Button>
+                                </Dropdown>
+                            )}
                         </Space>
                     )}
 
@@ -750,8 +731,8 @@ export default function DataTab({
                             loading={loading}
                             onClick={() => {
                                 if (viewMode === 'data') loadData(page, pageSize, activeWhere)
-                                else if (viewMode === 'struct') loadStructure()
-                                else if (viewMode === 'index' || viewMode === 'constraints') loadStructure()
+                                else if (viewMode === 'struct' || viewMode === 'index' || viewMode === 'constraints')
+                                    loadStructure()
                                 else loadDDL()
                             }}
                         />
@@ -768,35 +749,37 @@ export default function DataTab({
             {/* 数据视图 */}
             {viewMode === 'data' && (
                 <>
-                    {/* 表格主体：使用 ResizableTable 渲染 */}
                     <ResizableTable
                         cols={dataCols}
                         data={rows}
                         onColResize={handleColResize}
-                        className={pg.editTable}
+                        className={s.editTable}
                     >
                         <tbody>
                             {/* 渲染未保存的新增行 */}
                             {newRows.map((newRow, nIdx) => (
                                 <tr
                                     key={'new_' + nIdx}
-                                    className={pg.rowNew}
+                                    className={s.rowNew}
                                     onContextMenu={(e) => handleCellContextMenu(e, nIdx, undefined, true)}
                                 >
                                     <td
-                                        className={pg.rownum}
+                                        className={s.rownum}
                                         style={{ color: '#52c41a', fontWeight: 700 }}
                                         onContextMenu={(e) => handleCellContextMenu(e, nIdx, undefined, true)}
                                     >
                                         +
                                     </td>
                                     {columns.map((c) => {
-                                        const isEditing = editingNewCell?.rowIdx === nIdx && editingNewCell?.col === c
+                                        const isEditing =
+                                            editingNewCell?.rowIdx === nIdx && editingNewCell?.col === c
                                         const val = newRow[c]
                                         return (
                                             <td
                                                 key={c}
-                                                onClick={() => !isEditing && setEditingNewCell({ rowIdx: nIdx, col: c })}
+                                                onClick={() =>
+                                                    !isEditing && setEditingNewCell({ rowIdx: nIdx, col: c })
+                                                }
                                                 onContextMenu={(e) => handleCellContextMenu(e, nIdx, c, true)}
                                                 title="点击编辑，右键更多操作"
                                             >
@@ -808,11 +791,11 @@ export default function DataTab({
                                                         onCancel={() => setEditingNewCell(null)}
                                                     />
                                                 ) : val === null ? (
-                                                    <span className={pg.cellNull}>NULL</span>
+                                                    <span className={s.cellNull}>NULL</span>
                                                 ) : val !== undefined ? (
                                                     String(val)
                                                 ) : (
-                                                    <span className={pg.cellNull}>DEFAULT</span>
+                                                    <span className={s.cellNull}>DEFAULT</span>
                                                 )}
                                             </td>
                                         )
@@ -829,22 +812,29 @@ export default function DataTab({
                                         onContextMenu={(e) => handleCellContextMenu(e, rIdx, undefined, false)}
                                     >
                                         <td
-                                            className={pg.rownum}
+                                            className={s.rownum}
                                             onContextMenu={(e) => handleCellContextMenu(e, rIdx, undefined, false)}
                                         >
                                             {(page - 1) * pageSize + rIdx + 1}
                                         </td>
                                         {columns.map((c) => {
-                                            const isEditing = editingCell?.rowIdx === rIdx && editingCell?.col === c
-                                            const isCellDirty = rowDrafts[rIdx] && rowDrafts[rIdx][c] !== undefined
+                                            const isEditing =
+                                                editingCell?.rowIdx === rIdx && editingCell?.col === c
+                                            const isCellDirty =
+                                                rowDrafts[rIdx] && rowDrafts[rIdx][c] !== undefined
                                             const val = isCellDirty ? rowDrafts[rIdx][c] : row[c]
                                             const isNull = val === null || val === undefined
 
                                             return (
                                                 <td
                                                     key={c}
-                                                    className={(isCellDirty ? pg.cellDirty : '') + (isNull ? (' ' + pg.cellNull) : '')}
-                                                    onClick={() => !isEditing && setEditingCell({ rowIdx: rIdx, col: c })}
+                                                    className={
+                                                        (isCellDirty ? s.cellDirty : '') +
+                                                        (isNull ? ' ' + s.cellNull : '')
+                                                    }
+                                                    onClick={() =>
+                                                        !isEditing && setEditingCell({ rowIdx: rIdx, col: c })
+                                                    }
                                                     onContextMenu={(e) => handleCellContextMenu(e, rIdx, c, false)}
                                                     title="点击编辑，右键更多操作"
                                                 >
@@ -852,11 +842,13 @@ export default function DataTab({
                                                         <CellEditorInline
                                                             value={isNull ? '' : String(val)}
                                                             isNull={isNull}
-                                                            onCommit={(v, isN) => handleCommitCell(rIdx, c, v, isN)}
+                                                            onCommit={(v, isN) =>
+                                                                handleCommitCell(rIdx, c, v, isN)
+                                                            }
                                                             onCancel={() => setEditingCell(null)}
                                                         />
                                                     ) : isNull ? (
-                                                        <span className={sh.mysqlNull}>NULL</span>
+                                                        <span className={s.nullText}>NULL</span>
                                                     ) : typeof val === 'object' ? (
                                                         JSON.stringify(val)
                                                     ) : (
@@ -871,7 +863,7 @@ export default function DataTab({
 
                             {!rows.length && !newRows.length && (
                                 <tr>
-                                    <td colSpan={columns.length + 1} className={db.dbEmpty}>
+                                    <td colSpan={columns.length + 1} className={s.dbEmpty}>
                                         {loading ? '加载数据中...' : '暂无数据，可点击「新增行」插入数据'}
                                     </td>
                                 </tr>
@@ -880,12 +872,12 @@ export default function DataTab({
                     </ResizableTable>
 
                     {/* 底部翻页栏 */}
-                    <div className={pg.tablePager}>
-                        <span className={pg.countBadge}>
+                    <div className={s.tablePager}>
+                        <span className={s.countBadge}>
                             {countingRows ? (
                                 <>
-                                    <Loader2 size={12} className={pg.spinning} style={{ color: 'var(--accent)' }} />
-                                    <span>共 {totalRows > 0 ? (totalRows + '+') : '...'} 条 (计算中)</span>
+                                    <Loader2 size={12} className={s.spinning} style={{ color: 'var(--accent)' }} />
+                                    <span>共 {totalRows > 0 ? totalRows + '+' : '...'} 条 (计算中)</span>
                                 </>
                             ) : (
                                 '共 ' + totalRows + ' 条数据'
@@ -900,11 +892,11 @@ export default function DataTab({
                             disabled={loading}
                             showSizeChanger
                             pageSizeOptions={['20', '50', '100', '200', '500']}
-                            onChange={(p, s) => {
-                                if (s !== pageSize) {
-                                    setPageSize(s)
+                            onChange={(p, size) => {
+                                if (size !== pageSize) {
+                                    setPageSize(size)
                                     setPage(1)
-                                    loadData(1, s, activeWhere)
+                                    loadData(1, size, activeWhere)
                                 } else {
                                     setPage(p)
                                     loadData(p, pageSize, activeWhere)
@@ -917,8 +909,8 @@ export default function DataTab({
 
             {/* 结构视图 */}
             {viewMode === 'struct' && (
-                <div className={db.dbTableScroll}>
-                    <table className={db.dbTable}>
+                <div className={s.dbTableScroll}>
+                    <table className={s.dbTable}>
                         <thead>
                             <tr>
                                 <th style={{ width: 40, textAlign: 'center' }}>#</th>
@@ -932,7 +924,7 @@ export default function DataTab({
                             </tr>
                         </thead>
                         <tbody>
-                            {(describeData?.columns || []).map((col, idx) => (
+                            {(structure?.columns || []).map((col, idx) => (
                                 <tr key={col.name}>
                                     <td style={{ textAlign: 'center', color: 'var(--text-faint)' }}>{idx + 1}</td>
                                     <td>
@@ -941,7 +933,9 @@ export default function DataTab({
                                     <td>
                                         <Tag color="blue">{col.dataType}</Tag>
                                         {col.udtName && col.udtName !== col.dataType && (
-                                            <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 4 }}>({col.udtName})</span>
+                                            <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 4 }}>
+                                                ({col.udtName})
+                                            </span>
                                         )}
                                     </td>
                                     <td>
@@ -952,22 +946,20 @@ export default function DataTab({
                                         )}
                                     </td>
                                     <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                                        {col.defaultVal || <span className={sh.mysqlNull}>-</span>}
+                                        {col.defaultVal || <span className={s.nullText}>-</span>}
                                     </td>
-                                    <td>
-                                        {col.isPrimaryKey && <span className={pg.pkBadge}>PK</span>}
-                                    </td>
-                                    <td>
-                                        {col.isForeignKey && <span className={pg.fkBadge}>FK</span>}
-                                    </td>
+                                    <td>{col.isPrimaryKey && <span className={s.pkBadge}>PK</span>}</td>
+                                    <td>{col.isForeignKey && <span className={s.fkBadge}>FK</span>}</td>
                                     <td style={{ color: 'var(--text-dim)' }}>
-                                        {col.comment || '-'}
+                                        {col.comment || col.extra || '-'}
                                     </td>
                                 </tr>
                             ))}
-                            {(!describeData || describeData.columns.length === 0) && (
+                            {(!structure || structure.columns.length === 0) && (
                                 <tr>
-                                    <td colSpan={8} className={db.dbEmpty}>暂无结构信息</td>
+                                    <td colSpan={8} className={s.dbEmpty}>
+                                        暂无结构信息
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
@@ -977,20 +969,21 @@ export default function DataTab({
 
             {/* 索引视图 */}
             {viewMode === 'index' && (
-                <div className={db.dbTableScroll}>
-                    <table className={db.dbTable}>
+                <div className={s.dbTableScroll}>
+                    <table className={s.dbTable}>
                         <thead>
                             <tr>
                                 <th style={{ width: 40, textAlign: 'center' }}>#</th>
                                 <th>索引名称 (Index Name)</th>
                                 <th>类型 (Type)</th>
+                                <th>包含列 (Columns)</th>
                                 <th>占用大小 (Size)</th>
-                                <th>定义语句 (Definition)</th>
+                                <th>定义 / 详情 (Definition / Comment)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {(describeData?.indexes || []).map((idx, i) => (
-                                <tr key={idx.name}>
+                            {(structure?.indexes || []).map((idx, i) => (
+                                <tr key={idx.name + '_' + i}>
                                     <td style={{ textAlign: 'center', color: 'var(--text-faint)' }}>{i + 1}</td>
                                     <td>
                                         <strong style={{ fontFamily: 'monospace' }}>{idx.name}</strong>
@@ -1001,18 +994,31 @@ export default function DataTab({
                                         ) : idx.isUnique ? (
                                             <Tag color="orange">UNIQUE</Tag>
                                         ) : (
-                                            <Tag color="geekblue">INDEX</Tag>
+                                            <Tag color="geekblue">{idx.type || 'INDEX'}</Tag>
                                         )}
                                     </td>
+                                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                                        {idx.columns && idx.columns.length > 0 ? idx.columns.join(', ') : '-'}
+                                    </td>
                                     <td>{idx.size || '-'}</td>
-                                    <td style={{ fontFamily: 'monospace', fontSize: 12, maxWidth: 500, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                        {idx.def}
+                                    <td
+                                        style={{
+                                            fontFamily: 'monospace',
+                                            fontSize: 12,
+                                            maxWidth: 500,
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                        }}
+                                    >
+                                        {idx.def || idx.comment || '-'}
                                     </td>
                                 </tr>
                             ))}
-                            {(!describeData || describeData.indexes.length === 0) && (
+                            {(!structure || structure.indexes.length === 0) && (
                                 <tr>
-                                    <td colSpan={5} className={db.dbEmpty}>暂无索引</td>
+                                    <td colSpan={6} className={s.dbEmpty}>
+                                        暂无索引
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
@@ -1022,32 +1028,47 @@ export default function DataTab({
 
             {/* 约束视图 */}
             {viewMode === 'constraints' && (
-                <div className={db.dbTableScroll}>
-                    <table className={db.dbTable}>
+                <div className={s.dbTableScroll}>
+                    <table className={s.dbTable}>
                         <thead>
                             <tr>
                                 <th style={{ width: 40, textAlign: 'center' }}>#</th>
                                 <th>约束名称 (Constraint Name)</th>
                                 <th>约束类型 (Type)</th>
+                                <th>受约束列 (Column)</th>
                                 <th>定义 / 引用目标 (Definition / References)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {(describeData?.constraints || []).map((c, i) => (
-                                <tr key={c.name}>
+                            {(structure?.constraints || []).map((c, i) => (
+                                <tr key={c.name + '_' + i}>
                                     <td style={{ textAlign: 'center', color: 'var(--text-faint)' }}>{i + 1}</td>
                                     <td>
                                         <strong style={{ fontFamily: 'monospace' }}>{c.name}</strong>
                                     </td>
                                     <td>
-                                        <Tag color={c.type === 'PRIMARY KEY' ? 'red' : c.type === 'FOREIGN KEY' ? 'purple' : 'cyan'}>
+                                        <Tag
+                                            color={
+                                                c.type === 'PRIMARY KEY'
+                                                    ? 'red'
+                                                    : c.type === 'FOREIGN KEY'
+                                                    ? 'purple'
+                                                    : 'cyan'
+                                            }
+                                        >
                                             {c.type}
                                         </Tag>
                                     </td>
+                                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>{c.column || '-'}</td>
                                     <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
                                         {c.foreignTable ? (
                                             <span>
-                                                REFERENCES <strong>{(c.foreignSchema ? (c.foreignSchema + '.') : '') + c.foreignTable}</strong>{`(${c.foreignColumn || ''})`}
+                                                REFERENCES{' '}
+                                                <strong>
+                                                    {(c.foreignSchema ? c.foreignSchema + '.' : '') +
+                                                        c.foreignTable}
+                                                </strong>
+                                                {`(${c.foreignColumn || ''})`}
                                             </span>
                                         ) : (
                                             c.def || '-'
@@ -1055,9 +1076,11 @@ export default function DataTab({
                                     </td>
                                 </tr>
                             ))}
-                            {(!describeData || describeData.constraints.length === 0) && (
+                            {(!structure || structure.constraints.length === 0) && (
                                 <tr>
-                                    <td colSpan={4} className={db.dbEmpty}>暂无约束</td>
+                                    <td colSpan={5} className={s.dbEmpty}>
+                                        暂无约束
+                                    </td>
                                 </tr>
                             )}
                         </tbody>
@@ -1067,19 +1090,27 @@ export default function DataTab({
 
             {/* DDL 视图 */}
             {viewMode === 'ddl' && (
-                <div style={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
+                <div
+                    style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        height: '100%',
+                        position: 'relative',
+                    }}
+                >
                     <div style={{ position: 'absolute', top: 12, right: 16, zIndex: 10 }}>
                         <Button
                             size="small"
                             icon={<Copy size={13} />}
                             onClick={() => {
                                 navigator.clipboard.writeText(ddlText)
+                                message.success('已复制 DDL 到剪贴板')
                             }}
                         >
                             复制 DDL
                         </Button>
                     </div>
-                    <pre className={pg.ddlViewer}>{ddlText || '-- 正在生成 DDL 语句...'}</pre>
+                    <pre className={s.ddlViewer}>{ddlText || '-- 正在生成 DDL 语句...'}</pre>
                 </div>
             )}
 

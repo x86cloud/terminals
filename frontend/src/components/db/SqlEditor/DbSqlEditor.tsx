@@ -1,39 +1,44 @@
 import React, { useState, useMemo } from 'react'
-import { Button, Tooltip, Segmented, Tag, message, Space, Table, Tree } from 'antd'
-import { Play, Sparkles, Plus, X, RotateCw, FileCode, CheckCircle2, AlertCircle, Clock, Zap, Download } from 'lucide-react'
+import { Button, Tooltip, Segmented, message, Space, Table, Tree } from 'antd'
+import {
+    Play,
+    Plus,
+    Clock,
+    Zap,
+    Download,
+    FileCode,
+    AlertCircle,
+    Sparkles,
+} from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import TabBar, { TabItem } from '@/components/common/TabBar'
-import { API } from '@/api'
-import { MysqlQueryResult } from '@/types'
-import { SqlTab } from './mysqlTypes'
-import my from './SqlEditor.module.less'
-import db from '@/pages/mysql/dbTable.module.less'
+import { DbSqlEditorAdapter, DbQueryResult, ExplainPlanResult } from '../types'
+import s from './DbSqlEditor.module.less'
 
 interface QueryTab {
     id: string
     title: string
     sql: string
-    result: MysqlQueryResult | null
+    result: DbQueryResult | null
     durationMs?: number
     error?: string
-    explainResult: any | null
-    resultMode: 'table' | 'explain' | 'raw'
+    explainResult?: ExplainPlanResult | null
+    resultMode: 'table' | 'explain' | 'json'
 }
 
-export default function SqlEditor({
-    serverId,
-    dbName,
-    initialSql,
-}: {
-    serverId: string
-    dbName: string
+export interface DbSqlEditorProps {
+    adapter: DbSqlEditorAdapter
     initialSql?: string
-}) {
+}
+
+export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
+    const { dialect, placeholder, defaultSql } = adapter
+
     const [tabs, setTabs] = useState<QueryTab[]>([
         {
             id: 'tab_1',
             title: '查询 1',
-            sql: initialSql || `SELECT table_name, table_rows, data_length, create_time FROM information_schema.tables WHERE table_schema = '${dbName}' LIMIT 20;`,
+            sql: initialSql || defaultSql,
             result: null,
             explainResult: null,
             resultMode: 'table',
@@ -116,14 +121,17 @@ export default function SqlEditor({
         setRunning(true)
         const t0 = performance.now()
         try {
-            const res = await API.mysqlRun(serverId, dbName, sqlText)
-            const durationMs = Math.round(performance.now() - t0)
+            const res = await adapter.runSql(sqlText)
+            const durationMs = res.durationMs ?? Math.round(performance.now() - t0)
             updateActiveTab({
                 result: res,
                 durationMs,
-                error: '',
+                error: res.error || '',
                 resultMode: 'table',
             })
+            if (res.error) {
+                message.error(`执行出错: ${res.error}`)
+            }
         } catch (e: any) {
             const durationMs = Math.round(performance.now() - t0)
             const errStr = e.message || String(e)
@@ -147,28 +155,16 @@ export default function SqlEditor({
             return
         }
 
+        if (!adapter.explainSql) {
+            message.info('当前数据库方言未实现 EXPLAIN 解析')
+            return
+        }
+
         setRunning(true)
         try {
-            // 尝试 EXPLAIN FORMAT=JSON
-            let jsonParsed: any = null
-            try {
-                const jsonRes = await API.mysqlRun(serverId, dbName, `EXPLAIN FORMAT=JSON ${sqlText}`)
-                if (jsonRes && jsonRes.rows && jsonRes.rows[0]) {
-                    const rawVal = jsonRes.rows[0]['EXPLAIN'] || Object.values(jsonRes.rows[0])[0]
-                    if (typeof rawVal === 'string') {
-                        jsonParsed = JSON.parse(rawVal)
-                    } else {
-                        jsonParsed = rawVal
-                    }
-                }
-            } catch {
-                // 如果不支持 JSON，退回到传统 EXPLAIN
-                const tabRes = await API.mysqlRun(serverId, dbName, `EXPLAIN ${sqlText}`)
-                jsonParsed = tabRes
-            }
-
+            const planRes = await adapter.explainSql(sqlText)
             updateActiveTab({
-                explainResult: jsonParsed,
+                explainResult: planRes,
                 resultMode: 'explain',
             })
         } catch (e: any) {
@@ -178,81 +174,30 @@ export default function SqlEditor({
         }
     }
 
-    // 格式化解析 MySQL EXPLAIN 树节点
-    const renderPlanNode = (node: any): any => {
-        if (!node) return null
-
-        if (node.query_block) {
-            const qb = node.query_block
-            const costInfo = qb.cost_info?.query_cost ? ` (Cost: ${qb.cost_info.query_cost})` : ''
-            const children: any[] = []
-            if (qb.table) children.push(renderPlanNode({ table: qb.table }))
-            if (qb.nested_loop) {
-                qb.nested_loop.forEach((nl: any) => children.push(renderPlanNode(nl)))
-            }
-            if (qb.grouping_operation) {
-                children.push(renderPlanNode(qb.grouping_operation))
-            }
-            if (qb.ordering_operation) {
-                children.push(renderPlanNode(qb.ordering_operation))
-            }
-
-            return {
-                key: Math.random().toString(),
-                title: (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
-                        <Tag color="geekblue" style={{ fontWeight: 700, marginInlineEnd: 0 }}>
-                            Query Block #{qb.select_id || 1}
-                        </Tag>
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>{costInfo}</span>
-                    </div>
-                ),
-                children: children.filter(Boolean),
-            }
+    // 导出 CSV
+    const handleExportCsv = () => {
+        if (!activeTab.result?.rows?.length) {
+            message.info('无结果可导出')
+            return
         }
-
-        if (node.table) {
-            const t = node.table
-            return {
-                key: Math.random().toString(),
-                title: (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '2px 0' }}>
-                        <Tag color="blue" style={{ fontWeight: 600, marginInlineEnd: 0 }}>
-                            Table: {t.table_name}
-                        </Tag>
-                        <Tag color={t.access_type === 'ALL' ? 'red' : t.access_type === 'index' ? 'orange' : 'green'} style={{ marginInlineEnd: 0 }}>
-                            {t.access_type || 'Scan'}
-                        </Tag>
-                        {t.key && (
-                            <Tag color="purple" style={{ marginInlineEnd: 0 }}>
-                                Key: {t.key}
-                            </Tag>
-                        )}
-                        <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>
-                            扫描行数: {t.rows_examined_per_scan ?? t.rows ?? '-'}
-                            {t.filtered && ` | 过滤率: ${t.filtered}%`}
-                        </span>
-                    </div>
-                ),
-            }
-        }
-
-        return {
-            key: Math.random().toString(),
-            title: <span>{JSON.stringify(node)}</span>,
-        }
+        const cols = activeTab.result.columns || []
+        const csv = [
+            cols.join(','),
+            ...activeTab.result.rows.map((r) =>
+                cols.map((c) => JSON.stringify(r[c] ?? '')).join(',')
+            ),
+        ].join('\n')
+        navigator.clipboard.writeText(csv)
+        message.success('已将查询结果作为 CSV 复制到剪贴板')
     }
 
-    const planTreeData = React.useMemo(() => {
-        if (!activeTab.explainResult) return []
-        if (activeTab.explainResult.query_block) {
-            return [renderPlanNode(activeTab.explainResult)]
-        }
-        return []
+    const planTreeData = useMemo(() => {
+        if (!activeTab.explainResult?.treeData) return []
+        return activeTab.explainResult.treeData
     }, [activeTab.explainResult])
 
     return (
-        <div className={my.sqlWrap}>
+        <div className={s.sqlWrap}>
             {/* 多查询 Tab 栏 */}
             <TabBar
                 items={tabItems}
@@ -263,7 +208,7 @@ export default function SqlEditor({
                 onCloseLeft={handleCloseLeftTabs}
                 onCloseRight={handleCloseRightTabs}
                 size="small"
-                className={my.tabBar}
+                className={s.tabBar}
                 extraRight={
                     <Tooltip title="新建查询标签">
                         <Button
@@ -285,20 +230,22 @@ export default function SqlEditor({
             />
 
             {/* SQL 编辑区 */}
-            <div style={{ minHeight: 160, maxHeight: '40vh', borderBottom: '1px solid var(--border-color)' }}>
+            <div className={s.editorContainer}>
                 <CodeEditor
                     value={activeTab.sql}
                     lang="sql"
                     bordered={false}
                     height="180px"
-                    placeholder="-- 输入 MySQL SQL 语句，按 Ctrl+Enter 快速执行"
+                    placeholder={
+                        placeholder || `-- 输入 ${dialect.toUpperCase()} SQL 语句，按 Ctrl+Enter 快速执行`
+                    }
                     onChange={(val) => updateActiveTab({ sql: val })}
                     onModEnter={handleRunSql}
                 />
             </div>
 
             {/* 快捷操作栏 */}
-            <div className={my.runBar}>
+            <div className={s.runBar}>
                 <Space size={8}>
                     <Button
                         type="primary"
@@ -308,13 +255,15 @@ export default function SqlEditor({
                     >
                         运行 (Ctrl+Enter)
                     </Button>
-                    <Button
-                        icon={<Sparkles size={14} />}
-                        disabled={running}
-                        onClick={handleExplain}
-                    >
-                        EXPLAIN 分析
-                    </Button>
+                    {adapter.explainSql && (
+                        <Button
+                            icon={<Sparkles size={14} />}
+                            disabled={running}
+                            onClick={handleExplain}
+                        >
+                            EXPLAIN 分析
+                        </Button>
+                    )}
                 </Space>
 
                 {activeTab.result && (
@@ -323,17 +272,29 @@ export default function SqlEditor({
                         value={activeTab.resultMode}
                         onChange={(v) => updateActiveTab({ resultMode: v as any })}
                         options={[
-                            { label: `结果集 (${activeTab.result.rows?.length ?? 0})`, value: 'table' },
-                            { label: '执行计划树', value: 'explain', disabled: !activeTab.explainResult },
+                            {
+                                label: `结果集 (${activeTab.result.rows?.length ?? 0})`,
+                                value: 'table',
+                            },
+                            {
+                                label: '执行计划树',
+                                value: 'explain',
+                                disabled: !activeTab.explainResult,
+                            },
+                            {
+                                label: 'JSON 视图',
+                                value: 'json',
+                                disabled: !activeTab.result.rows?.length,
+                            },
                         ]}
                     />
                 )}
             </div>
 
             {/* 结果显示区 */}
-            <div className={my.resultArea}>
+            <div className={s.resultArea}>
                 {activeTab.error && (
-                    <div className={my.errorBanner}>
+                    <div className={s.errorBanner}>
                         <AlertCircle size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
                         {activeTab.error}
                     </div>
@@ -341,37 +302,23 @@ export default function SqlEditor({
 
                 {activeTab.resultMode === 'table' && activeTab.result && (
                     <>
-                        <div className={my.resultHead}>
+                        <div className={s.resultHead}>
                             <Space size={12}>
-                                <span className={my.metaTag}>
+                                <span className={s.metaTag}>
                                     <Clock size={12} /> 耗时: {activeTab.durationMs || 0} ms
                                 </span>
-                                <span className={my.metaTag}>
-                                    <Zap size={12} /> 返回: {activeTab.result.rows?.length ?? activeTab.result.affected ?? 0} 行
+                                <span className={s.metaTag}>
+                                    <Zap size={12} /> 返回:{' '}
+                                    {activeTab.result.rows?.length ?? activeTab.result.affected ?? 0} 行
                                 </span>
                             </Space>
 
-                            <Button
-                                size="small"
-                                icon={<Download size={13} />}
-                                onClick={() => {
-                                    if (!activeTab.result?.rows?.length) {
-                                        message.info('无结果可导出')
-                                        return
-                                    }
-                                    const cols = activeTab.result.columns || []
-                                    const csv = [
-                                        cols.join(','),
-                                        ...activeTab.result.rows.map((r) => cols.map((c) => JSON.stringify(r[c] ?? '')).join(',')),
-                                    ].join('\n')
-                                    navigator.clipboard.writeText(csv)
-                                }}
-                            >
+                            <Button size="small" icon={<Download size={13} />} onClick={handleExportCsv}>
                                 导出 CSV
                             </Button>
                         </div>
 
-                        <div className={my.tableWrap}>
+                        <div className={s.tableWrap}>
                             <Table
                                 size="small"
                                 pagination={{ pageSize: 50, showSizeChanger: true }}
@@ -383,7 +330,18 @@ export default function SqlEditor({
                                     dataIndex: col,
                                     key: col,
                                     render: (val) => {
-                                        if (val === null || val === undefined) return <span style={{ color: 'var(--text-faint)', fontStyle: 'italic' }}>NULL</span>
+                                        if (val === null || val === undefined) {
+                                            return (
+                                                <span
+                                                    style={{
+                                                        color: 'var(--text-faint)',
+                                                        fontStyle: 'italic',
+                                                    }}
+                                                >
+                                                    NULL
+                                                </span>
+                                            )
+                                        }
                                         if (typeof val === 'object') return JSON.stringify(val)
                                         return String(val)
                                     },
@@ -393,36 +351,40 @@ export default function SqlEditor({
                     </>
                 )}
 
-                {activeTab.resultMode === 'explain' && (
-                    <div className={my.explainTreeWrap}>
+                {activeTab.resultMode === 'explain' && activeTab.explainResult && (
+                    <div className={s.explainTreeWrap}>
                         {planTreeData.length > 0 ? (
-                            <Tree
-                                defaultExpandAll
-                                showLine
-                                treeData={planTreeData}
-                            />
-                        ) : activeTab.explainResult?.rows ? (
+                            <Tree defaultExpandAll showLine treeData={planTreeData} />
+                        ) : activeTab.explainResult.tableResult ? (
                             <Table
                                 size="small"
                                 pagination={false}
-                                dataSource={activeTab.explainResult.rows}
+                                dataSource={activeTab.explainResult.tableResult.rows}
                                 rowKey={(_, idx) => idx!}
-                                columns={(activeTab.explainResult.columns || []).map((col: string) => ({
-                                    title: col,
-                                    dataIndex: col,
-                                    key: col,
-                                }))}
+                                columns={activeTab.explainResult.tableResult.columns.map(
+                                    (col: string) => ({
+                                        title: col,
+                                        dataIndex: col,
+                                        key: col,
+                                    })
+                                )}
                             />
                         ) : (
                             <pre style={{ padding: 12, fontFamily: 'monospace', fontSize: 12 }}>
-                                {JSON.stringify(activeTab.explainResult, null, 2)}
+                                {JSON.stringify(activeTab.explainResult.raw, null, 2)}
                             </pre>
                         )}
                     </div>
                 )}
 
+                {activeTab.resultMode === 'json' && activeTab.result && (
+                    <pre className={s.jsonWrap}>
+                        {JSON.stringify(activeTab.result.rows, null, 2)}
+                    </pre>
+                )}
+
                 {!activeTab.result && !activeTab.error && !activeTab.explainResult && (
-                    <div className={my.emptyTip}>
+                    <div className={s.emptyTip}>
                         <FileCode size={36} opacity={0.3} />
                         <span>输入 SQL 语句并点击「运行」查看执行结果</span>
                     </div>

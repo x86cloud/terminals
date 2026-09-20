@@ -22,8 +22,9 @@ import ClientIcon from '@/components/ClientIcon'
 import { PostgresSessionInfo } from '@/types'
 import { PgDatabase, PgSchema, PgTable, PgFunction, PostgresTabItem } from './postgresTypes'
 import TabBar, { TabItem } from '@/components/common/TabBar'
-import DataTab from './DataTab'
-import SqlEditor from './SqlEditor'
+import DbDataTab from '@/components/db/DataTab'
+import DbSqlEditor from '@/components/db/SqlEditor'
+import { createPostgresAdapter, createPostgresSqlAdapter } from '@/components/db/adapters'
 import StatusPanel from './StatusPanel'
 import RolesPanel from './RolesPanel'
 import FunctionsPanel from './FunctionsPanel'
@@ -683,13 +684,17 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
                                 }}
                             >
                                 {t.type === 'status' && <StatusPanel serverId={serverId} dbName={currentDb} />}
-                                {t.type === 'sql' && <SqlEditor serverId={serverId} dbName={currentDb} initialSql={t.sqlText} />}
+                                {t.type === 'sql' && (
+                                    <DbSqlEditor
+                                        key={t.key}
+                                        adapter={createPostgresSqlAdapter(serverId, currentDb, currentSchema)}
+                                        initialSql={t.sqlText}
+                                    />
+                                )}
                                 {t.type === 'data' && t.schema && t.table && (
-                                    <DataTab
-                                        serverId={serverId}
-                                        dbName={t.dbName}
-                                        schema={t.schema}
-                                        tableName={t.table}
+                                    <DbDataTab
+                                        key={t.key}
+                                        adapter={createPostgresAdapter(serverId, t.dbName, t.schema, t.table)}
                                         onClose={() => handleCloseTab(t.key)}
                                     />
                                 )}
