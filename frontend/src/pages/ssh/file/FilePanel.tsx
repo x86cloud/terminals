@@ -314,7 +314,9 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
     return (
         <section
             className={`${fp.filePanel}${dragOver ? ' ' + fp.dragOver : ''}`}
-            data-session={sessionId}
+            data-file-drop-target="true"
+            data-session-id={sessionId}
+            data-path={path}
             onDragOver={(e) => {
                 if (nativeDrop) return
                 e.preventDefault()

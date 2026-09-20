@@ -55,8 +55,30 @@ type MysqlQueryResult struct {
 }
 
 func isReadQuery(sql string) bool {
-	upper := strings.ToUpper(strings.TrimSpace(sql))
-	readPrefixes := []string{"SELECT", "SHOW", "EXPLAIN", "DESC", "DESCRIBE"}
+	s := strings.TrimSpace(sql)
+	// 去除前导注释（/* ... */, -- ..., # ...）
+	for {
+		if strings.HasPrefix(s, "/*") {
+			idx := strings.Index(s, "*/")
+			if idx == -1 {
+				break
+			}
+			s = strings.TrimSpace(s[idx+2:])
+			continue
+		}
+		if strings.HasPrefix(s, "--") || strings.HasPrefix(s, "#") {
+			idx := strings.Index(s, "\n")
+			if idx == -1 {
+				s = ""
+				break
+			}
+			s = strings.TrimSpace(s[idx+1:])
+			continue
+		}
+		break
+	}
+	upper := strings.ToUpper(s)
+	readPrefixes := []string{"SELECT", "SHOW", "EXPLAIN", "DESC", "DESCRIBE", "WITH"}
 	for _, p := range readPrefixes {
 		if strings.HasPrefix(upper, p) {
 			return true
@@ -64,3 +86,4 @@ func isReadQuery(sql string) bool {
 	}
 	return false
 }
+

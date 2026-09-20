@@ -14,7 +14,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/pkg/sftp v1.13.11
 	github.com/redis/go-redis/v9 v9.22.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.20
+	github.com/wailsapp/wails/v3 v3.0.0-beta.23
 	go.mongodb.org/mongo-driver/v2 v2.8.1
 	golang.org/x/crypto v0.55.0
 	gopkg.in/yaml.v3 v3.0.1

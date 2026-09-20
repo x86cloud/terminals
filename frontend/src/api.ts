@@ -928,9 +928,28 @@ export function emitEvent(event: string, ...args: any[]): void {
     Events.Emit(event, args.length === 1 ? args[0] : args)
 }
 
+let dropUnsubscriber: (() => void) | null = null
+
 /** 注册系统级文件拖放 */
-export function registerNativeFileDrop(handler: (paths: string[]) => void): boolean {
-    return false // Wails v3 file drop fallback
+export function registerNativeFileDrop(
+    handler: (paths: string[], details?: any) => void
+): boolean {
+    if (dropUnsubscriber) {
+        dropUnsubscriber()
+        dropUnsubscriber = null
+    }
+    dropUnsubscriber = subscribe('files:dropped', (payload: any) => {
+        const files: string[] = Array.isArray(payload) ? payload : (payload?.files || [])
+        if (!files || files.length === 0) return
+        handler(files, payload?.details)
+    })
+    return true
 }
 
-export function unregisterNativeFileDrop(): void {}
+export function unregisterNativeFileDrop(): void {
+    if (dropUnsubscriber) {
+        dropUnsubscriber()
+        dropUnsubscriber = null
+    }
+}
+

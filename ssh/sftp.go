@@ -94,7 +94,11 @@ func (tm *TransferManager) create(sessionID, kind, name, localPath, remotePath s
 		StartedAt:  time.Now().UnixMilli(),
 		UpdatedAt:  time.Now().UnixMilli(),
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+	baseCtx := tm.ctx
+	if baseCtx == nil {
+		baseCtx = context.Background()
+	}
+	ctx, cancel := context.WithCancel(baseCtx)
 
 	tm.mu.Lock()
 	tm.items[t.ID] = t
@@ -166,6 +170,19 @@ func (tm *TransferManager) Cancel(id string) {
 	tm.mu.Unlock()
 	if cancel != nil {
 		cancel()
+	}
+}
+
+// CancelAll 取消所有正在运行的传输任务。
+func (tm *TransferManager) CancelAll() {
+	tm.mu.Lock()
+	cancels := make([]context.CancelFunc, 0, len(tm.cancels))
+	for _, c := range tm.cancels {
+		cancels = append(cancels, c)
+	}
+	tm.mu.Unlock()
+	for _, c := range cancels {
+		c()
 	}
 }
 
@@ -513,7 +530,11 @@ func (m *SessionManager) downloadTree(tm *TransferManager, ctx context.Context, 
 		rel = strings.TrimPrefix(rel, "/")
 		local := localRoot
 		if rel != "" {
-			local = filepath.Join(localRoot, filepath.FromSlash(rel))
+			cleanRel := filepath.Clean(filepath.FromSlash(rel))
+			if strings.HasPrefix(cleanRel, "..") || filepath.IsAbs(cleanRel) {
+				continue // 忽略恶意或非法的相对路径跳逸
+			}
+			local = filepath.Join(localRoot, cleanRel)
 		}
 		st := walker.Stat()
 		if st.IsDir() {

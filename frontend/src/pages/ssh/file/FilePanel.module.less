@@ -150,7 +150,11 @@
 }
 
 /* Wails 原生拖放激活类（运行时注入，非 CSS Modules 作用域） */
-.filePanel.wails-drop-target-active .dropHint,
-.filePanel.drag-over .dropHint {
+.filePanel:global(.file-drop-target-active) .dropHint,
+.filePanel:global(.wails-drop-target-active) .dropHint,
+.filePanel.dragOver .dropHint,
+.filePanel.drag-over .dropHint,
+:global(.file-drop-target-active) .dropHint {
     display: flex;
 }
+

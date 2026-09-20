@@ -171,13 +171,16 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     }, [activeSshId])
 
     useEffect(() => {
-        const ok = registerNativeFileDrop((paths) => {
-            const sessionId = activeIdRef.current
+        const ok = registerNativeFileDrop((paths, details) => {
+            const attrs = details?.attributes || {}
+            const attrSessionId = attrs['data-session-id'] || attrs['data-session']
+            const attrPath = attrs['data-path']
+            const sessionId = attrSessionId || activeIdRef.current
             if (!sessionId) {
                 message.warning('请先连接服务器再拖入文件')
                 return
             }
-            const remoteDir = pathsRef.current[sessionId] || '/'
+            const remoteDir = attrPath || pathsRef.current[sessionId] || '/'
             API.uploadPaths(sessionId, remoteDir, paths).catch((err) =>
                 message.error(errorMessage(err))
             )

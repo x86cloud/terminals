@@ -5,9 +5,11 @@ import (
 	"embed"
 	"log"
 
+	"terminal/core"
 	"terminal/services"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 )
 
 //go:embed all:frontend/dist
@@ -68,7 +70,7 @@ func main() {
 		},
 	})
 
-	app.Window.NewWithOptions(application.WebviewWindowOptions{
+	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:             "main",
 		Title:            "xClient",
 		Width:            1920,
@@ -78,6 +80,16 @@ func main() {
 		Frameless:        true,
 		BackgroundColour: application.NewRGB(20, 22, 25),
 		URL:              "/",
+		EnableFileDrop:   true,
+	})
+
+	win.OnWindowEvent(events.Common.WindowFilesDropped, func(event *application.WindowEvent) {
+		files := event.Context().DroppedFiles()
+		details := event.Context().DropTargetDetails()
+		core.EmitEvent("files:dropped", map[string]any{
+			"files":   files,
+			"details": details,
+		})
 	})
 
 	container.Startup(context.Background())

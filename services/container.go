@@ -81,9 +81,11 @@ func (c *Container) Startup(ctx context.Context) {
 }
 
 func (c *Container) Shutdown(ctx context.Context) {
+	c.Transfers.CancelAll()
 	c.Sessions.CloseAll()
 	c.RedisMgr.CloseAll()
 	c.MysqlMgr.CloseAll()
+	c.PostgresMgr.CloseAll()
 	c.MqttMgr.CloseAll()
 	c.MongoMgr.CloseAll()
 	c.SqliteMgr.CloseAll()

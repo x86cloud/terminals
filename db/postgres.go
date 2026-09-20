@@ -520,6 +520,32 @@ func (m *PostgresManager) PostgresCloseEx(serverID string) {
 	m.configs.Delete(serverID)
 }
 
+// CloseAll 关闭所有 PostgreSQL 连接池与 SSH 隧道。
+func (m *PostgresManager) CloseAll() {
+	m.pools.Range(func(key, value any) bool {
+		if pool, ok := value.(*pgxpool.Pool); ok {
+			pool.Close()
+		}
+		m.pools.Delete(key)
+		return true
+	})
+
+	m.tunnels.Range(func(key, value any) bool {
+		if tun, ok := value.(*pgSshTunnel); ok {
+			_ = tun.l.Close()
+			_ = tun.client.Close()
+		}
+		m.tunnels.Delete(key)
+		return true
+	})
+
+	m.configs.Range(func(key, value any) bool {
+		m.configs.Delete(key)
+		return true
+	})
+}
+
+
 // ListConnections 列出当前所有已建立连接的 PostgreSQL 数据库实例。
 func (m *PostgresManager) ListConnections() []map[string]any {
 	list := make([]map[string]any, 0)
