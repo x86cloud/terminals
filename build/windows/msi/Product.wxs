@@ -193,9 +193,9 @@
         ' 35 = vbYesNoCancel (3) + vbQuestion (32)
         res = MsgBox("您即将卸载 Terminal。" & vbCrLf & vbCrLf & _
                      "是否保留本地保存的连接配置与个性化数据？" & vbCrLf & vbCrLf & _
-                     "• 点击【是(Yes)】：仅卸载主程序，安全保留所有连接与配置（推荐）" & vbCrLf & _
-                     "• 点击【否(No)】：卸载主程序，并彻底清除本地所有连接配置与缓存数据" & vbCrLf & _
-                     "• 点击【取消(Cancel)】：取消本次卸载操作并退出", _
+                     "- 点击【是(Yes)】：仅卸载主程序，安全保留所有连接与配置（推荐）" & vbCrLf & _
+                     "- 点击【否(No)】：卸载主程序，并彻底清除本地所有连接配置与缓存数据" & vbCrLf & _
+                     "- 点击【取消(Cancel)】：取消本次卸载操作并退出", _
                      35, "Terminal 卸载向导")
         If res = 2 Then
             ' 用户取消卸载
