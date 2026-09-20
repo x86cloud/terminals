@@ -144,78 +144,68 @@ export default function KeysTab({
                                 options={Array.from({ length: 16 }, (_, i) => ({ value: i, label: `DB ${i}` }))}
                                 className={k.dbSelect}
                             />
-                            <span className={k.redisDbCount}>
-                                {data.keys.length} 键 / 共 {session.dbSize || 0}
+                            <span className={k.redisDbCount} title={`${data.keys.length} 键 / 共 ${session.dbSize || 0}`}>
+                                {data.keys.length} / {session.dbSize || 0}
                             </span>
-                            <div className={k.sideActions}>
-                                {onOpenCreateKey && (
-                                    <Tooltip title="新建键 (Create Key)">
-                                        <Button
-                                            size="small"
-                                            type="text"
-                                            icon={<Plus size={13} />}
-                                            onClick={onOpenCreateKey}
-                                        />
-                                    </Tooltip>
-                                )}
-                                <Tooltip title="重新扫描 (SCAN)">
+                        </div>
+                        <div className={k.sideActions}>
+                            {onOpenCreateKey && (
+                                <Tooltip title="新建键 (Create Key)">
                                     <Button
                                         size="small"
                                         type="text"
-                                        icon={<RotateCw size={13} />}
-                                        onClick={() => loadKeys(true)}
+                                        icon={<Plus size={13} />}
+                                        onClick={onOpenCreateKey}
                                     />
                                 </Tooltip>
-                                {String(data.cursor) !== '0' && (
-                                    <Tooltip title="加载更多键">
-                                        <Button
-                                            size="small"
-                                            type="text"
-                                            icon={<Download size={13} />}
-                                            onClick={() => loadKeys(false)}
-                                        >
-                                            更多
-                                        </Button>
-                                    </Tooltip>
-                                )}
-                            </div>
+                            )}
+                            <Tooltip title="重新扫描 (SCAN)">
+                                <Button
+                                    size="small"
+                                    type="text"
+                                    icon={<RotateCw size={13} />}
+                                    onClick={() => loadKeys(true)}
+                                />
+                            </Tooltip>
+                            {String(data.cursor) !== '0' && (
+                                <Tooltip title="加载更多键">
+                                    <Button
+                                        size="small"
+                                        type="text"
+                                        icon={<Download size={13} />}
+                                        onClick={() => loadKeys(false)}
+                                    >
+                                        更多
+                                    </Button>
+                                </Tooltip>
+                            )}
                         </div>
+                    </div>
 
-                        {/* Remote pattern search */}
-                        <div className={k.searchRow}>
-                            <Input
-                                size="small"
-                                placeholder="匹配模式 (如: user:*)..."
-                                value={pattern}
-                                prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
-                                allowClear
-                                onChange={(e) => setPattern(e.target.value)}
-                                onPressEnter={() => loadKeys(true)}
-                                className={k.searchInput}
-                            />
-                            <Segmented
-                                size="small"
-                                value={viewMode}
-                                onChange={(v) => setViewMode(v as 'tree' | 'flat')}
-                                options={[
-                                    { value: 'tree', icon: <Folder size={12} /> },
-                                    { value: 'flat', icon: <TableIcon size={12} /> },
-                                ]}
-                            />
-                        </div>
-
-                        {/* Local fast filter */}
-                        <div className={k.filterRow}>
-                            <Input
-                                size="small"
-                                placeholder="过滤已扫描出的键..."
-                                value={localFilter}
-                                prefix={<Filter size={11} style={{ color: 'var(--text-dim)' }} />}
-                                allowClear
-                                onChange={(e) => setLocalFilter(e.target.value)}
-                                className={k.filterInput}
-                            />
-                        </div>
+                    <div className={k.searchBar}>
+                        <Input
+                            size="small"
+                            placeholder="搜索/过滤 (回车远程 SCAN)..."
+                            value={localFilter || (pattern !== '*' ? pattern : '')}
+                            prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
+                            allowClear
+                            onChange={(e) => {
+                                const val = e.target.value
+                                setLocalFilter(val)
+                                setPattern(val ? (val.includes('*') ? val : `*${val}*`) : '*')
+                            }}
+                            onPressEnter={() => loadKeys(true)}
+                            className={k.searchInput}
+                        />
+                        <Segmented
+                            size="small"
+                            value={viewMode}
+                            onChange={(v) => setViewMode(v as 'tree' | 'flat')}
+                            options={[
+                                { value: 'tree', icon: <Folder size={12} /> },
+                                { value: 'flat', icon: <TableIcon size={12} /> },
+                            ]}
+                        />
                     </div>
 
                     <div className={k.redisKeys}>

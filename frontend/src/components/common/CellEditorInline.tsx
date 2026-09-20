@@ -6,11 +6,13 @@ export default function CellEditorInline({
     isNull,
     onCommit,
     onCancel,
+    onSave,
 }: {
     value: string
     isNull: boolean
     onCommit: (v: string, n: boolean) => void
     onCancel: () => void
+    onSave?: (v: string, n: boolean) => void
 }) {
     const [txt, setTxt] = useState(isNull ? '' : value)
     const dirtyRef = useRef(false)
@@ -24,6 +26,21 @@ export default function CellEditorInline({
             onCancel()
         } else {
             onCommit(val, isN)
+        }
+    }
+
+    const handleSave = (val: string, isN: boolean) => {
+        if (closedRef.current) return
+        closedRef.current = true
+        if (!dirtyRef.current) {
+            onCancel()
+            onSave?.(val, isN)
+        } else {
+            if (onSave) {
+                onSave(val, isN)
+            } else {
+                onCommit(val, isN)
+            }
         }
     }
 
@@ -44,7 +61,11 @@ export default function CellEditorInline({
                     setTxt(e.target.value)
                 }}
                 onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
+                    if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleSave(txt, false)
+                    } else if (e.key === 'Enter') {
                         e.preventDefault()
                         handleCommit(txt, false)
                     } else if (e.key === 'Escape') {

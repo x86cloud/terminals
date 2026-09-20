@@ -8,6 +8,7 @@
     padding: 16px;
     flex: 1;
     overflow-y: auto;
+    background: @bg-1;
 }
 
 .row {
@@ -64,7 +65,7 @@
     max-height: 200px;
     overflow-y: auto;
     background: @bg-2;
-    border: 1px solid @border;
+    border: 1px solid color-mix(in srgb, @border 75%, transparent);
     border-radius: @radius-sm;
     padding: 8px;
 }
@@ -74,9 +75,9 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    font-family: monospace;
+    font-family: @font-mono;
     padding: 4px 6px;
-    border-bottom: 1px dashed @border;
+    border-bottom: 1px dashed color-mix(in srgb, @border 50%, transparent);
 
     &:last-child {
         border-bottom: none;
@@ -99,7 +100,7 @@
 
 .redisEmpty {
     color: @text-dim;
-    font-size: 13px;
+    font-size: 12.5px;
     text-align: center;
     padding: 24px 0;
 }

@@ -4,31 +4,107 @@
 .redisPane {
     display: flex;
     flex-direction: column;
-    flex: 1;
-    .fill();
+    height: 100%;
     width: 100%;
     min-height: 0;
+    overflow: hidden;
+    background: @bg-1;
 }
 
-.redisTop {
+.tabBar {
+    height: 36px;
+    min-height: 36px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    padding: 0;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+.tabList {
+    display: flex;
+    align-items: stretch;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.tabItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: @text-dim;
+    background: transparent;
+    border: none;
+    border-right: 1px solid color-mix(in srgb, @border 70%, transparent);
+    border-radius: 0;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    height: 100%;
+    box-sizing: border-box;
+
+    &:hover {
+        color: @text;
+        background: color-mix(in srgb, @bg-1 55%, transparent);
+    }
+
+    &.active {
+        color: @accent;
+        background: @bg-1;
+        font-weight: 600;
+        box-shadow: 0 -2px 0 @accent inset;
+    }
+}
+
+.tabRight {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 0 12px;
-    border-bottom: 1px solid @border;
-    background: @bg-1;
+    flex-shrink: 0;
+}
 
-    :global {
-        .ant-tabs-nav {
-            margin-bottom: 0 !important;
-        }
-    }
+.statusTag {
+    font-size: 11px;
+    padding: 1px 7px;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: 4px;
+    color: @text-dim;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    line-height: 1.5;
+}
+
+.contentArea {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: @bg-1;
 }
 
 .redisMsg {
-    background: rgba(230, 162, 60, 0.15);
+    background: rgba(230, 162, 60, 0.1);
     color: #e6a23c;
-    padding: 6px 10px;
+    padding: 4px 10px;
     font-size: 12px;
     border-bottom: 1px solid @border;
 }

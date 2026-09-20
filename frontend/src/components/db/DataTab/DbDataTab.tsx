@@ -274,23 +274,38 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
     }
 
     // 提交保存所有修改
-    const handleSaveAll = async () => {
-        if (pkList.length === 0 && Object.keys(rowDrafts).length > 0) {
+    const handleSaveAll = async (
+        customDrafts?: Record<number, Record<string, any>>,
+        customNewRows?: Record<string, any>[]
+    ) => {
+        const targetDrafts = customDrafts !== undefined ? customDrafts : rowDrafts
+        const targetNewRows = customNewRows !== undefined ? customNewRows : newRows
+
+        const hasDrafts = Object.keys(targetDrafts).length > 0
+        const hasNew = targetNewRows.length > 0
+
+        if (!hasDrafts && !hasNew) {
+            return
+        }
+
+        if (pkList.length === 0 && hasDrafts) {
             message.error('该表未定义主键，无法执行基于主键的精确更新！')
             return
         }
 
         setSaving(true)
         try {
-            if (Object.keys(rowDrafts).length > 0) {
-                await adapter.updateRows(rowDrafts, rows, pkList)
+            if (hasDrafts) {
+                await adapter.updateRows(targetDrafts, rows, pkList)
             }
-            if (newRows.length > 0) {
-                await adapter.insertRows(newRows)
+            if (hasNew) {
+                await adapter.insertRows(targetNewRows)
             }
 
             setRowDrafts({})
             setNewRows([])
+            setEditingCell(null)
+            setEditingNewCell(null)
             message.success('数据已成功保存')
             loadData(page, pageSize, activeWhere)
         } catch (e: any) {
@@ -299,6 +314,73 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             setSaving(false)
         }
     }
+
+    // 单元格快捷键 Ctrl+S 保存 (已有行)
+    const handleSaveCellInline = (rowIdx: number, col: string, val: any, isNull: boolean) => {
+        setEditingCell(null)
+        const origVal = rows[rowIdx]?.[col]
+        const newVal = isNull ? null : val
+        let nextDrafts = { ...rowDrafts }
+        if (isSameCellValue(origVal, newVal)) {
+            if (nextDrafts[rowIdx]) {
+                const rowCopy = { ...nextDrafts[rowIdx] }
+                delete rowCopy[col]
+                if (Object.keys(rowCopy).length === 0) {
+                    delete nextDrafts[rowIdx]
+                } else {
+                    nextDrafts[rowIdx] = rowCopy
+                }
+            }
+        } else {
+            const coerced = coerceCellValue(origVal, val, isNull)
+            nextDrafts = {
+                ...nextDrafts,
+                [rowIdx]: {
+                    ...(nextDrafts[rowIdx] || {}),
+                    [col]: coerced,
+                },
+            }
+        }
+        setRowDrafts(nextDrafts)
+        void handleSaveAll(nextDrafts, newRows)
+    }
+
+    // 单元格快捷键 Ctrl+S 保存 (新增行)
+    const handleSaveNewCellInline = (rowIdx: number, col: string, val: any, isNull: boolean) => {
+        setEditingNewCell(null)
+        const nextNewRows = [...newRows]
+        nextNewRows[rowIdx] = {
+            ...nextNewRows[rowIdx],
+            [col]: isNull ? null : val,
+        }
+        setNewRows(nextNewRows)
+        void handleSaveAll(rowDrafts, nextNewRows)
+    }
+
+    // 监听全局 Ctrl+S / ⌘S 快捷键保存数据
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
+                if (viewMode === 'data') {
+                    // 如果正在使用内置的 CellEditorInline 编辑，由 CellEditorInline 自身的 onSave 优先处理
+                    const activeTag = document.activeElement?.tagName
+                    if (activeTag === 'INPUT' && document.activeElement?.classList.contains('cellInput')) {
+                        return
+                    }
+                    e.preventDefault()
+                    e.stopPropagation()
+                    if (saving || loading) return
+                    const hasDrafts = Object.keys(rowDrafts).length > 0 || newRows.length > 0
+                    if (hasDrafts) {
+                        void handleSaveAll()
+                    }
+                }
+            }
+        }
+
+        window.addEventListener('keydown', handleKeyDown)
+        return () => window.removeEventListener('keydown', handleKeyDown)
+    }, [viewMode, saving, loading, rowDrafts, newRows, pkList, rows, adapter, page, pageSize, activeWhere])
 
     // 放弃所有草稿修改
     const handleDiscardAll = () => {
@@ -697,16 +779,18 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 新增行
                             </Button>
 
-                            <Button
-                                size="small"
-                                type={dirtyCount > 0 ? 'primary' : 'default'}
-                                icon={<Save size={13} />}
-                                disabled={dirtyCount === 0 || saving}
-                                loading={saving}
-                                onClick={handleSaveAll}
-                            >
-                                保存修改 {dirtyCount > 0 ? '(' + dirtyCount + ')' : ''}
-                            </Button>
+                            <Tooltip title="保存修改 (快捷键: Ctrl+S / ⌘S)">
+                                <Button
+                                    size="small"
+                                    type={dirtyCount > 0 ? 'primary' : 'default'}
+                                    icon={<Save size={13} />}
+                                    disabled={dirtyCount === 0 || saving}
+                                    loading={saving}
+                                    onClick={() => handleSaveAll()}
+                                >
+                                    保存修改 {dirtyCount > 0 ? '(' + dirtyCount + ')' : ''}
+                                </Button>
+                            </Tooltip>
 
                             {dirtyCount > 0 && (
                                 <Button size="small" onClick={handleDiscardAll} disabled={saving}>
@@ -788,6 +872,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                         value={val !== undefined && val !== null ? String(val) : ''}
                                                         isNull={val === null}
                                                         onCommit={(v, isN) => handleCommitNewCell(nIdx, c, v, isN)}
+                                                        onSave={(v, isN) => handleSaveNewCellInline(nIdx, c, v, isN)}
                                                         onCancel={() => setEditingNewCell(null)}
                                                     />
                                                 ) : val === null ? (
@@ -844,6 +929,9 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                             isNull={isNull}
                                                             onCommit={(v, isN) =>
                                                                 handleCommitCell(rIdx, c, v, isN)
+                                                            }
+                                                            onSave={(v, isN) =>
+                                                                handleSaveCellInline(rIdx, c, v, isN)
                                                             }
                                                             onCancel={() => setEditingCell(null)}
                                                         />

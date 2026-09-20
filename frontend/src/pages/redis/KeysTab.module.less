@@ -8,6 +8,7 @@
     min-height: 0;
     overflow: hidden;
     position: relative;
+    background: @bg-1;
 }
 
 .keysContent {
@@ -21,10 +22,11 @@
     border-right: 1px solid @border;
     display: flex;
     flex-direction: column;
-    background: @bg-1;
+    background: @bg-2;
     flex-shrink: 0;
     user-select: none;
     overflow: hidden;
+    height: 100%;
 }
 
 .splitResizer {
@@ -43,23 +45,27 @@
 }
 
 .redisSideHead {
+    height: 36px;
+    padding: 0 8px 0 10px;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding: 8px 10px;
+    align-items: center;
+    justify-content: space-between;
     border-bottom: 1px solid @border;
-    background: @bg-1;
+    background: @bg-2;
     flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .dbRow {
     display: flex;
     align-items: center;
     gap: 6px;
+    flex: 1;
+    min-width: 0;
 }
 
 .dbSelect {
-    width: 84px;
+    width: 82px;
 }
 
 .redisDbCount {
@@ -75,12 +81,17 @@
     display: flex;
     align-items: center;
     gap: 2px;
+    flex-shrink: 0;
 }
 
-.searchRow {
+.searchBar {
+    padding: 6px 8px;
     display: flex;
     align-items: center;
     gap: 6px;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
+    flex-shrink: 0;
 }
 
 .searchInput {
@@ -88,34 +99,29 @@
     min-width: 0;
 }
 
-.filterRow {
-    display: flex;
-    align-items: center;
-}
-
-.filterInput {
-    width: 100%;
-}
-
 .redisKeys {
     flex: 1;
     overflow-y: auto;
+    overflow-x: hidden;
     padding: 4px;
+    min-height: 0;
+    background: @bg-2;
 }
 
 .redisKey {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 5px 8px;
+    padding: 4px 8px;
     border-radius: @radius-sm;
     cursor: pointer;
     font-size: 12px;
     color: @text;
-    transition: background 0.1s;
+    transition: all 0.12s ease;
+    user-select: none;
 
     &:hover {
-        background: @bg-2;
+        background: color-mix(in srgb, @bg-1 70%, transparent);
 
         .keyDelBtn {
             opacity: 1;
@@ -133,6 +139,7 @@
     flex: 1;
     min-width: 0;
     font-family: @font-mono;
+    font-size: 12px;
     .ellipsis();
 }
 
@@ -141,7 +148,7 @@
     align-items: center;
     justify-content: center;
     font-size: 9.5px;
-    font-weight: 700;
+    font-weight: 600;
     font-family: @font-mono;
     padding: 1px 4px;
     border-radius: 3px;
@@ -172,7 +179,7 @@
 
 .redisEmpty {
     color: @text-dim;
-    font-size: 13px;
+    font-size: 12.5px;
     text-align: center;
     padding: 40px 16px;
     display: flex;
@@ -184,11 +191,12 @@
 .redisMain {
     flex: 1;
     min-width: 0;
+    min-height: 0;
     display: flex;
     flex-direction: column;
-    padding: 12px;
-    gap: 12px;
-    background: @bg-2;
+    padding: 0;
+    gap: 0;
+    background: @bg-1;
     overflow: hidden;
 }
 
@@ -199,15 +207,14 @@
     align-items: center;
     justify-content: center;
     background: @bg-1;
-    border: 1px dashed @border;
-    border-radius: @radius-lg;
+    border: none;
     gap: 12px;
     color: @text-dim;
     padding: 30px;
 }
 
 .emptyTitle {
-    font-size: 15px;
+    font-size: 14.5px;
     font-weight: 600;
     color: @text;
 }

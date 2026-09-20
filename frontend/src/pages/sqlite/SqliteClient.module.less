@@ -20,35 +20,50 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 10px;
+    height: 36px;
+    padding: 0 10px;
     border-bottom: 1px solid @border;
     color: @text-dim;
+    box-sizing: border-box;
+}
+
+.sqliteTitleWrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    overflow: hidden;
+    min-width: 0;
+    user-select: none;
+    padding: 2px 4px;
+    border-radius: @radius-sm;
+    transition: all 0.15s ease;
+
+    &:hover {
+        background: color-mix(in srgb, @bg-2 70%, transparent);
+
+        .sqliteTitle {
+            color: @accent;
+        }
+    }
 }
 
 .sqliteTitle {
     font-weight: 600;
+    font-size: 13px;
     color: @text;
-}
-
-.sqlitePath {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 10px;
-    font-size: 12px;
-    color: @text-dim;
-    border-bottom: 1px solid @border;
     overflow: hidden;
-    white-space: nowrap;
     text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: color 0.15s ease;
 }
 
 .sqliteStatus {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px 8px;
-    font-size: 12px;
+    padding: 6px 10px 4px;
+    font-size: 11.5px;
     color: @text-dim;
 }
 

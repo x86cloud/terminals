@@ -8,6 +8,7 @@
     padding: 16px;
     flex: 1;
     overflow-y: auto;
+    background: @bg-1;
 }
 
 .subHead {
@@ -47,7 +48,7 @@
     max-height: 280px;
     overflow-y: auto;
     background: @bg-2;
-    border: 1px solid @border;
+    border: 1px solid color-mix(in srgb, @border 75%, transparent);
     border-radius: @radius-sm;
     padding: 8px;
 }
@@ -57,9 +58,9 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    font-family: monospace;
+    font-family: @font-mono;
     padding: 4px 6px;
-    border-bottom: 1px dashed @border;
+    border-bottom: 1px dashed color-mix(in srgb, @border 50%, transparent);
 
     &:last-child {
         border-bottom: none;
@@ -81,7 +82,7 @@
 }
 
 .redisMsg {
-    background: rgba(230, 162, 60, 0.15);
+    background: rgba(230, 162, 60, 0.12);
     color: #e6a23c;
     padding: 6px 10px;
     border-radius: @radius-sm;

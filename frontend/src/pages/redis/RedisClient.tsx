@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Tabs, Tag, Button, message } from 'antd'
+import { message } from 'antd'
+import { Database, Zap, ShieldCheck, Radio, Bell, ListOrdered, Activity } from 'lucide-react'
 import { API, subscribe } from '@/api'
 import type {
     RedisKeysResult,
@@ -33,6 +34,16 @@ import QueueTab from '@/pages/redis/QueueTab'
 import MonitorTab from '@/pages/redis/MonitorTab'
 import g from '@/styles/global.module.less'
 import r from '@/pages/redis/RedisClient.module.less'
+
+const TAB_ICONS: Record<Tab, React.ReactNode> = {
+    keys: <Database size={13} />,
+    pipeline: <Zap size={13} />,
+    tx: <ShieldCheck size={13} />,
+    pubsub: <Radio size={13} />,
+    keyspace: <Bell size={13} />,
+    queue: <ListOrdered size={13} />,
+    monitor: <Activity size={13} />,
+}
 
 interface Props {
     session: RedisSessionInfo
@@ -468,27 +479,51 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
 
     return (
         <div className={r.redisPane}>
-            <div className={r.redisTop}>
-                <Tabs
-                    size="small"
-                    activeKey={tab}
-                    onChange={(v) => setTab(v as Tab)}
-                    items={TABS.map((t) => ({ key: t, label: TAB_LABEL[t] }))}
-                    tabBarStyle={{ marginBottom: 0 }}
-                    style={{ flex: 1, minWidth: 0 }}
-                />
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                    {session.mode && <Tag color="blue">{session.mode}</Tag>}
+            <div className={r.tabBar}>
+                <div className={r.tabList}>
+                    {TABS.map((t) => (
+                        <div
+                            key={t}
+                            className={`${r.tabItem} ${tab === t ? r.active : ''}`}
+                            onClick={() => setTab(t)}
+                        >
+                            {TAB_ICONS[t]}
+                            <span>{TAB_LABEL[t]}</span>
+                        </div>
+                    ))}
+                </div>
+                <div className={r.tabRight}>
+                    {session.mode && (
+                        <span className={r.statusTag}>
+                            {session.mode}
+                        </span>
+                    )}
                     {session.breaker && (
-                        <Tag color={session.breaker === 'closed' ? 'green' : session.breaker === 'half_open' ? 'orange' : 'red'}>
+                        <span
+                            className={r.statusTag}
+                            style={{
+                                color:
+                                    session.breaker === 'closed'
+                                        ? 'var(--success)'
+                                        : session.breaker === 'half_open'
+                                          ? 'var(--warning)'
+                                          : 'var(--danger)',
+                                borderColor:
+                                    session.breaker === 'closed'
+                                        ? 'color-mix(in srgb, var(--success) 35%, transparent)'
+                                        : session.breaker === 'half_open'
+                                          ? 'color-mix(in srgb, var(--warning) 35%, transparent)'
+                                          : 'color-mix(in srgb, var(--danger) 35%, transparent)',
+                            }}
+                        >
                             {session.breaker}
-                        </Tag>
+                        </span>
                     )}
                 </div>
-
             </div>
 
-            {tab === 'keys' && (
+            <div className={r.contentArea}>
+                {tab === 'keys' && (
                 <KeysTab
                     session={session}
                     pattern={pattern}
@@ -601,6 +636,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
                     refreshMonitor={refreshMonitor}
                 />
             )}
+            </div>
             <CreateKeyModal
                 open={createKeyOpen}
                 currentDb={db}

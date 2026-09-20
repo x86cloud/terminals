@@ -7,8 +7,8 @@
     flex: 1;
     min-height: 0;
     background: @bg-1;
-    border: 1px solid @border;
-    border-radius: @radius-lg;
+    border: none;
+    border-radius: 0;
     overflow: hidden;
 }
 
@@ -17,9 +17,13 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 8px 12px;
+    height: 36px;
+    min-height: 36px;
+    padding: 0 12px;
     border-bottom: 1px solid @border;
-    background: @bg-elev;
+    background: @bg-2;
+    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .toolbarLeft {
@@ -42,7 +46,7 @@
 }
 
 .countBadge {
-    font-size: 12px;
+    font-size: 11.5px;
     color: @text-dim;
     white-space: nowrap;
 }
@@ -51,6 +55,7 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
+    background: @bg-1;
 }
 
 .cellValue {
@@ -81,18 +86,24 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    padding: 10px;
+    padding: 8px 12px;
     gap: 8px;
+    background: @bg-1;
 }
 
 .footerBar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 12px;
+    height: 28px;
+    min-height: 28px;
+    padding: 0 12px;
     border-top: 1px solid @border;
-    background: @bg-elev;
-    font-size: 12px;
+    background: @bg-2;
+    font-size: 11.5px;
+    color: @text-dim;
+    flex-shrink: 0;
+    box-sizing: border-box;
 }
 
 .stringModeTabs {
@@ -109,8 +120,8 @@
 
 .streamCard {
     background: @bg-2;
-    border: 1px solid @border;
-    border-radius: @radius-md;
+    border: 1px solid color-mix(in srgb, @border 70%, transparent);
+    border-radius: @radius-sm;
     padding: 8px 12px;
     margin-bottom: 8px;
 }

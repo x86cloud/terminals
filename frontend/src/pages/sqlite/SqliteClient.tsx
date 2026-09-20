@@ -3,8 +3,6 @@ import { Button, Space, Tooltip, Input, Dropdown, MenuProps, message } from 'ant
 import {
     Database,
     Plus,
-    Folder,
-    FileText,
     Table,
     RotateCw,
     Trash2,
@@ -103,22 +101,13 @@ export default function SqliteClient({ session, onClose }: Props) {
         void loadInfo()
     }, [loadTables, loadInfo])
 
-    const switchFile = async () => {
-        try {
-            const path = await API.sqliteOpenFile()
-            if (!path) return
-            setBusy(true)
-            setError('')
-            setPathError('')
-            const ok = await API.sqliteConnect(id, path)
-            if (!ok) throw new Error('无法打开该 SQLite 文件')
-            await Promise.all([loadTables(), loadInfo()])
-        } catch (e) {
-            setPathError(errorMessage(e))
-            setError(errorMessage(e))
-        } finally {
-            setBusy(false)
+    const copyPath = () => {
+        if (!info.path) {
+            message.warning('暂无文件路径')
+            return
         }
+        navigator.clipboard.writeText(info.path)
+        message.success('已复制文件路径')
     }
 
     // 打开数据表 Tab
@@ -329,14 +318,15 @@ export default function SqliteClient({ session, onClose }: Props) {
             {/* 左侧侧边栏 */}
             <aside className={sq.sqliteSide}>
                 <div className={sq.sqliteHead}>
-                    <Database size={15} style={{ color: '#faad14' }} />
-                    <span className={sq.sqliteTitle} title={session.title || 'SQLite'}>
-                        {session.title || 'SQLite'}
-                    </span>
+                    <Tooltip title={info.path ? info.path : 'unkown'}>
+                        <div className={sq.sqliteTitleWrap} onClick={copyPath}>
+                            <Database size={15} style={{ color: '#faad14', flexShrink: 0 }} />
+                            <span className={sq.sqliteTitle}>
+                                {session.title || 'SQLite'}
+                            </span>
+                        </div>
+                    </Tooltip>
                     <Space size={2} style={{ marginLeft: 'auto' }}>
-                        <Tooltip title="切换文件">
-                            <Button size="small" type="text" icon={<Folder size={12} />} onClick={switchFile} />
-                        </Tooltip>
                         <Tooltip title="新建数据表">
                             <Button size="small" type="text" icon={<Plus size={12} />} onClick={handleOpenCreateModal} />
                         </Tooltip>
@@ -361,13 +351,6 @@ export default function SqliteClient({ session, onClose }: Props) {
                             </Tooltip>
                         )}
                     </Space>
-                </div>
-
-                <div className={sq.sqlitePath} title={info.path}>
-                    <FileText size={12} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {info.path || '未选择文件'}
-                    </span>
                 </div>
 
                 <div className={sq.sqliteStatus}>
