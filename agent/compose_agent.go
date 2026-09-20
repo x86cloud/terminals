@@ -45,7 +45,7 @@ func GenerateDockerCompose(ctx context.Context, images []string, userPrompt stri
 
 	systemPrompt := `你是一位顶尖的容器化与 DevOps 架构专家，专职编写符合现代 Docker Compose 规范的 docker-compose.yml 配置文件。
 【编写规范】:
-1. 采用通用稳定的 Docker Compose 标准语法（如 version: '3.8' 或现代 Compose Spec），顶层包含 services、volumes、networks 等必要块。
+1. 采用现代官方推荐的 Docker Compose Spec 标准语法（遵循现代规范无需编写顶层 version 属性），顶层直接包含 services、volumes、networks 等必要块。
 2. 为每个服务配置合理的 service 名称、container_name、image（必须准确使用用户选定或推荐的镜像及版本标签）。
 3. 声明明确的端口映射 (ports: - "宿主机:容器")、环境变量 (environment) 与重启策略 (restart: unless-stopped 或 always)。
 4. 如果服务涉及数据持久化（如 MySQL、PostgreSQL、Redis、MongoDB、MinIO 等），必须配置规范的持久化数据卷 (volumes) 并在顶层 volumes 区域声明具名卷或主机挂载目录。

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import {
     Play,
     Square,
@@ -16,6 +16,7 @@ import {
     Sparkles,
     Terminal,
     RotateCcw,
+    Sliders,
 } from 'lucide-react'
 import {
     Table as AntTable,
@@ -31,6 +32,7 @@ import {
     Switch as AntSwitch,
     message,
     Tooltip as AntTooltip,
+    Collapse as AntCollapse,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { API } from '@/api'
@@ -43,6 +45,66 @@ import type {
 } from '@/types'
 import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
 import s from './DockerClient.module.less'
+
+export interface ParsedEnvVar {
+    name: string
+    defaultValue: string
+    hasDefault: boolean
+    occurrences: number
+}
+
+// 自动从 Compose YAML 文本中扫描 ${VAR}、${VAR:-default}、${VAR-default}、${VAR:?err} 及 $VAR 占位符
+export function scanEnvVarsFromYaml(content: string): ParsedEnvVar[] {
+    if (!content) return []
+    const map = new Map<string, ParsedEnvVar>()
+
+    // 1. 匹配 ${VAR:-default} 或 ${VAR-default} 或 ${VAR:?err} 或 ${VAR} (忽略转义 $$)
+    const bracketRegex = /(?<!\$)\$\{([a-zA-Z_0-9]+)(?::?[-?]([^}]*))?\}/g
+    let match: RegExpExecArray | null
+    while ((match = bracketRegex.exec(content)) !== null) {
+        const name = match[1]
+        if (!name || /^\d+$/.test(name)) continue
+
+        const hasDefault = match[2] !== undefined
+        const defaultValue = match[2] !== undefined ? match[2] : ''
+
+        const existing = map.get(name)
+        if (existing) {
+            existing.occurrences++
+            if (!existing.hasDefault && hasDefault) {
+                existing.defaultValue = defaultValue
+                existing.hasDefault = true
+            }
+        } else {
+            map.set(name, {
+                name,
+                defaultValue,
+                hasDefault,
+                occurrences: 1,
+            })
+        }
+    }
+
+    // 2. 匹配简单变量 $VAR
+    const simpleRegex = /(?<!\$)\$([a-zA-Z_][a-zA-Z0-9_]*)(?![a-zA-Z0-9_{])/g
+    while ((match = simpleRegex.exec(content)) !== null) {
+        const name = match[1]
+        if (!name) continue
+        const existing = map.get(name)
+        if (existing) {
+            existing.occurrences++
+        } else {
+            map.set(name, {
+                name,
+                defaultValue: '',
+                hasDefault: false,
+                occurrences: 1,
+            })
+        }
+    }
+
+    return Array.from(map.values())
+}
 
 interface Props {
     serverId: string
@@ -63,9 +125,7 @@ interface MergedComposeItem {
 }
 
 const DEFAULT_COMPOSE_NAME = 'nginx-web'
-const DEFAULT_COMPOSE_YAML = `version: '3.8'
-
-services:
+const DEFAULT_COMPOSE_YAML = `services:
   web:
     image: nginx:alpine
     container_name: nginx-web
@@ -88,10 +148,16 @@ export default function ComposeTab({ serverId }: Props) {
     const [currentRecordId, setCurrentRecordId] = useState<string | null>(null) // null 表示新建
     const [projectName, setProjectName] = useState(DEFAULT_COMPOSE_NAME)
     const [yamlContent, setYamlContent] = useState(DEFAULT_COMPOSE_YAML)
+    const [envVars, setEnvVars] = useState<Record<string, string>>({})
     const [forcePull, setForcePull] = useState(false)
     const [recreate, setRecreate] = useState(false)
     const [updating, setUpdating] = useState(false)
     const [aiModalOpen, setAiModalOpen] = useState(false)
+
+    // 实时扫描 Compose YAML 中引用的所有环境变量占位符
+    const scannedEnvVars = useMemo(() => {
+        return scanEnvVarsFromYaml(yamlContent)
+    }, [yamlContent])
 
     // 单个容器日志抽屉状态
     const [containerLogDrawer, setContainerLogDrawer] = useState<{
@@ -202,6 +268,7 @@ export default function ComposeTab({ serverId }: Props) {
         setCurrentRecordId(null)
         setProjectName(DEFAULT_COMPOSE_NAME)
         setYamlContent(DEFAULT_COMPOSE_YAML)
+        setEnvVars({})
         setForcePull(false)
         setRecreate(false)
         setEditorOpen(true)
@@ -215,11 +282,20 @@ export default function ComposeTab({ serverId }: Props) {
             setYamlContent(item.localRecord.yamlContent)
         } else {
             // 外部项目尝试构造基础 YAML 模版
-            setYamlContent(`version: '3.8'\n# 外部项目: ${item.name}\nservices:\n` +
+            setYamlContent(`# 外部项目: ${item.name}\nservices:\n` +
                 (item.services && item.services.length > 0
                     ? item.services.map(svc => `  ${svc.serviceName}:\n    image: ${svc.image}\n`).join('')
                     : `  app:\n    image: alpine\n`))
         }
+        const loadedEnv: Record<string, string> = {}
+        if (item.localRecord?.envVars) {
+            for (const [k, v] of Object.entries(item.localRecord.envVars)) {
+                if (v !== undefined && v !== null) {
+                    loadedEnv[k] = v
+                }
+            }
+        }
+        setEnvVars(loadedEnv)
         setForcePull(false)
         setRecreate(false)
         setEditorOpen(true)
@@ -240,12 +316,20 @@ export default function ComposeTab({ serverId }: Props) {
         setUpdating(true)
         const hideLoading = message.loading('正在执行 Compose 智能更新部署 (docker compose up)...', 0)
         try {
+            // 仅提取有用户自定义赋值的有效环境变量字典
+            const finalEnvVars: Record<string, string> = {}
+            for (const [k, v] of Object.entries(envVars)) {
+                if (v !== undefined && v !== '') {
+                    finalEnvVars[k] = v
+                }
+            }
+
             const record: DockerComposeRecord = {
                 id: currentRecordId || '',
                 serverId,
                 projectName: cleanName,
                 yamlContent: yamlContent.trim(),
-                envVars: {},
+                envVars: finalEnvVars,
                 createdAt: '',
                 updatedAt: '',
             }
@@ -956,6 +1040,227 @@ export default function ComposeTab({ serverId }: Props) {
                             placeholder="在此输入或编辑 docker-compose.yml 内容..."
                         />
                     </div>
+
+                    {/* 环境变量 (.env) 自动扫描与配置折叠面板 */}
+                    <AntCollapse
+                        size="small"
+                        defaultActiveKey={['env-vars']}
+                        style={{
+                            background: 'var(--bg-2)',
+                            borderRadius: 6,
+                            border: '1px solid var(--border)',
+                        }}
+                        items={[
+                            {
+                                key: 'env-vars',
+                                label: (
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            paddingRight: 8,
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                            <Sliders size={14} color="var(--accent)" />
+                                            <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)' }}>
+                                                环境变量
+                                            </span>
+                                            {scannedEnvVars.length > 0 ? (
+                                                <AntTag color="blue" style={{ fontSize: 11, margin: 0 }}>
+                                                    检测到 {scannedEnvVars.length} 个变量
+                                                </AntTag>
+                                            ) : (
+                                                <AntTag style={{ fontSize: 11, margin: 0, color: 'var(--text-faint)' }}>
+                                                    未检测到变量占位符
+                                                </AntTag>
+                                            )}
+                                            {scannedEnvVars.filter(
+                                                (v) => (envVars[v.name] === undefined || envVars[v.name] === '') && !v.hasDefault
+                                            ).length > 0 && (
+                                                    <AntTag color="warning" style={{ fontSize: 11, margin: 0 }}>
+                                                        {scannedEnvVars.filter(
+                                                            (v) => (envVars[v.name] === undefined || envVars[v.name] === '') && !v.hasDefault
+                                                        ).length} 个必填项未设值
+                                                    </AntTag>
+                                                )}
+                                        </div>
+                                        {scannedEnvVars.length > 0 && (
+                                            <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>
+                                                已自定义:{' '}
+                                                {scannedEnvVars.filter(
+                                                    (v) => envVars[v.name] !== undefined && envVars[v.name] !== ''
+                                                ).length}{' '}
+                                                / 默认值:{' '}
+                                                {scannedEnvVars.filter(
+                                                    (v) => (envVars[v.name] === undefined || envVars[v.name] === '') && v.hasDefault
+                                                ).length}
+                                            </span>
+                                        )}
+                                    </div>
+                                ),
+                                children: (
+                                    <div>
+                                        {scannedEnvVars.length === 0 ? (
+                                            <div
+                                                style={{
+                                                    padding: '14px 16px',
+                                                    textAlign: 'center',
+                                                    color: 'var(--text-dim)',
+                                                    fontSize: 12,
+                                                    background: 'var(--bg-1)',
+                                                    borderRadius: 6,
+                                                    border: '1px dashed var(--border)',
+                                                    lineHeight: 1.6,
+                                                }}
+                                            >
+                                                当前 Compose YAML 中未引用 <code>${'{VAR}'}</code> 占位符。
+                                                <br />
+                                                可在 YAML 中直接键入或粘贴如 <code>${'{APP_PORT:-8080}'}</code> 或 <code>${'{DB_PASSWORD}'}</code>，系统将实时自动扫描并在此提供变量赋值。
+                                            </div>
+                                        ) : (
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                                <div
+                                                    style={{
+                                                        display: 'grid',
+                                                        gridTemplateColumns: '200px 150px 1fr 85px',
+                                                        gap: 10,
+                                                        padding: '6px 12px',
+                                                        background: 'var(--bg-3)',
+                                                        borderRadius: 4,
+                                                        fontSize: 12,
+                                                        fontWeight: 500,
+                                                        color: 'var(--text-dim)',
+                                                        alignItems: 'center',
+                                                    }}
+                                                >
+                                                    <span>变量名称</span>
+                                                    <span>默认值 (Default)</span>
+                                                    <span>实际配置值 (.env Value)</span>
+                                                    <span style={{ textAlign: 'center' }}>生效状态</span>
+                                                </div>
+
+                                                {scannedEnvVars.map((v) => {
+                                                    const userVal = envVars[v.name]
+                                                    const isConfigured = userVal !== undefined && userVal !== ''
+                                                    const isUsingDefault = !isConfigured && v.hasDefault
+
+                                                    return (
+                                                        <div
+                                                            key={v.name}
+                                                            style={{
+                                                                display: 'grid',
+                                                                gridTemplateColumns: '200px 150px 1fr 85px',
+                                                                gap: 10,
+                                                                padding: '7px 12px',
+                                                                background: 'var(--bg-1)',
+                                                                borderRadius: 6,
+                                                                border: '1px solid var(--border)',
+                                                                alignItems: 'center',
+                                                            }}
+                                                        >
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, overflow: 'hidden' }}>
+                                                                <code
+                                                                    style={{
+                                                                        fontFamily: 'var(--font-mono)',
+                                                                        fontSize: 12,
+                                                                        color: 'var(--accent)',
+                                                                        fontWeight: 600,
+                                                                        overflow: 'hidden',
+                                                                        textOverflow: 'ellipsis',
+                                                                        whiteSpace: 'nowrap',
+                                                                    }}
+                                                                    title={`\${${v.name}}`}
+                                                                >
+                                                                    ${v.name}
+                                                                </code>
+                                                                {v.occurrences > 1 && (
+                                                                    <span
+                                                                        style={{
+                                                                            fontSize: 10,
+                                                                            color: 'var(--text-faint)',
+                                                                            background: 'var(--bg-2)',
+                                                                            padding: '1px 5px',
+                                                                            borderRadius: 3,
+                                                                            flexShrink: 0,
+                                                                        }}
+                                                                        title={`在 YAML 中引用了 ${v.occurrences} 次`}
+                                                                    >
+                                                                        x{v.occurrences}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+
+                                                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {v.hasDefault ? (
+                                                                    <code
+                                                                        style={{
+                                                                            fontSize: 11,
+                                                                            color: 'var(--text-dim)',
+                                                                            background: 'var(--bg-2)',
+                                                                            padding: '2px 6px',
+                                                                            borderRadius: 4,
+                                                                            fontFamily: 'var(--font-mono)',
+                                                                        }}
+                                                                        title={v.defaultValue}
+                                                                    >
+                                                                        {v.defaultValue === '' ? '<空>' : v.defaultValue}
+                                                                    </code>
+                                                                ) : (
+                                                                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>无默认值</span>
+                                                                )}
+                                                            </div>
+
+                                                            <div>
+                                                                <AntInput
+                                                                    size="small"
+                                                                    placeholder={v.hasDefault ? `默认: ${v.defaultValue}` : '请输入环境变量值（必填）'}
+                                                                    value={userVal ?? ''}
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value
+                                                                        setEnvVars((prev) => ({
+                                                                            ...prev,
+                                                                            [v.name]: val,
+                                                                        }))
+                                                                    }}
+                                                                    allowClear
+                                                                    style={{
+                                                                        fontFamily: 'var(--font-mono)',
+                                                                        fontSize: 12,
+                                                                    }}
+                                                                    prefix={
+                                                                        <span style={{ color: 'var(--text-faint)', fontSize: 11, marginRight: 2 }}>=</span>
+                                                                    }
+                                                                />
+                                                            </div>
+
+                                                            <div style={{ textAlign: 'center' }}>
+                                                                {isConfigured ? (
+                                                                    <AntTag color="green" style={{ fontSize: 11, margin: 0 }}>
+                                                                        已自定义
+                                                                    </AntTag>
+                                                                ) : isUsingDefault ? (
+                                                                    <AntTag color="default" style={{ fontSize: 11, margin: 0, color: 'var(--text-dim)' }}>
+                                                                        使用默认
+                                                                    </AntTag>
+                                                                ) : (
+                                                                    <AntTag color="warning" style={{ fontSize: 11, margin: 0 }}>
+                                                                        未配置
+                                                                    </AntTag>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
+                                ),
+                            },
+                        ]}
+                    />
 
                     <div
                         style={{

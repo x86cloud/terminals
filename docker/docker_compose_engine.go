@@ -343,8 +343,10 @@ func (d *DockerClient) UpComposeStack(ctx context.Context, req DockerComposeDepl
 
 	for _, serviceName := range sortedServices {
 		svc := spec.Services[serviceName]
-		if svc.Image == "" {
-			return fmt.Errorf("服务 [%s] 未指定 image 镜像", serviceName)
+		svc.Image = sanitizeImageName(svc.Image)
+		spec.Services[serviceName] = svc
+		if svc.Image == "" || svc.Image == ":latest" || strings.HasPrefix(svc.Image, ":") {
+			return fmt.Errorf("服务 [%s] 镜像名称格式无效 (%q)，请检查 docker-compose.yml 中的 image 配置或关联的 .env 环境变量", serviceName, svc.Image)
 		}
 
 		newHash := computeServiceConfigHash(svc)
@@ -374,7 +376,9 @@ func (d *DockerClient) UpComposeStack(ctx context.Context, req DockerComposeDepl
 
 		// 检查/拉取镜像
 		if req.ForcePull || !d.hasLocalImage(ctx, svc.Image) {
-			_, _ = d.PullImage(ctx, svc.Image)
+			if _, err := d.PullImage(ctx, svc.Image); err != nil {
+				return fmt.Errorf("拉取服务 [%s] 镜像 [%s] 失败: %w", serviceName, svc.Image, err)
+			}
 		}
 
 		// 如果容器已存在，停止并移除
@@ -843,6 +847,18 @@ func resolveServiceNetworks(projectName string, networks any, networkMap map[str
 	return attachments
 }
 
+func sanitizeImageName(image string) string {
+	image = strings.TrimSpace(image)
+	image = strings.Trim(image, "\"'`\r\n\t")
+	// 如果由于未配置环境变量导致出现 nginx: 或 redis: 等只有冒号无tag，自动补全 :latest 或去除孤立冒号
+	if strings.HasSuffix(image, ":") {
+		image = strings.TrimSuffix(image, ":") + ":latest"
+	}
+	// 如果由于 registry 前缀未配置导致以 / 开头，例如 /nginx:alpine，自动去除前导斜杠
+	image = strings.TrimPrefix(image, "/")
+	return image
+}
+
 func interpolateEnv(content string, envVars map[string]string) string {
 	merged := make(map[string]string)
 	for _, env := range os.Environ() {
@@ -855,17 +871,75 @@ func interpolateEnv(content string, envVars map[string]string) string {
 		merged[k] = v
 	}
 
-	// 匹配 ${VAR:-default} 或 ${VAR-default} 或 ${VAR}
-	re := regexp.MustCompile(`\$\{([a-zA-Z_0-9]+)(?::?-([^}]+))?\}`)
+	// 支持 $$ 转义为单个 $
+	content = strings.ReplaceAll(content, "$$", "\x00ESCAPED_DOLLAR\x00")
+
+	// 匹配 ${VAR:-default}, ${VAR-default}, ${VAR:?err}, ${VAR?err}, ${VAR:+alt}, ${VAR+alt}, ${VAR}
+	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?:(:[-?+]|[-?+])([^}]*))?\}`)
 	res := re.ReplaceAllStringFunc(content, func(m string) string {
 		sub := re.FindStringSubmatch(m)
 		if len(sub) > 1 {
 			varName := sub[1]
-			if val, ok := merged[varName]; ok && val != "" {
-				return val
+			op := ""
+			valOperand := ""
+			if len(sub) > 2 {
+				op = sub[2]
 			}
-			if len(sub) > 2 && sub[2] != "" {
-				return sub[2]
+			if len(sub) > 3 {
+				valOperand = sub[3]
+			}
+
+			val, hasVal := merged[varName]
+
+			switch op {
+			case ":-":
+				// If set and non-empty, use val; otherwise use default
+				if hasVal && val != "" {
+					return val
+				}
+				return valOperand
+			case "-":
+				// If set (even empty), use val; otherwise use default
+				if hasVal {
+					return val
+				}
+				return valOperand
+			case ":?":
+				// If set and non-empty, use val; otherwise fallback value if provided
+				if hasVal && val != "" {
+					return val
+				}
+				if valOperand != "" {
+					return valOperand
+				}
+				return ""
+			case "?":
+				// If set (even empty), use val; otherwise fallback value if provided
+				if hasVal {
+					return val
+				}
+				if valOperand != "" {
+					return valOperand
+				}
+				return ""
+			case ":+":
+				// If set and non-empty, use valOperand; otherwise empty
+				if hasVal && val != "" {
+					return valOperand
+				}
+				return ""
+			case "+":
+				// If set (even empty), use valOperand; otherwise empty
+				if hasVal {
+					return valOperand
+				}
+				return ""
+			default:
+				// No operator: ${VAR}
+				if hasVal {
+					return val
+				}
+				return ""
 			}
 		}
 		return ""
@@ -881,6 +955,7 @@ func interpolateEnv(content string, envVars map[string]string) string {
 		return ""
 	})
 
+	res = strings.ReplaceAll(res, "\x00ESCAPED_DOLLAR\x00", "$")
 	return res
 }
 
