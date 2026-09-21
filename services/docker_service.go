@@ -10,6 +10,7 @@ import (
 	"terminal/agent"
 	"terminal/core"
 	"terminal/docker"
+	"terminal/logger"
 
 	"github.com/google/uuid"
 )
@@ -27,24 +28,32 @@ func (s *DockerService) DockerConnect(id string) (bool, error) {
 	c := GetContainer()
 	cfg, ok := c.Store.Get(id)
 	if !ok {
-		return false, errors.New("服务器配置不存在")
-	}
-	_, err := c.DockerMgr.Connect(cfg)
-	if err != nil {
+		err := errors.New("服务器配置不存在")
+		logger.Errorf("Docker 连接失败: 服务器配置不存在 [ServerID=%s]", id)
 		return false, err
 	}
+	logger.Infof("正在发起 Docker 连接: ServerID=%s, 名称=%s, 主机=%s:%d", cfg.ID, cfg.Name, cfg.Host, cfg.Port)
+	_, err := c.DockerMgr.Connect(cfg)
+	if err != nil {
+		logger.Errorf("Docker 连接失败 [ServerID=%s, 主机=%s:%d]: %v", id, cfg.Host, cfg.Port, err)
+		return false, err
+	}
+	logger.Infof("Docker 连接成功: ServerID=%s, 主机=%s:%d", id, cfg.Host, cfg.Port)
 	return true, nil
 }
 
 // DockerClose 关闭指定 ID 的 Docker 连接。
 func (s *DockerService) DockerClose(id string) error {
+	logger.Infof("关闭 Docker 连接: ServerID=%s", id)
 	return GetContainer().DockerMgr.Disconnect(id)
 }
 
 // DockerTestConnection 测试指定配置的连通性。
 func (s *DockerService) DockerTestConnection(cfg core.ServerConfig) (string, error) {
+	logger.Infof("测试 Docker 连通性: 主机=%s:%d", cfg.Host, cfg.Port)
 	cli, err := docker.NewDockerClient(cfg)
 	if err != nil {
+		logger.Errorf("创建 Docker 测试客户端失败 [主机=%s:%d]: %v", cfg.Host, cfg.Port, err)
 		return "", err
 	}
 	defer cli.Close()
@@ -54,8 +63,10 @@ func (s *DockerService) DockerTestConnection(cfg core.ServerConfig) (string, err
 
 	apiVersion, err := cli.Ping(ctx)
 	if err != nil {
+		logger.Errorf("Docker Ping 连通性测试失败 [主机=%s:%d]: %v", cfg.Host, cfg.Port, err)
 		return "", fmt.Errorf("Ping 失败: %w", err)
 	}
+	logger.Infof("Docker 连通性测试成功 [API版本=%s]", apiVersion)
 	return fmt.Sprintf("连接成功！Docker API 版本: %s", apiVersion), nil
 }
 
@@ -94,31 +105,39 @@ func (s *DockerService) DockerListContainers(id string, all bool) ([]docker.Dock
 
 // DockerControlContainer 控制容器生命周期（start, stop, restart, pause, unpause, remove）。
 func (s *DockerService) DockerControlContainer(id string, containerID string, action string) error {
+	logger.Infof("Docker 控制容器生命周期 [ServerID=%s, ContainerID=%s, Action=%s]", id, containerID, action)
 	cli, err := GetContainer().DockerMgr.GetClient(id)
 	if err != nil {
+		logger.Errorf("获取 Docker 客户端失败 [ServerID=%s]: %v", id, err)
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	var opErr error
 	switch strings.ToLower(action) {
 	case "start":
-		return cli.StartContainer(ctx, containerID)
+		opErr = cli.StartContainer(ctx, containerID)
 	case "stop":
-		return cli.StopContainer(ctx, containerID)
+		opErr = cli.StopContainer(ctx, containerID)
 	case "restart":
-		return cli.RestartContainer(ctx, containerID)
+		opErr = cli.RestartContainer(ctx, containerID)
 	case "pause":
-		return cli.PauseContainer(ctx, containerID)
+		opErr = cli.PauseContainer(ctx, containerID)
 	case "unpause":
-		return cli.UnpauseContainer(ctx, containerID)
+		opErr = cli.UnpauseContainer(ctx, containerID)
 	case "remove", "rm":
-		return cli.RemoveContainer(ctx, containerID, false)
+		opErr = cli.RemoveContainer(ctx, containerID, false)
 	case "forceremove", "force_remove", "rm_force":
-		return cli.RemoveContainer(ctx, containerID, true)
+		opErr = cli.RemoveContainer(ctx, containerID, true)
 	default:
-		return fmt.Errorf("不支持的容器操作: %s", action)
+		opErr = fmt.Errorf("不支持的容器操作: %s", action)
 	}
+	if opErr != nil {
+		logger.Errorf("Docker 控制容器失败 [ServerID=%s, ContainerID=%s, Action=%s]: %v", id, containerID, action, opErr)
+		return opErr
+	}
+	return nil
 }
 
 // DockerInspectContainer 查看容器 Inspect 详情。
@@ -145,13 +164,20 @@ func (s *DockerService) DockerGetContainerLogs(id string, containerID string, ta
 
 // DockerCreateContainer 创建新容器。
 func (s *DockerService) DockerCreateContainer(id string, req docker.DockerCreateContainerReq) (string, error) {
+	logger.Infof("Docker 创建新容器 [ServerID=%s, Image=%s, Name=%s]", id, req.Image, req.Name)
 	cli, err := GetContainer().DockerMgr.GetClient(id)
 	if err != nil {
+		logger.Errorf("获取 Docker 客户端失败 [ServerID=%s]: %v", id, err)
 		return "", err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	return cli.CreateContainer(ctx, req)
+	cid, err := cli.CreateContainer(ctx, req)
+	if err != nil {
+		logger.Errorf("Docker 创建新容器失败 [ServerID=%s, Image=%s]: %v", id, req.Image, err)
+		return "", err
+	}
+	return cid, nil
 }
 
 // DockerListImages 获取镜像列表。
@@ -178,24 +204,38 @@ func (s *DockerService) DockerInspectImage(id string, imageID string) (string, e
 
 // DockerPullImage 在线拉取镜像。
 func (s *DockerService) DockerPullImage(id string, imageName string) (string, error) {
+	logger.Infof("Docker 开始在线拉取镜像 [ServerID=%s, Image=%s]", id, imageName)
 	cli, err := GetContainer().DockerMgr.GetClient(id)
 	if err != nil {
+		logger.Errorf("获取 Docker 客户端失败 [ServerID=%s]: %v", id, err)
 		return "", err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 	defer cancel()
-	return cli.PullImage(ctx, imageName)
+	res, err := cli.PullImage(ctx, imageName)
+	if err != nil {
+		logger.Errorf("Docker 拉取镜像失败 [ServerID=%s, Image=%s]: %v", id, imageName, err)
+		return "", err
+	}
+	logger.Infof("Docker 拉取镜像成功 [ServerID=%s, Image=%s]", id, imageName)
+	return res, nil
 }
 
 // DockerRemoveImage 删除镜像。
 func (s *DockerService) DockerRemoveImage(id string, imageID string, force bool) error {
+	logger.Infof("Docker 删除镜像 [ServerID=%s, ImageID=%s, Force=%v]", id, imageID, force)
 	cli, err := GetContainer().DockerMgr.GetClient(id)
 	if err != nil {
+		logger.Errorf("获取 Docker 客户端失败 [ServerID=%s]: %v", id, err)
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return cli.RemoveImage(ctx, imageID, force)
+	if err := cli.RemoveImage(ctx, imageID, force); err != nil {
+		logger.Errorf("Docker 删除镜像失败 [ServerID=%s, ImageID=%s]: %v", id, imageID, err)
+		return err
+	}
+	return nil
 }
 
 // DockerSaveImage 弹出保存文件对话框并将镜像导出保存为本地 tar 压缩包。
@@ -444,9 +484,12 @@ func (s *DockerService) DockerDeleteComposeRecord(serverId string, id string) er
 
 // DockerUpComposeStack 执行类似 docker compose up 的智能增量更新，仅在实例创建/启动成功后才同步保存本地 YAML。
 func (s *DockerService) DockerUpComposeStack(serverId string, record core.DockerComposeRecord, forcePull bool, recreate bool) (*core.DockerComposeRecord, error) {
+	logger.Infof("Docker Compose Up 部署更新 [ServerID=%s, Project=%s, ForcePull=%v, Recreate=%v]", serverId, record.ProjectName, forcePull, recreate)
 	c := GetContainer()
 	if c.Store == nil {
-		return nil, errors.New("存储服务不可用")
+		err := errors.New("存储服务不可用")
+		logger.Errorf("Docker Compose Up 失败: %v", err)
+		return nil, err
 	}
 
 	record.ServerID = serverId
@@ -456,6 +499,7 @@ func (s *DockerService) DockerUpComposeStack(serverId string, record core.Docker
 
 	cli, err := c.DockerMgr.GetClient(serverId)
 	if err != nil {
+		logger.Errorf("获取 Docker 客户端失败 [ServerID=%s]: %v", serverId, err)
 		return nil, fmt.Errorf("获取 Docker 客户端失败: %w", err)
 	}
 
@@ -473,15 +517,18 @@ func (s *DockerService) DockerUpComposeStack(serverId string, record core.Docker
 
 	// 1. 先部署容器实例：若失败，绝不落盘保存，直接返回错误（容器已由 UpComposeStack 自动回滚清理）
 	if err := cli.UpComposeStack(ctx, req); err != nil {
+		logger.Errorf("执行 Compose 部署更新失败 [ServerID=%s, Project=%s]: %v", serverId, record.ProjectName, err)
 		return nil, fmt.Errorf("执行 Compose 部署更新失败: %w", err)
 	}
 
 	// 2. 仅当实例全部创建并启动成功后，才保存到本地存储 composes.json
 	saved, err := c.Store.SaveComposeRecord(record)
 	if err != nil {
+		logger.Errorf("实例已部署成功，但持久化本地配置记录失败: %v", err)
 		return nil, fmt.Errorf("实例已部署成功，但持久化本地配置记录失败: %w", err)
 	}
 
+	logger.Infof("Docker Compose Up 成功完成并已持久化 [ServerID=%s, Project=%s, ID=%s]", serverId, record.ProjectName, saved.ID)
 	return saved, nil
 }
 

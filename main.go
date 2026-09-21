@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"terminal/core"
+	"terminal/logger"
 	"terminal/services"
 
 	"github.com/wailsapp/wails/v3/pkg/application"
@@ -16,6 +17,13 @@ import (
 var assets embed.FS
 
 func main() {
+	if _, err := logger.Init(); err != nil {
+		log.Printf("failed to initialize logger: %v", err)
+	}
+	defer logger.Close()
+
+	logger.Info("xClient starting up...")
+
 	container := services.GetContainer()
 
 	systemSvc := services.NewSystemService()
@@ -96,8 +104,10 @@ func main() {
 
 	err := app.Run()
 	if err != nil {
+		logger.Errorf("app.Run error: %v", err)
 		log.Fatal(err)
 	}
 
 	container.Shutdown(context.Background())
+	logger.Info("xClient shut down cleanly")
 }

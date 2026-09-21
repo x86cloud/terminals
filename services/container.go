@@ -8,6 +8,7 @@ import (
 	"terminal/db"
 	"terminal/docker"
 	"terminal/k8s"
+	"terminal/logger"
 	"terminal/mongo"
 	"terminal/proto"
 	"terminal/redis"
@@ -15,13 +16,13 @@ import (
 )
 
 type Container struct {
-	Store     *core.Store
-	Sessions  *ssh.SessionManager
-	Transfers *ssh.TransferManager
-	RedisMgr  *redis.RedisManager
-	MqttMgr   *proto.MqttManager
-	MongoMgr  *mongo.MongoManager
-	WsMgr     *proto.WsManager
+	Store       *core.Store
+	Sessions    *ssh.SessionManager
+	Transfers   *ssh.TransferManager
+	RedisMgr    *redis.RedisManager
+	MqttMgr     *proto.MqttManager
+	MongoMgr    *mongo.MongoManager
+	WsMgr       *proto.WsManager
 	MysqlMgr    *db.MysqlManagerEx
 	PostgresMgr *db.PostgresManager
 	SqliteMgr   *db.SqliteManager
@@ -38,6 +39,7 @@ func GetContainer() *Container {
 	once.Do(func() {
 		store, err := core.NewStore()
 		if err != nil {
+			logger.Errorf("初始化配置存储失败: %v", err)
 			store = &core.Store{}
 		}
 		GlobalContainer = &Container{
@@ -59,6 +61,7 @@ func GetContainer() *Container {
 }
 
 func (c *Container) Startup(ctx context.Context) {
+	logger.Info("服务容器正在启动，注入全局上下文与管理器...")
 	c.Sessions.SetContext(ctx)
 	c.Transfers.SetContext(ctx)
 	c.MqttMgr.SetContext(ctx)
@@ -76,8 +79,11 @@ func (c *Container) Startup(ctx context.Context) {
 
 	if c.Store != nil {
 		settings := c.Store.GetSettings()
-		_ = agent.DefaultRuntime.InitOrUpdate(settings)
+		if err := agent.DefaultRuntime.InitOrUpdate(settings); err != nil {
+			logger.Warnf("初始化智能体运行时设置失败: %v", err)
+		}
 	}
+	logger.Info("服务容器启动完成")
 }
 
 func (c *Container) Shutdown(ctx context.Context) {

@@ -22,6 +22,7 @@ import (
 	"terminal/agent/skills"
 	"terminal/agent/store"
 	"terminal/core"
+	"terminal/logger"
 
 	"github.com/cloudwego/eino/schema"
 )
@@ -38,6 +39,7 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 	if sessionID == "" {
 		sessionID = "ai_agent_default"
 	}
+	logger.Infof("AI Agent 收到请求 [SessionID=%s, MessageCount=%d]", sessionID, len(messages))
 
 	c := GetContainer()
 	cfg := c.Store.GetSettings()
@@ -58,6 +60,7 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 	)
 
 	if notice != "" {
+		logger.Infof("AI Agent 发出提示 [SessionID=%s]: %s", sessionID, notice)
 		agent.DefaultRuntime.EventBus.Emit(events.Event{
 			Type:      events.EventNotice,
 			SessionID: sessionID,
@@ -67,6 +70,7 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 
 	if err != nil {
 		if err.Error() == "用户手动停止了推导" {
+			logger.Infof("AI Agent 用户停止了推导 [SessionID=%s]", sessionID)
 			stoppedText := fullText
 			if strings.TrimSpace(stoppedText) != "" {
 				stoppedText += "\n\n⏹️ [用户手动停止了推导]"
@@ -83,6 +87,7 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 			})
 			return stoppedText, nil
 		}
+		logger.Errorf("AI Agent 推导异常 [SessionID=%s]: %v", sessionID, err)
 		agent.DefaultRuntime.EventBus.Emit(events.Event{
 			Type:      events.EventError,
 			SessionID: sessionID,
@@ -90,6 +95,7 @@ func (s *AgentService) AgentSend(sessionID string, messages []agent.FrontendMess
 		})
 		return fullText, err
 	}
+	logger.Infof("AI Agent 推导完成 [SessionID=%s, ReplyLength=%d]", sessionID, len(fullText))
 
 	agent.DefaultRuntime.EventBus.Emit(events.Event{
 		Type:      events.EventDone,
@@ -110,6 +116,7 @@ func (s *AgentService) AgentStopSend(sessionID string) bool {
 	if sessionID == "" {
 		sessionID = "ai_agent_default"
 	}
+	logger.Infof("AI Agent 收到停止推导指令 [SessionID=%s]", sessionID)
 	agent.DefaultManager.StopChat(sessionID)
 	return true
 }
@@ -268,8 +275,11 @@ func (s *AgentService) AgentProposePlan(sessionID, objective string) (*planner.P
 func (s *AgentService) AgentApprovePlan(planID string) (bool, error) {
 	plan, ok := agent.DefaultRuntime.PlanGate.Approve(planID)
 	if !ok || plan == nil {
-		return false, errors.New("规划不存在或已批准")
+		err := errors.New("规划不存在或已批准")
+		logger.Errorf("批准规划失败 [PlanID=%s]: %v", planID, err)
+		return false, err
 	}
+	logger.Infof("AI Agent 批准规划并开始执行 [PlanID=%s, Steps=%d, Objective=%s]", planID, len(plan.Steps), plan.Objective)
 	plan.Status = "approved"
 
 	if len(plan.Steps) == 0 {
@@ -676,19 +686,25 @@ func (s *AgentService) AgentListSessions() ([]store.SessionItem, error) {
 
 func (s *AgentService) AgentCreateSession(title string) (store.SessionItem, error) {
 	if agent.DefaultRuntime.Store == nil {
-		return store.SessionItem{}, errors.New("存储层未就绪")
+		err := errors.New("存储层未就绪")
+		logger.Errorf("创建会话失败: %v", err)
+		return store.SessionItem{}, err
 	}
 	id := fmt.Sprintf("sess_%d", time.Now().UnixMilli())
 	if strings.TrimSpace(title) == "" {
 		title = "新会话"
 	}
+	logger.Infof("AI Agent 创建会话 [SessionID=%s, Title=%s]", id, title)
 	return agent.DefaultRuntime.Store.CreateSession(id, title)
 }
 
 func (s *AgentService) AgentUpdateSessionTitle(sessionID, title string) error {
 	if agent.DefaultRuntime.Store == nil {
-		return errors.New("存储层未就绪")
+		err := errors.New("存储层未就绪")
+		logger.Errorf("更新会话标题失败: %v", err)
+		return err
 	}
+	logger.Infof("AI Agent 更新会话标题 [SessionID=%s, Title=%s]", sessionID, title)
 	err := agent.DefaultRuntime.Store.UpdateSessionTitle(sessionID, title)
 	if err == nil {
 		core.EmitEvent("agent:session_updated", map[string]string{
@@ -701,8 +717,11 @@ func (s *AgentService) AgentUpdateSessionTitle(sessionID, title string) error {
 
 func (s *AgentService) AgentDeleteSession(sessionID string) error {
 	if agent.DefaultRuntime.Store == nil {
-		return errors.New("存储层未就绪")
+		err := errors.New("存储层未就绪")
+		logger.Errorf("删除会话失败: %v", err)
+		return err
 	}
+	logger.Infof("AI Agent 删除会话 [SessionID=%s]", sessionID)
 	// 联动清理方案目录
 	_ = planner.DeletePlan(sessionID)
 	err := agent.DefaultRuntime.Store.DeleteSession(sessionID)

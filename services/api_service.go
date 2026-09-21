@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 	"terminal/core"
+	"terminal/logger"
 	"terminal/proto"
 )
 
@@ -17,18 +18,38 @@ func NewApiService() *ApiService {
 }
 
 func (s *ApiService) ApiRequest(req proto.ApiRequest) (proto.ApiResponse, error) {
-	return proto.HttpApiRequest(req)
+	logger.Infof("执行 HTTP API 请求: Method=%s, URL=%s", req.Method, req.URL)
+	resp, err := proto.HttpApiRequest(req)
+	if err != nil {
+		logger.Errorf("HTTP API 请求失败 [%s %s]: %v", req.Method, req.URL, err)
+		return resp, err
+	}
+	logger.Infof("HTTP API 请求响应: %s %s -> 状态码=%d, 耗时=%dms", req.Method, req.URL, resp.StatusCode, resp.DurationMs)
+	return resp, nil
 }
 
 func (s *ApiService) WsConnect(req proto.WsConnectRequest) (proto.WsConnectResult, error) {
-	return GetContainer().WsMgr.WsConnect(req)
+	logger.Infof("发起 WebSocket 连接: URL=%s", req.URL)
+	res, err := GetContainer().WsMgr.WsConnect(req)
+	if err != nil {
+		logger.Errorf("WebSocket 连接建立失败 [%s]: %v", req.URL, err)
+		return res, err
+	}
+	logger.Infof("WebSocket 连接建立成功: ID=%s, URL=%s", res.ID, req.URL)
+	return res, nil
 }
 
 func (s *ApiService) WsSend(id string, message string) error {
-	return GetContainer().WsMgr.WsSend(id, message)
+	logger.Infof("WebSocket 发送消息 [ID=%s, Bytes=%d]", id, len(message))
+	if err := GetContainer().WsMgr.WsSend(id, message); err != nil {
+		logger.Errorf("WebSocket 发送消息失败 [ID=%s]: %v", id, err)
+		return err
+	}
+	return nil
 }
 
 func (s *ApiService) WsClose(id string) {
+	logger.Infof("关闭 WebSocket 连接 [ID=%s]", id)
 	GetContainer().WsMgr.WsClose(id)
 }
 

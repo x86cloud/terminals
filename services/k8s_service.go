@@ -9,6 +9,7 @@ import (
 	"terminal/agent"
 	"terminal/core"
 	"terminal/k8s"
+	"terminal/logger"
 )
 
 // K8sService 导出给 Wails 的 Kubernetes 集群管理服务接口。
@@ -24,17 +25,23 @@ func (s *K8sService) K8sConnect(id string) (bool, error) {
 	c := GetContainer()
 	cfg, ok := c.Store.Get(id)
 	if !ok {
-		return false, errors.New("服务器配置不存在")
-	}
-	_, err := c.K8sMgr.Connect(cfg)
-	if err != nil {
+		err := errors.New("服务器配置不存在")
+		logger.Errorf("K8s 连接失败: 服务器配置不存在 [ServerID=%s]", id)
 		return false, err
 	}
+	logger.Infof("正在发起 K8s 集群连接: ServerID=%s, 名称=%s, 主机=%s:%d", cfg.ID, cfg.Name, cfg.Host, cfg.Port)
+	_, err := c.K8sMgr.Connect(cfg)
+	if err != nil {
+		logger.Errorf("K8s 连接失败 [ServerID=%s, 主机=%s:%d]: %v", id, cfg.Host, cfg.Port, err)
+		return false, err
+	}
+	logger.Infof("K8s 集群连接成功: ServerID=%s, 主机=%s:%d", id, cfg.Host, cfg.Port)
 	return true, nil
 }
 
 // K8sClose 关闭指定 ID 的 K8s 连接。
 func (s *K8sService) K8sClose(id string) error {
+	logger.Infof("关闭 K8s 连接: ServerID=%s", id)
 	return GetContainer().K8sMgr.Disconnect(id)
 }
 
@@ -45,8 +52,10 @@ func (s *K8sService) K8sParseKubeconfig(kubeconfigData string, kubeconfigPath st
 
 // K8sTestConnection 测试指定配置的连通性。
 func (s *K8sService) K8sTestConnection(cfg core.ServerConfig) (string, error) {
+	logger.Infof("测试 K8s 连通性: 主机=%s:%d", cfg.Host, cfg.Port)
 	cli, err := k8s.NewK8sClient(cfg)
 	if err != nil {
+		logger.Errorf("创建 K8s 测试客户端失败 [主机=%s:%d]: %v", cfg.Host, cfg.Port, err)
 		return "", err
 	}
 	defer cli.Close()
@@ -56,13 +65,16 @@ func (s *K8sService) K8sTestConnection(cfg core.ServerConfig) (string, error) {
 
 	err = cli.Ping(ctx)
 	if err != nil {
+		logger.Errorf("K8s 连通性测试失败 [主机=%s:%d]: %v", cfg.Host, cfg.Port, err)
 		return "", fmt.Errorf("连接测试失败: %w", err)
 	}
 
 	overview, err := cli.GetOverview(ctx)
 	if err == nil && overview != nil {
+		logger.Infof("K8s 连通性测试成功 [版本=%s, 节点数=%d]", overview.GitVersion, overview.NodesTotal)
 		return fmt.Sprintf("连接成功！Kubernetes 版本: %s (%s), 节点数: %d", overview.GitVersion, overview.Platform, overview.NodesTotal), nil
 	}
+	logger.Info("K8s API Server 响应正常")
 	return "连接成功！Kubernetes API Server 响应正常", nil
 }
 
@@ -138,13 +150,19 @@ func (s *K8sService) K8sGetPodLogs(id string, namespace string, podName string, 
 
 // K8sDeletePod 删除指定 Pod。
 func (s *K8sService) K8sDeletePod(id string, namespace string, podName string) error {
+	logger.Infof("K8s 删除 Pod [ServerID=%s, Namespace=%s, Pod=%s]", id, namespace, podName)
 	cli, err := GetContainer().K8sMgr.GetClient(id)
 	if err != nil {
+		logger.Errorf("获取 K8s 客户端失败 [ServerID=%s]: %v", id, err)
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return cli.DeletePod(ctx, namespace, podName)
+	if err := cli.DeletePod(ctx, namespace, podName); err != nil {
+		logger.Errorf("K8s 删除 Pod 失败 [ServerID=%s, Namespace=%s, Pod=%s]: %v", id, namespace, podName, err)
+		return err
+	}
+	return nil
 }
 
 // K8sListDeployments 获取 Deployment 列表。
@@ -160,24 +178,36 @@ func (s *K8sService) K8sListDeployments(id string, namespace string) ([]k8s.K8sD
 
 // K8sScaleDeployment 动态调整 Deployment 副本数。
 func (s *K8sService) K8sScaleDeployment(id string, namespace string, name string, replicas int32) error {
+	logger.Infof("K8s 伸缩 Deployment [ServerID=%s, Namespace=%s, Name=%s, Replicas=%d]", id, namespace, name, replicas)
 	cli, err := GetContainer().K8sMgr.GetClient(id)
 	if err != nil {
+		logger.Errorf("获取 K8s 客户端失败 [ServerID=%s]: %v", id, err)
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return cli.ScaleDeployment(ctx, namespace, name, replicas)
+	if err := cli.ScaleDeployment(ctx, namespace, name, replicas); err != nil {
+		logger.Errorf("K8s 伸缩 Deployment 失败 [ServerID=%s, Namespace=%s, Name=%s]: %v", id, namespace, name, err)
+		return err
+	}
+	return nil
 }
 
 // K8sRestartDeployment 触发 Deployment 滚动重启。
 func (s *K8sService) K8sRestartDeployment(id string, namespace string, name string) error {
+	logger.Infof("K8s 重启 Deployment [ServerID=%s, Namespace=%s, Name=%s]", id, namespace, name)
 	cli, err := GetContainer().K8sMgr.GetClient(id)
 	if err != nil {
+		logger.Errorf("获取 K8s 客户端失败 [ServerID=%s]: %v", id, err)
 		return err
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
-	return cli.RestartDeployment(ctx, namespace, name)
+	if err := cli.RestartDeployment(ctx, namespace, name); err != nil {
+		logger.Errorf("K8s 重启 Deployment 失败 [ServerID=%s, Namespace=%s, Name=%s]: %v", id, namespace, name, err)
+		return err
+	}
+	return nil
 }
 
 // K8sListServices 获取 Service 列表。
@@ -411,9 +441,11 @@ func (s *K8sService) K8sGetOrchestrationRecord(id string) (*core.K8sOrchestratio
 
 // K8sApplyOrchestration 部署并保存 Kubernetes YAML 编排。严格遵循后验强一致性：先部署，成功后再落盘。
 func (s *K8sService) K8sApplyOrchestration(serverId string, record core.K8sOrchestrationRecord) ([]k8s.K8sApplyResult, error) {
+	logger.Infof("K8s 部署编排 [ServerID=%s, Name=%s, Namespace=%s]", serverId, record.Name, record.Namespace)
 	c := GetContainer()
 	cli, err := c.K8sMgr.GetClient(serverId)
 	if err != nil {
+		logger.Errorf("K8s 连接集群失败 [ServerID=%s]: %v", serverId, err)
 		return nil, fmt.Errorf("无法连接至集群: %w", err)
 	}
 
@@ -423,6 +455,7 @@ func (s *K8sService) K8sApplyOrchestration(serverId string, record core.K8sOrche
 	// 1. 声明式应用 YAML
 	results, err := cli.ApplyYAML(ctx, record.YamlContent)
 	if err != nil {
+		logger.Errorf("K8s 编排部署失败 [ServerID=%s, Name=%s]: %v", serverId, record.Name, err)
 		return results, fmt.Errorf("部署失败: %w", err)
 	}
 
@@ -436,6 +469,7 @@ func (s *K8sService) K8sApplyOrchestration(serverId string, record core.K8sOrche
 	}
 
 	if !hasSuccess && len(results) > 0 {
+		logger.Warnf("K8s 编排资源均未成功应用，拒绝落盘 [ServerID=%s, Name=%s]", serverId, record.Name)
 		return results, errors.New("所有资源均应用失败，拒绝保存到本地配置")
 	}
 
@@ -457,11 +491,13 @@ func (s *K8sService) K8sApplyOrchestration(serverId string, record core.K8sOrche
 		record.Namespace = "default"
 	}
 
-	_, saveErr := c.Store.SaveK8sOrchestrationRecord(record)
+	saved, saveErr := c.Store.SaveK8sOrchestrationRecord(record)
 	if saveErr != nil {
+		logger.Errorf("K8s 编排本地记录保存失败 [ServerID=%s, Name=%s]: %v", serverId, record.Name, saveErr)
 		return results, fmt.Errorf("集群部署成功但本地记录保存失败: %w", saveErr)
 	}
 
+	logger.Infof("K8s 编排部署成功并已持久化 [ServerID=%s, Name=%s, ID=%s]", serverId, record.Name, saved.ID)
 	return results, nil
 }
 
