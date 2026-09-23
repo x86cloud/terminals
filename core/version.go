@@ -12,9 +12,9 @@ import (
 )
 
 // Injected via ldflags during build:
-// -ldflags "-X 'terminal/core.Version=v1.0.6' -X 'terminal/core.GitCommit=b7e78b2' -X 'terminal/core.BuildDate=2026-09-09'"
+// -ldflags "-X 'terminal/core.Version=v1.0.9' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-09-23'"
 var (
-	Version   = "v1.0.6"
+	Version   = "v1.0.9"
 	GitCommit = "dev"
 	BuildDate = ""
 )
