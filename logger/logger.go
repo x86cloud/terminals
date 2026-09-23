@@ -152,8 +152,8 @@ func Init(opts ...Option) (*slog.Logger, error) {
 			}
 			if a.Key == slog.SourceKey {
 				if src, ok := a.Value.Any().(*slog.Source); ok && src != nil {
-					shortFile := filepath.Base(src.File)
-					return slog.String("caller", fmt.Sprintf("%s:%d", shortFile, src.Line))
+					shortFile := fastBase(src.File)
+					return slog.String("caller", shortFile+":"+strconv.Itoa(src.Line))
 				}
 			}
 			return a
@@ -166,11 +166,60 @@ func Init(opts ...Option) (*slog.Logger, error) {
 	currentLogger.Store(logger)
 	slog.SetDefault(logger)
 
-	// 接管标准库 log 输出，使所有已有 log.Printf 自动进入本地滚动日志并带源码文件名与行号
-	log.SetOutput(lumberjackLogger)
-	log.SetFlags(log.Ldate | log.Ltime | log.Lmicroseconds | log.Lshortfile)
+	// 接管标准库 log 输出，使所有已有 log.Printf 自动统一格式写入 slog
+	log.SetOutput(&logBridgeWriter{})
+	log.SetFlags(0)
+	log.SetPrefix("")
 
 	return logger, nil
+}
+
+// logBridgeWriter 将标准库 log 的输出重定向到全局 slog，使所有 log.Printf 输出与 slog 结构化格式统一。
+type logBridgeWriter struct{}
+
+func (w *logBridgeWriter) Write(p []byte) (int, error) {
+	l := currentLogger.Load()
+	if l == nil {
+		return len(p), nil
+	}
+	h := l.Handler()
+	ctx := context.Background()
+	if !h.Enabled(ctx, slog.LevelInfo) {
+		return len(p), nil
+	}
+
+	msg := strings.TrimRight(string(p), "\r\n")
+
+	// 解析真实调用者 PC，跳过标准库 log 包与桥接器自身调用帧
+	var pcs [16]uintptr
+	n := runtime.Callers(2, pcs[:])
+	frames := runtime.CallersFrames(pcs[:n])
+	var callerPC uintptr
+	i := 0
+	for {
+		frame, more := frames.Next()
+		if !strings.HasPrefix(frame.Function, "log.") && !strings.Contains(frame.Function, "logBridgeWriter") {
+			callerPC = pcs[i]
+			break
+		}
+		i++
+		if !more {
+			break
+		}
+	}
+
+	r := slog.NewRecord(time.Now(), slog.LevelInfo, msg, callerPC)
+	_ = h.Handle(ctx, r)
+	return len(p), nil
+}
+
+// NewStandardLogger 创建一个适配到全局 slog 的标准库 *log.Logger 实例，方便传给只接受 *log.Logger 的第三方库。
+func NewStandardLogger(level slog.Level) *log.Logger {
+	return slog.NewLogLogger(GetLogger().Handler(), level)
+}
+
+func init() {
+	_, _ = Init()
 }
 
 // EnsureInitialized 确保日志库已经初始化；若尚未显式调用 Init()，则自动使用默认配置初始化。
@@ -182,8 +231,12 @@ func EnsureInitialized() {
 
 // GetLogger 获取全局当前 *slog.Logger 实例。
 func GetLogger() *slog.Logger {
-	EnsureInitialized()
-	return currentLogger.Load()
+	l := currentLogger.Load()
+	if l == nil {
+		EnsureInitialized()
+		return currentLogger.Load()
+	}
+	return l
 }
 
 // Close 关闭日志文件流（程序退出时调用）。
@@ -198,9 +251,18 @@ func Close() error {
 	return nil
 }
 
+// fastBase 快速截取文件路径中的纯文件名，避免全量 filepath.Base 解析与堆分配。
+func fastBase(path string) string {
+	for i := len(path) - 1; i >= 0; i-- {
+		if path[i] == '/' || path[i] == '\\' {
+			return path[i+1:]
+		}
+	}
+	return path
+}
+
 // logWithCaller 精确获取业务调用处的 PC (跳过封装层级)，并通过 slog 处理。
 func logWithCaller(ctx context.Context, level slog.Level, msg string, args ...any) {
-	EnsureInitialized()
 	l := currentLogger.Load()
 	if l == nil {
 		return
@@ -211,11 +273,35 @@ func logWithCaller(ctx context.Context, level slog.Level, msg string, args ...an
 	}
 
 	var pcs [1]uintptr
-	// 跳过: [0: runtime.Callers, 1: logWithCaller, 2: Info/Infof/etc, 3: 真实调用者]
+	// 跳过: [0: runtime.Callers, 1: logWithCaller, 2: Info/Debug/etc, 3: 真实调用者]
 	runtime.Callers(3, pcs[:])
 
 	r := slog.NewRecord(time.Now(), level, msg, pcs[0])
 	r.Add(args...)
+	_ = h.Handle(ctx, r)
+}
+
+// logfWithCaller 针对格式化输出进行快速级别预检，若未开启级别则直接跳过 fmt.Sprintf 与调用栈捕获，达成 0 分配。
+func logfWithCaller(ctx context.Context, level slog.Level, format string, args ...any) {
+	l := currentLogger.Load()
+	if l == nil {
+		return
+	}
+	h := l.Handler()
+	if !h.Enabled(ctx, level) {
+		return
+	}
+
+	var pcs [1]uintptr
+	// 跳过: [0: runtime.Callers, 1: logfWithCaller, 2: Infof/Debugf/etc, 3: 真实调用者]
+	runtime.Callers(3, pcs[:])
+
+	msg := format
+	if len(args) > 0 {
+		msg = fmt.Sprintf(format, args...)
+	}
+
+	r := slog.NewRecord(time.Now(), level, msg, pcs[0])
 	_ = h.Handle(ctx, r)
 }
 
@@ -241,22 +327,22 @@ func Error(msg string, args ...any) {
 
 // Debugf 记录格式化 Debug 日志。
 func Debugf(format string, args ...any) {
-	logWithCaller(context.Background(), slog.LevelDebug, fmt.Sprintf(format, args...))
+	logfWithCaller(context.Background(), slog.LevelDebug, format, args...)
 }
 
 // Infof 记录格式化 Info 日志。
 func Infof(format string, args ...any) {
-	logWithCaller(context.Background(), slog.LevelInfo, fmt.Sprintf(format, args...))
+	logfWithCaller(context.Background(), slog.LevelInfo, format, args...)
 }
 
 // Warnf 记录格式化 Warn 日志。
 func Warnf(format string, args ...any) {
-	logWithCaller(context.Background(), slog.LevelWarn, fmt.Sprintf(format, args...))
+	logfWithCaller(context.Background(), slog.LevelWarn, format, args...)
 }
 
 // Errorf 记录格式化 Error 日志。
 func Errorf(format string, args ...any) {
-	logWithCaller(context.Background(), slog.LevelError, fmt.Sprintf(format, args...))
+	logfWithCaller(context.Background(), slog.LevelError, format, args...)
 }
 
 // With 返回带有预设属性字段的子 Logger。
@@ -266,6 +352,7 @@ func With(args ...any) *slog.Logger {
 
 // LogWriter 获取底层写入器（可用于某些需要 io.Writer 的第三方组件）。
 func LogWriter() io.Writer {
-	EnsureInitialized()
+	mu.Lock()
+	defer mu.Unlock()
 	return currentWriter
 }

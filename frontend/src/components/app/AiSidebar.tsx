@@ -90,6 +90,8 @@ export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps
         }
     }, [isResizing])
 
+    const handleClose = useCallback(() => setAiSidebarOpen(false), [setAiSidebarOpen])
+
     return (
         <aside
             className={`${s.aiSidebar} ${aiSidebarOpen ? s.open : s.closed} ${isResizing || !mounted ? s.noTransition : ''}`}
@@ -113,12 +115,12 @@ export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps
             >
                 <ErrorBoundary
                     title="AI 智能体渲染异常"
-                    onClose={() => setAiSidebarOpen(false)}
+                    onClose={handleClose}
                 >
                     <AiAgentPanel
                         settings={settings}
                         onUpdateSettings={onUpdateSettings}
-                        onClose={() => setAiSidebarOpen(false)}
+                        onClose={handleClose}
                     />
                 </ErrorBoundary>
             </div>

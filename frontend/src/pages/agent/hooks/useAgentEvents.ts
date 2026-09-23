@@ -30,48 +30,56 @@ export function useAgentEvents({
     setPendingPlan,
 }: UseAgentEventsProps) {
     useEffect(() => {
-        const appendOrUpdateAssistant = (updater: (msg: AiMessage) => void) => {
+        const appendOrUpdateAssistant = (updater: (msg: AiMessage) => AiMessage) => {
             setMessages((prev) => {
                 const copy = [...prev]
-                let last = copy[copy.length - 1]
-                if (!last || last.role !== 'assistant') {
-                    last = {
-                        role: 'assistant',
-                        content: '',
-                        reasoning_content: '',
-                        process_steps: [],
-                        timestamp: Date.now(),
-                    }
-                    copy.push(last)
+                const lastIdx = copy.length - 1
+                const last = copy[lastIdx]
+                const target: AiMessage =
+                    last && last.role === 'assistant'
+                        ? { ...last }
+                        : {
+                              role: 'assistant',
+                              content: '',
+                              reasoning_content: '',
+                              process_steps: [],
+                              timestamp: Date.now(),
+                          }
+                const updated = updater(target)
+                if (last && last.role === 'assistant') {
+                    copy[lastIdx] = updated
+                } else {
+                    copy.push(updated)
                 }
-                updater(last)
                 return copy
             })
         }
 
         const unsubChatChunk = subscribe(`agent:chunk:${activeSessionId}`, (chunk: string) => {
-            appendOrUpdateAssistant((last) => {
-                last.content = (last.content || '') + chunk
-                if (last.process_steps) {
-                    last.process_steps = last.process_steps.map((st) =>
-                        st.type === 'think' ? { ...st, status: 'completed' } : st
-                    )
-                }
-            })
+            appendOrUpdateAssistant((last) => ({
+                ...last,
+                content: (last.content || '') + chunk,
+                process_steps: last.process_steps
+                    ? last.process_steps.map((st) =>
+                          st.type === 'think' ? { ...st, status: 'completed' } : st
+                      )
+                    : [],
+            }))
         })
 
         const handleReasoningChunk = (chunk: string) => {
             setActiveReasoning((prev) => prev + chunk)
             appendOrUpdateAssistant((last) => {
                 const newReasoning = (last.reasoning_content || '') + chunk
-                last.reasoning_content = newReasoning
-
                 const steps = [...(last.process_steps || [])]
                 const lastStep = steps[steps.length - 1]
 
                 // If the last step is an active thinking step, stream into it
                 if (lastStep && lastStep.type === 'think' && lastStep.status === 'running') {
-                    lastStep.content = (lastStep.content || '') + chunk
+                    steps[steps.length - 1] = {
+                        ...lastStep,
+                        content: (lastStep.content || '') + chunk,
+                    }
                 } else {
                     // Otherwise start a new thinking step below the latest tool execution
                     const hasTools = steps.some((s) => s.type === 'tool')
@@ -84,7 +92,11 @@ export function useAgentEvents({
                         timestamp: Date.now(),
                     })
                 }
-                last.process_steps = steps
+                return {
+                    ...last,
+                    reasoning_content: newReasoning,
+                    process_steps: steps,
+                }
             })
         }
 
@@ -114,9 +126,7 @@ export function useAgentEvents({
             if (!event) return
             const isTargetSession =
                 !event.session_id ||
-                event.session_id === activeSessionId ||
-                event.session_id === 'ai_agent_default' ||
-                activeSessionId === 'ai_agent_default'
+                event.session_id === activeSessionId
 
             if (
                 !isTargetSession &&
@@ -128,6 +138,25 @@ export function useAgentEvents({
                 return
 
             switch (event.type) {
+                case 'ChatChunk':
+                case 'chat_chunk':
+                    const cChunk =
+                        typeof event.payload === 'string'
+                            ? event.payload
+                            : event.payload?.chunk || ''
+                    if (cChunk) {
+                        appendOrUpdateAssistant((last) => ({
+                            ...last,
+                            content: (last.content || '') + cChunk,
+                            process_steps: last.process_steps
+                                ? last.process_steps.map((st) =>
+                                      st.type === 'think' ? { ...st, status: 'completed' } : st
+                                  )
+                                : [],
+                        }))
+                    }
+                    break
+
                 case 'ReasoningChunk':
                 case 'reasoning_chunk':
                     const rChunk =
@@ -174,7 +203,10 @@ export function useAgentEvents({
                                 timestamp: Date.now(),
                             })
                         }
-                        last.process_steps = steps
+                        return {
+                            ...last,
+                            process_steps: steps,
+                        }
                     })
                     break
 
@@ -263,11 +295,12 @@ export function useAgentEvents({
                                 timestamp: Date.now(),
                             })
                         }
-                        last.process_steps = steps
+                        return {
+                            ...last,
+                            process_steps: steps,
+                        }
                     })
                     break
-
-
 
                 case 'PlanProposed':
                 case 'plan_proposed':
@@ -308,7 +341,10 @@ export function useAgentEvents({
                                 timestamp: Date.now(),
                             })
                         }
-                        last.process_steps = steps
+                        return {
+                            ...last,
+                            process_steps: steps,
+                        }
                     })
                     break
 
@@ -324,6 +360,7 @@ export function useAgentEvents({
                 case 'StepFinished':
                 case 'step_finished':
                     if (event.payload?.step_id) {
+                        let toSave: AiMessage[] | null = null
                         setMessages((prev) => {
                             let updated = false
                             const copy = prev.map((msg) => {
@@ -377,12 +414,13 @@ export function useAgentEvents({
                                 return msg
                             })
                             if (updated) {
-                                API.agentSaveSessionMessages(activeSessionId, copy).catch(
-                                    () => {}
-                                )
+                                toSave = copy
                             }
                             return copy
                         })
+                        if (toSave) {
+                            API.agentSaveSessionMessages(activeSessionId, toSave).catch(() => {})
+                        }
                     }
                     break
 
@@ -404,6 +442,7 @@ export function useAgentEvents({
                         doneContent.includes('执行过程中断') ||
                         doneContent.includes('规划已被用户手动停止')
 
+                    let finalMessagesToSave: AiMessage[] | null = null
                     setMessages((curr) => {
                         const copy = [...curr]
                         if (isPlanReport) {
@@ -427,33 +466,52 @@ export function useAgentEvents({
                                         summary: doneContent,
                                     },
                                 }
-                                API.agentSaveSessionMessages(activeSessionId, copy).catch(
-                                    () => {}
-                                )
                             }
+                            finalMessagesToSave = copy
                             return copy
                         }
 
-                        appendOrUpdateAssistant((last) => {
-                            if (doneContent) last.content = doneContent
-                            if (
-                                !last.content &&
-                                (event.payload?.reasoning_content || last.reasoning_content)
-                            ) {
-                                last.content = '已完成深度推演与相关操作。'
+                        let lastIdx = copy.length - 1
+                        let last = copy[lastIdx]
+                        if (!last || last.role !== 'assistant') {
+                            last = {
+                                role: 'assistant',
+                                content: '',
+                                reasoning_content: '',
+                                process_steps: [],
+                                timestamp: Date.now(),
                             }
-                            if (event.payload?.reasoning_content)
-                                last.reasoning_content = event.payload.reasoning_content
-                            if (last.process_steps) {
-                                last.process_steps = last.process_steps.map((st) => ({
-                                    ...st,
-                                    status: 'completed',
-                                }))
-                            }
-                        })
-                        API.agentSaveSessionMessages(activeSessionId, copy).catch(() => {})
+                            copy.push(last)
+                            lastIdx = copy.length - 1
+                        }
+
+                        let newContent = last.content
+                        if (doneContent) newContent = doneContent
+                        if (
+                            !newContent &&
+                            (event.payload?.reasoning_content || last.reasoning_content)
+                        ) {
+                            newContent = '已完成深度推演与相关操作。'
+                        }
+                        const newReasoning =
+                            event.payload?.reasoning_content || last.reasoning_content
+                        const newSteps = (last.process_steps || []).map((st) => ({
+                            ...st,
+                            status: 'completed' as const,
+                        }))
+
+                        copy[lastIdx] = {
+                            ...last,
+                            content: newContent,
+                            reasoning_content: newReasoning,
+                            process_steps: newSteps,
+                        }
+                        finalMessagesToSave = copy
                         return copy
                     })
+                    if (finalMessagesToSave) {
+                        API.agentSaveSessionMessages(activeSessionId, finalMessagesToSave).catch(() => {})
+                    }
                     break
 
                 case 'Error':
@@ -464,16 +522,15 @@ export function useAgentEvents({
                     setPendingAsk(null)
                     const errPayload = String(event.payload || '')
                     setNoticeText(`❌ 出错: ${errPayload}`)
-                    appendOrUpdateAssistant((last) => {
-                        if (!last.content) {
-                            last.content = `⚠️ 执行遇到错误: ${errPayload}`
-                        }
-                        if (last.process_steps) {
-                            last.process_steps = last.process_steps.map((st) =>
-                                st.status === 'running' ? { ...st, status: 'failed' } : st
-                            )
-                        }
-                    })
+                    appendOrUpdateAssistant((last) => ({
+                        ...last,
+                        content: last.content || `⚠️ 执行遇到错误: ${errPayload}`,
+                        process_steps: last.process_steps
+                            ? last.process_steps.map((st) =>
+                                  st.status === 'running' ? { ...st, status: 'failed' } : st
+                              )
+                            : [],
+                    }))
                     break
             }
         })

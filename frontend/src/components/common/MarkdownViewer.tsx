@@ -57,7 +57,7 @@ const STREAMING_IDLE = { hasNextChunk: false, enableAnimation: false }
 //     return <code className={s.inlineCode}>{children}</code>
 // }
 
-export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
+export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(({
     content = '',
     streaming = false,
     className = '',
@@ -68,12 +68,9 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
                 content={content}
                 openLinksInNewTab={true}
                 streaming={streaming ? STREAMING_ACTIVE : STREAMING_IDLE}
-            // components={{
-            //     code: CustomCode,
-            // }}
             />
         </div>
     )
-}
+})
 
 export default MarkdownViewer

@@ -8,7 +8,7 @@ interface ProcessStepsListProps {
     isStreaming?: boolean
 }
 
-export const ProcessStepsList: React.FC<ProcessStepsListProps> = ({
+export const ProcessStepsList: React.FC<ProcessStepsListProps> = React.memo(({
     steps,
     isStreaming = false,
 }) => {
@@ -170,7 +170,7 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = ({
             )}
         </div>
     )
-}
+})
 
 export const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
     const reasoning = msg.reasoning_content || msg.plan?.reasoning_content || ''
@@ -183,26 +183,30 @@ export const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
         })
     }
     const steps: ProcessStep[] = []
+    const stableBase = msg.timestamp
+        ? String(msg.timestamp)
+        : `${msg.role}_${(msg.content || '').slice(0, 16).replace(/\s+/g, '_')}`
+
     if (reasoning) {
         steps.push({
-            id: `think_${msg.timestamp || Date.now()}`,
+            id: `think_${stableBase}`,
             type: 'think',
             title: '深度思考过程',
             content: reasoning,
             status: 'completed',
-            timestamp: msg.timestamp || Date.now(),
+            timestamp: msg.timestamp || 0,
         })
     }
     if (msg.tool_calls && msg.tool_calls.length > 0) {
         msg.tool_calls.forEach((tc, i) => {
             steps.push({
-                id: tc.id || `tool_${i}_${msg.timestamp || Date.now()}`,
+                id: tc.id || `tool_${i}_${stableBase}`,
                 type: 'tool',
                 title: tc.name,
                 summary: tc.args,
                 content: '',
                 status: 'completed',
-                timestamp: msg.timestamp || Date.now(),
+                timestamp: msg.timestamp || 0,
             })
         })
     }

@@ -4,12 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"terminal/core"
@@ -186,9 +186,9 @@ type PgStatus struct {
 // ===================== PostgresManager 连接管理器 =====================
 
 type PostgresManager struct {
-	pools   sync.Map // key: "serverID:dbName" -> *pgxpool.Pool
-	tunnels sync.Map // key: "serverID" -> *pgSshTunnel
-	configs sync.Map // key: "serverID" -> core.ServerConfig
+	pools   core.ConcurrentMap[string, *pgxpool.Pool]
+	tunnels core.ConcurrentMap[string, *pgSshTunnel]
+	configs core.ConcurrentMap[string, core.ServerConfig]
 }
 
 type pgSshTunnel struct {
@@ -265,38 +265,24 @@ func openPgSSHTunnel(cfg core.ServerConfig, target string) (*pgSshTunnel, error)
 			if err != nil {
 				return
 			}
-			go func(localConn net.Conn) {
+			go func(c net.Conn) {
+				defer c.Close()
 				remoteConn, err := sshClient.Dial("tcp", target)
 				if err != nil {
-					_ = localConn.Close()
 					return
 				}
+				defer remoteConn.Close()
+
+				done := make(chan struct{}, 2)
 				go func() {
-					buf := make([]byte, 32*1024)
-					for {
-						n, err := localConn.Read(buf)
-						if n > 0 {
-							_, _ = remoteConn.Write(buf[:n])
-						}
-						if err != nil {
-							break
-						}
-					}
-					_ = localConn.Close()
-					_ = remoteConn.Close()
+					_, _ = io.Copy(remoteConn, c)
+					done <- struct{}{}
 				}()
-				buf := make([]byte, 32*1024)
-				for {
-					n, err := remoteConn.Read(buf)
-					if n > 0 {
-						_, _ = localConn.Write(buf[:n])
-					}
-					if err != nil {
-						break
-					}
-				}
-				_ = localConn.Close()
-				_ = remoteConn.Close()
+				go func() {
+					_, _ = io.Copy(c, remoteConn)
+					done <- struct{}{}
+				}()
+				<-done
 			}(conn)
 		}
 	}()
@@ -336,8 +322,7 @@ func (m *PostgresManager) GetPool(serverID, dbName string) (*pgxpool.Pool, error
 	}
 	poolKey := fmt.Sprintf("%s:%s", serverID, dbName)
 
-	if val, ok := m.pools.Load(poolKey); ok {
-		pool := val.(*pgxpool.Pool)
+	if pool, ok := m.pools.Get(poolKey); ok {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
 		if err := pool.Ping(ctx); err == nil {
@@ -347,11 +332,10 @@ func (m *PostgresManager) GetPool(serverID, dbName string) (*pgxpool.Pool, error
 		m.pools.Delete(poolKey)
 	}
 
-	cfgVal, ok := m.configs.Load(serverID)
+	cfg, ok := m.configs.Get(serverID)
 	if !ok {
 		return nil, fmt.Errorf("服务器配置未加载: %s", serverID)
 	}
-	cfg := cfgVal.(core.ServerConfig)
 
 	host := cfg.Host
 	port := cfg.Port
@@ -360,18 +344,15 @@ func (m *PostgresManager) GetPool(serverID, dbName string) (*pgxpool.Pool, error
 	}
 
 	if cfg.PostgresSSHEnabled && cfg.PostgresSSHHost != "" {
-		tunVal, ok := m.tunnels.Load(serverID)
-		var tun *pgSshTunnel
-		if ok {
-			tun = tunVal.(*pgSshTunnel)
-		} else {
+		tun, ok := m.tunnels.Get(serverID)
+		if !ok {
 			target := fmt.Sprintf("%s:%d", host, port)
 			var err error
 			tun, err = openPgSSHTunnel(cfg, target)
 			if err != nil {
 				return nil, fmt.Errorf("建立 SSH 隧道失败: %w", err)
 			}
-			m.tunnels.Store(serverID, tun)
+			m.tunnels.Set(serverID, tun)
 		}
 		parts := strings.Split(tun.local, ":")
 		host = parts[0]
@@ -414,7 +395,7 @@ func (m *PostgresManager) GetPool(serverID, dbName string) (*pgxpool.Pool, error
 		return nil, fmt.Errorf("Ping PostgreSQL 失败: %w", err)
 	}
 
-	m.pools.Store(poolKey, pool)
+	m.pools.Set(poolKey, pool)
 	return pool, nil
 }
 
@@ -484,7 +465,7 @@ func (m *PostgresManager) PostgresTestConnection(cfg core.ServerConfig) (map[str
 
 // PostgresConnectEx 连接并测试 PostgreSQL 实例。
 func (m *PostgresManager) PostgresConnectEx(cfg core.ServerConfig) (bool, error) {
-	m.configs.Store(cfg.ID, cfg)
+	m.configs.Set(cfg.ID, cfg)
 	dbName := cfg.PostgresDatabase
 	if dbName == "" {
 		dbName = "postgres"
@@ -498,23 +479,24 @@ func (m *PostgresManager) PostgresConnectEx(cfg core.ServerConfig) (bool, error)
 
 // PostgresCloseEx 断开并清理指定服务器的所有连接池与隧道。
 func (m *PostgresManager) PostgresCloseEx(serverID string) {
-	m.pools.Range(func(key, value any) bool {
-		k := key.(string)
-		if strings.HasPrefix(k, serverID+":") {
-			if pool, ok := value.(*pgxpool.Pool); ok {
+	prefix := serverID + ":"
+	var keysToDelete []string
+	m.pools.Range(func(k string, pool *pgxpool.Pool) bool {
+		if strings.HasPrefix(k, prefix) {
+			if pool != nil {
 				pool.Close()
 			}
-			m.pools.Delete(k)
+			keysToDelete = append(keysToDelete, k)
 		}
 		return true
 	})
+	for _, k := range keysToDelete {
+		m.pools.Delete(k)
+	}
 
-	if tunVal, ok := m.tunnels.Load(serverID); ok {
-		if tun, ok := tunVal.(*pgSshTunnel); ok {
-			_ = tun.l.Close()
-			_ = tun.client.Close()
-		}
-		m.tunnels.Delete(serverID)
+	if tun, ok := m.tunnels.GetAndDelete(serverID); ok && tun != nil {
+		_ = tun.l.Close()
+		_ = tun.client.Close()
 	}
 
 	m.configs.Delete(serverID)
@@ -522,46 +504,40 @@ func (m *PostgresManager) PostgresCloseEx(serverID string) {
 
 // CloseAll 关闭所有 PostgreSQL 连接池与 SSH 隧道。
 func (m *PostgresManager) CloseAll() {
-	m.pools.Range(func(key, value any) bool {
-		if pool, ok := value.(*pgxpool.Pool); ok {
+	m.pools.Range(func(key string, pool *pgxpool.Pool) bool {
+		if pool != nil {
 			pool.Close()
 		}
-		m.pools.Delete(key)
 		return true
 	})
+	m.pools.Clear()
 
-	m.tunnels.Range(func(key, value any) bool {
-		if tun, ok := value.(*pgSshTunnel); ok {
+	m.tunnels.Range(func(key string, tun *pgSshTunnel) bool {
+		if tun != nil {
 			_ = tun.l.Close()
 			_ = tun.client.Close()
 		}
-		m.tunnels.Delete(key)
 		return true
 	})
+	m.tunnels.Clear()
 
-	m.configs.Range(func(key, value any) bool {
-		m.configs.Delete(key)
-		return true
-	})
+	m.configs.Clear()
 }
-
 
 // ListConnections 列出当前所有已建立连接的 PostgreSQL 数据库实例。
 func (m *PostgresManager) ListConnections() []map[string]any {
-	list := make([]map[string]any, 0)
-	m.configs.Range(func(key, value any) bool {
-		if cfg, ok := value.(core.ServerConfig); ok {
-			list = append(list, map[string]any{
-				"id":       cfg.ID,
-				"name":     cfg.Name,
-				"host":     cfg.Host,
-				"port":     cfg.Port,
-				"database": cfg.PostgresDatabase,
-				"user":     cfg.Username,
-			})
-		}
-		return true
-	})
+	configs := m.configs.Values()
+	list := make([]map[string]any, 0, len(configs))
+	for _, cfg := range configs {
+		list = append(list, map[string]any{
+			"id":       cfg.ID,
+			"name":     cfg.Name,
+			"host":     cfg.Host,
+			"port":     cfg.Port,
+			"database": cfg.PostgresDatabase,
+			"user":     cfg.Username,
+		})
+	}
 	return list
 }
 
@@ -569,16 +545,14 @@ func (m *PostgresManager) ListConnections() []map[string]any {
 func (m *PostgresManager) ResolveID(idOrName string) (string, error) {
 	trimmed := strings.TrimSpace(idOrName)
 	if trimmed != "" {
-		if _, ok := m.configs.Load(trimmed); ok {
+		if _, ok := m.configs.Get(trimmed); ok {
 			return trimmed, nil
 		}
 		var foundID string
-		m.configs.Range(func(key, value any) bool {
-			if cfg, ok := value.(core.ServerConfig); ok {
-				if strings.EqualFold(cfg.Name, trimmed) || strings.EqualFold(cfg.Host, trimmed) || strings.EqualFold(cfg.ID, trimmed) {
-					foundID = cfg.ID
-					return false
-				}
+		m.configs.Range(func(key string, cfg core.ServerConfig) bool {
+			if strings.EqualFold(cfg.Name, trimmed) || strings.EqualFold(cfg.Host, trimmed) || strings.EqualFold(cfg.ID, trimmed) {
+				foundID = cfg.ID
+				return false
 			}
 			return true
 		})
@@ -586,13 +560,7 @@ func (m *PostgresManager) ResolveID(idOrName string) (string, error) {
 			return foundID, nil
 		}
 	}
-	var ids []string
-	m.configs.Range(func(key, value any) bool {
-		if id, ok := key.(string); ok {
-			ids = append(ids, id)
-		}
-		return true
-	})
+	ids := m.configs.Keys()
 	if len(ids) == 1 {
 		return ids[0], nil
 	}

@@ -475,37 +475,29 @@ func (m *MysqlManagerEx) MysqlCloseEx(id string) {
 }
 
 func (m *MysqlManagerEx) MysqlDatabases(id string) ([]string, error) {
-	_, rows, err := m.queryEx(id, "", "SHOW DATABASES")
-	if err != nil {
-		return nil, err
+	mc, ok := m.Get(id)
+	if !ok {
+		return nil, errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
-	dbs := make([]string, 0, len(rows))
-	for _, r := range rows {
-		for _, v := range r {
-			if s := asString(v); s != "" {
-				dbs = append(dbs, s)
-				break
-			}
-		}
-	}
-	return dbs, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return QuerySingleColumn[string](ctx, mc.db, "SHOW DATABASES")
 }
 
 func (m *MysqlManagerEx) MysqlTables(id, dbName string) ([]string, error) {
-	_, rows, err := m.queryEx(id, dbName, "SHOW TABLES")
-	if err != nil {
-		return nil, err
+	mc, ok := m.Get(id)
+	if !ok {
+		return nil, errors.New("MySQL 连接不存在或已断开，请重新连接")
 	}
-	tables := make([]string, 0, len(rows))
-	for _, r := range rows {
-		for _, v := range r {
-			if s := asString(v); s != "" {
-				tables = append(tables, s)
-				break
-			}
+	if strings.TrimSpace(dbName) != "" {
+		if _, e := mc.db.Exec("USE " + quoteIdent(dbName)); e != nil {
+			return nil, fmt.Errorf("切换数据库失败: %w", e)
 		}
+		mc.curDb = dbName
 	}
-	return tables, nil
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	return QuerySingleColumn[string](ctx, mc.db, "SHOW TABLES")
 }
 
 func (m *MysqlManagerEx) MysqlRun(id, dbName, sqlText string) (MysqlQueryResult, error) {

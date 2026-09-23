@@ -52,17 +52,30 @@ export function useAgentComposer({
 
     const prevMessagesLengthRef = useRef<number>(0)
 
-    // Scroll to bottom on new message or during generation/reasoning
+    // Reset generation state on active session change
     useEffect(() => {
-        if (
-            messages.length > prevMessagesLengthRef.current ||
-            isGenerating ||
-            activeReasoning
-        ) {
+        setIsGenerating(false)
+        setActiveReasoning('')
+    }, [activeSessionId])
+
+    // Safety watchdog: prevent isGenerating from being stuck indefinitely in case of dropped events
+    useEffect(() => {
+        if (!isGenerating) return
+        const watchdog = setTimeout(() => {
+            setIsGenerating(false)
+            setActiveReasoning('')
+            setNoticeText('智能体响应超时或已停止')
+        }, 120000)
+        return () => clearTimeout(watchdog)
+    }, [isGenerating, setNoticeText])
+
+    // Scroll to bottom only on new messages added or streaming reasoning
+    useEffect(() => {
+        if (messages.length > prevMessagesLengthRef.current || (isGenerating && activeReasoning)) {
             chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
         }
         prevMessagesLengthRef.current = messages.length
-    }, [messages, isGenerating, activeReasoning])
+    }, [messages.length, isGenerating, activeReasoning])
 
     const handleSelectWorkspace = useCallback(async () => {
         try {
@@ -83,6 +96,7 @@ export function useAgentComposer({
             if (isGenerating) return
 
             // 1. 本地更新消息中对应 plan 的状态为 approved，并将更早未批准方案标记为 expired
+            let updatedMessages: AiMessage[] = []
             setMessages((current) => {
                 const copy = current.map((msg) => {
                     if (msg.plan) {
@@ -108,9 +122,12 @@ export function useAgentComposer({
                     }
                     return msg
                 })
-                API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
+                updatedMessages = copy
                 return copy
             })
+            if (updatedMessages.length > 0) {
+                API.agentSaveSessionMessages(activeSessionId, updatedMessages).catch(() => { })
+            }
 
             // 2. 调用后端标记批准
             try {
@@ -137,55 +154,66 @@ export function useAgentComposer({
                 timestamp: Date.now(),
             }
 
+            setIsGenerating(true)
+            setActiveReasoning('')
+            setNoticeText('')
+
+            let updatedHistory: AiMessage[] = []
             setMessages((curr) => {
-                const updatedHistory = [...curr, userMsg, assistantMsg]
-                setIsGenerating(true)
-                setActiveReasoning('')
-                setNoticeText('')
-
-                API.agentSend(activeSessionId, updatedHistory.slice(0, -1)).then((resp) => {
-                    setMessages((finalCurr) => {
-                        const copy = [...finalCurr]
-                        const last = copy[copy.length - 1]
-                        if (last && last.role === 'assistant') {
-                            if (!last.content) {
-                                last.content = resp || (last.reasoning_content ? '已完成实施方案执行。' : '方案执行完毕。')
-                            }
-                            if (last.process_steps) {
-                                last.process_steps = last.process_steps.map((st) => ({
-                                    ...st,
-                                    status: 'completed',
-                                }))
-                            }
-                        }
-                        API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
-                        return copy
-                    })
-                }).catch((err: any) => {
-                    const errMsg = err?.message || String(err)
-                    setNoticeText(`方案执行失败: ${errMsg}`)
-                    setMessages((finalCurr) => {
-                        const copy = [...finalCurr]
-                        const last = copy[copy.length - 1]
-                        if (last && last.role === 'assistant') {
-                            if (!last.content) last.content = `执行中断: ${errMsg}`
-                            if (last.process_steps) {
-                                last.process_steps = last.process_steps.map((st) =>
-                                    st.status === 'running' ? { ...st, status: 'failed' } : st
-                                )
-                            }
-                        }
-                        return copy
-                    })
-                }).finally(() => {
-                    setIsGenerating(false)
-                    setActiveReasoning('')
-                })
-
+                updatedHistory = [...curr, userMsg, assistantMsg]
                 return updatedHistory
             })
+
+            API.agentSend(activeSessionId, updatedHistory.slice(0, -1)).then((resp) => {
+                let toSave: AiMessage[] | null = null
+                setMessages((finalCurr) => {
+                    const copy = [...finalCurr]
+                    const lastIdx = copy.length - 1
+                    const last = copy[lastIdx]
+                    if (last && last.role === 'assistant') {
+                        const newContent = last.content || resp || (last.reasoning_content ? '已完成实施方案执行。' : '方案执行完毕。')
+                        const newSteps = (last.process_steps || []).map((st) => ({
+                            ...st,
+                            status: 'completed' as const,
+                        }))
+                        copy[lastIdx] = {
+                            ...last,
+                            content: newContent,
+                            process_steps: newSteps,
+                        }
+                    }
+                    toSave = copy
+                    return copy
+                })
+                if (toSave) {
+                    API.agentSaveSessionMessages(activeSessionId, toSave).catch(() => { })
+                }
+            }).catch((err: any) => {
+                const errMsg = err?.message || String(err)
+                setNoticeText(`方案执行失败: ${errMsg}`)
+                setMessages((finalCurr) => {
+                    const copy = [...finalCurr]
+                    const lastIdx = copy.length - 1
+                    const last = copy[lastIdx]
+                    if (last && last.role === 'assistant') {
+                        const newContent = last.content || `执行中断: ${errMsg}`
+                        const newSteps = (last.process_steps || []).map((st) =>
+                            st.status === 'running' ? { ...st, status: 'failed' as const } : st
+                        )
+                        copy[lastIdx] = {
+                            ...last,
+                            content: newContent,
+                            process_steps: newSteps,
+                        }
+                    }
+                    return copy
+                })
+            }).finally(() => {
+                setIsGenerating(false)
+                setActiveReasoning('')
+            })
         },
-        [activeSessionId, setMessages, setNoticeText, setActiveMode, setIsGenerating, setActiveReasoning]
+        [activeSessionId, setMessages, setNoticeText, setActiveMode, isGenerating]
     )
 
     const handleCancelPlan = useCallback(

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Copy, Check } from 'lucide-react'
 import { Button, Tooltip } from 'antd'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
@@ -16,7 +16,7 @@ interface ChatMessageItemProps {
     onRetryPlanStep?: (planId: string, stepId: string) => void
 }
 
-export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
+export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
     message,
     index,
     isStreaming,
@@ -26,6 +26,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 }) => {
     const isUser = message.role === 'user'
     const [copied, setCopied] = useState(false)
+
+    const steps = useMemo(() => getStepsForMessage(message), [message])
 
     const handleCopyAssistant = () => {
         if (!message.content) return
@@ -66,7 +68,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
                 {/* Reasoning & Process Steps with Tools */}
                 <ProcessStepsList
-                    steps={getStepsForMessage(message)}
+                    steps={steps}
                     isStreaming={isStreaming}
                 />
 
@@ -106,6 +108,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             <div className={s.turnDivider} />
         </div>
     )
-}
+})
 
 export default ChatMessageItem

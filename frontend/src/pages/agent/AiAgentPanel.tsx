@@ -20,7 +20,7 @@ interface Props {
     onClose?: () => void
 }
 
-export default function AiAgentPanel({ settings, onUpdateSettings, onClose }: Props) {
+export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSettings, onClose }: Props) => {
     const [noticeText, setNoticeText] = useState<string>('')
     const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
     const [pendingAsk, setPendingAsk] = useState<any>(null)
@@ -413,4 +413,6 @@ export default function AiAgentPanel({ settings, onUpdateSettings, onClose }: Pr
             />
         </div>
     )
-}
+})
+
+export default AiAgentPanel

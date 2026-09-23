@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo, ReactNode } from 'react'
 import {
     SessionInfo,
     RedisSessionInfo,
@@ -96,9 +96,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const [aiSidebarOpen, setAiSidebarOpen] = useState<boolean>(false)
 
     const sessionsRef = useRef(sessions)
-    sessionsRef.current = sessions
     const toolsRef = useRef(tools)
-    toolsRef.current = tools
+    useEffect(() => {
+        sessionsRef.current = sessions
+        toolsRef.current = tools
+    }, [sessions, tools])
 
     const toggleSidebar = useCallback(() => {
         setSidebarOpen((prev) => !prev)
@@ -108,9 +110,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         setAiSidebarOpen((prev) => !prev)
     }, [])
 
+    const prevConnRef = useRef<string>('')
+
     useEffect(() => {
         if (!activeTarget || !activeTarget.id) {
-            API.agentSetActiveConnection(null).catch(() => {})
+            if (prevConnRef.current !== '') {
+                prevConnRef.current = ''
+                API.agentSetActiveConnection(null).catch(() => {})
+            }
             return
         }
 
@@ -230,7 +237,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 break
         }
 
-        API.agentSetActiveConnection(info).catch(() => {})
+        const connKey = info ? `${info.protocol}:${info.id}:${info.database || ''}` : ''
+        if (connKey !== prevConnRef.current) {
+            prevConnRef.current = connKey
+            API.agentSetActiveConnection(info).catch(() => {})
+        }
     }, [activeTarget, sessions])
 
     const activateTab = useCallback((kind: TabKind | null, id: string | null = null) => {
@@ -358,26 +369,43 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         }
     }, [])
 
+    const contextValue = useMemo<SessionContextValue>(
+        () => ({
+            sessions,
+            tools,
+            activeTarget,
+            sidebarOpen,
+            toggleSidebar,
+            setSidebarOpen,
+            aiSidebarOpen,
+            toggleAiSidebar,
+            setAiSidebarOpen,
+            activateTab,
+            closeSession,
+            addSession,
+            updateSession,
+            openTool,
+            closeTool,
+        }),
+        [
+            sessions,
+            tools,
+            activeTarget,
+            sidebarOpen,
+            toggleSidebar,
+            aiSidebarOpen,
+            toggleAiSidebar,
+            activateTab,
+            closeSession,
+            addSession,
+            updateSession,
+            openTool,
+            closeTool,
+        ]
+    )
+
     return (
-        <SessionContext.Provider
-            value={{
-                sessions,
-                tools,
-                activeTarget,
-                sidebarOpen,
-                toggleSidebar,
-                setSidebarOpen,
-                aiSidebarOpen,
-                toggleAiSidebar,
-                setAiSidebarOpen,
-                activateTab,
-                closeSession,
-                addSession,
-                updateSession,
-                openTool,
-                closeTool,
-            }}
-        >
+        <SessionContext.Provider value={contextValue}>
             {children}
         </SessionContext.Provider>
     )

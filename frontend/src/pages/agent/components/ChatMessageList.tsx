@@ -17,7 +17,7 @@ interface ChatMessageListProps {
     onLoadMore?: () => void
 }
 
-export const ChatMessageList: React.FC<ChatMessageListProps> = ({
+export const ChatMessageList: React.FC<ChatMessageListProps> = React.memo(({
     messages,
     isGenerating,
     chatEndRef,
@@ -137,22 +137,25 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = ({
                     </div>
                 </div>
             ) : (
-                messages.map((msg, idx) => (
-                    <ChatMessageItem
-                        key={idx}
-                        message={msg}
-                        index={idx}
-                        isStreaming={isGenerating && idx === messages.length - 1}
-                        onApprovePlan={onApprovePlan}
-                        onCancelPlan={onCancelPlan}
-                        onRetryPlanStep={onRetryPlanStep}
-                    />
-                ))
+                messages.map((msg, idx) => {
+                    const itemKey = (msg as any).id || (msg.timestamp ? `${msg.role}_${msg.timestamp}` : `${msg.role}_${idx}`)
+                    return (
+                        <ChatMessageItem
+                            key={itemKey}
+                            message={msg}
+                            index={idx}
+                            isStreaming={isGenerating && idx === messages.length - 1}
+                            onApprovePlan={onApprovePlan}
+                            onCancelPlan={onCancelPlan}
+                            onRetryPlanStep={onRetryPlanStep}
+                        />
+                    )
+                })
             )}
 
             <div ref={chatEndRef} />
         </div>
     )
-}
+})
 
 export default ChatMessageList
