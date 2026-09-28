@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Table, Space, Tag, Button, Input, message, Tooltip } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
@@ -6,13 +6,11 @@ import {
     Layers,
     Box,
     Network,
-    HardDrive,
     Search,
     RefreshCw,
     Copy,
     CheckCircle,
     Sliders,
-    Activity,
 } from 'lucide-react'
 import { API } from '@/api'
 import type { K8sOverview, K8sNodeInfo } from '@/types'

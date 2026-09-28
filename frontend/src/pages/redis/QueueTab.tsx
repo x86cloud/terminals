@@ -1,5 +1,4 @@
-import React from 'react'
-import { Input, Select, Button, InputNumber, Space } from 'antd'
+import { Input, Select, Button, InputNumber } from 'antd'
 import { RedisQueueItem } from '@/types'
 import { fmtFields } from '@/pages/redis/redisTypes'
 import q from '@/pages/redis/QueueTab.module.less'

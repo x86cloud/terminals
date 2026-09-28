@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, message } from 'antd'
-import { Search, Plus, Trash2, Edit3, Eye, Copy, RefreshCw, FileCode, Table as TableIcon } from 'lucide-react'
+import { Search, Plus, Trash2, Edit3, Eye, Copy, FileCode, Table as TableIcon } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'

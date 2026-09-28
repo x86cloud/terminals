@@ -1,9 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { Select, Input, Button, Segmented, Space, Tag, Checkbox, Tooltip, Alert, message } from 'antd'
-import { X, Copy, PanelLeft, Send, Save, Globe, Radio, CheckCircle, Clock, Database, Download, Edit2, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Select, Input, Button, Segmented, Tag, Checkbox, Tooltip, Alert } from 'antd'
+import { Copy, PanelLeft, Send, Save, Globe, Clock, Database, Download, Edit2, Trash2 } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import a from '@/pages/api/HttpRequest.module.less'
-import { findTreeNode } from '@/pages/api/apiTypes'
 import type { ApiState } from '@/pages/api/useApi'
 
 const methodColorMap: Record<string, string> = {
@@ -21,7 +20,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
         mode, wsStatus, wsConnect, wsDisconnect, wsConnecting, wsSendMsg,
         method, setMethod, methods, url, updateUrl, doSend, sending, showApiTree, setShowApiTree,
         currentApiName, currentApiId, renameTreeNode, saveCurrentApi, setSaveModalOpen, setSaveModalMode,
-        params, headers, bodyType, body, auth, timeoutMs, insecureTLS, followRedirects, apiTree, isModified,
+        isModified,
     } = state
 
     const [isEditingName, setIsEditingName] = useState(false)

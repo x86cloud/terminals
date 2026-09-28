@@ -1038,6 +1038,7 @@ export interface AppSettings {
     aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
     aiEnableVerifier?: boolean
     aiMaxParallel?: number
+    closeAction?: 'ask' | 'minimize' | 'quit'
 }
 
 export interface ToolCallItem {

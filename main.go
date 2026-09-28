@@ -16,6 +16,9 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var trayIcon []byte
+
 func main() {
 	if _, err := logger.Init(); err != nil {
 		log.Printf("failed to initialize logger: %v", err)
@@ -74,7 +77,7 @@ func main() {
 			},
 		},
 		Mac: application.MacOptions{
-			ApplicationShouldTerminateAfterLastWindowClosed: true,
+			ApplicationShouldTerminateAfterLastWindowClosed: false,
 		},
 	})
 
@@ -98,6 +101,53 @@ func main() {
 			"files":   files,
 			"details": details,
 		})
+	})
+
+	restoreWindow := func() {
+		win.Show()
+		win.UnMinimise()
+		win.Focus()
+	}
+
+	// 系统托盘初始化
+	tray := app.SystemTray.New()
+	tray.SetIcon(trayIcon)
+	tray.SetTooltip("xClient")
+	tray.OnClick(restoreWindow)
+	tray.OnDoubleClick(restoreWindow)
+
+	trayMenu := app.NewMenu()
+	trayMenu.Add("显示主界面").OnClick(func(ctx *application.Context) {
+		restoreWindow()
+	})
+	trayMenu.AddSeparator()
+	trayMenu.Add("退出程序").OnClick(func(ctx *application.Context) {
+		core.SetAppQuitting(true)
+		app.Quit()
+	})
+	tray.SetMenu(trayMenu)
+
+	// 拦截关闭事件 (如 Alt+F4 / 任务栏右键关闭)
+	win.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
+		if core.IsAppQuitting() {
+			return
+		}
+		var closeAction = "ask"
+		if container.Store != nil {
+			closeAction = container.Store.GetSettings().CloseAction
+		}
+		switch closeAction {
+		case "minimize":
+			event.Cancel()
+			win.Hide()
+		case "quit":
+			core.SetAppQuitting(true)
+			app.Quit()
+		default: // "ask"
+			event.Cancel()
+			restoreWindow()
+			core.EmitEvent("app:request-close", nil)
+		}
 	})
 
 	container.Startup(context.Background())

@@ -890,7 +890,6 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
 
                             {/* 渲染已持久化的行 */}
                             {rows.map((row, rIdx) => {
-                                const isRowDirty = !!rowDrafts[rIdx]
                                 return (
                                     <tr
                                         key={rIdx}

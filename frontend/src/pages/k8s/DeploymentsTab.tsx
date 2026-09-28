@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     Table,
     Space,
@@ -9,14 +9,12 @@ import {
     InputNumber,
     message,
     Popconfirm,
-    Tooltip,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
     RotateCw,
     Search,
     RefreshCw,
-    Copy,
     Code,
     TrendingUp,
     Trash2,

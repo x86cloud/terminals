@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Tooltip, Segmented } from 'antd'
 import { PanelLeft, Folder, BarChart2, Play, Plug, Clock, Maximize2, Minimize2, X } from 'lucide-react'
 import TerminalView from '@/pages/ssh/terminal/TerminalView'
@@ -8,7 +8,6 @@ import ProcessPanel from '@/pages/ssh/process/ProcessPanel'
 import ServicePanel from '@/pages/ssh/service/ServicePanel'
 import CronPanel from '@/pages/ssh/cron/CronPanel'
 import { SessionInfo } from '@/types'
-import g from '@/styles/global.module.less'
 import w from '@/pages/ssh/SessionWorkspace.module.less'
 
 export interface SessionWorkspaceProps {

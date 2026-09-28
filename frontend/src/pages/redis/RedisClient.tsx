@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { message } from 'antd'
 import { Database, Zap, ShieldCheck, Radio, Bell, ListOrdered, Activity } from 'lucide-react'
 import { API, subscribe } from '@/api'
@@ -32,10 +32,9 @@ import PubSubTab from '@/pages/redis/PubSubTab'
 import KeyspaceTab from '@/pages/redis/KeyspaceTab'
 import QueueTab from '@/pages/redis/QueueTab'
 import MonitorTab from '@/pages/redis/MonitorTab'
-import g from '@/styles/global.module.less'
 import r from '@/pages/redis/RedisClient.module.less'
 
-const TAB_ICONS: Record<Tab, React.ReactNode> = {
+const TAB_ICONS: Record<Tab, ReactNode> = {
     keys: <Database size={13} />,
     pipeline: <Zap size={13} />,
     tx: <ShieldCheck size={13} />,

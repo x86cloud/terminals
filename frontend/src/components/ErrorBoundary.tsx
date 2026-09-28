@@ -1,4 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react'
+import { Component, ErrorInfo, ReactNode } from 'react'
 import { Button, Result, Space } from 'antd'
 import s from './ErrorBoundary.module.less'
 

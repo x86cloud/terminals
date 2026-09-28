@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     Table,
     Space,
@@ -6,7 +6,6 @@ import {
     Button,
     Input,
     Segmented,
-    Modal,
     message,
     Tooltip,
     Popconfirm,

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Popover, Select, Input, Button, Space, Tooltip } from 'antd'
-import { Filter, X } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Popover, Select, Input, Button, Tooltip } from 'antd'
+import { Filter } from 'lucide-react'
 
 export type FilterOp =
     | 'contains'

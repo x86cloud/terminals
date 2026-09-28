@@ -2,10 +2,8 @@ import { useEffect } from 'react'
 import { API, subscribe } from '@/api'
 import {
     AiMessage,
-    AgentApprovalRequest,
     AgentAskRequest,
     AgentHitlConfirmRequest,
-    AgentPlan,
 } from '@/types'
 
 interface UseAgentEventsProps {
@@ -16,7 +14,6 @@ interface UseAgentEventsProps {
     setNoticeText: (msg: string) => void
     setPendingAsk: (ask: AgentAskRequest | null) => void
     setPendingHitl: (hitl: AgentHitlConfirmRequest | null) => void
-    setPendingPlan: (plan: AgentPlan | null) => void
 }
 
 export function useAgentEvents({
@@ -27,7 +24,6 @@ export function useAgentEvents({
     setNoticeText,
     setPendingAsk,
     setPendingHitl,
-    setPendingPlan,
 }: UseAgentEventsProps) {
     useEffect(() => {
         const appendOrUpdateAssistant = (updater: (msg: AiMessage) => AiMessage) => {
@@ -304,7 +300,6 @@ export function useAgentEvents({
 
                 case 'PlanProposed':
                 case 'plan_proposed':
-                    setPendingPlan(event.payload)
                     break
 
                 case 'AskUser':
@@ -551,7 +546,6 @@ export function useAgentEvents({
         setNoticeText,
         setPendingAsk,
         setPendingHitl,
-        setPendingPlan,
     ])
 }
 

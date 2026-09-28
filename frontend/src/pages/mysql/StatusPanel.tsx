@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { Select, Button, Segmented, Space, Badge, Tag, Tooltip, Input, message } from 'antd'
 import {
     Activity,
@@ -9,24 +9,15 @@ import {
     ArrowUpDown,
     RotateCw,
     Search,
-    X,
     Check,
     Copy,
     Power,
     Sliders,
-    Layers,
-    Info,
     AlertTriangle,
-    Shield,
-    Server,
-    FileText,
-    Cpu,
-    ExternalLink
 } from 'lucide-react'
 import StatusCard from '@/pages/mysql/StatusCard'
 import { formatSize, errorMessage } from '@/utils'
 import { API } from '@/api'
-import g from '@/styles/global.module.less'
 import my from './StatusPanel.module.less'
 
 interface Props {

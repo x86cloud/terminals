@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react'
 import { ChevronRight, Loader2 } from 'lucide-react'
-import { TreeNodeData, TreeProps, TreeDropInfo } from './types'
+import { TreeNodeData, TreeProps } from './types'
 import s from './Tree.module.less'
 
 function findNode(key: string, nodes: TreeNodeData[]): TreeNodeData | null {

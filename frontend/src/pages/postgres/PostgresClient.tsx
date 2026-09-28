@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Button, Tag, Dropdown, MenuProps, message, Tooltip, Space, Popconfirm } from 'antd'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { Button, Tag, Dropdown, MenuProps, message, Tooltip, Space } from 'antd'
 import Tree from '@/components/common/Tree'
 import {
     Database,
@@ -20,7 +20,7 @@ import {
 import { API } from '@/api'
 import ClientIcon from '@/components/ClientIcon'
 import { PostgresSessionInfo } from '@/types'
-import { PgDatabase, PgSchema, PgTable, PgFunction, PostgresTabItem } from './postgresTypes'
+import { PgDatabase, PgSchema, PgTable, PostgresTabItem } from './postgresTypes'
 import TabBar, { TabItem } from '@/components/common/TabBar'
 import DbDataTab from '@/components/db/DataTab'
 import DbSqlEditor from '@/components/db/SqlEditor'

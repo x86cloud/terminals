@@ -1,5 +1,7 @@
 package core
 
+import "sync/atomic"
+
 type AiModelItem struct {
 	ID               string  `json:"id"`
 	Name             string  `json:"name"`
@@ -38,6 +40,7 @@ type AppSettings struct {
 	AiReasoningEffort       string        `json:"aiReasoningEffort"` // "low" | "medium" | "high"
 	AiEnableVerifier        bool          `json:"aiEnableVerifier"`
 	AiMaxParallel           int           `json:"aiMaxParallel"`
+	CloseAction             string        `json:"closeAction"` // "ask" | "minimize" | "quit"
 }
 
 func DefaultAppSettings() AppSettings {
@@ -77,5 +80,17 @@ func DefaultAppSettings() AppSettings {
 		AiReasoningEffort:       "medium",
 		AiEnableVerifier:        false,
 		AiMaxParallel:           4,
+		CloseAction:             "ask",
 	}
 }
+
+var isAppQuitting atomic.Bool
+
+func SetAppQuitting(q bool) {
+	isAppQuitting.Store(q)
+}
+
+func IsAppQuitting() bool {
+	return isAppQuitting.Load()
+}
+

@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
-import { Modal, Segmented, Button, Input, InputNumber, Select, message } from 'antd'
-import { Download, Upload, FileCode } from 'lucide-react'
+import { useState } from 'react'
+import { Modal, Segmented, InputNumber, message } from 'antd'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 

@@ -1,5 +1,4 @@
-import React from 'react'
-import { Select, Input, InputNumber, Button, Segmented, Checkbox, Tooltip, Space, Badge, AutoComplete } from 'antd'
+import { Select, Input, InputNumber, Button, Segmented, Checkbox, Tooltip, AutoComplete } from 'antd'
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import a from '@/pages/api/ApiConfigTabs.module.less'

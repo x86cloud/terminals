@@ -5,6 +5,8 @@ import (
 	"terminal/agent"
 	"terminal/core"
 	"terminal/logger"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type SystemService struct{}
@@ -177,4 +179,20 @@ func (s *SystemService) OpenBrowser(targetURL string) error {
 	}
 	return nil
 }
+
+func (s *SystemService) HideWindow() {
+	if app := application.Get(); app != nil {
+		if w, ok := app.Window.GetByName("main"); ok && w != nil {
+			w.Hide()
+		}
+	}
+}
+
+func (s *SystemService) QuitApp() {
+	core.SetAppQuitting(true)
+	if app := application.Get(); app != nil {
+		app.Quit()
+	}
+}
+
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Button, Tooltip, Popover, Input, InputNumber, Space, Popconfirm, message, Modal } from 'antd'
+import { useState } from 'react'
+import { Button, Tooltip, Popover, Input, InputNumber, Popconfirm, message, Modal } from 'antd'
 import { Copy, Check, Clock, RefreshCw, Trash2, Edit2, Database } from 'lucide-react'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'

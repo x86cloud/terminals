@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
-import { Modal, Space, Button, Select, Input, message, Tag } from 'antd'
-import { Sparkles, Bot, Wand2, Lightbulb, Layers } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Modal, Button, Select, Input, message } from 'antd'
+import { Sparkles, Wand2, Lightbulb } from 'lucide-react'
 import { API } from '@/api'
 
 interface Props {

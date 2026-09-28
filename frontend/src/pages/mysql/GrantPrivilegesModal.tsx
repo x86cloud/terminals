@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Modal, Form, Select, Segmented, Checkbox, Switch, Button, Tag, Space, Alert, Divider } from 'antd'
-import { KeyRound, Shield, Eye, Sparkles, CheckSquare, Square } from 'lucide-react'
+import { Shield, Eye, Sparkles } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 

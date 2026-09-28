@@ -39,9 +39,7 @@ export default function ApiTreeList({ state }: Props) {
         moveTreeNode,
         newBlankApi,
         showApiTree,
-        setShowApiTree,
         setSaveModalOpen,
-        saveModalMode,
         setSaveModalMode,
         isModified,
         currentApiName,
@@ -51,7 +49,6 @@ export default function ApiTreeList({ state }: Props) {
 
     const [keyword, setKeyword] = useState('')
     const [expandedKeys, setExpandedKeys] = useState<string[]>(['folder_default'])
-    const [autoExpandParent, setAutoExpandParent] = useState(true)
     const [contextMenu, setContextMenu] = useState<MenuState>(closedMenu)
 
     // 重命名/新建分组弹窗状态
@@ -484,7 +481,6 @@ export default function ApiTreeList({ state }: Props) {
                     return [...prev, key]
                 }
             })
-            setAutoExpandParent(false)
         } else if (raw && !raw.isFolder) {
             safeLoadApi(raw as SavedApiItem)
         }
@@ -714,7 +710,6 @@ export default function ApiTreeList({ state }: Props) {
                         expandedKeys={effectiveExpandedKeys}
                         onExpand={(keys) => {
                             setExpandedKeys(keys)
-                            setAutoExpandParent(false)
                         }}
                         onSelect={handleSelect}
                         onDrop={handleDrop}

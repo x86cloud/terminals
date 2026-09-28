@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     Table,
     Button,
@@ -27,7 +27,6 @@ import {
     Code,
     RefreshCw,
     Copy,
-    Info,
     Terminal,
 } from 'lucide-react'
 import { API } from '@/api'

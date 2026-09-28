@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Modal, Button, Select, Input, message, Tag } from 'antd'
 import { Sparkles, Wand2, Lightbulb } from 'lucide-react'
 import { API } from '@/api'

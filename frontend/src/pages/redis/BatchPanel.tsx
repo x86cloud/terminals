@@ -1,4 +1,3 @@
-import React from 'react'
 import { Input, Button } from 'antd'
 import CodeEditor from '@/components/CodeEditor'
 import { RedisPipelineResult, RedisTransactionResult } from '@/types'

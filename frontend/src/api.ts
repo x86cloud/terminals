@@ -1,4 +1,4 @@
-import { Events } from '@wailsio/runtime'
+import { Events, Window, Application } from '@wailsio/runtime'
 import * as SystemService from '../bindings/terminal/services/systemservice'
 import * as SshService from '../bindings/terminal/services/sshservice'
 import * as SftpService from '../bindings/terminal/services/sftpservice'
@@ -34,7 +34,6 @@ import type {
     MongoFindResult,
     MongoValidatorInfo,
     MongoBulkOp,
-    MongoBulkResult,
     MongoTxOp,
     MongoDatabaseInfo,
     MongoCollectionInfo,
@@ -59,15 +58,12 @@ import type {
     AgentSkillItem,
     AgentPlan,
     AgentPlanStep,
-    AgentApprovalRequest,
     AgentAskRequest,
     FrontendMessage,
     DockerComposeStackInfo,
-    DockerComposeDeployReq,
     DockerComposeRecord,
     KubeconfigContextInfo,
     K8sApplyResult,
-    K8sResourceItemSummary,
     K8sOrchestrationRecord,
     K8sDeleteResult,
     AppVersionInfo,
@@ -118,6 +114,34 @@ export const API = {
         }
         window.open(url, '_blank')
         return Promise.resolve()
+    },
+
+    // 窗口与系统操作
+    hideWindow: async (): Promise<void> => {
+        try {
+            if ((SystemService as any).HideWindow) {
+                await (SystemService as any).HideWindow()
+                return
+            }
+        } catch {}
+        try {
+            await Window.Hide()
+        } catch (e) {
+            console.warn('hideWindow failed:', e)
+        }
+    },
+    quitApp: async (): Promise<void> => {
+        try {
+            if ((SystemService as any).QuitApp) {
+                await (SystemService as any).QuitApp()
+                return
+            }
+        } catch {}
+        try {
+            await Application.Quit()
+        } catch (e) {
+            console.warn('quitApp failed:', e)
+        }
     },
 
     // 设置持久化

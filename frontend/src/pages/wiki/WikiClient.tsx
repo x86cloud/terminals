@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import {
     Input,
     Button,
@@ -6,7 +6,6 @@ import {
     Modal,
     message,
     Segmented,
-    Space,
 } from 'antd'
 import {
     BookOpen,
@@ -24,7 +23,6 @@ import {
     Edit2,
     Sparkles,
     Search,
-    Check,
 } from 'lucide-react'
 import Tree, { TreeNodeData } from '@/components/common/Tree'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
@@ -43,7 +41,7 @@ interface Props {
 type ViewMode = 'preview' | 'edit' | 'split'
 
 export default function WikiClient({ onClose }: Props) {
-    const { sessions, activeTarget } = useSession()
+    const { activeTarget } = useSession()
     const [treeData, setTreeData] = useState<WikiNode[]>([])
     const [wikiDir, setWikiDir] = useState<string>('')
     const [loading, setLoading] = useState<boolean>(false)

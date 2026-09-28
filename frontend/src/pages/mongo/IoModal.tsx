@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Modal, Radio, Button, Input, Space, Alert, Progress, message } from 'antd'
+import { useState } from 'react'
+import { Modal, Radio, Button, Input, Alert, message } from 'antd'
 import { Download, Copy } from 'lucide-react'
 import { copyTextToClipboard } from '@/utils/sqlExport'
 import { API } from '@/api'

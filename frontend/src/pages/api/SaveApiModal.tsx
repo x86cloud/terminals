@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
-import { Modal, Form, Input, Select, message } from 'antd'
-import { Folder, FileCode } from 'lucide-react'
+import { useEffect } from 'react'
+import { Modal, Form, Input, Select } from 'antd'
+import { FileCode } from 'lucide-react'
 import { getFolderOptions } from './apiTypes'
 import type { ApiState } from './useApi'
 

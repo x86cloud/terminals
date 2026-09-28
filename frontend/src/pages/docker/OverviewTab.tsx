@@ -1,12 +1,10 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Button, Modal as AntdModal, Checkbox, message, Space, Tag } from 'antd'
 import {
-    Activity,
     Box,
     Layers,
     HardDrive,
     Network,
-    Cpu,
     Server,
     Trash2,
     RefreshCw,

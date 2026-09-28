@@ -1,4 +1,3 @@
-import React from 'react'
 import { Button } from 'antd'
 import AppLogo from '@/components/AppLogo'
 import ErrorBoundary from '@/components/ErrorBoundary'

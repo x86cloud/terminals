@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import { useState, useRef } from 'react'
 import s from './CellEditorInline.module.less'
 
 export default function CellEditorInline({

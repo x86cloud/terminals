@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react'
-import { Table, Button, Tag, Input, Switch, Tooltip, message, Popconfirm, Space, Segmented, Badge } from 'antd'
+import { useState, useEffect, useMemo } from 'react'
+import { Table, Button, Tag, Input, Switch, Tooltip, message, Popconfirm, Space, Segmented } from 'antd'
 import { RotateCw, Activity, HardDrive, ShieldCheck, Clock, Search, Copy, Check } from 'lucide-react'
 import { API } from '@/api'
 import { PgStatus, PgSession } from './postgresTypes'

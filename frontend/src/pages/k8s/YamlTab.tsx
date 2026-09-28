@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Table,
   Space,
@@ -39,7 +39,7 @@ import {
 import CodeEditor from '@/components/CodeEditor'
 import K8sYamlGenerateModal from './K8sYamlGenerateModal'
 import { API } from '@/api'
-import type { K8sOrchestrationRecord, K8sResourceItemSummary } from '@/types'
+import type { K8sOrchestrationRecord } from '@/types'
 import s from './K8sClient.module.less'
 
 interface Props {
@@ -254,7 +254,6 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       )
 
       const failures = results?.filter((r) => r.action === 'failed') || []
-      const successes = results?.filter((r) => r.action !== 'failed') || []
 
       if (failures.length === 0) {
         message.success(

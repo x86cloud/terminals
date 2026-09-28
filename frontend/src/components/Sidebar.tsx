@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Input, Button, Tooltip } from 'antd'
 import {
     Plug,
@@ -163,11 +163,6 @@ export default function Sidebar({
         const name = editingGroup.name.trim()
         if (name) onRenameGroup({ id: editingGroup.id, name })
         setEditingGroup(null)
-    }
-
-    const openMoveMenu = (server: ServerConfig, e: React.MouseEvent) => {
-        e.preventDefault()
-        setMoveMenu({ serverId: server.id, x: e.clientX, y: e.clientY })
     }
 
     const renderServer = (server: ServerConfig) => {

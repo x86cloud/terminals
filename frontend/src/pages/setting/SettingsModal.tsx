@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Button } from 'antd'
 import { ArrowLeft, Palette, Bot, Info } from 'lucide-react'
 import { AppSettings, AiModelItem } from '@/types'
@@ -21,6 +21,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
     const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('light')
     const [globalFontFamily, setGlobalFontFamily] = useState('system')
+    const [closeAction, setCloseAction] = useState<'ask' | 'minimize' | 'quit'>('ask')
 
     const [aiBaseUrl, setAiBaseUrl] = useState('https://api.deepseek.com')
     const [aiApiKey, setAiApiKey] = useState('')
@@ -50,6 +51,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             const ratio = settings.aiContextCompressRatio || 80
             setThemeMode(settings.themeMode || 'light')
             setGlobalFontFamily(settings.globalFontFamily || 'system')
+            setCloseAction(settings.closeAction || 'ask')
             setAiBaseUrl(settings.aiBaseUrl || 'https://api.deepseek.com')
             setAiApiKey(settings.aiApiKey || '')
             setAiModel(settings.aiModel || 'deepseek-v4-flash')
@@ -111,9 +113,10 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiMaxParallel,
             aiSystemPrompt,
             aiWorkspaceDir,
+            closeAction,
             ...partial,
         })
-    }, [settings, themeMode, globalFontFamily, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiModelContextTokens, aiContextCompressRatio, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, onSave])
+    }, [settings, themeMode, globalFontFamily, closeAction, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiModelContextTokens, aiContextCompressRatio, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, onSave])
 
     if (!open) return null
 
@@ -127,6 +130,11 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         setGlobalFontFamily(fontKey)
         applyGlobalFont(fontKey)
         persistSettings({ globalFontFamily: fontKey })
+    }
+
+    const handleCloseActionChange = (action: 'ask' | 'minimize' | 'quit') => {
+        setCloseAction(action)
+        persistSettings({ closeAction: action })
     }
 
     const handleAiAgentChange = (fields: Partial<AppSettings>) => {
@@ -222,8 +230,10 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                     <AppearanceTab
                         themeMode={themeMode}
                         globalFontFamily={globalFontFamily}
+                        closeAction={closeAction}
                         onThemeChange={handleThemeChange}
                         onGlobalFontChange={handleGlobalFontChange}
+                        onCloseActionChange={handleCloseActionChange}
                     />
                 )}
 

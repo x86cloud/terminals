@@ -1,7 +1,6 @@
 import { API } from '@/api'
 import {
     ServerConfig,
-    SessionInfo,
     RedisSessionInfo,
     MysqlSessionInfo,
     PostgresSessionInfo,

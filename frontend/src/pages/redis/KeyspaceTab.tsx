@@ -1,4 +1,3 @@
-import React from 'react'
 import { Input, InputNumber, Button } from 'antd'
 import { RedisKeyspaceMessage, RedisSlowLogEntry } from '@/types'
 import ks from '@/pages/redis/KeyspaceTab.module.less'

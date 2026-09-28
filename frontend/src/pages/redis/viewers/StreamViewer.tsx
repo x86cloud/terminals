@@ -1,6 +1,6 @@
-import React, { useState, useMemo } from 'react'
-import { Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, message } from 'antd'
-import { Search, Plus, Trash2, Copy, Clock, KeyRound } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { Input, Button, Space, Tooltip, Modal, Popconfirm, message } from 'antd'
+import { Search, Plus, Trash2, Copy, Clock } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -28,12 +28,6 @@ export default function StreamViewer({ session, selected, value, onReload, flash
     const [entryId, setEntryId] = useState('*')
     const [fieldsText, setFieldsText] = useState('{\n  "event": "order_created",\n  "amount": "99.9"\n}')
     const [adding, setAdding] = useState(false)
-
-    // Inspect Entry Drawer
-    const [inspectDrawer, setInspectDrawer] = useState<{ open: boolean; msg: StreamMessage | null }>({
-        open: false,
-        msg: null,
-    })
 
     const messages = useMemo<StreamMessage[]>(() => {
         if (Array.isArray(value.rawJson)) {

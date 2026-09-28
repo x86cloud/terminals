@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal, Space, Button, message, Tag } from 'antd'
 import {
     Code,
     Copy,
     Save,
-    RotateCcw,
-    X,
-    CheckCircle,
 } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'

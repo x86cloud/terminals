@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { Button, Input, Tooltip, message, Space } from 'antd'
-import { Terminal, ChevronUp, ChevronDown, Trash2, Play, CornerDownLeft } from 'lucide-react'
+import { Button, Input, Tooltip } from 'antd'
+import { Terminal, ChevronUp, ChevronDown, Trash2, CornerDownLeft } from 'lucide-react'
 import { RedisSessionInfo } from '@/types'
 import c from './RedisCliDrawer.module.less'
 

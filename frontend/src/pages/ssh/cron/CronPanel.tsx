@@ -1,5 +1,5 @@
-import React, {useCallback, useEffect, useMemo, useState} from 'react'
-import { Input, Button, Switch, Table, Modal, Alert, Tag, Space, Tooltip, message } from 'antd'
+import {useCallback, useEffect, useMemo, useState} from 'react'
+import { Input, Button, Switch, Table, Modal, Alert, Space, Tooltip, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Plus, Search, RotateCw, Play, Edit, Trash2 } from 'lucide-react'
 import {ConfirmModal, ConfirmState} from '@/components/Modal'
@@ -173,7 +173,7 @@ export default function CronPanel({sessionId, active}: Props) {
             key: 'expression',
             width: 180,
             render: (expr) => (
-                <div>
+                <div style={{ whiteSpace: 'nowrap' }}>
                     <span style={{ fontFamily: 'monospace', fontWeight: 600, color: '#2b90ee' }}>{expr}</span>
                     <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{explainCron(expr)}</div>
                 </div>
@@ -281,15 +281,16 @@ export default function CronPanel({sessionId, active}: Props) {
             )}
 
             <div className={c.tableWrap}>
-                <Table<SSHCronItem>
-                    rowKey="id"
-                    size="small"
-                    columns={columns}
-                    dataSource={filteredItems}
-                    loading={busy}
-                    pagination={{ pageSize: 50, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'] }}
-                    scroll={{ y: 'calc(100vh - 280px)' }}
-                />
+                <div className={c.tableInner}>
+                    <Table<SSHCronItem>
+                        rowKey="id"
+                        size="small"
+                        columns={columns}
+                        dataSource={filteredItems}
+                        loading={busy}
+                        pagination={{ pageSize: 50, showSizeChanger: true, pageSizeOptions: ['20', '50', '100', '200'] }}
+                    />
+                </div>
             </div>
 
             {/* 新建/编辑 Modal */}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Button, Segmented, Space, Tooltip, Tag, message, Modal, Input } from 'antd'
-import { Sparkles, Minimize2, Copy, Save, Plus, FileText, Check, AlertCircle } from 'lucide-react'
+import { Sparkles, Minimize2, Copy, Save, Plus, Check, AlertCircle } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'

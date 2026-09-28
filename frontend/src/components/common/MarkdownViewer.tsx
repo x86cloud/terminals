@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
-import XMarkdown, { ComponentProps } from '@ant-design/x-markdown'
-import { Copy, Check } from 'lucide-react'
+import React from 'react'
+import XMarkdown from '@ant-design/x-markdown'
 import s from './MarkdownViewer.module.less'
 
 interface MarkdownViewerProps {

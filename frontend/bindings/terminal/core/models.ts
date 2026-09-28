@@ -59,6 +59,11 @@ export interface AppSettings {
     "aiReasoningEffort": string;
     "aiEnableVerifier": boolean;
     "aiMaxParallel": number;
+
+    /**
+     * "ask" | "minimize" | "quit"
+     */
+    "closeAction": string;
 }
 
 export interface AppVersionInfo {

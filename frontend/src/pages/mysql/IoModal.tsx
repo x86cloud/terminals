@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Modal, Segmented, Input, InputNumber, Alert, Space } from 'antd'
+import { useState } from 'react'
+import { Modal, Segmented, Input, InputNumber, Alert } from 'antd'
 
 export interface ExportOptions {
     mode: 'sql' | 'csv' | 'json'

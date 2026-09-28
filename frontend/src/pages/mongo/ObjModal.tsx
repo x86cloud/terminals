@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Modal, Input, Switch, Alert, InputNumber, Space } from 'antd'
 
 export type MongoObjModalKind =

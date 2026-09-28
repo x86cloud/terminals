@@ -1,5 +1,4 @@
-import React from 'react'
-import { Input, Button, Tag, Space } from 'antd'
+import { Input, Button, Tag } from 'antd'
 import { RedisPubsubMessage } from '@/types'
 import ps from '@/pages/redis/PubSubTab.module.less'
 

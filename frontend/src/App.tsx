@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConfigProvider, App as AntdApp, message } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { getAntdTheme } from './theme'
@@ -19,6 +19,7 @@ import TitleBar from '@/components/TitleBar'
 import ServerDialog from '@/components/ServerDialog'
 import SettingsModal from '@/pages/setting/SettingsModal'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import CloseConfirmModal from '@/components/CloseConfirmModal'
 import SessionTabs from '@/components/app/SessionTabs'
 import Stage from '@/components/app/Stage'
 import AiSidebar from '@/components/app/AiSidebar'
@@ -60,6 +61,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
 
     // ---- 设置与弹窗 ----
     const [settingsOpen, setSettingsOpen] = useState(false)
+    const [closeModalOpen, setCloseModalOpen] = useState(false)
     const [dialog, setDialog] = useState<{ open: boolean; initial: ServerConfig | null }>({
         open: false,
         initial: null,
@@ -71,6 +73,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     const activeIdRef = useRef<string | null>(null)
     const pathsRef = useRef<Record<string, string>>({})
     const connectingRef = useRef<Set<string>>(new Set())
+    const pendingCloseActionRef = useRef<'minimize' | null>(null)
 
     /* ---------------- 基础数据加载与事件订阅 ---------------- */
 
@@ -143,6 +146,43 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         [reloadServers]
     )
 
+    /* ---------------- 关闭与退出处理 ---------------- */
+
+    const handleRequestClose = useCallback(() => {
+        const action = settings.closeAction || 'ask'
+        if (action === 'minimize') {
+            void API.hideWindow()
+        } else if (action === 'quit') {
+            void API.quitApp()
+        } else {
+            setCloseModalOpen(true)
+        }
+    }, [settings.closeAction])
+
+    const handleConfirmClose = useCallback(
+        async (action: 'minimize' | 'quit', remember: boolean) => {
+            setCloseModalOpen(false)
+            if (remember) {
+                const nextSettings: AppSettings = { ...settings, closeAction: action }
+                await onUpdateSettings(nextSettings)
+            }
+            if (action === 'quit') {
+                pendingCloseActionRef.current = null
+                void API.quitApp()
+            } else {
+                pendingCloseActionRef.current = 'minimize'
+            }
+        },
+        [settings, onUpdateSettings]
+    )
+
+    const handleCloseModalAfterClose = useCallback(() => {
+        if (pendingCloseActionRef.current === 'minimize') {
+            pendingCloseActionRef.current = null
+            void API.hideWindow()
+        }
+    }, [])
+
     useEffect(() => {
         void reloadServers()
         void reloadGroups()
@@ -156,12 +196,16 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             setPendingAsk(question)
             openTool('aiAgent')
         })
+        const offCloseReq = subscribe('app:request-close', () => {
+            handleRequestClose()
+        })
 
         return () => {
             offClosed()
             offAsk()
+            offCloseReq()
         }
-    }, [closeSession, openTool])
+    }, [closeSession, openTool, handleRequestClose])
 
     /* ---------------- 系统级文件拖拽 ---------------- */
 
@@ -310,6 +354,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 onOpenSettings={() => setSettingsOpen(true)}
                 themeMode={settings.themeMode}
                 onToggleTheme={onToggleTheme}
+                onRequestClose={handleRequestClose}
             />
 
             <div className={a.body}>
@@ -361,6 +406,16 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 settings={settings}
                 onClose={() => setSettingsOpen(false)}
                 onSave={onUpdateSettings}
+            />
+
+            <CloseConfirmModal
+                open={closeModalOpen}
+                onConfirm={handleConfirmClose}
+                onCancel={() => {
+                    pendingCloseActionRef.current = null
+                    setCloseModalOpen(false)
+                }}
+                afterClose={handleCloseModalAfterClose}
             />
 
             <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />

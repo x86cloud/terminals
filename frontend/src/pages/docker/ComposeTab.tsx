@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import {
     Play,
     Square,
@@ -12,7 +12,6 @@ import {
     Layers,
     Edit3,
     Check,
-    ArrowUpRight,
     Sparkles,
     Terminal,
     RotateCcw,

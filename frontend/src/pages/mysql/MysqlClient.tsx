@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
+import { Button, Dropdown, MenuProps, message, Tooltip, Space } from 'antd'
 import Tree from '@/components/common/Tree'
 import {
     Database,
-    Folder,
     Table as TableIcon,
     Plus,
     RotateCw,
@@ -15,7 +14,6 @@ import {
     Download,
     Upload,
     Copy,
-    X,
     Eraser,
     Layers,
     Eye,
@@ -99,7 +97,6 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const [objUnique, setObjUnique] = useState(false)
     const [objBusy, setObjBusy] = useState(false)
     const [objMsg, setObjMsg] = useState('')
-    const [createTableOpen, setCreateTableOpen] = useState(false)
 
     const [ioModal, setIoModal] = useState<null | 'export' | 'import'>(null)
     const [ioTable, setIoTable] = useState('')

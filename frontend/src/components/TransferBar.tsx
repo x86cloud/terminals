@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button, Progress, Tag, Tooltip } from 'antd'
 import { Upload, Download, X } from 'lucide-react'
 import { Transfer } from '@/types'

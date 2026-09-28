@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Space, Tooltip, Input, Dropdown, MenuProps, message } from 'antd'
 import {
     Database,
@@ -7,7 +7,6 @@ import {
     RotateCw,
     Trash2,
     Eraser,
-    Play,
     Code,
     X,
 } from 'lucide-react'
@@ -46,12 +45,10 @@ export default function SqliteClient({ session, onClose }: Props) {
     const [tables, setTables] = useState<SqliteTableInfo[]>([])
     const [filterText, setFilterText] = useState('')
     const [busy, setBusy] = useState(false)
-    const [error, setError] = useState('')
     const [info, setInfo] = useState<{ path: string; size: number }>({
         path: session.path,
         size: session.size,
     })
-    const [pathError, setPathError] = useState('')
     const [confirmState, setConfirmState] = useState<ConfirmState>(emptyConfirm)
 
     // 建表弹窗态
@@ -76,12 +73,11 @@ export default function SqliteClient({ session, onClose }: Props) {
 
     const loadTables = useCallback(async () => {
         setBusy(true)
-        setError('')
         try {
             const list = await API.sqliteTables(id)
             setTables(list)
         } catch (e) {
-            setError(errorMessage(e))
+            message.error(`加载表结构失败: ${errorMessage(e)}`)
         } finally {
             setBusy(false)
         }
@@ -358,7 +354,6 @@ export default function SqliteClient({ session, onClose }: Props) {
                     <span style={{ marginLeft: 'auto' }}>
                         共 {tables.length} {tables.length === 1 ? '张表' : '张表/视图'}
                     </span>
-                    {pathError && <span className={sq.pathErr}>{pathError}</span>}
                 </div>
 
                 <div style={{ padding: '6px 8px 4px' }}>

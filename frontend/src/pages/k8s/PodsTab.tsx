@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import {
     Table,
     Space,
@@ -7,7 +7,6 @@ import {
     Input,
     Select,
     Drawer,
-    Modal,
     message,
     Popconfirm,
     Tooltip,
@@ -38,21 +37,6 @@ interface Props {
     currentNamespace: string
     initialSearchKw?: string
 }
-
-const DEFAULT_POD_TEMPLATE = (namespace: string) => `apiVersion: v1
-kind: Pod
-metadata:
-  name: sample-pod
-  namespace: ${namespace && namespace !== '_all' ? namespace : 'default'}
-  labels:
-    app: sample-pod
-spec:
-  containers:
-  - name: main
-    image: nginx:alpine
-    ports:
-    - containerPort: 80
-`
 
 export default function PodsTab({ serverId, currentNamespace, initialSearchKw }: Props) {
     const [pods, setPods] = useState<K8sPodInfo[]>([])
@@ -569,6 +553,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
 
             {/* 日志抽屉 */}
             <Drawer
+                open={logsDrawerOpen}
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <FileText size={16} color="var(--accent)" />
@@ -676,7 +661,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                 kind="Pod"
                 namespace={yamlTarget?.namespace || 'default'}
                 name={yamlTarget?.name || ''}
-                mode="edit"
+                mode={yamlMode}
                 onSuccess={fetchPods}
             />
 

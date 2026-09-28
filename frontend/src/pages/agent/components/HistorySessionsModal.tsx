@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Modal, Input, Button, Tag, Popconfirm, Empty, Tooltip, Space } from 'antd'
+import { Modal, Input, Button, Tag, Popconfirm, Empty, Tooltip } from 'antd'
 import { History, Plus, Search, MessageSquare, Edit2, Trash2, Check, X } from 'lucide-react'
 import { AgentSessionItem } from '@/types'
 import s from './HistorySessionsModal.module.less'

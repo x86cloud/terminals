@@ -29,6 +29,10 @@ export function GetAppVersion(): $CancellablePromise<core$0.AppVersionInfo> {
     return $Call.ByID(2593061335);
 }
 
+export function HideWindow(): $CancellablePromise<void> {
+    return $Call.ByID(627431966);
+}
+
 export function ListGroups(): $CancellablePromise<core$0.ServerGroup[] | null> {
     return $Call.ByID(3810483558);
 }
@@ -43,6 +47,10 @@ export function MoveServerToGroup(serverID: string, groupID: string): $Cancellab
 
 export function OpenBrowser(targetURL: string): $CancellablePromise<void> {
     return $Call.ByID(1062841006, targetURL);
+}
+
+export function QuitApp(): $CancellablePromise<void> {
+    return $Call.ByID(1707809496);
 }
 
 export function SaveAppSettings(settings: core$0.AppSettings): $CancellablePromise<core$0.AppSettings> {

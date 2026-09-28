@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Button, Tooltip, message, Tag, Space } from 'antd'
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw, Key } from 'lucide-react'
 import { API } from '@/api'
-import { PgTable, PgColumn, PgConstraint } from './postgresTypes'
+import { PgColumn, PgConstraint } from './postgresTypes'
 import pg from './ErDiagram.module.less'
 
 interface TableMeta {
@@ -58,7 +58,6 @@ export default function ErDiagram({
     const layout = useMemo(() => {
         const CARD_W = 220
         const GAP_X = 60
-        const GAP_Y = 40
         const COLS = Math.max(2, Math.ceil(Math.sqrt(tablesMeta.length * 1.5)))
 
         const positions: Record<string, { x: number; y: number; w: number; h: number }> = {}

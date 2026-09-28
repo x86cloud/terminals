@@ -1,4 +1,3 @@
-import React from 'react'
 import { Button, Input, Tag } from 'antd'
 import a from '@/pages/api/WsClient.module.less'
 import sh from '@/pages/api/apiShared.module.less'

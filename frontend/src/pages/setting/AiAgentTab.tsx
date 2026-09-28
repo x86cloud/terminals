@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Card, Input, InputNumber, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, Popconfirm, message } from 'antd'
+import { useState, useEffect } from 'react'
+import { Card, Input, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, Popconfirm, message } from 'antd'
 import { Bot, Server, Shield, Sparkles, Layers, FolderOpen, BookOpen, Eye, Plus, Edit2, Trash2, Check } from 'lucide-react'
 import { AppSettings, AgentSkillItem, AiModelItem } from '@/types'
 import { API } from '@/api'
@@ -461,6 +461,7 @@ export default function AiAgentTab({
 
             {/* 卡片 6：SOP 技能 (Skills) */}
             <Card
+                loading={skillsLoading}
                 size="small"
                 title={
                     <Space size={8}>

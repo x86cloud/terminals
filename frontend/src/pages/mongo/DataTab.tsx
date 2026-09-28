@@ -1,7 +1,6 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
     Button,
-    InputNumber,
     Space,
     Tooltip,
     Pagination,
@@ -65,7 +64,6 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
     // 数据状态
     const [docs, setDocs] = useState<string[]>([])
     const [total, setTotal] = useState(0)
-    const [count, setCount] = useState(0)
     const [duration, setDuration] = useState(0)
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(DEFAULT_LIMIT)
@@ -235,7 +233,6 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                 const res: MongoFindResult = await API.mongoFind(id, spec)
                 setDocs(res.documents || [])
                 setTotal(res.total ?? 0)
-                setCount(res.count ?? (res.documents?.length ?? 0))
                 setDuration(res.durationMs ?? 0)
                 setPage(targetPage)
             } catch (e) {

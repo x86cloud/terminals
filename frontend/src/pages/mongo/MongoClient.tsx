@@ -1,9 +1,8 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
 import Tree from '@/components/common/Tree'
 import {
     Database,
-    Folder,
     Table as TableIcon,
     Plus,
     RotateCw,
@@ -12,7 +11,6 @@ import {
     Trash2,
     Download,
     Copy,
-    X,
     Layers,
     SlidersHorizontal,
     Edit,
@@ -20,7 +18,7 @@ import {
 import { API } from '@/api'
 import ClientIcon from '@/components/ClientIcon'
 import { MongoSessionInfo, MongoDatabaseInfo, MongoCollectionInfo } from '@/types'
-import { MongoTabItem, MongoTabType } from './mongoTypes'
+import { MongoTabItem } from './mongoTypes'
 import TabBar, { TabItem } from '@/components/common/TabBar'
 import DataTab from './DataTab'
 import MqlEditor from './MqlEditor'
@@ -51,7 +49,6 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
     const [expandedKeys, setExpandedKeys] = useState<string[]>([])
     const [loadingTree, setLoadingTree] = useState(false)
     const [loadingDbs, setLoadingDbs] = useState<Record<string, boolean>>({})
-    const [isReady, setIsReady] = useState(false)
 
     // 工作区多标签栏管理
     const [tabs, setTabs] = useState<MongoTabItem[]>([
@@ -106,7 +103,6 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
     // 连接初始化与获取数据库列表
     const initConnection = useCallback(async () => {
         setLoadingTree(true)
-        setIsReady(false)
         try {
             const dbs: MongoDatabaseInfo[] = await API.mongoDatabases(id)
             const dbNames = (dbs || []).map((d) => d.name)
@@ -123,7 +119,6 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 await loadCollections(targetDb)
                 setExpandedKeys([`db_${targetDb}`])
             }
-            setIsReady(true)
         } catch (e: any) {
             message.error(`连接 MongoDB 失败: ${e.message || e}`)
         } finally {
@@ -289,7 +284,6 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         return databases.map((dbName) => {
             const dbKey = `db_${dbName}`
             const colls = collectionsMap[dbName] || []
-            const isLoadingDb = !!loadingDbs[dbName]
 
             const collChildren = colls.map((c) => ({
                 key: `coll_${dbName}_${c.name}`,

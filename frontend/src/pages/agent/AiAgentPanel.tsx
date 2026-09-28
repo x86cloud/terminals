@@ -1,13 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { Button, Modal, Tag, Space, Tooltip, Input } from 'antd'
-import { Bot, Trash2, AlertTriangle, PanelRightClose, Plus, History } from 'lucide-react'
+import { Button, Modal, Space, Tooltip, Input } from 'antd'
+import { Trash2, AlertTriangle, PanelRightClose, Plus, History } from 'lucide-react'
 import { API } from '@/api'
 import { AppSettings, AgentHitlConfirmRequest } from '@/types'
 import { useAgentSessions } from './hooks/useAgentSessions'
 import { useAgentEvents } from './hooks/useAgentEvents'
 import { useAgentComposer } from './hooks/useAgentComposer'
 import { ChatMessageList } from './components/ChatMessageList'
-import { ApprovalDock } from './components/ApprovalDock'
 import { AskUserDock } from './components/AskUserDock'
 import { HitlConfirmModal } from './components/HitlConfirmModal'
 import { HistorySessionsModal } from './components/HistorySessionsModal'
@@ -22,10 +21,8 @@ interface Props {
 
 export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSettings, onClose }: Props) => {
     const [noticeText, setNoticeText] = useState<string>('')
-    const [pendingApprovals, setPendingApprovals] = useState<any[]>([])
     const [pendingAsk, setPendingAsk] = useState<any>(null)
     const [pendingHitl, setPendingHitl] = useState<AgentHitlConfirmRequest | null>(null)
-    const [pendingPlan, setPendingPlan] = useState<any>(null)
     const [showClearConfirm, setShowClearConfirm] = useState<boolean>(false)
     const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false)
     const [isEditingTitle, setIsEditingTitle] = useState<boolean>(false)
@@ -71,7 +68,6 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
         setImages,
         isGenerating,
         setIsGenerating,
-        activeReasoning,
         setActiveReasoning,
         activeCommand,
         setActiveCommand,
@@ -102,7 +98,6 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
         setNoticeText,
         setPendingAsk,
         setPendingHitl,
-        setPendingPlan,
     })
 
     // Check pending approvals on mount
@@ -249,7 +244,6 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                 {/* Header Bar */}
                 <div className={s.headerBar}>
                     <div className={s.titleSection}>
-                        <Bot size={18} color="#2b90ee" />
                         <div className={s.sessionTitleWrapper}>
                             {isEditingTitle ? (
                                 <Input

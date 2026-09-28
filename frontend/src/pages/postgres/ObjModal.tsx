@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { Modal, Form, Input, Select, message } from 'antd'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'

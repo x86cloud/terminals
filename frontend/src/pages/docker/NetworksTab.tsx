@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     Table,
     Button,
@@ -13,7 +13,7 @@ import {
     Select,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { Plus, Trash2, RefreshCw, Search, Network as NetIcon, Info } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, Search } from 'lucide-react'
 import { API } from '@/api'
 import type { DockerNetworkInfo } from '@/types'
 import s from './DockerClient.module.less'

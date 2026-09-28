@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react'
-import { Segmented, Space, Select, Button, message, Badge, Modal, Input, Popconfirm, Tooltip } from 'antd'
+import { useState, useEffect } from 'react'
+import { Segmented, Space, Select, Button, message, Modal, Input, Popconfirm, Tooltip } from 'antd'
 import {
     Activity,
     Layers,
@@ -9,7 +9,6 @@ import {
     HardDrive,
     Code,
     RefreshCw,
-    Server,
     Plus,
     Trash2,
 } from 'lucide-react'

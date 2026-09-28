@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     Table,
     Button,
@@ -11,7 +11,7 @@ import {
     Popconfirm,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { Plus, Trash2, RefreshCw, Search, HardDrive, Copy } from 'lucide-react'
+import { Plus, Trash2, RefreshCw, Search, Copy } from 'lucide-react'
 import { API } from '@/api'
 import type { DockerVolumeInfo } from '@/types'
 import s from './DockerClient.module.less'

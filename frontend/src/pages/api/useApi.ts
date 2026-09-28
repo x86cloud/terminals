@@ -6,7 +6,6 @@ import {
     ApiHeader,
     ApiMethod,
     ApiMode,
-    ApiRequest,
     ApiResponse,
     ConfigTab,
     WsMessage,

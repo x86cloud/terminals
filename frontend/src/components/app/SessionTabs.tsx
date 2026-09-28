@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import { useMemo } from 'react'
 import { BarChart2, Link as LinkIcon, BookOpen } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import TabBar, { TabItem } from '@/components/common/TabBar'

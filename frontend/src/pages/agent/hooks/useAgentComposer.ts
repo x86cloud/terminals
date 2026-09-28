@@ -1,7 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { API, consumePendingAsk } from '@/api'
 import { AiMessage, AgentPlan } from '@/types'
-import { message } from 'antd'
 
 interface UseAgentComposerProps {
     activeSessionId: string

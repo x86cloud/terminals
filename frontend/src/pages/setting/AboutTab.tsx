@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Button, Tag, Space, Alert, Tooltip, message } from 'antd'
 import { RotateCw, CheckCircle2, ArrowUpRight, Copy, GitBranch, Calendar, Laptop, Sparkles } from 'lucide-react'
 import AppLogo from '@/components/AppLogo'
@@ -14,7 +14,6 @@ export default function AboutTab() {
         goVersion: '',
         platform: 'windows/amd64',
     })
-    const [loadingVer, setLoadingVer] = useState(true)
     const [checking, setChecking] = useState(false)
     const [updateResult, setUpdateResult] = useState<UpdateCheckResult | null>(null)
 
@@ -27,9 +26,6 @@ export default function AboutTab() {
                 }
             })
             .catch(() => { })
-            .finally(() => {
-                if (mounted) setLoadingVer(false)
-            })
         return () => {
             mounted = false
         }

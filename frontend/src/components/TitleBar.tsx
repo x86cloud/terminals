@@ -26,6 +26,7 @@ interface TitleBarProps {
     onToggleSidebar?: () => void
     aiSidebarOpen?: boolean
     onToggleAiSidebar?: () => void
+    onRequestClose?: () => void
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -37,6 +38,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     onToggleSidebar,
     aiSidebarOpen,
     onToggleAiSidebar,
+    onRequestClose,
 }) => {
     const session = useSession()
     const isSidebarOpen = sidebarOpen ?? session.sidebarOpen
@@ -101,6 +103,10 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     }
 
     const handleClose = () => {
+        if (onRequestClose) {
+            onRequestClose()
+            return
+        }
         try {
             Window.Close()
         } catch (e) {

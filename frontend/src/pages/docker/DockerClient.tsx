@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Segmented, Button, Space, Tag, message } from 'antd'
 import {
     Activity,
@@ -7,7 +7,6 @@ import {
     HardDrive,
     Network,
     RefreshCw,
-    Radio,
     Sliders,
 } from 'lucide-react'
 import { API } from '@/api'

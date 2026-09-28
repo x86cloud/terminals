@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Input, Button, Tooltip, Space } from 'antd'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Input, Button, Tooltip } from 'antd'
 import { ArrowUp, ArrowDown, X as CloseIcon } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'

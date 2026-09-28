@@ -1,5 +1,5 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { Button, Progress, Checkbox, Table, Tag, Alert, Space, Card, message } from 'antd'
+import { useCallback, useEffect, useState } from 'react'
+import { Button, Progress, Checkbox, Table, Tag, Alert, Space, message } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { RotateCw, Server, Terminal, Database, Plug } from 'lucide-react'
 import { API } from '@/api'

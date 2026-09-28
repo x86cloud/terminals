@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Button, Input, Space } from 'antd'
+import { Button, Input } from 'antd'
 import { HelpCircle } from 'lucide-react'
 import { AgentAskRequest } from '@/types'
 import s from './AskUserDock.module.less'

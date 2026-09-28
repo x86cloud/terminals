@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState, useTransition } from 'react'
-import { Button, Input, Switch, Segmented, Tooltip } from 'antd'
+import { useEffect, useMemo, useState, useTransition } from 'react'
+import { Button, Input, Switch, Segmented } from 'antd'
 import { Copy, Download } from 'lucide-react'
 import { md5 } from '@/utils/md5'
 import CodeEditor from '@/components/CodeEditor'

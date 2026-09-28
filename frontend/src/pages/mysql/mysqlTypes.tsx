@@ -1,4 +1,3 @@
-import React from 'react'
 import { sql, SQLDialect } from '@codemirror/lang-sql'
 import { MysqlQueryResult } from '@/types'
 import my from '@/pages/mysql/mysqlShared.module.less'

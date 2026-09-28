@@ -1,5 +1,4 @@
-import React from 'react'
-import { Modal, Input, Switch, Alert, Button, Space } from 'antd'
+import { Modal, Input, Switch, Alert } from 'antd'
 import CodeEditor from '@/components/CodeEditor'
 
 export type ObjModalKind = 'createdb' | 'createtable' | 'dropdb' | 'droptable' | 'truncate' | 'createindex' | 'dropindex'

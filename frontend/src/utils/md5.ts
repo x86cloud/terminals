@@ -116,9 +116,6 @@ function toBytesUTF8(str: string): number[] {
     return out
 }
 
-function rol(val: number, shift: number): number {
-    return (val << shift) | (val >>> (32 - shift))
-}
 
 function hex(n: number): string {
     let s = ''

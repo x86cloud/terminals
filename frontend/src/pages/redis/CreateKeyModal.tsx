@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Modal, Input, InputNumber, Segmented, Button, Space, Tag, Alert, Tooltip, Select } from 'antd'
+import { useState } from 'react'
+import { Modal, Input, InputNumber, Segmented, Button, Space, Tag, Alert, Select } from 'antd'
 import { Plus, Trash2, Sparkles, Minimize2, Key, Database, Clock, Layers } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 

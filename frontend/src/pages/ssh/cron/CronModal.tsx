@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Modal, Input, Button, Tag, Space, Alert } from 'antd'
+import { useEffect, useState } from 'react'
+import { Modal, Input, Tag, Space } from 'antd'
 import { SSHCronItem } from '@/types'
 
 interface Props {

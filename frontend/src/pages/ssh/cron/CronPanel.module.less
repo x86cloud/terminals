@@ -70,6 +70,13 @@
     flex: 1;
     overflow: auto;
     padding: 0 12px 12px;
+    min-height: 0;
+    min-width: 0;
+}
+
+.tableInner {
+    min-width: 100%;
+    width: max-content;
 }
 
 .alertBox {
@@ -78,13 +85,14 @@
 
 .cmdText {
     font-family: @font-mono;
-    word-break: break-all;
+    white-space: nowrap;
 }
 
 .commentText {
     font-size: 11.5px;
     color: @text-dim;
     font-style: italic;
+    white-space: nowrap;
 }
 
 .outputContainer {
