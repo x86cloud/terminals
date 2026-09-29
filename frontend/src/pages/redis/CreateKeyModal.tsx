@@ -183,7 +183,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                     </Button>
                 </div>
             }
-            destroyOnClose
+            destroyOnHidden
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 4 }}>
                 {error && <Alert type="error" message={error} showIcon closable onClose={() => setError('')} />}

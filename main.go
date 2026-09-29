@@ -25,7 +25,7 @@ func main() {
 	}
 	defer logger.Close()
 
-	logger.Info("xClient starting up...")
+	logger.Info("Terminal starting up...")
 
 	container := services.GetContainer()
 
@@ -159,5 +159,5 @@ func main() {
 	}
 
 	container.Shutdown(context.Background())
-	logger.Info("xClient shut down cleanly")
+	logger.Info("Terminal shut down cleanly")
 }

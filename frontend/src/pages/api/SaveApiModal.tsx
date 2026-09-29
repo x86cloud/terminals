@@ -66,7 +66,7 @@ export default function SaveApiModal({ state }: Props) {
             onCancel={() => setSaveModalOpen(false)}
             okText="保存"
             cancelText="取消"
-            destroyOnClose
+            destroyOnHidden
             width={480}
         >
             <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

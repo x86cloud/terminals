@@ -115,7 +115,7 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
             okText="创建用户"
             cancelText="取消"
             width={580}
-            destroyOnClose
+            destroyOnHidden
         >
             {error && (
                 <Alert

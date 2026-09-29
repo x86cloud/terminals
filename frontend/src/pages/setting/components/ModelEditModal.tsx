@@ -153,7 +153,7 @@ export const ModelEditModal: React.FC<Props> = ({
                 </Space>
             }
             width={520}
-            destroyOnClose
+            destroyOnHidden
             onCancel={onClose}
             footer={
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>

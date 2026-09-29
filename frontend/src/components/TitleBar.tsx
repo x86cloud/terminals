@@ -143,7 +143,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                     <AppLogo size={18} />
                 </div>
                 <div className={s.title}>
-                    Terminal
+                    xTerminal
                 </div>
             </div>
 

@@ -734,7 +734,7 @@ export default function ApiTreeList({ state }: Props) {
                 onCancel={() => setNameModal({ open: false, title: '', type: 'folder', initialValue: '' })}
                 okText="确定"
                 cancelText="取消"
-                destroyOnClose
+                destroyOnHidden
                 width={400}
             >
                 <div style={{ padding: '12px 0' }}>
@@ -763,7 +763,7 @@ export default function ApiTreeList({ state }: Props) {
                 onCancel={() => setMoveModal({ open: false, targetId: '', targetName: '', isFolder: false })}
                 okText="确定移动"
                 cancelText="取消"
-                destroyOnClose
+                destroyOnHidden
                 width={400}
             >
                 <div style={{ padding: '16px 0 8px' }}>

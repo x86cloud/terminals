@@ -1,6 +1,6 @@
 module terminal
 
-go 1.27
+go 1.27.1
 
 require (
 	github.com/cloudwego/eino v0.9.15

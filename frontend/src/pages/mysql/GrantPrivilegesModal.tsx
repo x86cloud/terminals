@@ -210,7 +210,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
             okText="执行授权 (GRANT)"
             cancelText="取消"
             width={680}
-            destroyOnClose
+            destroyOnHidden
         >
             {error && (
                 <Alert

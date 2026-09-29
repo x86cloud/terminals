@@ -123,8 +123,8 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
                         {isExpired
                             ? '该方案已被后续更新覆盖，仅供归档查看'
                             : isApproved
-                            ? '方案已批准，正在对话中自主执行'
-                            : '请审阅技术实施方案，确认无误后点击执行'}
+                                ? '方案已批准，正在对话中自主执行'
+                                : '请审阅技术实施方案，确认无误后点击执行'}
                     </span>
                     <div>
                         {isExpired ? (
@@ -153,7 +153,7 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
                     </div>
                 </div>
             }
-            destroyOnClose={false}
+            destroyOnHidden={false}
         >
             <div className={s.drawerBody}>
                 <MarkdownViewer content={markdownContent} />

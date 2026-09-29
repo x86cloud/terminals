@@ -1143,7 +1143,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     }
                     open={cellModal.open}
                     width={760}
-                    destroyOnClose
+                    destroyOnHidden
                     onCancel={() => setCellModal(null)}
                     footer={[
                         <Button

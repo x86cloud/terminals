@@ -198,9 +198,9 @@ export default function Stage({
             {empty && (
                 <div className={g.emptyStage}>
                     <AppLogo size={54} />
-                    <h2>多协议开发运维客户端</h2>
+                    <h2>xTerminal </h2>
                     <p>
-                        xClient 是一款跨平台桌面客户端，集成了 SSH 终端、SFTP、Redis、MySQL、SQLite、
+                        xTerminal 是一款跨平台桌面客户端，集成了 SSH 终端、SFTP、Redis、MySQL、SQLite、
                         MQTT 与 HTTP 接口调试等常用运维工具。
                     </p>
                     <a className={g.emptyLink} href="https://github.com/x86cloud/terminals" target="_blank" rel="noreferrer">

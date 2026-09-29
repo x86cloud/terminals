@@ -93,7 +93,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
             footer={null}
             width={640}
             centered
-            destroyOnClose
+            destroyOnHidden
         >
             <div className={s.modalBody}>
                 {/* Top Controls */}

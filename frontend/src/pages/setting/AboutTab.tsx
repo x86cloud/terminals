@@ -70,7 +70,7 @@ export default function AboutTab() {
 
     return (
         <div className={ab.aboutBox}>
-            <AppLogo size={52} />
+            <AppLogo size={64} />
             <div className={ab.appName}>xClient</div>
 
             <div className={ab.verBadgeRow}>

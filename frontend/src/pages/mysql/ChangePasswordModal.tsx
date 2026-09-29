@@ -76,12 +76,12 @@ export const ChangePasswordModal: React.FC<Props> = ({
             okText="确认修改密码"
             cancelText="取消"
             width={480}
-            destroyOnClose
+            destroyOnHidden
         >
             {error && (
                 <Alert
                     type="error"
-                    message="修改密码失败"
+                    title="修改密码失败"
                     description={error}
                     showIcon
                     style={{ marginBottom: 16 }}

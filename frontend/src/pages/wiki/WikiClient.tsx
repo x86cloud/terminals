@@ -696,7 +696,7 @@ export default function WikiClient({ onClose }: Props) {
                 onCancel={() => setNameModal((prev) => ({ ...prev, open: false }))}
                 okText="确定"
                 cancelText="取消"
-                destroyOnClose
+                destroyOnHidden
             >
                 <div style={{ marginTop: 12 }}>
                     <Input
