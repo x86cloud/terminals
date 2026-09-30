@@ -15,6 +15,10 @@
   <b>Terminals</b> 是一款基于 <b>Wails v3</b>、<b>Go</b> 与 <b>React 18</b> 构建的新一代、高性能 <b>All-in-One 现代化云端运维与全数据库工作台</b>。将 SSH 终端、容器管理（Docker & Compose）、Kubernetes 云原生编排、全生命周期数据库管理（MySQL、PostgreSQL、Redis、MongoDB、SQLite）、物联网调试（MQTT）、HTTP/WebSocket API 控制台以及<b>内置自主 AI Agent 智能体</b>无缝融为一体。
 </p>
 
+<p align="center">
+  <img src="docs/ui.png" alt="Terminals 工作台总览" width="96%">
+</p>
+
 ---
 
 ## 🌟 核心亮点
@@ -38,6 +42,10 @@
 - **进程与服务管理**：实时进程列表与终止控制，支持 Systemd 服务状态管理（启动/停止/重启/重载）。
 - **Crontab 定时任务**：可视化定时任务解析与在线编辑管理。
 
+<p align="center">
+  <img src="docs/terminal.png" alt="SSH 终端与实时系统监控大盘" width="96%">
+</p>
+
 ### 🐳 2. Docker & Docker Compose 容器编排套件
 - **容器生命周期管理**：直观查看容器运行状态、一键启动/停止/重启/强制删除。
 - **Web Shell 终端直连**：一键进入容器执行 Shell 命令，支持交互式操作与输入输出实时同步。
@@ -46,6 +54,10 @@
 - **镜像与网络卷管理**：镜像一键拉取/删除/导出，Docker 虚拟网络与持久化存储卷管理。
 - **Docker Compose 可视化工作台**：支持多项目 Compose 项目编排、配置在线编辑、增量服务更新与启停部署。
 - **AI 智能生成 Compose**：基于自然语言一键智能生成标准化 `docker-compose.yml` 配置并支持一键应用。
+
+<p align="center">
+  <img src="docs/docker.png" alt="Docker & Compose 容器编排工作台" width="96%">
+</p>
 
 ### ☸️ 3. Kubernetes (K8s) 云原生多集群与资源编排套件
 - **多集群与命名空间切换**：支持导入/解析 Kubeconfig，秒级切换不同 K8s 集群与 Namespaces。
@@ -66,6 +78,10 @@
 - **用户与权限管理**：可视化创建数据库用户、密码重置、主机权限划分与细粒度 Grant/Revoke 授权。
 - **跳板机隧道与 SSL 传输**：支持通过 Bastion SSH 跳板机穿透私网 VPC 数据库，支持 `禁用` / `首选` / `强制加密` / `跳过校验` 等 TLS 模式。
 - **导入与导出**：支持 SQL 脚本与 CSV 数据文件的快速导入导出。
+
+<p align="center">
+  <img src="docs/mysql.png" alt="MySQL 数据库客户端与 SQL 控制台" width="96%">
+</p>
 
 ### 🐘 5. PostgreSQL 高性能数据库客户端
 - **多 Schema（模式）与对象支持**：完整支持 PostgreSQL 树形层级（Database -> Schema -> Table/View），支持多模式自由切换。
@@ -93,6 +109,10 @@
 - **Pub/Sub 与 KeySpace 实时流**：支持实时频道订阅与消息发布、KeySpace 键空间事件通知监听。
 - **性能监控与慢查询**：实时呈现每秒指令数 (OPS)、内存碎片率、连接客户端数与 SlowLog 慢日志排查。
 - **ACL 与 TLS 安全**：支持 Redis 6+ ACL 用户名密码认证与 TLS 加密传输。
+
+<p align="center">
+  <img src="docs/redis.png" alt="Redis 现代化多数据类型可视化工作台" width="96%">
+</p>
 
 ### 🍃 7. MongoDB 文档管理工作台
 - **集合与文档 CRUD**：支持 JSON 与表格双模式浏览文档，提供可视化过滤条件构建、投影与排序。
@@ -127,6 +147,7 @@
 - **流式交互体验**：实时流式输出推理步骤与工具执行结果反馈。
 
 ### ⚙️ 12. 系统设置与在线版本更新
+- **系统托盘与关闭策略**：支持常驻系统托盘（System Tray），支持托盘右键快捷菜单与单击唤醒；支持在设置中自定义窗口关闭动作（「每次询问」/「最小化至托盘」/「直接退出」）。
 - **编译期版本注入**：构建流水线自动提取 Git Tag、Commit SHA 与编译时间并注入二进制程序。
 - **运行时环境展示**：在「设置 -> 关于」中直观展示当前版本、Git Commit、构建时间、运行平台与 Go 驱动信息。
 - **一键检查更新**：内置在线版本检测，直接查询 GitHub Releases/Tags 进行 SemVer 语义化比对。

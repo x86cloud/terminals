@@ -3,7 +3,7 @@ module terminal
 go 1.27.1
 
 require (
-	github.com/cloudwego/eino v0.9.15
+	github.com/cloudwego/eino v0.9.21
 	github.com/cloudwego/eino-ext/components/model/openai v0.1.13
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.8.1
@@ -14,7 +14,7 @@ require (
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/pkg/sftp v1.13.11
 	github.com/redis/go-redis/v9 v9.22.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.23
+	github.com/wailsapp/wails/v3 v3.0.0-beta.26
 	go.mongodb.org/mongo-driver/v2 v2.8.1
 	golang.org/x/crypto v0.55.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1

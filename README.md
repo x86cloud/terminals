@@ -15,6 +15,10 @@
   <b>Terminals</b> is a next-generation, high-performance <b>All-in-One DevOps, Cloud-Native & Multi-Database Workstation</b> powered by <b>Wails v3</b>, <b>Go</b>, and <b>React 18</b>. Seamlessly integrate SSH terminals, container management (Docker & Compose), Kubernetes cluster orchestration, full-lifecycle database administration (MySQL, PostgreSQL, Redis, MongoDB, SQLite), IoT debugging (MQTT), HTTP/WebSocket API consoles, and an embedded <b>Autonomous AI Agent</b> into a single lightweight desktop app.
 </p>
 
+<p align="center">
+  <img src="docs/ui.png" alt="Terminals Workspace Overview" width="96%">
+</p>
+
 ---
 
 ## 🌟 Highlights
@@ -38,6 +42,10 @@
 - **Process & Service Manager**: Real-time process listing with search, kill signals, and Systemd service status control (Start/Stop/Restart/Reload).
 - **Cron Job Scheduler**: Crontab schedule inspector and visual cron job editor.
 
+<p align="center">
+  <img src="docs/terminal.png" alt="SSH Terminal & Real-Time Telemetry" width="96%">
+</p>
+
 ### 🐳 2. Docker & Docker Compose Container Workstation
 - **Container Lifecycle Management**: Real-time status inspection with one-click Start, Stop, Restart, and Force Remove.
 - **Direct Web Shell**: Instant interactive container terminal execution with bidirectional streaming.
@@ -46,6 +54,10 @@
 - **Images, Networks & Volumes**: Pull, inspect, build, export, and delete images, along with network topology and volume storage management.
 - **Docker Compose Studio**: Multi-project Compose workspace with online YAML editing, incremental service updates, and live deployments.
 - **AI-Powered Compose Generator**: Generate and refine standardized `docker-compose.yml` configurations from natural language prompts.
+
+<p align="center">
+  <img src="docs/docker.png" alt="Docker & Compose Container Studio" width="96%">
+</p>
 
 ### ☸️ 3. Kubernetes (K8s) Cloud-Native Multi-Cluster Suite
 - **Multi-Cluster & Namespace Switching**: Import and parse Kubeconfig files with instant cluster and namespace switching.
@@ -66,6 +78,10 @@
 - **User & Privileges Management**: Visual user creator, password reset, and granular privilege grant/revoke panel.
 - **Bastion SSH Tunnel & SSL**: Seamless connection to private VPC databases through SSH jump hosts with `preferred` / `true` / `skip-verify` TLS modes.
 - **Import & Export**: Support for SQL dumps and CSV data import/export.
+
+<p align="center">
+  <img src="docs/mysql.png" alt="MySQL Client & SQL Console" width="96%">
+</p>
 
 ### 🐘 5. PostgreSQL High-Performance Database Client
 - **Multi-Schema & Object Navigation**: Full support for PostgreSQL hierarchical trees (Database -> Schema -> Table/View) with seamless schema switching.
@@ -93,6 +109,10 @@
 - **Pub/Sub & KeySpace Live Stream**: Real-time channel message publisher/subscriber and keyspace event notification monitor.
 - **Performance & SlowLog Monitor**: Real-time command ops/sec, memory fragmentation, connected clients, and slow query logs.
 - **ACL & TLS Security**: Support for Redis 6+ ACL username/passwords and TLS-encrypted connections.
+
+<p align="center">
+  <img src="docs/redis.png" alt="Redis Modern Data Studio" width="96%">
+</p>
 
 ### 🍃 7. MongoDB Document Studio
 - **Collections & Documents**: Document CRUD tree with JSON and tabular view modes, complex query builder, projection, and sorting.
@@ -127,6 +147,7 @@
 - **Streaming Telemetry**: Live stream output for thoughts, tool actions, and diagnostic observations.
 
 ### ⚙️ 12. Settings & In-App Update Checker
+- **System Tray & Window Close Behavior**: Background system tray integration with context menus and click-to-restore; configurable window closing action ("Always Ask", "Minimize to Tray", or "Quit Application").
 - **Compile-Time Metadata**: Build pipeline automatically extracts and embeds Git Tag, Commit SHA, and build timestamp into the binary.
 - **Runtime Environment Inspector**: View application version, Git commit, build date, OS platform, and Go runtime under Settings -> About.
 - **One-Click Update Checker**: Queries GitHub Releases/Tags to perform SemVer comparisons against the current version.
