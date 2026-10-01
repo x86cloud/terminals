@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"gopkg.in/natefinch/lumberjack.v2"
+
+	"terminal/storage"
 )
 
 // Config 定义本地日志滚动配置。
@@ -44,23 +46,7 @@ var (
 )
 
 func defaultLogPath() string {
-	if dir := os.Getenv("XCLIENT_LOG_DIR"); dir != "" {
-		return filepath.Join(dir, "app.log")
-	}
-	if file := os.Getenv("XCLIENT_LOG_FILE"); file != "" {
-		return file
-	}
-
-	base, err := os.UserConfigDir()
-	if err != nil {
-		home, herr := os.UserHomeDir()
-		if herr != nil {
-			base = "."
-		} else {
-			base = filepath.Join(home, ".config")
-		}
-	}
-	return filepath.Join(base, "xClient", "logs", "app.log")
+	return storage.LogFilePath()
 }
 
 // DefaultConfig 获取默认日志配置，并根据环境变量进行覆盖。
@@ -73,40 +59,6 @@ func DefaultConfig() Config {
 		Compress:   true,
 		Level:      slog.LevelWarn,
 	}
-
-	if val := os.Getenv("XCLIENT_LOG_MAX_SIZE"); val != "" {
-		if n, err := strconv.Atoi(val); err == nil && n > 0 {
-			cfg.MaxSize = n
-		}
-	}
-	if val := os.Getenv("XCLIENT_LOG_MAX_BACKUPS"); val != "" {
-		if n, err := strconv.Atoi(val); err == nil && n >= 0 {
-			cfg.MaxBackups = n
-		}
-	}
-	if val := os.Getenv("XCLIENT_LOG_MAX_AGE"); val != "" {
-		if n, err := strconv.Atoi(val); err == nil && n >= 0 {
-			cfg.MaxAge = n
-		}
-	}
-	if val := os.Getenv("XCLIENT_LOG_COMPRESS"); val != "" {
-		if b, err := strconv.ParseBool(val); err == nil {
-			cfg.Compress = b
-		}
-	}
-	if val := strings.ToLower(os.Getenv("XCLIENT_LOG_LEVEL")); val != "" {
-		switch val {
-		case "debug":
-			cfg.Level = slog.LevelDebug
-		case "info":
-			cfg.Level = slog.LevelInfo
-		case "warn", "warning":
-			cfg.Level = slog.LevelWarn
-		case "error":
-			cfg.Level = slog.LevelError
-		}
-	}
-
 	return cfg
 }
 

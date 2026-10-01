@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"terminal/agent/store"
+	"terminal/storage"
 
 	"gopkg.in/yaml.v3"
 )
@@ -35,13 +36,9 @@ type SkillsRegistry struct {
 	store     *store.Store
 }
 
-// GetDefaultSkillsDir returns the standard skills directory (%APPDATA%/xClient/skills or ~/.config/xClient/skills)
+// GetDefaultSkillsDir returns the standard skills directory (%APPDATA%/xTerminal/skills or ~/.config/xTerminal/skills)
 func GetDefaultSkillsDir() string {
-	home, err := os.UserConfigDir()
-	if err != nil {
-		home = "."
-	}
-	dir := filepath.Join(home, "xClient", "skills")
+	dir := storage.SkillsDir()
 	_ = os.MkdirAll(dir, 0o755)
 	return dir
 }

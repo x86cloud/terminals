@@ -12,6 +12,7 @@ import ListViewer from '@/pages/redis/viewers/ListViewer'
 import SetViewer from '@/pages/redis/viewers/SetViewer'
 import ZSetViewer from '@/pages/redis/viewers/ZSetViewer'
 import StreamViewer from '@/pages/redis/viewers/StreamViewer'
+import { appStorage, StorageKey } from '@/utils/storage'
 import k from '@/pages/redis/KeysTab.module.less'
 
 interface KeysTabProps {
@@ -72,13 +73,14 @@ export default function KeysTab({
 }: KeysTabProps) {
     // Sidebar width resize state
     const [sidebarWidth, setSidebarWidth] = useState(() => {
-        const saved = localStorage.getItem('redis_sidebar_width')
-        return saved ? Number(saved) : 320
+        return appStorage.getNumber(StorageKey.RedisSidebarWidth, 320)
     })
     const [isDragging, setIsDragging] = useState(false)
     const isDraggingRef = useRef(false)
     const startXRef = useRef(0)
     const startWidthRef = useRef(320)
+    const currentWidthRef = useRef(sidebarWidth)
+    currentWidthRef.current = sidebarWidth
 
     // Local filter state
     const [localFilter, setLocalFilter] = useState('')
@@ -93,13 +95,14 @@ export default function KeysTab({
             if (!isDraggingRef.current) return
             const delta = moveEvent.clientX - startXRef.current
             const nextW = Math.max(240, Math.min(650, startWidthRef.current + delta))
+            currentWidthRef.current = nextW
             setSidebarWidth(nextW)
         }
 
         const onMouseUp = () => {
             isDraggingRef.current = false
             setIsDragging(false)
-            localStorage.setItem('redis_sidebar_width', String(sidebarWidth))
+            appStorage.set(StorageKey.RedisSidebarWidth, currentWidthRef.current)
             window.removeEventListener('mousemove', onMouseMove)
             window.removeEventListener('mouseup', onMouseUp)
         }

@@ -15,6 +15,7 @@ import (
 
 	"terminal/agent/router"
 	"terminal/core"
+	"terminal/storage"
 
 	"github.com/cloudwego/eino/schema"
 )
@@ -44,11 +45,7 @@ type WikiCatalogItem struct {
 
 // GetWikiDir 获取本地 Wiki 知识库根目录路径
 func GetWikiDir() (string, error) {
-	configDir, err := core.AppConfigDir()
-	if err != nil {
-		return "", err
-	}
-	wikiDir := filepath.Join(configDir, "wiki")
+	wikiDir := storage.WikiDir()
 	if err := os.MkdirAll(wikiDir, 0o755); err != nil {
 		return "", fmt.Errorf("创建 Wiki 目录失败: %w", err)
 	}
@@ -67,7 +64,7 @@ func GetWikiDir() (string, error) {
 
 ---
 `
-		_ = os.WriteFile(filepath.Join(wikiDir, "README.md"), []byte(initContent), 0o644)
+		_ = storage.WriteFileAtomic(filepath.Join(wikiDir, "README.md"), []byte(initContent), 0o644)
 	}
 
 	return wikiDir, nil
@@ -322,7 +319,7 @@ func SavePage(relPath string, content string) error {
 		return fmt.Errorf("创建父级目录失败: %w", err)
 	}
 
-	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+	if err := storage.WriteFileAtomic(fullPath, []byte(content), 0o644); err != nil {
 		return fmt.Errorf("写入文档失败: %w", err)
 	}
 
@@ -369,7 +366,7 @@ func CreateNode(parentPath string, name string, isFolder bool) (string, error) {
 		parent := filepath.Dir(fullPath)
 		_ = os.MkdirAll(parent, 0o755)
 		initialDoc := fmt.Sprintf("# %s\n\n", strings.TrimSuffix(name, ".md"))
-		if err := os.WriteFile(fullPath, []byte(initialDoc), 0o644); err != nil {
+		if err := storage.WriteFileAtomic(fullPath, []byte(initialDoc), 0o644); err != nil {
 			return "", fmt.Errorf("创建文档失败: %w", err)
 		}
 	}

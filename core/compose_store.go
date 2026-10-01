@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"terminal/storage"
 )
 
 // DockerComposeRecord 描述在客户端本地保存的一个 Compose 配置文件记录。
@@ -32,9 +34,13 @@ type ComposeStore struct {
 }
 
 // NewComposeStore 初始化 Compose 存储。
-func NewComposeStore(dir string) (*ComposeStore, error) {
+func NewComposeStore(dir ...string) (*ComposeStore, error) {
+	file := storage.ComposesPath()
+	if len(dir) > 0 && dir[0] != "" {
+		file = filepath.Join(dir[0], "composes.json")
+	}
 	cs := &ComposeStore{
-		file: filepath.Join(dir, "composes.json"),
+		file: file,
 		list: []DockerComposeRecord{},
 	}
 	if err := cs.load(); err != nil {
@@ -65,11 +71,7 @@ func (cs *ComposeStore) load() error {
 }
 
 func (cs *ComposeStore) save() error {
-	data, err := json.MarshalIndent(cs.list, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(cs.file, data, 0o600)
+	return storage.WriteJSONAtomic(cs.file, cs.list, 0o600)
 }
 
 // ListRecords 获取指定 serverId 的 Compose 记录（若 serverId 为空则返回全部）。

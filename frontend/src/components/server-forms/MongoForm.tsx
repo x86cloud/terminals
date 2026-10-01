@@ -406,7 +406,7 @@ export const MongoForm: React.FC<ServerFormProps> = ({
                                     <div>
                                         <div style={{ fontSize: 12, marginBottom: 4 }}>上报应用名称 (App Name)</div>
                                         <Input
-                                            placeholder="xClient"
+                                            placeholder="xTerminal"
                                             value={form.mongoAppName || ''}
                                             onChange={(e) => update({ mongoAppName: e.target.value })}
                                         />

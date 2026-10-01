@@ -244,7 +244,7 @@ func (s *AgentService) AgentProposePlan(sessionID, objective string) (*planner.P
 		return nil, err
 	}
 
-	// Save Markdown plan to %APPDATA%/xClient/plans/<sessionId>/implementation_plan.md
+	// Save Markdown plan to %APPDATA%/xTerminal/plans/<sessionId>/implementation_plan.md
 	plan, saveErr := planner.SavePlanMarkdown(sessionID, objective, fullText)
 	if saveErr != nil {
 		return nil, saveErr

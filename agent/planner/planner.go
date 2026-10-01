@@ -13,6 +13,7 @@ import (
 	"terminal/agent/events"
 	"terminal/agent/guard"
 	"terminal/agent/router"
+	"terminal/storage"
 
 	"github.com/cloudwego/eino/schema"
 )
@@ -47,7 +48,7 @@ type Plan struct {
 	SessionID        string     `json:"session_id"`
 	Objective        string     `json:"objective"`
 	Content          string     `json:"content"`              // Markdown 格式完整实施方案
-	FilePath         string     `json:"file_path"`            // 本地落盘路径 (%APPDATA%/xClient/plans/<sessionId>/implementation_plan.md)
+	FilePath         string     `json:"file_path"`            // 本地落盘路径 (%APPDATA%/xTerminal/plans/<sessionId>/implementation_plan.md)
 	Status           string     `json:"status"`               // proposed | approved | rejected
 	IsUpdate         bool       `json:"is_update,omitempty"`  // 是否是对已有方案的更新版本
 	Steps            []PlanStep `json:"steps,omitempty"`      // 兼容字段
@@ -74,14 +75,7 @@ func NewPlanner(r *router.ModelRouter, g *guard.PolicyGuard, eb *events.EventBus
 
 // GetPlansDir 获取会话专用的 plans 应用目录
 func GetPlansDir(sessionID string) (string, error) {
-	home, err := os.UserConfigDir()
-	if err != nil {
-		home = os.TempDir()
-	}
-	if sessionID == "" {
-		sessionID = "default"
-	}
-	dir := filepath.Join(home, "xClient", "plans", sessionID)
+	dir := storage.PlansDir(sessionID)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
@@ -104,14 +98,7 @@ func GetExistingPlan(sessionID string) string {
 
 // DeletePlan 删除会话对应的实施方案目录
 func DeletePlan(sessionID string) error {
-	home, err := os.UserConfigDir()
-	if err != nil {
-		return err
-	}
-	if sessionID == "" {
-		sessionID = "default"
-	}
-	dir := filepath.Join(home, "xClient", "plans", sessionID)
+	dir := storage.PlansDir(sessionID)
 	return os.RemoveAll(dir)
 }
 
@@ -133,7 +120,7 @@ func SavePlanMarkdown(sessionID, objective, content string) (*Plan, error) {
 		finalContent = fmt.Sprintf("# %s\n\n## 目标与背景\n执行目标: %s\n", objective, objective)
 	}
 
-	_ = os.WriteFile(planFilePath, []byte(finalContent), 0o644)
+	_ = storage.WriteFileAtomic(planFilePath, []byte(finalContent), 0o644)
 
 	planID := fmt.Sprintf("plan_%d", time.Now().UnixNano())
 	plan := &Plan{
@@ -161,7 +148,7 @@ func (p *Planner) GeneratePlan(ctx context.Context, sessionID, objective string,
 	}
 	if resolved == nil || resolved.Model == nil {
 		fallbackContent := fmt.Sprintf("# %s\n\n## 目标与背景\n用户请求制定技术实施方案。\n\n## 拟变更清单\n- 根据用户目标开展变更。\n\n## 验证计划\n- 实施完成后进行功能和连通性验证。\n", objective)
-		_ = os.WriteFile(planFilePath, []byte(fallbackContent), 0o644)
+		_ = storage.WriteFileAtomic(planFilePath, []byte(fallbackContent), 0o644)
 		return &Plan{
 			ID:          planID,
 			SessionID:   sessionID,
@@ -212,7 +199,7 @@ func (p *Planner) GeneratePlan(ctx context.Context, sessionID, objective string,
 		})
 		if genErr != nil || res == nil || strings.TrimSpace(res.Content) == "" {
 			fallbackContent := fmt.Sprintf("# %s\n\n## 目标与背景\n执行目标: %s\n\n## 拟变更清单\n- 开展任务实施。\n\n## 验证计划\n- 检查执行结果。\n", objective, objective)
-			_ = os.WriteFile(planFilePath, []byte(fallbackContent), 0o644)
+			_ = storage.WriteFileAtomic(planFilePath, []byte(fallbackContent), 0o644)
 			return &Plan{
 				ID:          planID,
 				SessionID:   sessionID,
@@ -273,7 +260,7 @@ func (p *Planner) GeneratePlan(ctx context.Context, sessionID, objective string,
 	}
 
 	// 写入本地应用目录
-	_ = os.WriteFile(planFilePath, []byte(finalContent), 0o644)
+	_ = storage.WriteFileAtomic(planFilePath, []byte(finalContent), 0o644)
 
 	plan := &Plan{
 		ID:               planID,

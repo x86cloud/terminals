@@ -69,7 +69,7 @@ func CheckForUpdates() UpdateCheckResult {
 		}
 	}
 
-	req.Header.Set("User-Agent", "xClient-Terminal/"+Version)
+	req.Header.Set("User-Agent", "xTerminal/"+Version)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 
 	resp, err := client.Do(req)

@@ -19,7 +19,7 @@ export interface Plan {
     "content": string;
 
     /**
-     * 本地落盘路径 (%APPDATA%/xClient/plans/<sessionId>/implementation_plan.md)
+     * 本地落盘路径 (%APPDATA%/xTerminal/plans/<sessionId>/implementation_plan.md)
      */
     "file_path": string;
 

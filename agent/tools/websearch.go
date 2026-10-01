@@ -45,7 +45,7 @@ func RegisterWebSearchTool(bus *ToolBus) error {
 			if err != nil {
 				return nil, err
 			}
-			req.Header.Set("User-Agent", "xClient-Agent/2.0")
+			req.Header.Set("User-Agent", "xTerminal-Agent/2.0")
 
 			resp, err := client.Do(req)
 			if err != nil {

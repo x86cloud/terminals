@@ -55,16 +55,16 @@ const (
 
 // MongoURIInfo 是连接串解析结果，供前端回填表单。
 type MongoURIInfo struct {
-	Scheme     string   `json:"scheme"`
-	Hosts      []string `json:"hosts"`
-	Username   string   `json:"username"`
-	Password   string   `json:"password"`
-	Database   string   `json:"database"`
-	AuthSource string   `json:"authSource"`
-	AuthMech   string   `json:"authMech"`
-	ReplicaSet string   `json:"replicaSet"`
-	TLS        bool     `json:"tls"`
-	SRV        bool     `json:"srv"`
+	Scheme     string            `json:"scheme"`
+	Hosts      []string          `json:"hosts"`
+	Username   string            `json:"username"`
+	Password   string            `json:"password"`
+	Database   string            `json:"database"`
+	AuthSource string            `json:"authSource"`
+	AuthMech   string            `json:"authMech"`
+	ReplicaSet string            `json:"replicaSet"`
+	TLS        bool              `json:"tls"`
+	SRV        bool              `json:"srv"`
 	Options    map[string]string `json:"options"`
 }
 
@@ -303,7 +303,7 @@ func buildMongoOptions(cfg core.ServerConfig) (*options.ClientOptions, error) {
 	if strings.TrimSpace(cfg.MongoAppName) != "" {
 		opts.SetAppName(cfg.MongoAppName)
 	} else {
-		opts.SetAppName("xClient")
+		opts.SetAppName("xTerminal")
 	}
 	if cfg.MongoCompressors != "" {
 		opts.SetCompressors(splitAddrs(cfg.MongoCompressors))
@@ -366,11 +366,11 @@ func (s *mongoStats) snapshot() map[string]any {
 		avg = float64(total) / float64(ops) / 1e6
 	}
 	return map[string]any{
-		"ops":        ops,
-		"failures":   atomic.LoadInt64(&s.failures),
-		"slowOps":    atomic.LoadInt64(&s.slowOps),
-		"avgMs":      avg,
-		"totalMs":    float64(total) / 1e6,
+		"ops":      ops,
+		"failures": atomic.LoadInt64(&s.failures),
+		"slowOps":  atomic.LoadInt64(&s.slowOps),
+		"avgMs":    avg,
+		"totalMs":  float64(total) / 1e6,
 	}
 }
 
@@ -571,8 +571,6 @@ func (m *MongoManager) CloseAll() {
 	}
 }
 
-
-
 // ===================== BSON / JSON 互转 =====================
 
 // parseJSONDoc 把前端传入的 JSON 文本解析为 BSON 文档，
@@ -675,10 +673,10 @@ func (m *MongoManager) TestConnection(cfg core.ServerConfig) (map[string]any, er
 	var hello bson.M
 	_ = cli.Database("admin").RunCommand(ctx, bson.D{{Key: "hello", Value: 1}}).Decode(&hello)
 	return map[string]any{
-		"ok":       true,
+		"ok":        true,
 		"latencyMs": time.Since(start).Milliseconds(),
-		"topology": detectTopology(hello),
-		"version":  serverVersion(ctx, cli),
+		"topology":  detectTopology(hello),
+		"version":   serverVersion(ctx, cli),
 	}, nil
 }
 
@@ -1313,16 +1311,16 @@ type MongoQuerySpec struct {
 	Sort       string `json:"sort"`       // JSON
 	Limit      int    `json:"limit"`
 	Skip       int    `json:"skip"`
-	Hint       string `json:"hint"`   // 索引名或 JSON
+	Hint       string `json:"hint"`      // 索引名或 JSON
 	Collation  string `json:"collation"` // JSON
 }
 
 // MongoFindResult 查询结果。
 type MongoFindResult struct {
-	Documents []string `json:"documents"` // Extended JSON 字符串数组
-	Count     int      `json:"count"`
-	Total     int64    `json:"total"`
-	DurationMs int64   `json:"durationMs"`
+	Documents  []string `json:"documents"` // Extended JSON 字符串数组
+	Count      int      `json:"count"`
+	Total      int64    `json:"total"`
+	DurationMs int64    `json:"durationMs"`
 }
 
 // MongoFind 按查询构建器规格执行查询。
@@ -1720,10 +1718,10 @@ func (m *MongoManager) MongoFindOneAndUpdate(id, db, coll, filterJSON, updateJSO
 
 // MongoBulkOp 描述一次批量写操作。
 type MongoBulkOp struct {
-	Type       string `json:"type"`       // insert | update | updateMany | replace | delete | deleteMany
-	Filter     string `json:"filter"`     // JSON
-	Document   string `json:"document"`   // JSON
-	Upsert     bool   `json:"upsert"`
+	Type     string `json:"type"`     // insert | update | updateMany | replace | delete | deleteMany
+	Filter   string `json:"filter"`   // JSON
+	Document string `json:"document"` // JSON
+	Upsert   bool   `json:"upsert"`
 }
 
 // MongoBulkWrite 执行批量写（一次网络往返，显著优于逐条操作）。

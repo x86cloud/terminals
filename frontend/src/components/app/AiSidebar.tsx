@@ -3,6 +3,7 @@ import { AppSettings } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import AiAgentPanel from '@/pages/agent/AiAgentPanel'
+import { appStorage, StorageKey } from '@/utils/storage'
 import s from './AiSidebar.module.less'
 
 interface AiSidebarProps {
@@ -10,7 +11,6 @@ interface AiSidebarProps {
     onUpdateSettings?: (newSettings: AppSettings) => Promise<void>
 }
 
-const STORAGE_KEY = 'ai_sidebar_width'
 const DEFAULT_WIDTH = 440
 const MIN_WIDTH = 340
 const MAX_WIDTH = 800
@@ -19,16 +19,9 @@ export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps
     const { aiSidebarOpen, setAiSidebarOpen } = useSession()
 
     const [width, setWidth] = useState<number>(() => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY)
-            if (saved) {
-                const parsed = parseInt(saved, 10)
-                if (!isNaN(parsed) && parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
-                    return parsed
-                }
-            }
-        } catch {
-            /* ignore */
+        const parsed = appStorage.getNumber(StorageKey.AiSidebarWidth, DEFAULT_WIDTH)
+        if (parsed >= MIN_WIDTH && parsed <= MAX_WIDTH) {
+            return parsed
         }
         return DEFAULT_WIDTH
     })
@@ -73,11 +66,7 @@ export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps
             document.body.style.userSelect = ''
             document.body.style.cursor = ''
             setWidth((curr) => {
-                try {
-                    localStorage.setItem(STORAGE_KEY, String(curr))
-                } catch {
-                    /* ignore */
-                }
+                appStorage.set(StorageKey.AiSidebarWidth, curr)
                 return curr
             })
         }

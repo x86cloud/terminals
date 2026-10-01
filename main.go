@@ -45,7 +45,7 @@ func main() {
 	wikiSvc := services.NewWikiService()
 
 	app := application.New(application.Options{
-		Name:        "xClient",
+		Name:        "xTerminal",
 		Description: "Multi-protocol terminal and database client",
 		Services: []application.Service{
 			application.NewService(systemSvc),
@@ -83,7 +83,7 @@ func main() {
 
 	win := app.Window.NewWithOptions(application.WebviewWindowOptions{
 		Name:             "main",
-		Title:            "xClient",
+		Title:            "xTerminal",
 		Width:            1920,
 		Height:           1080,
 		MinWidth:         960,
@@ -112,7 +112,7 @@ func main() {
 	// 系统托盘初始化
 	tray := app.SystemTray.New()
 	tray.SetIcon(trayIcon)
-	tray.SetTooltip("xClient")
+	tray.SetTooltip("xTerminal")
 	tray.OnClick(restoreWindow)
 	tray.OnDoubleClick(restoreWindow)
 

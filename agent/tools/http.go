@@ -236,7 +236,7 @@ func ExecuteHttpRequest(ctx context.Context, input *HttpRequestInput) (*HttpRequ
 		req.Header.Set("Content-Type", detectedContentType)
 	}
 	if req.Header.Get("User-Agent") == "" {
-		req.Header.Set("User-Agent", "xClient-Agent/2.0")
+		req.Header.Set("User-Agent", "xTerminal-Agent/2.0")
 	}
 
 	// 5. 设置超时与 Transport (SSL 跳过、代理、重定向)
@@ -407,4 +407,3 @@ func RegisterHttpTools(bus *ToolBus) error {
 
 	return nil
 }
-

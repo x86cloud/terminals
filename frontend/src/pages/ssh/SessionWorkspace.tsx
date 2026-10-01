@@ -8,6 +8,7 @@ import ProcessPanel from '@/pages/ssh/process/ProcessPanel'
 import ServicePanel from '@/pages/ssh/service/ServicePanel'
 import CronPanel from '@/pages/ssh/cron/CronPanel'
 import { SessionInfo } from '@/types'
+import { appStorage, StorageKey } from '@/utils/storage'
 import w from '@/pages/ssh/SessionWorkspace.module.less'
 
 export interface SessionWorkspaceProps {
@@ -25,11 +26,8 @@ export default function SessionWorkspace({
 }: SessionWorkspaceProps) {
     const rootRef = useRef<HTMLDivElement | null>(null)
     const [panelWidth, setPanelWidth] = useState<number>(() => {
-        const saved = localStorage.getItem('ssh_file_panel_width')
-        if (saved) {
-            const num = parseInt(saved, 10)
-            if (!isNaN(num) && num >= 300 && num <= 1400) return num
-        }
+        const num = appStorage.getNumber(StorageKey.SshFilePanelWidth, 540)
+        if (num >= 300 && num <= 1400) return num
         return 540
     })
     const [showPanel, setShowPanel] = useState<boolean>(true)
@@ -58,7 +56,7 @@ export default function SessionWorkspace({
             if (draggingRef.current) {
                 draggingRef.current = false
                 setIsDragging(false)
-                localStorage.setItem('ssh_file_panel_width', String(panelWidthRef.current))
+                appStorage.set(StorageKey.SshFilePanelWidth, panelWidthRef.current)
             }
         }
 

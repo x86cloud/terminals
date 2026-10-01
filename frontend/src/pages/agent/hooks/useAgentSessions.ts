@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { API, subscribe } from '@/api'
 import { AiMessage, AgentSessionItem } from '@/types'
+import { appStorage, StorageKey } from '@/utils/storage'
 
 const DEFAULT_SESSION_ID = 'ai_agent_default'
 const DEFAULT_PAGE_ROUNDS = 5
@@ -48,7 +49,7 @@ export function sliceLatestRounds(allMsgs: AiMessage[], roundCount: number): {
 export function useAgentSessions() {
     const [sessions, setSessions] = useState<AgentSessionItem[]>([])
     const [activeSessionId, setActiveSessionId] = useState<string>(() => {
-        return localStorage.getItem('active_agent_session_id') || DEFAULT_SESSION_ID
+        return appStorage.getString(StorageKey.ActiveAgentSessionId, DEFAULT_SESSION_ID)
     })
     const activeSessionIdRef = useRef<string>(activeSessionId)
     activeSessionIdRef.current = activeSessionId
@@ -106,16 +107,16 @@ export function useAgentSessions() {
                 setSessions([created])
                 setActiveSessionId(created.id)
                 activeSessionIdRef.current = created.id
-                localStorage.setItem('active_agent_session_id', created.id)
+                appStorage.set(StorageKey.ActiveAgentSessionId, created.id)
                 await loadSessionMessages(created.id)
             } else {
                 setSessions(list)
-                const savedId = localStorage.getItem('active_agent_session_id')
+                const savedId = appStorage.getString(StorageKey.ActiveAgentSessionId, '')
                 const exists = list.find((s) => s.id === savedId)
                 const targetId = exists ? exists.id : list[0].id
                 setActiveSessionId(targetId)
                 activeSessionIdRef.current = targetId
-                localStorage.setItem('active_agent_session_id', targetId)
+                appStorage.set(StorageKey.ActiveAgentSessionId, targetId)
                 await loadSessionMessages(targetId)
             }
         } catch (e) {
@@ -132,7 +133,7 @@ export function useAgentSessions() {
             setSessions((prev) => [created, ...prev.filter((s) => s.id !== created.id)])
             setActiveSessionId(created.id)
             activeSessionIdRef.current = created.id
-            localStorage.setItem('active_agent_session_id', created.id)
+            appStorage.set(StorageKey.ActiveAgentSessionId, created.id)
             setMessages([])
             setVisibleRounds(DEFAULT_PAGE_ROUNDS)
             return created
@@ -147,7 +148,7 @@ export function useAgentSessions() {
             if (!sessionId || sessionId === activeSessionIdRef.current) return
             setActiveSessionId(sessionId)
             activeSessionIdRef.current = sessionId
-            localStorage.setItem('active_agent_session_id', sessionId)
+            appStorage.set(StorageKey.ActiveAgentSessionId, sessionId)
             await loadSessionMessages(sessionId)
         },
         [loadSessionMessages]
@@ -181,14 +182,14 @@ export function useAgentSessions() {
                         const nextId = remaining[0].id
                         setActiveSessionId(nextId)
                         activeSessionIdRef.current = nextId
-                        localStorage.setItem('active_agent_session_id', nextId)
+                        appStorage.set(StorageKey.ActiveAgentSessionId, nextId)
                         await loadSessionMessages(nextId)
                     } else {
                         const created = await API.agentCreateSession('新会话')
                         setSessions([created])
                         setActiveSessionId(created.id)
                         activeSessionIdRef.current = created.id
-                        localStorage.setItem('active_agent_session_id', created.id)
+                        appStorage.set(StorageKey.ActiveAgentSessionId, created.id)
                         setMessages([])
                         setVisibleRounds(DEFAULT_PAGE_ROUNDS)
                     }

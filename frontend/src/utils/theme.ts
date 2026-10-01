@@ -1,4 +1,5 @@
 import { AppSettings } from '@/types'
+import { appStorage, StorageKey } from '@/utils/storage'
 
 export const DEFAULT_SETTINGS: AppSettings = {
     themeMode: 'light',
@@ -43,22 +44,10 @@ export function applyThemeMode(mode: 'light' | 'dark' | 'system') {
 }
 
 export function getCachedSettings(): AppSettings {
-    try {
-        const raw = localStorage.getItem('xclient_app_settings')
-        if (raw) {
-            const parsed = JSON.parse(raw)
-            return { ...DEFAULT_SETTINGS, ...parsed }
-        }
-    } catch {
-        // ignore
-    }
-    return DEFAULT_SETTINGS
+    const cached = appStorage.get<AppSettings>(StorageKey.AppSettings, DEFAULT_SETTINGS)
+    return { ...DEFAULT_SETTINGS, ...cached }
 }
 
 export function setCachedSettings(settings: AppSettings) {
-    try {
-        localStorage.setItem('xclient_app_settings', JSON.stringify(settings))
-    } catch {
-        // ignore
-    }
+    appStorage.set(StorageKey.AppSettings, settings)
 }

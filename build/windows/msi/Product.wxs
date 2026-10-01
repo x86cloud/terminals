@@ -212,7 +212,7 @@
 
     <CustomAction Id="AbortUninstall" Error="卸载操作已被用户取消。" />
 
-    <!-- 彻底清理用户数据（%APPDATA%\xClient、%APPDATA%\Terminal、%LOCALAPPDATA%\terminal-v3.exe） -->
+    <!-- 彻底清理用户数据（%APPDATA%\xTerminal%APPDATA%\Terminal、%LOCALAPPDATA%\terminal-v3.exe） -->
     <CustomAction Id="CleanUserData" Script="vbscript" Return="ignore">
       <![CDATA[
         On Error Resume Next
@@ -223,8 +223,8 @@
             appData = sh.ExpandEnvironmentStrings("%APPDATA%")
             localAppData = sh.ExpandEnvironmentStrings("%LOCALAPPDATA%")
 
-            If fso.FolderExists(appData & "\xClient") Then
-                fso.DeleteFolder appData & "\xClient", True
+            If fso.FolderExists(appData & "\xTerminal") Then
+                fso.DeleteFolder appData & "\xTerminal", True
             End If
             If fso.FolderExists(appData & "\Terminal") Then
                 fso.DeleteFolder appData & "\Terminal", True

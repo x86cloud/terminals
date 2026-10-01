@@ -11,6 +11,8 @@ import (
 	"sync"
 	"time"
 
+	"terminal/storage"
+
 	_ "modernc.org/sqlite"
 )
 
@@ -53,10 +55,8 @@ var (
 func GetStore() (*Store, error) {
 	var err error
 	storeOnce.Do(func() {
-		home, _ := os.UserConfigDir()
-		dir := filepath.Join(home, "xClient")
-		_ = os.MkdirAll(dir, 0o755)
-		dbPath := filepath.Join(dir, "xagent.db")
+		dbPath := storage.AgentDBPath()
+		_ = os.MkdirAll(filepath.Dir(dbPath), 0o755)
 		defaultStore, err = NewStore(dbPath)
 	})
 	return defaultStore, err
@@ -183,8 +183,7 @@ func (s *Store) autoMigrateSessions() {
 }
 
 func (s *Store) autoMigrateJSONHistory() {
-	home, _ := os.UserConfigDir()
-	jsonPath := filepath.Join(home, "xClient", "ai_agent_history.json")
+	jsonPath := filepath.Join(storage.BaseDir(), "ai_agent_history.json")
 	if _, err := os.Stat(jsonPath); err != nil {
 		return // File does not exist
 	}

@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"terminal/storage"
 )
 
 // K8sResourceItemSummary 记录编排中单个资源的基本元信息。
@@ -42,9 +44,13 @@ type K8sOrchestrationStore struct {
 }
 
 // NewK8sOrchestrationStore 初始化 K8s 编排存储。
-func NewK8sOrchestrationStore(dir string) (*K8sOrchestrationStore, error) {
+func NewK8sOrchestrationStore(dir ...string) (*K8sOrchestrationStore, error) {
+	file := storage.K8sOrchestrationsPath()
+	if len(dir) > 0 && dir[0] != "" {
+		file = filepath.Join(dir[0], "k8s_orchestrations.json")
+	}
 	ks := &K8sOrchestrationStore{
-		file: filepath.Join(dir, "k8s_orchestrations.json"),
+		file: file,
 		list: []K8sOrchestrationRecord{},
 	}
 	if err := ks.load(); err != nil {
@@ -75,11 +81,7 @@ func (ks *K8sOrchestrationStore) load() error {
 }
 
 func (ks *K8sOrchestrationStore) save() error {
-	data, err := json.MarshalIndent(ks.list, "", "  ")
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(ks.file, data, 0o600)
+	return storage.WriteJSONAtomic(ks.file, ks.list, 0o600)
 }
 
 // ListRecords 获取指定 serverId 的编排记录（若 serverId 为空则返回全部）。

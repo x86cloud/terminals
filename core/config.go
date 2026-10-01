@@ -17,10 +17,12 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"terminal/storage"
 )
 
 const (
-	appDirName = "xClient"
+	appDirName = "xTerminal"
 	encPrefix  = "enc:v1:"
 )
 
@@ -117,15 +119,15 @@ type ServerConfig struct {
 	PostgresConnMaxLifetime int    `json:"postgresConnMaxLifetime,omitempty"` // 连接最大存活（秒）
 	PostgresConnMaxIdleTime int    `json:"postgresConnMaxIdleTime,omitempty"` // 连接最大空闲（秒）
 	PostgresConnectTimeout  int    `json:"postgresConnectTimeout,omitempty"`  // 连接超时（秒）
-	PostgresSSHEnabled     bool   `json:"postgresSSHEnabled,omitempty"`     // 是否启用 SSH 隧道
-	PostgresSSHHost        string `json:"postgresSSHHost,omitempty"`        // 跳板机地址
-	PostgresSSHHostPort    int    `json:"postgresSSHHostPort,omitempty"`    // 跳板机端口
-	PostgresSSHUser        string `json:"postgresSSHUser,omitempty"`        // 跳板机用户名
-	PostgresSSHAuthType    string `json:"postgresSSHAuthType,omitempty"`    // password | key
-	PostgresSSHPassword    string `json:"postgresSSHPassword,omitempty"`    // 跳板机密码
-	PostgresSSHKeyPath     string `json:"postgresSSHKeyPath,omitempty"`     // 跳板机私钥路径
-	PostgresSSHKeyData     string `json:"postgresSSHKeyData,omitempty"`     // 跳板机私钥内容
-	PostgresSSHPassphrase  string `json:"postgresSSHPassphrase,omitempty"`  // 私钥口令
+	PostgresSSHEnabled      bool   `json:"postgresSSHEnabled,omitempty"`      // 是否启用 SSH 隧道
+	PostgresSSHHost         string `json:"postgresSSHHost,omitempty"`         // 跳板机地址
+	PostgresSSHHostPort     int    `json:"postgresSSHHostPort,omitempty"`     // 跳板机端口
+	PostgresSSHUser         string `json:"postgresSSHUser,omitempty"`         // 跳板机用户名
+	PostgresSSHAuthType     string `json:"postgresSSHAuthType,omitempty"`     // password | key
+	PostgresSSHPassword     string `json:"postgresSSHPassword,omitempty"`     // 跳板机密码
+	PostgresSSHKeyPath      string `json:"postgresSSHKeyPath,omitempty"`      // 跳板机私钥路径
+	PostgresSSHKeyData      string `json:"postgresSSHKeyData,omitempty"`      // 跳板机私钥内容
+	PostgresSSHPassphrase   string `json:"postgresSSHPassphrase,omitempty"`   // 私钥口令
 
 	// MongoDB 高级配置
 	MongoURI                 string `json:"mongoUri,omitempty"`                 // 完整连接串，填写后优先生效
@@ -482,44 +484,29 @@ type Store struct {
 	k8sOrchStore *K8sOrchestrationStore
 }
 
-var (
-	testAppConfigDir   string
-	testAppConfigDirMu sync.RWMutex
-)
-
 // SetAppConfigDirForTest 用于单测隔离自定义配置目录
 func SetAppConfigDirForTest(dir string) {
-	testAppConfigDirMu.Lock()
-	defer testAppConfigDirMu.Unlock()
-	testAppConfigDir = dir
+	storage.SetBaseDirForTest(dir)
 }
 
+// AppConfigDir 获取当前配置目录（对应 %APPDATA%/xTerminal/config）
 func AppConfigDir() (string, error) {
-	testAppConfigDirMu.RLock()
-	if testAppConfigDir != "" {
-		dir := testAppConfigDir
-		testAppConfigDirMu.RUnlock()
-		return dir, nil
-	}
-	testAppConfigDirMu.RUnlock()
-
-	base, err := os.UserConfigDir()
-	if err != nil {
-		home, herr := os.UserHomeDir()
-		if herr != nil {
-			return "", err
-		}
-		base = filepath.Join(home, ".config")
-	}
-	dir := filepath.Join(base, appDirName)
+	dir := storage.ConfigDir()
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", err
 	}
 	return dir, nil
 }
 
-func loadOrCreateKey(dir string) ([]byte, error) {
-	keyPath := filepath.Join(dir, "secret.key")
+func loadOrCreateKey(keyPathOpt ...string) ([]byte, error) {
+	keyPath := storage.SecretKeyPath()
+	if len(keyPathOpt) > 0 && keyPathOpt[0] != "" {
+		if filepath.Base(keyPathOpt[0]) == "secret.key" {
+			keyPath = keyPathOpt[0]
+		} else {
+			keyPath = filepath.Join(keyPathOpt[0], "secret.key")
+		}
+	}
 	if data, err := os.ReadFile(keyPath); err == nil && len(data) == 32 {
 		return data, nil
 	}
@@ -527,18 +514,17 @@ func loadOrCreateKey(dir string) ([]byte, error) {
 	if _, err := io.ReadFull(rand.Reader, key); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(keyPath, key, 0o600); err != nil {
+	if err := storage.WriteFileAtomic(keyPath, key, 0o600); err != nil {
 		return nil, err
 	}
 	return key, nil
 }
 
 func NewStore() (*Store, error) {
-	dir, err := AppConfigDir()
-	if err != nil {
+	if err := storage.EnsureDirs(); err != nil {
 		return nil, err
 	}
-	key, err := loadOrCreateKey(dir)
+	key, err := loadOrCreateKey()
 	if err != nil {
 		return nil, err
 	}
@@ -546,17 +532,17 @@ func NewStore() (*Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs, err := NewComposeStore(dir)
+	cs, err := NewComposeStore()
 	if err != nil {
 		return nil, err
 	}
-	ks, err := NewK8sOrchestrationStore(dir)
+	ks, err := NewK8sOrchestrationStore()
 	if err != nil {
 		return nil, err
 	}
 	s := &Store{
-		dir:          dir,
-		file:         filepath.Join(dir, "servers.json"),
+		dir:          storage.ConfigDir(),
+		file:         storage.ServersPath(),
 		box:          box,
 		settings:     DefaultAppSettings(),
 		composeStore: cs,
@@ -645,15 +631,7 @@ func (s *Store) persist() error {
 		Groups:   s.groups,
 		Settings: s.settings,
 	}
-	data, err := json.MarshalIndent(wrapper, "", "  ")
-	if err != nil {
-		return err
-	}
-	tmp := s.file + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, s.file)
+	return storage.WriteJSONAtomic(s.file, wrapper, 0o600)
 }
 
 func fillAiDefaults(settings *AppSettings) {
@@ -693,11 +671,11 @@ func fillAiDefaults(settings *AppSettings) {
 		}
 		settings.AiModels = []AiModelItem{
 			{
-				ID:            "model_default",
-				Name:          name,
-				Model:         settings.AiModel,
-				BaseURL:       settings.AiBaseURL,
-				APIKey:        settings.AiAPIKey,
+				ID:               "model_default",
+				Name:             name,
+				Model:            settings.AiModel,
+				BaseURL:          settings.AiBaseURL,
+				APIKey:           settings.AiAPIKey,
 				ContextTokens:    settings.AiModelContextTokens,
 				Temperature:      settings.AiTemperature,
 				EnableMultimodal: settings.AiEnableMultimodal,
@@ -1045,4 +1023,3 @@ func (s *Store) DeleteK8sOrchestrationRecord(id string) error {
 	}
 	return s.k8sOrchStore.DeleteRecord(id)
 }
-

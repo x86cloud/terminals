@@ -2,11 +2,11 @@ package services
 
 import (
 	"os"
-	"path/filepath"
 	"sync"
 	"terminal/core"
 	"terminal/logger"
 	"terminal/proto"
+	"terminal/storage"
 )
 
 type ApiService struct {
@@ -92,11 +92,7 @@ const defaultApiTreeJson = `[
 ]`
 
 func (s *ApiService) getApiPath() (string, error) {
-	dir, err := core.AppConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "apis.json"), nil
+	return storage.ApisPath(), nil
 }
 
 // LoadApiTree 读取本地接口树文件内容。如果文件不存在则自动创建并写入默认接口树
@@ -104,21 +100,17 @@ func (s *ApiService) LoadApiTree() (string, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	filePath, err := s.getApiPath()
-	if err != nil {
-		return defaultApiTreeJson, err
-	}
-
+	filePath := storage.ApisPath()
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			_ = os.WriteFile(filePath, []byte(defaultApiTreeJson), 0o644)
+			_ = storage.WriteFileAtomic(filePath, []byte(defaultApiTreeJson), 0o644)
 			return defaultApiTreeJson, nil
 		}
 		return "", err
 	}
 	if len(data) == 0 {
-		_ = os.WriteFile(filePath, []byte(defaultApiTreeJson), 0o644)
+		_ = storage.WriteFileAtomic(filePath, []byte(defaultApiTreeJson), 0o644)
 		return defaultApiTreeJson, nil
 	}
 	return string(data), nil
@@ -129,11 +121,8 @@ func (s *ApiService) SaveApiTree(content string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	filePath, err := s.getApiPath()
-	if err != nil {
-		return err
-	}
-	return os.WriteFile(filePath, []byte(content), 0o644)
+	filePath := storage.ApisPath()
+	return storage.WriteFileAtomic(filePath, []byte(content), 0o644)
 }
 
 // ChooseImportApiFile 弹出文件选择对话框，读取用户选择的 JSON 文件内容
@@ -164,7 +153,7 @@ func (s *ApiService) ChooseExportApiFile(content string, defaultName string) (st
 	if filePath == "" {
 		return "", nil
 	}
-	err = os.WriteFile(filePath, []byte(content), 0o644)
+	err = storage.WriteFileAtomic(filePath, []byte(content), 0o644)
 	if err != nil {
 		return "", err
 	}

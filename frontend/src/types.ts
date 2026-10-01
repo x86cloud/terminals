@@ -296,7 +296,7 @@ export function emptyServer(): ServerConfig {
         mongoConnectTimeout: 10,
         mongoServerSelectTimeout: 10,
         mongoCompressors: '',
-        mongoAppName: 'xClient',
+        mongoAppName: 'xTerminal',
         // Docker 高级参数默认值
         dockerEndpointType: 'unix',
         dockerSocketPath: '',

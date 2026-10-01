@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
 
 	"terminal/core"
+	"terminal/storage"
 
 	"github.com/google/uuid"
 )
@@ -104,11 +104,7 @@ const defaultApiTreeJson = `[
 
 // GetApiPath 获取接口配置文件的存储绝对路径
 func GetApiPath() (string, error) {
-	dir, err := core.AppConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, "apis.json"), nil
+	return storage.ApisPath(), nil
 }
 
 // LoadApiTreeNodes 从本地 apis.json 文件中读取解析接口树
@@ -116,15 +112,11 @@ func LoadApiTreeNodes() ([]ApiTreeItem, error) {
 	apiFileMu.Lock()
 	defer apiFileMu.Unlock()
 
-	filePath, err := GetApiPath()
-	if err != nil {
-		return nil, err
-	}
-
+	filePath := storage.ApisPath()
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			_ = os.WriteFile(filePath, []byte(defaultApiTreeJson), 0o644)
+			_ = storage.WriteFileAtomic(filePath, []byte(defaultApiTreeJson), 0o644)
 			var defaultNodes []ApiTreeItem
 			_ = json.Unmarshal([]byte(defaultApiTreeJson), &defaultNodes)
 			return defaultNodes, nil
@@ -133,7 +125,7 @@ func LoadApiTreeNodes() ([]ApiTreeItem, error) {
 	}
 
 	if len(strings.TrimSpace(string(data))) == 0 {
-		_ = os.WriteFile(filePath, []byte(defaultApiTreeJson), 0o644)
+		_ = storage.WriteFileAtomic(filePath, []byte(defaultApiTreeJson), 0o644)
 		var defaultNodes []ApiTreeItem
 		_ = json.Unmarshal([]byte(defaultApiTreeJson), &defaultNodes)
 		return defaultNodes, nil
@@ -152,17 +144,8 @@ func SaveApiTreeNodes(nodes []ApiTreeItem) error {
 	apiFileMu.Lock()
 	defer apiFileMu.Unlock()
 
-	filePath, err := GetApiPath()
-	if err != nil {
-		return err
-	}
-
-	data, err := json.MarshalIndent(nodes, "", "  ")
-	if err != nil {
-		return fmt.Errorf("序列化接口树失败: %w", err)
-	}
-
-	if err := os.WriteFile(filePath, data, 0o644); err != nil {
+	filePath := storage.ApisPath()
+	if err := storage.WriteJSONAtomic(filePath, nodes, 0o644); err != nil {
 		return fmt.Errorf("写入 apis.json 失败: %w", err)
 	}
 
