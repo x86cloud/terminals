@@ -46,6 +46,18 @@ func (s *SshService) ConnectWithConfig(cfg core.ServerConfig, cols int, rows int
 	return sess, nil
 }
 
+// SshTestConnection 测试指定配置的 SSH 服务器连通性。
+func (s *SshService) SshTestConnection(cfg core.ServerConfig) (map[string]any, error) {
+	logger.Infof("测试 SSH 连通性: 主机=%s:%d, 用户=%s", cfg.Host, cfg.Port, cfg.Username)
+	res, err := GetContainer().Sessions.TestConnection(cfg)
+	if err != nil {
+		logger.Warnf("SSH 测试连接失败 [主机=%s:%d]: %v", cfg.Host, cfg.Port, err)
+		return nil, err
+	}
+	logger.Infof("SSH 测试连接成功 [主机=%s:%d]: %v", cfg.Host, cfg.Port, res)
+	return res, nil
+}
+
 func (s *SshService) Disconnect(sessionID string) error {
 	logger.Infof("断开 SSH 会话: SessionID=%s", sessionID)
 	GetContainer().Sessions.Remove(sessionID)

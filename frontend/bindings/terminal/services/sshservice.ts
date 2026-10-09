@@ -72,6 +72,13 @@ export function SendInput(sessionID: string, data: string): $CancellablePromise<
     return $Call.ByID(350783029, sessionID, data);
 }
 
+/**
+ * SshTestConnection 测试指定配置的 SSH 服务器连通性。
+ */
+export function SshTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(4037738301, cfg);
+}
+
 export function TerminalAttach(sessionID: string, cols: number, rows: number): $CancellablePromise<void> {
     return $Call.ByID(2019728728, sessionID, cols, rows);
 }

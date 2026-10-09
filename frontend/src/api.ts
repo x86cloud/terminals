@@ -168,6 +168,8 @@ export const API = {
         SshService.Connect(serverId, cols, rows) as any,
     connectWithConfig: (cfg: ServerConfig, cols: number, rows: number): Promise<SessionInfo> =>
         SshService.ConnectWithConfig(cfg as any, cols, rows) as any,
+    sshTestConnection: (cfg: ServerConfig): Promise<{ connected: boolean; pingMs: number }> =>
+        SshService.SshTestConnection(cfg as any).then((r: any) => (r || { connected: true, pingMs: 0 }) as any),
     disconnect: (sessionId: string): Promise<void> => SshService.Disconnect(sessionId),
     sendInput: (sessionId: string, data: string): Promise<void> => SshService.SendInput(sessionId, data),
     resizeTerminal: (sessionId: string, cols: number, rows: number): Promise<void> =>

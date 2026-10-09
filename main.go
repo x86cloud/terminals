@@ -67,7 +67,7 @@ func main() {
 			Handler: application.AssetFileServerFS(assets),
 		},
 		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID: "xclient-single-instance-key",
+			UniqueID: "xterminal-single-instance-key",
 			OnSecondInstanceLaunch: func(data application.SecondInstanceData) {
 				if w, ok := application.Get().Window.GetByName("main"); ok && w != nil {
 					w.UnMinimise()

@@ -234,6 +234,47 @@ func readPrivateKey(value string) ([]byte, error) {
 	return data, nil
 }
 
+// TestConnection 使用临时配置测试 SSH 连通性并返回网络延迟。
+func (m *SessionManager) TestConnection(cfg core.ServerConfig) (map[string]any, error) {
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	auths, err := buildAuthMethods(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	timeout := 8 * time.Second
+	clientCfg := &golangssh.ClientConfig{
+		User:            cfg.Username,
+		Auth:            auths,
+		HostKeyCallback: golangssh.InsecureIgnoreHostKey(),
+		Timeout:         timeout,
+	}
+
+	start := time.Now()
+	conn, err := net.DialTimeout("tcp", cfg.Addr(), timeout)
+	if err != nil {
+		return nil, fmt.Errorf("连接 %s 失败: %w", cfg.Addr(), err)
+	}
+	defer conn.Close()
+
+	_ = conn.SetDeadline(time.Now().Add(timeout))
+
+	c, chans, reqs, err := golangssh.NewClientConn(conn, cfg.Addr(), clientCfg)
+	if err != nil {
+		return nil, fmt.Errorf("SSH 握手或认证失败: %w", err)
+	}
+	client := golangssh.NewClient(c, chans, reqs)
+	defer client.Close()
+
+	latency := time.Since(start).Milliseconds()
+	return map[string]any{
+		"connected": true,
+		"pingMs":    latency,
+	}, nil
+}
+
 // Connect 建立 SSH 连接并启动交互式 shell。
 func (m *SessionManager) Connect(cfg core.ServerConfig, cols, rows int) (SessionInfo, error) {
 	if err := cfg.Validate(); err != nil {

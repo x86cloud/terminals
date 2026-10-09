@@ -88,7 +88,10 @@ export default function ServerDialog({
         setBusy(true)
         setTestResult(null)
         try {
-            if (form.type === 'docker') {
+            if (form.type === 'ssh' || !form.type) {
+                const res = await API.sshTestConnection(form)
+                setTestResult({ success: true, message: `SSH 连接成功! 延迟: ${res.pingMs || 0}ms` })
+            } else if (form.type === 'docker') {
                 const msg = await API.dockerTestConnection(form)
                 setTestResult({ success: true, message: msg || 'Docker 连通性测试通过！' })
             } else if (form.type === 'mongo') {
@@ -150,7 +153,7 @@ export default function ServerDialog({
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        {['mongo', 'redis', 'mysql', 'postgres', 'mqtt', 'docker', 'k8s'].includes(form.type || '') && (
+                        {['ssh', 'mongo', 'redis', 'mysql', 'postgres', 'mqtt', 'docker', 'k8s'].includes(form.type || 'ssh') && (
                             <Button onClick={handleTestConnection} loading={busy}>
                                 测试连接
                             </Button>
