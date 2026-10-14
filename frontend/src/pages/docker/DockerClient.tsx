@@ -11,6 +11,7 @@ import {
 } from 'lucide-react'
 import { API } from '@/api'
 import type { DockerSessionInfo, DockerOverview } from '@/types'
+import { useSession } from '@/contexts/SessionContext'
 import ClientIcon from '@/components/ClientIcon'
 import OverviewTab from './OverviewTab'
 import ComposeTab from './ComposeTab'
@@ -28,6 +29,9 @@ interface Props {
 type TabKey = 'overview' | 'compose' | 'containers' | 'images' | 'volumes' | 'networks'
 
 export default function DockerClient({ session, onClose }: Props) {
+    const { activeTarget } = useSession()
+    const isActive = activeTarget?.kind === 'docker' && activeTarget.id === session.id
+
     const [activeTab, setActiveTab] = useState<TabKey>('overview')
     const [overview, setOverview] = useState<DockerOverview | null>(null)
     const [loading, setLoading] = useState(false)
@@ -52,6 +56,7 @@ export default function DockerClient({ session, onClose }: Props) {
     }
 
     useEffect(() => {
+        if (!isActive) return
         fetchOverview()
         timerRef.current = setInterval(() => {
             fetchOverview(true)
@@ -59,7 +64,7 @@ export default function DockerClient({ session, onClose }: Props) {
         return () => {
             if (timerRef.current) clearInterval(timerRef.current)
         }
-    }, [session.serverId])
+    }, [session.serverId, isActive])
 
     const handleRunImage = (imageName: string) => {
         setActiveTab('containers')

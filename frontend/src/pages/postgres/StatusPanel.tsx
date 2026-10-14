@@ -2,16 +2,22 @@ import { useState, useEffect, useMemo } from 'react'
 import { Table, Button, Tag, Input, Switch, Tooltip, message, Popconfirm, Space, Segmented } from 'antd'
 import { RotateCw, Activity, HardDrive, ShieldCheck, Clock, Search, Copy, Check } from 'lucide-react'
 import { API } from '@/api'
+import { useSession } from '@/contexts/SessionContext'
 import { PgStatus, PgSession } from './postgresTypes'
 import pg from './StatusPanel.module.less'
 
 export default function StatusPanel({
+    sessionId,
     serverId,
     dbName,
 }: {
+    sessionId?: string
     serverId: string
     dbName: string
 }) {
+    const { activeTarget } = useSession()
+    const isActive = !sessionId || (activeTarget?.kind === 'postgres' && activeTarget.id === sessionId)
+
     const [status, setStatus] = useState<PgStatus | null>(null)
     const [sessions, setSessions] = useState<PgSession[]>([])
     const [loading, setLoading] = useState(false)
@@ -41,12 +47,12 @@ export default function StatusPanel({
     }, [serverId, dbName])
 
     useEffect(() => {
-        if (!autoRefresh) return
+        if (!autoRefresh || !isActive) return
         const timer = setInterval(() => {
             loadMetrics()
         }, 3000)
         return () => clearInterval(timer)
-    }, [autoRefresh, serverId, dbName])
+    }, [autoRefresh, isActive, serverId, dbName])
 
     const handleKill = async (pid: number, terminate = true) => {
         try {

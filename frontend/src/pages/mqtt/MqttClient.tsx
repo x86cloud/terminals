@@ -68,6 +68,7 @@ function getTopicColor(topic: string) {
 }
 
 const MAX_MESSAGES = 1000
+const DISPLAY_LIMIT = 150
 
 export default function MqttClient({ session, onClose }: Props) {
     const [subs, setSubs] = useState<MqttSubscription[]>([])
@@ -89,7 +90,7 @@ export default function MqttClient({ session, onClose }: Props) {
     const [autoScroll, setAutoScroll] = useState<boolean>(true)
 
     // Copying state feedback
-    const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
+    const [copiedId, setCopiedId] = useState<string | null>(null)
 
     const [status, setStatus] = useState<{ connected: boolean; error?: string }>({
         connected: session.connected,
@@ -98,6 +99,21 @@ export default function MqttClient({ session, onClose }: Props) {
     const [error, setError] = useState('')
     const logRef = useRef<HTMLDivElement>(null)
     const bottomRef = useRef<HTMLDivElement>(null)
+
+    // Message batching buffer & sequencer
+    const msgSeqRef = useRef(0)
+    const msgBufferRef = useRef<MqttMessage[]>([])
+    const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const flushMessages = useCallback(() => {
+        if (msgBufferRef.current.length === 0) return
+        const chunk = msgBufferRef.current
+        msgBufferRef.current = []
+        setMessages((prev) => {
+            const next = prev.concat(chunk)
+            return next.length > MAX_MESSAGES ? next.slice(next.length - MAX_MESSAGES) : next
+        })
+    }, [])
 
     const reloadSubs = useCallback(async () => {
         try {
@@ -111,17 +127,22 @@ export default function MqttClient({ session, onClose }: Props) {
     useEffect(() => {
         reloadSubs()
         const offMsg = subscribe(`mqtt:message:${session.id}`, (data: any) => {
-            setMessages((prev) => {
-                const next = prev.concat({
-                    dir: 'in',
-                    topic: data.topic,
-                    payload: data.payload,
-                    qos: data.qos,
-                    retained: !!data.retained,
-                    ts: data.ts,
-                })
-                return next.length > MAX_MESSAGES ? next.slice(next.length - MAX_MESSAGES) : next
+            const ts = data.ts || Date.now()
+            msgBufferRef.current.push({
+                id: `${ts}-${++msgSeqRef.current}`,
+                dir: 'in',
+                topic: data.topic,
+                payload: data.payload,
+                qos: data.qos,
+                retained: !!data.retained,
+                ts,
             })
+            if (!flushTimerRef.current) {
+                flushTimerRef.current = setTimeout(() => {
+                    flushTimerRef.current = null
+                    flushMessages()
+                }, 50)
+            }
         })
         const offStatus = subscribe(`mqtt:status:${session.id}`, (data: any) => {
             setStatus({ connected: !!data.connected, error: data.error })
@@ -129,8 +150,12 @@ export default function MqttClient({ session, onClose }: Props) {
         return () => {
             offMsg()
             offStatus()
+            if (flushTimerRef.current) {
+                clearTimeout(flushTimerRef.current)
+                flushTimerRef.current = null
+            }
         }
-    }, [session.id, reloadSubs])
+    }, [session.id, reloadSubs, flushMessages])
 
     // Stats
     const totalIn = useMemo(() => messages.filter((m) => m.dir === 'in').length, [messages])
@@ -160,6 +185,14 @@ export default function MqttClient({ session, onClose }: Props) {
         })
     }, [messages, dirFilter, filterTopic, searchKeyword])
 
+    // Display sliding window (limit DOM elements to latest 150 items)
+    const displayedMessages = useMemo(() => {
+        if (filteredMessages.length <= DISPLAY_LIMIT) {
+            return filteredMessages
+        }
+        return filteredMessages.slice(filteredMessages.length - DISPLAY_LIMIT)
+    }, [filteredMessages])
+
     // Auto-scroll message stream
     useEffect(() => {
         if (autoScroll) {
@@ -171,7 +204,7 @@ export default function MqttClient({ session, onClose }: Props) {
                 }
             })
         }
-    }, [filteredMessages.length, autoScroll])
+    }, [displayedMessages.length, autoScroll])
 
     // Actions
     const doSubscribe = async () => {
@@ -218,14 +251,16 @@ export default function MqttClient({ session, onClose }: Props) {
         setError('')
         try {
             await API.mqttPublish(session.id, t, pubPayload, pubQos, pubRetained)
+            const now = Date.now()
             setMessages((prev) => {
                 const next = prev.concat({
+                    id: `${now}-${++msgSeqRef.current}`,
                     dir: 'out',
                     topic: t,
                     payload: pubPayload,
                     qos: pubQos,
                     retained: pubRetained,
-                    ts: Date.now(),
+                    ts: now,
                 })
                 return next.length > MAX_MESSAGES ? next.slice(next.length - MAX_MESSAGES) : next
             })
@@ -255,10 +290,10 @@ export default function MqttClient({ session, onClose }: Props) {
         }
     }
 
-    const copyPayload = (payload: string, idx: number) => {
+    const copyPayload = (payload: string, id: string) => {
         navigator.clipboard.writeText(payload)
-        setCopiedIdx(idx)
-        setTimeout(() => setCopiedIdx(null), 1500)
+        setCopiedId(id)
+        setTimeout(() => setCopiedId(null), 1500)
     }
 
     const fillToPublish = (topic: string, payload?: string) => {
@@ -511,12 +546,27 @@ export default function MqttClient({ session, onClose }: Props) {
                         </div>
                     )}
 
-                    {filteredMessages.map((msg, i) => {
+                    {filteredMessages.length > DISPLAY_LIMIT && (
+                        <div style={{
+                            textAlign: 'center',
+                            padding: '6px 0',
+                            fontSize: 11,
+                            color: 'var(--text-dim)',
+                            borderBottom: '1px dashed var(--border-color, rgba(140, 140, 140, 0.2))',
+                            marginBottom: 6,
+                        }}>
+                            已展示最新 {DISPLAY_LIMIT} 条消息（当前筛选共 {filteredMessages.length} 条）
+                        </div>
+                    )}
+
+                    {displayedMessages.map((msg) => {
                         const isIncoming = msg.dir === 'in'
                         const topicColor = getTopicColor(msg.topic)
+                        const msgId = msg.id || `${msg.ts}-${msg.topic}`
+                        const isCopied = copiedId === msgId
                         return (
                             <div
-                                key={i}
+                                key={msgId}
                                 className={`${m.msgCard} ${isIncoming ? m.msgIn : m.msgOut}`}
                             >
                                 <div className={m.msgCardHeader}>
@@ -546,12 +596,12 @@ export default function MqttClient({ session, onClose }: Props) {
 
                                     <div className={m.msgCardMetaRight}>
                                         <div className={m.cardHoverActions}>
-                                            <Tooltip title={copiedIdx === i ? '已复制' : '复制 Payload'}>
+                                            <Tooltip title={isCopied ? '已复制' : '复制 Payload'}>
                                                 <Button
                                                     size="small"
                                                     type="text"
-                                                    icon={copiedIdx === i ? <Check size={12} color="#22c55e" /> : <Copy size={12} />}
-                                                    onClick={() => copyPayload(msg.payload, i)}
+                                                    icon={isCopied ? <Check size={12} color="#22c55e" /> : <Copy size={12} />}
+                                                    onClick={() => copyPayload(msg.payload, msgId)}
                                                 />
                                             </Tooltip>
                                             <Tooltip title="以此主题发布">

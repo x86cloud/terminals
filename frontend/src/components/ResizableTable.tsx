@@ -217,7 +217,19 @@ export default function ResizableTable({
         minW: number
         maxW: number
         rafId: number | null
+        cleanup?: () => void
     } | null>(null)
+
+    useEffect(() => {
+        return () => {
+            if (dragRef.current?.rafId) {
+                cancelAnimationFrame(dragRef.current.rafId)
+            }
+            dragRef.current?.cleanup?.()
+            document.body.style.cursor = ''
+            document.body.style.userSelect = ''
+        }
+    }, [])
 
     const effectiveRows = useMemo(() => data ?? rows ?? [], [data, rows])
 
@@ -281,16 +293,6 @@ export default function ResizableTable({
             const currentW = getColRenderWidth(col)
             const minW = col.minWidth ?? (col.hasFilter ? 95 : defaultMinWidth)
             const maxW = col.maxWidth ?? defaultMaxWidth
-            dragRef.current = {
-                key: col.key,
-                startX: e.clientX,
-                startW: currentW,
-                minW,
-                maxW,
-                rafId: null,
-            }
-            setResizingCol({ key: col.key, width: currentW })
-
             const onMove = (me: MouseEvent) => {
                 if (!dragRef.current) return
                 const delta = me.clientX - dragRef.current.startX
@@ -314,17 +316,32 @@ export default function ResizableTable({
                 })
             }
 
+            const cleanup = () => {
+                document.removeEventListener('mousemove', onMove)
+                document.removeEventListener('mouseup', onUp)
+            }
+
             const onUp = () => {
                 if (dragRef.current?.rafId) {
                     cancelAnimationFrame(dragRef.current.rafId)
                 }
                 dragRef.current = null
                 setResizingCol(null)
-                document.removeEventListener('mousemove', onMove)
-                document.removeEventListener('mouseup', onUp)
+                cleanup()
                 document.body.style.cursor = ''
                 document.body.style.userSelect = ''
             }
+
+            dragRef.current = {
+                key: col.key,
+                startX: e.clientX,
+                startW: currentW,
+                minW,
+                maxW,
+                rafId: null,
+                cleanup,
+            }
+            setResizingCol({ key: col.key, width: currentW })
 
             document.body.style.cursor = 'col-resize'
             document.body.style.userSelect = 'none'

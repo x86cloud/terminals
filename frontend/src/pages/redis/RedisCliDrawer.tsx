@@ -30,7 +30,7 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
     const [histIdx, setHistIdx] = useState<number>(-1)
 
     const outputRef = useRef<HTMLDivElement>(null)
-    const isDraggingRef = useRef(false)
+    const [isDragging, setIsDragging] = useState(false)
     const startYRef = useRef(0)
     const startHeightRef = useRef(0)
 
@@ -40,27 +40,37 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
         }
     }, [logs, expanded])
 
-    // Drag to resize
-    const handleMouseDown = (e: React.MouseEvent) => {
-        isDraggingRef.current = true
-        startYRef.current = e.clientY
-        startHeightRef.current = height
+    useEffect(() => {
+        if (!isDragging) return
 
         const onMouseMove = (moveEvent: MouseEvent) => {
-            if (!isDraggingRef.current) return
             const delta = startYRef.current - moveEvent.clientY
             const nextH = Math.max(140, Math.min(600, startHeightRef.current + delta))
             setHeight(nextH)
         }
 
         const onMouseUp = () => {
-            isDraggingRef.current = false
+            setIsDragging(false)
+        }
+
+        document.body.style.cursor = 'row-resize'
+        document.body.style.userSelect = 'none'
+        window.addEventListener('mousemove', onMouseMove)
+        window.addEventListener('mouseup', onMouseUp)
+
+        return () => {
+            document.body.style.cursor = ''
+            document.body.style.userSelect = ''
             window.removeEventListener('mousemove', onMouseMove)
             window.removeEventListener('mouseup', onMouseUp)
         }
+    }, [isDragging])
 
-        window.addEventListener('mousemove', onMouseMove)
-        window.addEventListener('mouseup', onMouseUp)
+    // Drag to resize
+    const handleMouseDown = (e: React.MouseEvent) => {
+        startYRef.current = e.clientY
+        startHeightRef.current = height
+        setIsDragging(true)
     }
 
     const handleExecute = async (cmdToRun?: string) => {

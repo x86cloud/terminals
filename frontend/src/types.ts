@@ -528,6 +528,7 @@ export interface MqttSessionInfo {
 }
 
 export interface MqttMessage {
+    id?: string
     dir: 'in' | 'out'
     topic: string
     payload: string

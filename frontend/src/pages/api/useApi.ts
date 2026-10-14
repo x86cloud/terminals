@@ -128,6 +128,8 @@ export function useApi() {
 
     const [mode, setMode] = useState<ApiMode>('http')
     const [wsConnId, setWsConnId] = useState<string | null>(null)
+    const wsConnIdRef = useRef<string | null>(null)
+    wsConnIdRef.current = wsConnId
     const [wsStatus, setWsStatus] = useState<WsStatus>('idle')
     const [wsMessages, setWsMessages] = useState<WsMessage[]>([])
     const [wsInput, setWsInput] = useState('')
@@ -257,10 +259,13 @@ export function useApi() {
     }, [url, headers, insecureTLS, auth, wsProtocols])
 
     const wsDisconnect = useCallback(() => {
-        if (wsConnId) API.wsClose(wsConnId)
+        if (wsConnIdRef.current) {
+            API.wsClose(wsConnIdRef.current)
+            wsConnIdRef.current = null
+        }
         setWsConnId(null)
         setWsStatus('closed')
-    }, [wsConnId])
+    }, [])
 
     const wsSendMsg = useCallback(async () => {
         const msg = wsInput
@@ -278,11 +283,12 @@ export function useApi() {
     // 销毁组件时释放 WebSocket 连接
     useEffect(() => {
         return () => {
-            if (wsConnId) {
-                API.wsClose(wsConnId)
+            if (wsConnIdRef.current) {
+                API.wsClose(wsConnIdRef.current)
+                wsConnIdRef.current = null
             }
         }
-    }, [wsConnId])
+    }, [])
 
     const formatJsonBody = useCallback(() => {
         if (bodyType !== 'json') return

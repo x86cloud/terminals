@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Select, Input, Button, Segmented, Tag, Checkbox, Tooltip, Alert } from 'antd'
 import { Copy, PanelLeft, Send, Save, Globe, Clock, Database, Download, Edit2, Trash2 } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
+import { useSession } from '@/contexts/SessionContext'
 import a from '@/pages/api/HttpRequest.module.less'
 import type { ApiState } from '@/pages/api/useApi'
 
@@ -16,6 +17,9 @@ const methodColorMap: Record<string, string> = {
 }
 
 export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () => void }) {
+    const { activeTarget } = useSession()
+    const isApiActive = activeTarget?.kind === 'api'
+
     const {
         mode, wsStatus, wsConnect, wsDisconnect, wsConnecting, wsSendMsg,
         method, setMethod, methods, url, updateUrl, doSend, sending, showApiTree, setShowApiTree,
@@ -49,8 +53,9 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
         }
     }
 
-    // 快捷键 Ctrl+S / Cmd+S 快速保存
+    // 快捷键 Ctrl+S / Cmd+S 快速保存（仅在 API 工具处于活跃标签时生效）
     useEffect(() => {
+        if (!isApiActive) return
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S')) {
                 e.preventDefault()
@@ -59,7 +64,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [currentApiId, saveCurrentApi, setSaveModalMode, setSaveModalOpen])
+    }, [isApiActive, currentApiId, saveCurrentApi, setSaveModalMode, setSaveModalOpen])
 
     const methodOptions = methods.map((m) => ({
         value: m,

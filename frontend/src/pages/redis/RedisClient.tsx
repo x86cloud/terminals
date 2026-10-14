@@ -66,6 +66,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
     const [db, setDb] = useState(session.db)
     const [dbInput, setDbInput] = useState(String(session.db))
     const cursorRef = useRef('0')
+    const activeValReqIdRef = useRef(0)
 
     // ---- 树状分层视图 ----
     const [viewMode, setViewMode] = useState<'tree' | 'flat'>('tree')
@@ -225,12 +226,15 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         async (key: string) => {
             if (!key) return
             setSelected(key)
+            const reqId = ++activeValReqIdRef.current
             try {
                 const v = await API.redisGet(session.id, key)
+                if (reqId !== activeValReqIdRef.current) return
                 setValue(v)
                 setEditor(formatValue(v))
                 setTtl(v.ttl)
             } catch (e: any) {
+                if (reqId !== activeValReqIdRef.current) return
                 flash('读取失败: ' + (e?.message || e))
                 setValue(null)
             }
@@ -239,6 +243,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
     )
 
     useEffect(() => {
+        activeValReqIdRef.current++
         cursorRef.current = '0'
         setData({ cursor: '0', keys: [] })
         setSelected('')

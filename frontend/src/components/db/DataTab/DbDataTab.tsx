@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import {
     Segmented,
     Button,
@@ -61,6 +61,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
     const [sortCol, setSortCol] = useState('')
     const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC')
     const [countingRows, setCountingRows] = useState(false)
+    const loadDataReqIdRef = useRef(0)
 
     // 列宽状态
     const [colWidths, setColWidths] = useState<Record<string, number>>({})
@@ -147,6 +148,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         targetSortCol = sortCol,
         targetSortOrder = sortOrder
     ) => {
+        const reqId = ++loadDataReqIdRef.current
         setLoading(true)
         try {
             const res = await adapter.loadData({
@@ -156,6 +158,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 sortCol: targetSortCol,
                 sortOrder: targetSortOrder,
             })
+            if (reqId !== loadDataReqIdRef.current) return
             setColumns(res.columns || [])
             setRows(res.rows || [])
             setRowDrafts({})
@@ -165,13 +168,24 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             setCountingRows(true)
             adapter
                 .countData(where)
-                .then((cnt) => setTotalRows(cnt))
+                .then((cnt) => {
+                    if (reqId === loadDataReqIdRef.current) {
+                        setTotalRows(cnt)
+                    }
+                })
                 .catch(() => {})
-                .finally(() => setCountingRows(false))
+                .finally(() => {
+                    if (reqId === loadDataReqIdRef.current) {
+                        setCountingRows(false)
+                    }
+                })
         } catch (e: any) {
+            if (reqId !== loadDataReqIdRef.current) return
             message.error('查询数据失败: ' + (e.message || e))
         } finally {
-            setLoading(false)
+            if (reqId === loadDataReqIdRef.current) {
+                setLoading(false)
+            }
         }
     }
 

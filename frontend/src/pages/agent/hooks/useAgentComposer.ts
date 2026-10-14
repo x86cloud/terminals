@@ -50,6 +50,7 @@ export function useAgentComposer({
     }, [])
 
     const prevMessagesLengthRef = useRef<number>(0)
+    const lastScrollTimeRef = useRef<number>(0)
 
     // Reset generation state on active session change
     useEffect(() => {
@@ -68,10 +69,17 @@ export function useAgentComposer({
         return () => clearTimeout(watchdog)
     }, [isGenerating, setNoticeText])
 
-    // Scroll to bottom only on new messages added or streaming reasoning
+    // Scroll to bottom: smooth on new message additions, throttled auto-scroll during streaming
     useEffect(() => {
-        if (messages.length > prevMessagesLengthRef.current || (isGenerating && activeReasoning)) {
+        if (messages.length > prevMessagesLengthRef.current) {
             chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+            lastScrollTimeRef.current = Date.now()
+        } else if (isGenerating) {
+            const now = Date.now()
+            if (now - lastScrollTimeRef.current > 120) {
+                lastScrollTimeRef.current = now
+                chatEndRef.current?.scrollIntoView({ behavior: 'auto' })
+            }
         }
         prevMessagesLengthRef.current = messages.length
     }, [messages.length, isGenerating, activeReasoning])

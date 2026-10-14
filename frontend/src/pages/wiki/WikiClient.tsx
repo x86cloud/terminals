@@ -28,11 +28,35 @@ import Tree, { TreeNodeData } from '@/components/common/Tree'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
 import CodeEditor from '@/components/CodeEditor'
 import ContextMenu, { closedMenu, MenuState, MenuItem } from '@/components/ContextMenu'
-import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import { ConfirmModal } from '@/components/Modal'
 import { API } from '@/api'
-import { WikiNode } from '@/types'
+import { WikiNode, FrontendMessage } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
 import s from './WikiClient.module.less'
+
+// 模块级静态图标单例，杜绝在递归树遍历时高频分配临时 JSX 对象与内联样式对象
+const FOLDER_ICON = <Folder size={14} style={{ color: '#3370ff' }} />
+const FILE_ICON = <FileText size={14} style={{ color: '#667085' }} />
+
+function getErrorMessage(err: unknown): string {
+    if (err instanceof Error) return err.message
+    return String(err)
+}
+
+function confirmSwitchDoc(): Promise<boolean> {
+    return new Promise((resolve) => {
+        Modal.confirm({
+            title: '未保存的修改',
+            content: '当前文档有未保存的修改，切换将丢失改动。是否继续？',
+            okText: '放弃修改并切换',
+            okButtonProps: { danger: true },
+            cancelText: '取消',
+            centered: true,
+            onOk: () => resolve(true),
+            onCancel: () => resolve(false),
+        })
+    })
+}
 
 interface Props {
     onClose?: () => void
@@ -42,6 +66,11 @@ type ViewMode = 'preview' | 'edit' | 'split'
 
 export default function WikiClient({ onClose }: Props) {
     const { activeTarget } = useSession()
+
+    // 挂载与单调递增请求 ID 守护，消除竞态与卸载后 setState 内存泄漏
+    const isMountedRef = useRef<boolean>(true)
+    const activeDocReqIdRef = useRef<number>(0)
+
     const [treeData, setTreeData] = useState<WikiNode[]>([])
     const [wikiDir, setWikiDir] = useState<string>('')
     const [loading, setLoading] = useState<boolean>(false)
@@ -55,8 +84,17 @@ export default function WikiClient({ onClose }: Props) {
     const [saving, setSaving] = useState<boolean>(false)
     const [viewMode, setViewMode] = useState<ViewMode>('preview')
 
+    // 保持 selectedPath 的稳定 Ref，避免 loadTree 依赖 selectedPath 导致重构
+    const selectedPathRef = useRef<string | null>(selectedPath)
+    useEffect(() => {
+        selectedPathRef.current = selectedPath
+    }, [selectedPath])
+
     // 延迟渲染 Markdown 内容，避免编辑输入时全量频繁重建 AST 和大量垃圾对象
     const deferredContent = useDeferredValue(content)
+
+    // 搜索词延迟响应，防止快速输入时主线程被 O(N) 递归树计算卡死
+    const deferredKeyword = useDeferredValue(searchKeyword)
 
     // 目录树展开节点
     const [expandedKeys, setExpandedKeys] = useState<string[]>([])
@@ -81,13 +119,14 @@ export default function WikiClient({ onClose }: Props) {
         initialValue: '',
     })
     const [nameInput, setNameInput] = useState<string>('')
+    const [submittingName, setSubmittingName] = useState<boolean>(false)
 
-    // 删除确认弹窗
-    const [confirm, setConfirm] = useState<ConfirmState>({
-        open: false,
-        title: '',
-        message: '',
-    })
+    // 删除目标数据状态（纯数据驱动，禁止在 State 中挂载包含闭包的异步回调函数）
+    const [deleteTarget, setDeleteTarget] = useState<{
+        relPath: string
+        isFolder: boolean
+    } | null>(null)
+    const [deleting, setDeleting] = useState<boolean>(false)
 
     // 提炼编译会话弹窗
     const [compileModalOpen, setCompileModalOpen] = useState<boolean>(false)
@@ -100,6 +139,40 @@ export default function WikiClient({ onClose }: Props) {
         return content !== originalContent
     }, [selectedPath, content, originalContent])
 
+    // 组件生命周期与挂载标记管理，并在卸载时自动销毁未关闭的全局提示
+    useEffect(() => {
+        isMountedRef.current = true
+        return () => {
+            isMountedRef.current = false
+            activeDocReqIdRef.current += 1
+            message.destroy('compile_wiki')
+        }
+    }, [])
+
+    // 选择并打开文档（携带请求递增 ID 校验与未保存确认，防止竞态覆盖与数据丢失）
+    const selectDoc = useCallback(async (node: WikiNode) => {
+        if (node.is_folder) return
+        if (isDirty) {
+            const proceed = await confirmSwitchDoc()
+            if (!proceed) return
+        }
+
+        const currentReqId = ++activeDocReqIdRef.current
+        try {
+            const text = await API.wikiReadPage(node.rel_path)
+            if (!isMountedRef.current || currentReqId !== activeDocReqIdRef.current) {
+                return
+            }
+            setSelectedPath(node.rel_path)
+            setSelectedNode(node)
+            setContent(text)
+            setOriginalContent(text)
+        } catch (err: unknown) {
+            if (!isMountedRef.current || currentReqId !== activeDocReqIdRef.current) return
+            message.error(`读取文档失败: ${getErrorMessage(err)}`)
+        }
+    }, [isDirty])
+
     // 加载 Wiki 目录与目录树
     const loadTree = useCallback(async (autoSelectFirst = false) => {
         setLoading(true)
@@ -108,20 +181,23 @@ export default function WikiClient({ onClose }: Props) {
                 API.wikiListTree(),
                 API.wikiGetDir(),
             ])
-            setTreeData(nodes || [])
+            if (!isMountedRef.current) return
+            const safeNodes = nodes || []
+            setTreeData(safeNodes)
             setWikiDir(dir || '')
 
             // 默认展开顶层所有文件夹
-            if (nodes && nodes.length > 0) {
-                const folderKeys = nodes
+            if (safeNodes.length > 0) {
+                const folderKeys = safeNodes
                     .filter((n) => n.is_folder)
                     .map((n) => n.rel_path)
                 setExpandedKeys((prev) => Array.from(new Set([...prev, ...folderKeys])))
 
                 // 如果未选中任何节点且要求自动选中，选中首篇文档
-                if (autoSelectFirst && !selectedPath) {
+                if (autoSelectFirst && !selectedPathRef.current) {
                     const findFirstDoc = (list: WikiNode[]): WikiNode | null => {
-                        for (const item of list) {
+                        for (let i = 0; i < list.length; i++) {
+                            const item = list[i]
                             if (!item.is_folder) return item
                             if (item.children && item.children.length > 0) {
                                 const sub = findFirstDoc(item.children)
@@ -130,41 +206,25 @@ export default function WikiClient({ onClose }: Props) {
                         }
                         return null
                     }
-                    const first = findFirstDoc(nodes)
+                    const first = findFirstDoc(safeNodes)
                     if (first) {
                         void selectDoc(first)
                     }
                 }
             }
-        } catch (err: any) {
-            message.error(`加载知识库失败: ${err?.message || String(err)}`)
+        } catch (err: unknown) {
+            if (!isMountedRef.current) return
+            message.error(`加载知识库失败: ${getErrorMessage(err)}`)
         } finally {
-            setLoading(false)
+            if (isMountedRef.current) {
+                setLoading(false)
+            }
         }
-    }, [selectedPath])
+    }, [selectDoc])
 
     useEffect(() => {
         void loadTree(true)
-    }, [])
-
-    // 选择并打开文档
-    const selectDoc = async (node: WikiNode) => {
-        if (node.is_folder) return
-        if (isDirty) {
-            const proceed = window.confirm('当前文档有未保存的修改，切换将丢失改动。是否继续？')
-            if (!proceed) return
-        }
-
-        try {
-            const text = await API.wikiReadPage(node.rel_path)
-            setSelectedPath(node.rel_path)
-            setSelectedNode(node)
-            setContent(text)
-            setOriginalContent(text)
-        } catch (err: any) {
-            message.error(`读取文档失败: ${err?.message || String(err)}`)
-        }
-    }
+    }, [loadTree])
 
     // 保存当前文档
     const handleSave = useCallback(async () => {
@@ -172,42 +232,51 @@ export default function WikiClient({ onClose }: Props) {
         setSaving(true)
         try {
             await API.wikiSavePage(selectedPath, content)
+            if (!isMountedRef.current) return
             setOriginalContent(content)
             message.success('已保存到本地')
             // 静默更新树信息
             void loadTree(false)
-        } catch (err: any) {
-            message.error(`保存失败: ${err?.message || String(err)}`)
+        } catch (err: unknown) {
+            if (!isMountedRef.current) return
+            message.error(`保存失败: ${getErrorMessage(err)}`)
         } finally {
-            setSaving(false)
+            if (isMountedRef.current) {
+                setSaving(false)
+            }
         }
     }, [selectedPath, isDirty, content, loadTree])
 
     const saveRef = useRef(handleSave)
-    saveRef.current = handleSave
-
-    // 快捷键监听 (Ctrl+S / Cmd+S)
     useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
+        saveRef.current = handleSave
+    }, [handleSave])
+
+    // 快捷键监听 (Ctrl+S / Cmd+S)，采用 AbortSignal 统一管理解绑与生命周期
+    useEffect(() => {
+        const ac = new AbortController()
+        window.addEventListener('keydown', (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault()
                 void saveRef.current()
             }
+        }, { signal: ac.signal })
+
+        return () => {
+            ac.abort()
         }
-        window.addEventListener('keydown', handleKeyDown)
-        return () => window.removeEventListener('keydown', handleKeyDown)
     }, [])
 
     // 打开系统文件管理器
     const handleOpenDir = async () => {
         try {
             await API.wikiOpenDir()
-        } catch (err: any) {
-            message.error(`打开本地目录失败: ${err?.message || String(err)}`)
+        } catch (err: unknown) {
+            message.error(`打开本地目录失败: ${getErrorMessage(err)}`)
         }
     }
 
-    // 创建或重命名弹窗确认
+    // 创建或重命名弹窗确认（修复子级相对路径重命名映射与重复提交问题）
     const handleConfirmNameModal = async () => {
         const val = nameInput.trim()
         if (!val) {
@@ -215,10 +284,12 @@ export default function WikiClient({ onClose }: Props) {
             return
         }
 
+        setSubmittingName(true)
         try {
             if (nameModal.type === 'createFile') {
                 const finalName = val.endsWith('.md') ? val : `${val}.md`
                 const createdPath = await API.wikiCreateNode(nameModal.parentPath, finalName, false)
+                if (!isMountedRef.current) return
                 message.success('文档创建成功')
                 setNameModal((prev) => ({ ...prev, open: false }))
                 await loadTree(false)
@@ -233,6 +304,7 @@ export default function WikiClient({ onClose }: Props) {
                 void selectDoc(node)
             } else if (nameModal.type === 'createFolder') {
                 await API.wikiCreateNode(nameModal.parentPath, val, true)
+                if (!isMountedRef.current) return
                 message.success('分组创建成功')
                 setNameModal((prev) => ({ ...prev, open: false }))
                 await loadTree(false)
@@ -242,48 +314,65 @@ export default function WikiClient({ onClose }: Props) {
                 parts[parts.length - 1] = val
                 const newRelPath = parts.join('/')
                 await API.wikiRenameNode(nameModal.targetPath, newRelPath)
+                if (!isMountedRef.current) return
                 message.success('重命名成功')
                 setNameModal((prev) => ({ ...prev, open: false }))
-                if (selectedPath === nameModal.targetPath) {
-                    setSelectedPath(newRelPath)
-                    if (selectedNode) {
-                        setSelectedNode({ ...selectedNode, rel_path: newRelPath, name: val })
+
+                // 同步修正当前选中路径（包含文档本身及父级/祖先分组被重命名的子路径场景）
+                if (selectedPath) {
+                    if (selectedPath === nameModal.targetPath) {
+                        setSelectedPath(newRelPath)
+                        setSelectedNode((prev) => (prev ? { ...prev, rel_path: newRelPath, name: val } : null))
+                    } else if (selectedPath.startsWith(nameModal.targetPath + '/')) {
+                        const subPathSuffix = selectedPath.slice(nameModal.targetPath.length)
+                        const updatedDocPath = newRelPath + subPathSuffix
+                        setSelectedPath(updatedDocPath)
+                        setSelectedNode((prev) => (prev ? { ...prev, rel_path: updatedDocPath } : null))
                     }
                 }
                 await loadTree(false)
             }
-        } catch (err: any) {
-            message.error(`操作失败: ${err?.message || String(err)}`)
+        } catch (err: unknown) {
+            if (!isMountedRef.current) return
+            message.error(`操作失败: ${getErrorMessage(err)}`)
+        } finally {
+            if (isMountedRef.current) {
+                setSubmittingName(false)
+            }
         }
     }
 
-    // 删除节点
-    const handleDeleteNode = (relPath: string, isFolder: boolean) => {
-        setConfirm({
-            open: true,
-            title: isFolder ? '删除知识库分组' : '删除知识库文档',
-            danger: true,
-            confirmText: '确认删除',
-            message: `确定要删除 ${isFolder ? '分组' : '文档'} "${relPath}" 吗？此操作无法撤销。`,
-            onConfirm: async () => {
-                try {
-                    await API.wikiDeleteNode(relPath)
-                    message.success('删除成功')
-                    if (selectedPath === relPath || (isFolder && selectedPath?.startsWith(relPath + '/'))) {
-                        setSelectedPath(null)
-                        setSelectedNode(null)
-                        setContent('')
-                        setOriginalContent('')
-                    }
-                    await loadTree(false)
-                } catch (err: any) {
-                    message.error(`删除失败: ${err?.message || String(err)}`)
-                } finally {
-                    setConfirm({ open: false, title: '', message: '' })
-                }
-            },
-        })
-    }
+    // 删除节点触发
+    const handleDeleteNode = useCallback((relPath: string, isFolder: boolean) => {
+        setDeleteTarget({ relPath, isFolder })
+    }, [])
+
+    // 执行删除操作（稳定函数，不作为闭包存入 state）
+    const handleExecuteDelete = useCallback(async () => {
+        if (!deleteTarget) return
+        const { relPath, isFolder } = deleteTarget
+        setDeleting(true)
+        try {
+            await API.wikiDeleteNode(relPath)
+            if (!isMountedRef.current) return
+            message.success('删除成功')
+            if (selectedPath === relPath || (isFolder && selectedPath?.startsWith(relPath + '/'))) {
+                setSelectedPath(null)
+                setSelectedNode(null)
+                setContent('')
+                setOriginalContent('')
+            }
+            await loadTree(false)
+            setDeleteTarget(null)
+        } catch (err: unknown) {
+            if (!isMountedRef.current) return
+            message.error(`删除失败: ${getErrorMessage(err)}`)
+        } finally {
+            if (isMountedRef.current) {
+                setDeleting(false)
+            }
+        }
+    }, [deleteTarget, selectedPath, loadTree])
 
     // 执行会话编译提炼
     const handleCompileSession = async () => {
@@ -304,49 +393,50 @@ export default function WikiClient({ onClose }: Props) {
             }
 
             // 转换为 FrontendMessage 格式
-            const formattedMsgs = msgs.map((m: any) => ({
-                id: m.id || String(Date.now()),
+            const formattedMsgs: FrontendMessage[] = msgs.map((m: any) => ({
                 role: m.role || 'user',
                 content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content),
-                timestamp: m.timestamp || Date.now(),
+                reasoningContent: m.reasoningContent || m.reasoning_content,
             }))
 
             message.loading({ content: 'AI 正在分析并提炼会话中的关键知识...', key: 'compile_wiki', duration: 0 })
             const resultMsg = await API.wikiCompileSession(selectedSessionId, formattedMsgs)
+            if (!isMountedRef.current) return
             message.success({ content: resultMsg || '会话已提炼编译并写入知识库', key: 'compile_wiki', duration: 3 })
             setCompileModalOpen(false)
             await loadTree(false)
-        } catch (err: any) {
-            message.error({ content: `编译提炼失败: ${err?.message || String(err)}`, key: 'compile_wiki' })
+        } catch (err: unknown) {
+            if (!isMountedRef.current) return
+            message.error({ content: `编译提炼失败: ${getErrorMessage(err)}`, key: 'compile_wiki' })
         } finally {
-            setCompiling(false)
+            if (isMountedRef.current) {
+                setCompiling(false)
+            }
         }
     }
 
-    // 递归转换 WikiNode 为 TreeNodeData 并支持关键字过滤
+    // 递归转换 WikiNode 为 TreeNodeData 并支持关键字过滤（采用 useDeferredValue 降级与静态单例图标）
     const treeNodes: TreeNodeData[] = useMemo(() => {
-        const kw = searchKeyword.trim().toLowerCase()
+        const kw = deferredKeyword.trim().toLowerCase()
 
         const filterAndConvert = (nodes: WikiNode[]): TreeNodeData[] => {
             const res: TreeNodeData[] = []
-            for (const node of nodes) {
+            for (let i = 0; i < nodes.length; i++) {
+                const node = nodes[i]
                 const matchSelf = !kw || node.name.toLowerCase().includes(kw) || node.rel_path.toLowerCase().includes(kw)
-                let childNodes: TreeNodeData[] = []
+                let childNodes: TreeNodeData[] | undefined
                 if (node.is_folder && node.children) {
-                    childNodes = filterAndConvert(node.children)
+                    const sub = filterAndConvert(node.children)
+                    if (sub.length > 0) childNodes = sub
                 }
 
-                if (matchSelf || childNodes.length > 0) {
+                if (matchSelf || (childNodes && childNodes.length > 0)) {
                     res.push({
                         key: node.rel_path,
                         title: node.name,
                         isLeaf: !node.is_folder,
-                        icon: node.is_folder ? (
-                            <Folder size={14} style={{ color: '#3370ff' }} />
-                        ) : (
-                            <FileText size={14} style={{ color: '#667085' }} />
-                        ),
-                        children: node.is_folder ? childNodes : undefined,
+                        icon: node.is_folder ? FOLDER_ICON : FILE_ICON,
+                        children: node.is_folder ? (childNodes || []) : undefined,
                         raw: node,
                     })
                 }
@@ -355,10 +445,10 @@ export default function WikiClient({ onClose }: Props) {
         }
 
         return filterAndConvert(treeData)
-    }, [treeData, searchKeyword])
+    }, [treeData, deferredKeyword])
 
     // 右键菜单打开
-    const handleContextMenu = (e: React.MouseEvent, node: WikiNode) => {
+    const handleContextMenu = useCallback((e: React.MouseEvent, node: WikiNode) => {
         e.preventDefault()
         e.stopPropagation()
 
@@ -434,16 +524,15 @@ export default function WikiClient({ onClose }: Props) {
             y: e.clientY,
             items,
         })
-    }
+    }, [handleDeleteNode])
 
-    // 统计数据
+    // 统计数据（轻量遍历，去除无用的 folders 计算）
     const stats = useMemo(() => {
         let docs = 0
-        let folders = 0
         const walk = (nodes: WikiNode[]) => {
-            for (const n of nodes) {
+            for (let i = 0; i < nodes.length; i++) {
+                const n = nodes[i]
                 if (n.is_folder) {
-                    folders++
                     if (n.children) walk(n.children)
                 } else {
                     docs++
@@ -451,8 +540,38 @@ export default function WikiClient({ onClose }: Props) {
             }
         }
         walk(treeData)
-        return { docs, folders }
+        return { docs }
     }, [treeData])
+
+    // 树渲染性能护栏：稳定化选中的 keys 与回调引用，防止打字时整棵目录树无意义 Diff 重绘
+    const selectedKeys = useMemo(() => (selectedPath ? [selectedPath] : []), [selectedPath])
+
+    const handleExpand = useCallback((keys: string[]) => {
+        setExpandedKeys(keys)
+    }, [])
+
+    const handleSelect = useCallback((_: any, { node }: { node: TreeNodeData }) => {
+        if (node.raw) {
+            void selectDoc(node.raw)
+        }
+    }, [selectDoc])
+
+    const titleSpanStyle: React.CSSProperties = useMemo(() => ({ flex: 1, userSelect: 'none' }), [])
+
+    const renderTreeTitle = useCallback((node: TreeNodeData) => (
+        <span
+            onContextMenu={(e) => {
+                if (node.raw) handleContextMenu(e, node.raw)
+            }}
+            style={titleSpanStyle}
+        >
+            {node.title}
+        </span>
+    ), [handleContextMenu, titleSpanStyle])
+
+    const handleCloseContextMenu = useCallback(() => {
+        setContextMenu(closedMenu)
+    }, [])
 
     return (
         <div className={s.wikiContainer}>
@@ -533,24 +652,11 @@ export default function WikiClient({ onClose }: Props) {
                 <div className={s.treeWrap}>
                     <Tree
                         treeData={treeNodes}
-                        selectedKeys={selectedPath ? [selectedPath] : []}
+                        selectedKeys={selectedKeys}
                         expandedKeys={expandedKeys}
-                        onExpand={(keys) => setExpandedKeys(keys)}
-                        onSelect={(_, { node }) => {
-                            if (node.raw) {
-                                void selectDoc(node.raw)
-                            }
-                        }}
-                        titleRender={(node) => (
-                            <span
-                                onContextMenu={(e) => {
-                                    if (node.raw) handleContextMenu(e, node.raw)
-                                }}
-                                style={{ flex: 1, userSelect: 'none' }}
-                            >
-                                {node.title}
-                            </span>
-                        )}
+                        onExpand={handleExpand}
+                        onSelect={handleSelect}
+                        titleRender={renderTreeTitle}
                         emptyText="暂无知识库文档"
                     />
                 </div>
@@ -692,16 +798,19 @@ export default function WikiClient({ onClose }: Props) {
             </div>
 
             {/* 右键菜单 */}
-            <ContextMenu state={contextMenu} onClose={() => setContextMenu(closedMenu)} />
+            <ContextMenu state={contextMenu} onClose={handleCloseContextMenu} />
 
             {/* 新建/重命名弹窗 */}
             <Modal
                 title={nameModal.title}
                 open={nameModal.open}
                 onOk={handleConfirmNameModal}
-                onCancel={() => setNameModal((prev) => ({ ...prev, open: false }))}
+                onCancel={() => {
+                    if (!submittingName) setNameModal((prev) => ({ ...prev, open: false }))
+                }}
                 okText="确定"
                 cancelText="取消"
+                confirmLoading={submittingName}
                 destroyOnHidden
             >
                 <div style={{ marginTop: 12 }}>
@@ -713,14 +822,31 @@ export default function WikiClient({ onClose }: Props) {
                         }
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
-                        onPressEnter={handleConfirmNameModal}
+                        onPressEnter={() => {
+                            if (!submittingName) void handleConfirmNameModal()
+                        }}
+                        disabled={submittingName}
                         autoFocus
                     />
                 </div>
             </Modal>
 
-            {/* 删除确认弹窗 */}
-            <ConfirmModal state={confirm} onCancel={() => setConfirm({ open: false, title: '', message: '' })} />
+            {/* 删除确认弹窗（纯数据驱动） */}
+            <ConfirmModal
+                state={{
+                    open: !!deleteTarget,
+                    title: deleteTarget?.isFolder ? '删除知识库分组' : '删除知识库文档',
+                    danger: true,
+                    confirmText: deleting ? '删除中...' : '确认删除',
+                    message: deleteTarget
+                        ? `确定要删除 ${deleteTarget.isFolder ? '分组' : '文档'} "${deleteTarget.relPath}" 吗？此操作无法撤销。`
+                        : '',
+                    onConfirm: handleExecuteDelete,
+                }}
+                onCancel={() => {
+                    if (!deleting) setDeleteTarget(null)
+                }}
+            />
 
             {/* 会话提炼编译弹窗 */}
             <Modal

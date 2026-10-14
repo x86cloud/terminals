@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Input, Button, Tooltip } from 'antd'
 import {
     Plug,
@@ -135,19 +135,56 @@ export default function Sidebar({
 
     const kindOf = (s: ServerConfig): ConnType => (s.type || 'ssh') as ConnType
 
-    const sessionsOf = (server: ServerConfig): Array<{ id: string; serverId?: string; connected?: boolean;[key: string]: any }> => {
-        const kind = kindOf(server)
-        const list = (ctxSessions[kind] || []) as Array<{ id: string; serverId?: string; connected?: boolean;[key: string]: any }>
-        return list.filter((s) => s.serverId === server.id)
-    }
+    // 预先建立按 groupId 分组的服务器映射，避免每个分组反复 filter
+    const serversByGroup = useMemo(() => {
+        const map = new Map<string, ServerConfig[]>()
+        for (const s of filtered) {
+            const gid = s.groupId || ''
+            let list = map.get(gid)
+            if (!list) {
+                list = []
+                map.set(gid, list)
+            }
+            list.push(s)
+        }
+        return map
+    }, [filtered])
+
+    // 预先建立 serverId -> sessions 映射，避免每次渲染反复扫描所有会话
+    const sessionsByServerId = useMemo(() => {
+        const map = new Map<string, Array<{ id: string; serverId?: string; connected?: boolean; [key: string]: any }>>()
+        for (const key of Object.keys(ctxSessions) as ConnType[]) {
+            const list = ctxSessions[key] || []
+            for (const sess of list as Array<{ id: string; serverId?: string; connected?: boolean; [key: string]: any }>) {
+                if (sess.serverId) {
+                    let arr = map.get(sess.serverId)
+                    if (!arr) {
+                        arr = []
+                        map.set(sess.serverId, arr)
+                    }
+                    arr.push(sess)
+                }
+            }
+        }
+        return map
+    }, [ctxSessions])
+
+    const sessionsOf = useCallback(
+        (server: ServerConfig): Array<{ id: string; serverId?: string; connected?: boolean; [key: string]: any }> => {
+            return sessionsByServerId.get(server.id) || []
+        },
+        [sessionsByServerId]
+    )
 
     const activeIdOf = (server: ServerConfig) => {
         const kind = kindOf(server)
         return activeTarget?.kind === kind ? activeTarget.id : null
     }
 
-    const serversOfGroup = (groupId: string) =>
-        filtered.filter((s) => (s.groupId || '') === groupId)
+    const serversOfGroup = useCallback(
+        (groupId: string) => serversByGroup.get(groupId) || [],
+        [serversByGroup]
+    )
 
     const toggleGroup = (id: string) =>
         setUserExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
@@ -317,7 +354,7 @@ export default function Sidebar({
         )
     }
 
-    const ungrouped = filtered.filter((s) => !s.groupId)
+    const ungrouped = serversOfGroup('')
 
     return (
         <aside

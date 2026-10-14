@@ -44,8 +44,10 @@ export default function SessionWorkspace({
     )
 
     useEffect(() => {
+        if (!isDragging) return
+
         const onMouseMove = (e: MouseEvent) => {
-            if (!draggingRef.current || !rootRef.current) return
+            if (!rootRef.current) return
             const rect = rootRef.current.getBoundingClientRect()
             const rawWidth = rect.right - e.clientX
             const clamped = Math.min(1200, Math.max(300, rawWidth))
@@ -53,11 +55,9 @@ export default function SessionWorkspace({
         }
 
         const onMouseUp = () => {
-            if (draggingRef.current) {
-                draggingRef.current = false
-                setIsDragging(false)
-                appStorage.set(StorageKey.SshFilePanelWidth, panelWidthRef.current)
-            }
+            draggingRef.current = false
+            setIsDragging(false)
+            appStorage.set(StorageKey.SshFilePanelWidth, panelWidthRef.current)
         }
 
         window.addEventListener('mousemove', onMouseMove)
@@ -66,7 +66,7 @@ export default function SessionWorkspace({
             window.removeEventListener('mousemove', onMouseMove)
             window.removeEventListener('mouseup', onMouseUp)
         }
-    }, [])
+    }, [isDragging])
 
     const toggleShowPanel = useCallback(() => {
         setShowPanel((prev) => !prev)

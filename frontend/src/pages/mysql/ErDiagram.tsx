@@ -13,8 +13,10 @@ export default function ErDiagram({
     busy: boolean
 }) {
     const canvasRef = useRef<HTMLDivElement>(null)
-    const [scale, setScale] = useState(1)
-    const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+    const [{ scale, pan }, setViewState] = useState<{ scale: number; pan: { x: number; y: number } }>({
+        scale: 1,
+        pan: { x: 0, y: 0 },
+    })
     const [isDragging, setIsDragging] = useState(false)
     const [isFullscreen, setIsFullscreen] = useState(false)
 
@@ -98,8 +100,10 @@ export default function ErDiagram({
         const fitX = (rect.width - ER.svgW * finalScale) / 2
         const fitY = (rect.height - ER.svgH * finalScale) / 2
 
-        setScale(finalScale)
-        setPan({ x: fitX, y: fitY })
+        setViewState({
+            scale: finalScale,
+            pan: { x: fitX, y: fitY },
+        })
     }, [ER.svgW, ER.svgH])
 
     // 初始渲染或尺寸变动由 ResizeObserver 负责精确自适应
@@ -142,10 +146,13 @@ export default function ErDiagram({
         if (!isDragging) return
         const dx = e.clientX - dragStartRef.current.x
         const dy = e.clientY - dragStartRef.current.y
-        setPan({
-            x: panStartRef.current.x + dx,
-            y: panStartRef.current.y + dy,
-        })
+        setViewState((prev) => ({
+            ...prev,
+            pan: {
+                x: panStartRef.current.x + dx,
+                y: panStartRef.current.y + dy,
+            },
+        }))
     }
 
     const handleMouseUp = () => setIsDragging(false)
@@ -158,17 +165,21 @@ export default function ErDiagram({
         const onWheel = (e: WheelEvent) => {
             e.preventDefault()
             const delta = e.deltaY > 0 ? -0.06 : 0.06
-            setScale((prevScale) => {
+            const rect = elem.getBoundingClientRect()
+            const mouseX = e.clientX - rect.left
+            const mouseY = e.clientY - rect.top
+
+            setViewState((prev) => {
+                const prevScale = prev.scale
                 const nextScale = Math.max(0.05, Math.min(3, +(prevScale + delta).toFixed(2)))
-                const rect = elem.getBoundingClientRect()
-                const mouseX = e.clientX - rect.left
-                const mouseY = e.clientY - rect.top
                 const ratio = nextScale / prevScale
-                setPan((prevPan) => ({
-                    x: mouseX - (mouseX - prevPan.x) * ratio,
-                    y: mouseY - (mouseY - prevPan.y) * ratio,
-                }))
-                return nextScale
+                return {
+                    scale: nextScale,
+                    pan: {
+                        x: mouseX - (mouseX - prev.pan.x) * ratio,
+                        y: mouseY - (mouseY - prev.pan.y) * ratio,
+                    },
+                }
             })
         }
 
@@ -183,7 +194,7 @@ export default function ErDiagram({
                     <Button
                         size="small"
                         style={{ width: 24, padding: 0 }}
-                        onClick={() => setScale((s) => Math.max(0.05, +(s - 0.1).toFixed(2)))}
+                        onClick={() => setViewState((prev) => ({ ...prev, scale: Math.max(0.05, +(prev.scale - 0.1).toFixed(2)) }))}
                     >
                         −
                     </Button>
@@ -193,7 +204,7 @@ export default function ErDiagram({
                     <Button
                         size="small"
                         style={{ width: 24, padding: 0 }}
-                        onClick={() => setScale((s) => Math.min(3, +(s + 0.1).toFixed(2)))}
+                        onClick={() => setViewState((prev) => ({ ...prev, scale: Math.min(3, +(prev.scale + 0.1).toFixed(2)) }))}
                     >
                         +
                     </Button>
@@ -201,7 +212,7 @@ export default function ErDiagram({
                 <Tooltip title="1:1 原始比例">
                     <Button
                         size="small"
-                        onClick={() => setScale(1)}
+                        onClick={() => setViewState((prev) => ({ ...prev, scale: 1 }))}
                     >
                         100%
                     </Button>

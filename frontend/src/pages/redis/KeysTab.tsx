@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react'
+import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { Input, Button, Segmented, Select, Tooltip, Dropdown, message } from 'antd'
 import { Folder, Table as TableIcon, Search, RotateCw, Download, Plus, Database, Trash2, Copy } from 'lucide-react'
 import { RedisKeysResult, RedisSessionInfo, RedisValue } from '@/types'
@@ -85,14 +85,10 @@ export default function KeysTab({
     // Local filter state
     const [localFilter, setLocalFilter] = useState('')
 
-    const handleMouseDown = (e: React.MouseEvent) => {
-        isDraggingRef.current = true
-        setIsDragging(true)
-        startXRef.current = e.clientX
-        startWidthRef.current = sidebarWidth
+    useEffect(() => {
+        if (!isDragging) return
 
         const onMouseMove = (moveEvent: MouseEvent) => {
-            if (!isDraggingRef.current) return
             const delta = moveEvent.clientX - startXRef.current
             const nextW = Math.max(240, Math.min(650, startWidthRef.current + delta))
             currentWidthRef.current = nextW
@@ -103,12 +99,21 @@ export default function KeysTab({
             isDraggingRef.current = false
             setIsDragging(false)
             appStorage.set(StorageKey.RedisSidebarWidth, currentWidthRef.current)
-            window.removeEventListener('mousemove', onMouseMove)
-            window.removeEventListener('mouseup', onMouseUp)
         }
 
         window.addEventListener('mousemove', onMouseMove)
         window.addEventListener('mouseup', onMouseUp)
+        return () => {
+            window.removeEventListener('mousemove', onMouseMove)
+            window.removeEventListener('mouseup', onMouseUp)
+        }
+    }, [isDragging])
+
+    const handleMouseDown = (e: React.MouseEvent) => {
+        isDraggingRef.current = true
+        setIsDragging(true)
+        startXRef.current = e.clientX
+        startWidthRef.current = sidebarWidth
     }
 
     // Filter keys locally

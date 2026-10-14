@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Select, Button, Segmented, Space, Badge, Tag, Tooltip, Input, message } from 'antd'
+import { Select, Button, Segmented, Space, Badge, Tag, Tooltip, Input, message, Modal } from 'antd'
 import {
     Activity,
     Zap,
@@ -18,6 +18,7 @@ import {
 import StatusCard from '@/pages/mysql/StatusCard'
 import { formatSize, errorMessage } from '@/utils'
 import { API } from '@/api'
+import { useSession } from '@/contexts/SessionContext'
 import my from './StatusPanel.module.less'
 
 interface Props {
@@ -50,6 +51,9 @@ export default function StatusPanel({
     busy,
     onRefresh,
 }: Props) {
+    const { activeTarget } = useSession()
+    const isActive = !sessionId || (activeTarget?.kind === 'mysql' && activeTarget.id === sessionId)
+
     const [subTab, setSubTab] = useState<'process' | 'slow' | 'variables'>('process')
     const [autoRefreshSec, setAutoRefreshSec] = useState<number>(0)
     const [procSearch, setProcSearch] = useState('')
@@ -62,12 +66,12 @@ export default function StatusPanel({
 
     // 定时自动刷新
     useEffect(() => {
-        if (autoRefreshSec <= 0) return
+        if (autoRefreshSec <= 0 || !isActive) return
         const timer = setInterval(() => {
             if (!busy) onRefresh()
         }, autoRefreshSec * 1000)
         return () => clearInterval(timer)
-    }, [autoRefreshSec, busy, onRefresh])
+    }, [autoRefreshSec, busy, onRefresh, isActive])
 
     const copyText = async (key: string, text: string) => {
         try {
@@ -79,20 +83,28 @@ export default function StatusPanel({
         }
     }
 
-    const killProcess = async (id: any) => {
+    const killProcess = (id: any) => {
         if (!sessionId) return
         const pid = String(id)
-        if (!window.confirm(`确定要终止会话线程 #${pid} 吗？`)) return
-        setKillingId(pid)
-        try {
-            await API.mysqlRun(sessionId, '', `KILL ${pid}`)
-            message.success(`已终止进程 #${pid}`)
-            onRefresh()
-        } catch (e) {
-            message.error(`终止进程失败: ${errorMessage(e)}`)
-        } finally {
-            setKillingId(null)
-        }
+        Modal.confirm({
+            title: '终止会话线程',
+            content: `确定要终止会话线程 #${pid} 吗？`,
+            okText: '确定终止',
+            okType: 'danger',
+            cancelText: '取消',
+            onOk: async () => {
+                setKillingId(pid)
+                try {
+                    await API.mysqlRun(sessionId, '', `KILL ${pid}`)
+                    message.success(`已终止进程 #${pid}`)
+                    onRefresh()
+                } catch (e) {
+                    message.error(`终止进程失败: ${errorMessage(e)}`)
+                } finally {
+                    setKillingId(null)
+                }
+            },
+        })
     }
 
     // ---------------- 性能指标计算 ----------------

@@ -51,50 +51,86 @@ export function useAgentEvents({
             })
         }
 
-        const unsubChatChunk = subscribe(`agent:chunk:${activeSessionId}`, (chunk: string) => {
-            appendOrUpdateAssistant((last) => ({
-                ...last,
-                content: (last.content || '') + chunk,
-                process_steps: last.process_steps
-                    ? last.process_steps.map((st) =>
-                          st.type === 'think' ? { ...st, status: 'completed' } : st
-                      )
-                    : [],
-            }))
-        })
+        let pendingChat = ''
+        let pendingReasoning = ''
+        let rafId: number | null = null
 
-        const handleReasoningChunk = (chunk: string) => {
-            setActiveReasoning((prev) => prev + chunk)
+        const flushChunks = () => {
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId)
+                rafId = null
+            }
+            if (!pendingChat && !pendingReasoning) return
+
+            const chatToFlush = pendingChat
+            const reasoningToFlush = pendingReasoning
+            pendingChat = ''
+            pendingReasoning = ''
+
+            if (reasoningToFlush) {
+                setActiveReasoning((prev) => prev + reasoningToFlush)
+            }
+
             appendOrUpdateAssistant((last) => {
-                const newReasoning = (last.reasoning_content || '') + chunk
-                const steps = [...(last.process_steps || [])]
-                const lastStep = steps[steps.length - 1]
+                let updated = last
+                if (reasoningToFlush) {
+                    const newReasoning = (updated.reasoning_content || '') + reasoningToFlush
+                    const steps = [...(updated.process_steps || [])]
+                    const lastStep = steps[steps.length - 1]
 
-                // If the last step is an active thinking step, stream into it
-                if (lastStep && lastStep.type === 'think' && lastStep.status === 'running') {
-                    steps[steps.length - 1] = {
-                        ...lastStep,
-                        content: (lastStep.content || '') + chunk,
+                    if (lastStep && lastStep.type === 'think' && lastStep.status === 'running') {
+                        steps[steps.length - 1] = {
+                            ...lastStep,
+                            content: (lastStep.content || '') + reasoningToFlush,
+                        }
+                    } else {
+                        const hasTools = steps.some((s) => s.type === 'tool')
+                        steps.push({
+                            id: `think_${Date.now()}_${steps.length}`,
+                            type: 'think',
+                            title: hasTools ? '继续思考与推演' : '深度思考过程',
+                            content: reasoningToFlush,
+                            status: 'running',
+                            timestamp: Date.now(),
+                        })
                     }
-                } else {
-                    // Otherwise start a new thinking step below the latest tool execution
-                    const hasTools = steps.some((s) => s.type === 'tool')
-                    steps.push({
-                        id: `think_${Date.now()}_${steps.length}`,
-                        type: 'think',
-                        title: hasTools ? '继续思考与推演' : '深度思考过程',
-                        content: chunk,
-                        status: 'running',
-                        timestamp: Date.now(),
-                    })
+                    updated = {
+                        ...updated,
+                        reasoning_content: newReasoning,
+                        process_steps: steps,
+                    }
                 }
-                return {
-                    ...last,
-                    reasoning_content: newReasoning,
-                    process_steps: steps,
+
+                if (chatToFlush) {
+                    updated = {
+                        ...updated,
+                        content: (updated.content || '') + chatToFlush,
+                        process_steps: updated.process_steps
+                            ? updated.process_steps.map((st) =>
+                                  st.type === 'think' ? { ...st, status: 'completed' } : st
+                              )
+                            : [],
+                    }
                 }
+
+                return updated
             })
         }
+
+        const scheduleFlush = () => {
+            if (rafId === null) {
+                rafId = requestAnimationFrame(() => {
+                    rafId = null
+                    flushChunks()
+                })
+            }
+        }
+
+        const unsubChatChunk = subscribe(`agent:chunk:${activeSessionId}`, (chunk: string) => {
+            if (!chunk) return
+            pendingChat += chunk
+            scheduleFlush()
+        })
 
         const unsubAskUserSess = subscribe(
             `agent:ask_user:${activeSessionId}`,
@@ -133,36 +169,41 @@ export function useAgentEvents({
             )
                 return
 
+            if (
+                event.type !== 'ChatChunk' &&
+                event.type !== 'chat_chunk' &&
+                event.type !== 'ReasoningChunk' &&
+                event.type !== 'reasoning_chunk'
+            ) {
+                flushChunks()
+            }
+
             switch (event.type) {
                 case 'ChatChunk':
-                case 'chat_chunk':
+                case 'chat_chunk': {
                     const cChunk =
                         typeof event.payload === 'string'
                             ? event.payload
                             : event.payload?.chunk || ''
                     if (cChunk) {
-                        appendOrUpdateAssistant((last) => ({
-                            ...last,
-                            content: (last.content || '') + cChunk,
-                            process_steps: last.process_steps
-                                ? last.process_steps.map((st) =>
-                                      st.type === 'think' ? { ...st, status: 'completed' } : st
-                                  )
-                                : [],
-                        }))
+                        pendingChat += cChunk
+                        scheduleFlush()
                     }
                     break
+                }
 
                 case 'ReasoningChunk':
-                case 'reasoning_chunk':
+                case 'reasoning_chunk': {
                     const rChunk =
                         typeof event.payload === 'string'
                             ? event.payload
                             : event.payload?.chunk || ''
                     if (rChunk) {
-                        handleReasoningChunk(rChunk)
+                        pendingReasoning += rChunk
+                        scheduleFlush()
                     }
                     break
+                }
 
                 case 'ToolStart':
                 case 'tool_start':
@@ -531,6 +572,11 @@ export function useAgentEvents({
         })
 
         return () => {
+            flushChunks()
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId)
+                rafId = null
+            }
             unsubChatChunk()
             unsubAskUserSess()
             unsubAskUserGlobal()

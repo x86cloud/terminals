@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import {
     Button,
     Space,
@@ -81,6 +81,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
     const [projectionText, setProjectionText] = useState('')
     const [sortText, setSortText] = useState('{}')
     const [skip, setSkip] = useState(0)
+    const runQueryReqIdRef = useRef(0)
 
     // 右键上下文菜单状态
     const [contextMenu, setContextMenu] = useState<{
@@ -216,6 +217,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
     const runQuery = useCallback(
         async (targetPage = 1, currentLimit = pageSize) => {
             if (!collection || !db) return
+            const reqId = ++runQueryReqIdRef.current
             setBusy(true)
             setError('')
             try {
@@ -231,23 +233,29 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     collation: '',
                 }
                 const res: MongoFindResult = await API.mongoFind(id, spec)
+                if (reqId !== runQueryReqIdRef.current) return
                 setDocs(res.documents || [])
                 setTotal(res.total ?? 0)
                 setDuration(res.durationMs ?? 0)
                 setPage(targetPage)
             } catch (e) {
+                if (reqId !== runQueryReqIdRef.current) return
                 setError(errorMessage(e))
             } finally {
-                setBusy(false)
+                if (reqId === runQueryReqIdRef.current) {
+                    setBusy(false)
+                }
             }
         },
         [collection, combinedFilterJSON, db, id, pageSize, projectionText, skip, sortText]
     )
 
     useEffect(() => {
-        if (collection && db) {
+        if (!collection || !db) return
+        const timer = setTimeout(() => {
             void runQuery(1, pageSize)
-        }
+        }, 300)
+        return () => clearTimeout(timer)
     }, [collection, db, combinedFilterJSON])
 
     // 解析当前页文档为行对象

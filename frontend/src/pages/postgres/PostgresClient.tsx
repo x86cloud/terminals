@@ -683,7 +683,7 @@ export default function PostgresClient({ session, onClose, onChange }: Props) {
                                     width: '100%',
                                 }}
                             >
-                                {t.type === 'status' && <StatusPanel serverId={serverId} dbName={currentDb} />}
+                                {t.type === 'status' && <StatusPanel sessionId={session.id} serverId={serverId} dbName={currentDb} />}
                                 {t.type === 'sql' && (
                                     <DbSqlEditor
                                         key={t.key}
