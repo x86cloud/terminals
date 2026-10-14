@@ -1,11 +1,19 @@
 package services
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
 	"terminal/agent"
 	"terminal/core"
 	"terminal/logger"
+	"terminal/storage"
 
+	"github.com/google/uuid"
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
@@ -133,6 +141,201 @@ func (s *SystemService) MoveServerToGroup(serverID, groupID string) error {
 	}
 	logger.Infof("移动服务器成功: ServerID=%s -> GroupID=%s", serverID, groupID)
 	return nil
+}
+
+// ServersExportData 定义全量配置导出的 JSON 结构
+type ServersExportData struct {
+	Version    string              `json:"version"`
+	ExportedAt string              `json:"exportedAt"`
+	Servers    []core.ServerConfig `json:"servers"`
+	Groups     []core.ServerGroup  `json:"groups"`
+}
+
+// ConfigIOResult 描述配置导入/导出操作的结果
+type ConfigIOResult struct {
+	Success      bool   `json:"success"`
+	Cancelled    bool   `json:"cancelled"`
+	FilePath     string `json:"filePath"`
+	ServersCount int    `json:"serversCount"`
+	GroupsCount  int    `json:"groupsCount"`
+	Message      string `json:"message"`
+}
+
+// ExportServersConfig 弹出原生保存对话框并导出所有服务器连接与分组配置
+func (s *SystemService) ExportServersConfig() (*ConfigIOResult, error) {
+	c := GetContainer()
+	if c.Store == nil {
+		return nil, errors.New("配置存储不可用")
+	}
+
+	servers := c.Store.List()
+	groups := c.Store.ListGroups()
+
+	defaultFilename := fmt.Sprintf("terminals_backup_%s.json", time.Now().Format("20060102_150405"))
+	filePath, err := core.SaveFileDialog("导出连接与分组配置", defaultFilename)
+	if err != nil {
+		logger.Errorf("导出配置对话框错误: %v", err)
+		return nil, err
+	}
+	if filePath == "" {
+		// 用户取消
+		return &ConfigIOResult{
+			Cancelled: true,
+		}, nil
+	}
+
+	data := ServersExportData{
+		Version:    "1.0",
+		ExportedAt: time.Now().Format(time.RFC3339),
+		Servers:    servers,
+		Groups:     groups,
+	}
+
+	jsonBytes, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		logger.Errorf("序列化配置失败: %v", err)
+		return nil, err
+	}
+
+	if err := storage.WriteFileAtomic(filePath, jsonBytes, 0o644); err != nil {
+		logger.Errorf("写入配置文件失败 [%s]: %v", filePath, err)
+		return nil, err
+	}
+
+	logger.Infof("已成功导出配置到文件 [%s]: %d 个连接, %d 个分组", filePath, len(servers), len(groups))
+	return &ConfigIOResult{
+		Success:      true,
+		FilePath:     filePath,
+		ServersCount: len(servers),
+		GroupsCount:  len(groups),
+		Message:      fmt.Sprintf("已成功导出 %d 个连接与 %d 个分组", len(servers), len(groups)),
+	}, nil
+}
+
+// ImportServersConfig 弹出原生选择对话框并增量智能合并导入服务器连接与分组配置
+func (s *SystemService) ImportServersConfig() (*ConfigIOResult, error) {
+	c := GetContainer()
+	if c.Store == nil {
+		return nil, errors.New("配置存储不可用")
+	}
+
+	filePath, err := core.OpenFileDialog("选择要导入的配置文件 (.json)")
+	if err != nil {
+		logger.Errorf("选择导入文件错误: %v", err)
+		return nil, err
+	}
+	if filePath == "" {
+		// 用户取消
+		return &ConfigIOResult{
+			Cancelled: true,
+		}, nil
+	}
+
+	rawBytes, err := os.ReadFile(filePath)
+	if err != nil {
+		logger.Errorf("读取配置文件失败 [%s]: %v", filePath, err)
+		return nil, err
+	}
+
+	var exportData ServersExportData
+	if err := json.Unmarshal(rawBytes, &exportData); err != nil || (len(exportData.Servers) == 0 && len(exportData.Groups) == 0) {
+		// 尝试直接作为 []core.ServerConfig 解析（兼容第三方或旧版裸列表）
+		var legacyServers []core.ServerConfig
+		if errLegacy := json.Unmarshal(rawBytes, &legacyServers); errLegacy == nil && len(legacyServers) > 0 {
+			exportData.Servers = legacyServers
+		} else {
+			return nil, fmt.Errorf("配置文件格式错误，无法识别有效的连接或分组数据")
+		}
+	}
+
+	// 当前本地已有配置
+	existingServers := c.Store.List()
+	existingGroups := c.Store.ListGroups()
+
+	existingServerIDs := make(map[string]bool)
+	for _, srv := range existingServers {
+		existingServerIDs[srv.ID] = true
+	}
+
+	existingGroupIDs := make(map[string]bool)
+	existingGroupNames := make(map[string]string) // name -> ID
+	for _, grp := range existingGroups {
+		existingGroupIDs[grp.ID] = true
+		existingGroupNames[grp.Name] = grp.ID
+	}
+
+	// 分组映射字典：旧 ID -> 新 ID
+	groupIDMap := make(map[string]string)
+	importedGroupsCount := 0
+
+	for _, grp := range exportData.Groups {
+		oldID := grp.ID
+		trimmedName := strings.TrimSpace(grp.Name)
+		if trimmedName == "" {
+			continue
+		}
+
+		// 若本地已存在同名分组，直接复用该同名分组的 ID
+		if targetID, exists := existingGroupNames[trimmedName]; exists {
+			groupIDMap[oldID] = targetID
+			continue
+		}
+
+		// 若 ID 冲突，分配新 UUID
+		if existingGroupIDs[grp.ID] || grp.ID == "" {
+			grp.ID = uuid.NewString()
+		}
+
+		savedGroup, err := c.Store.SaveGroup(grp)
+		if err != nil {
+			logger.Warnf("导入分组 [%s] 失败: %v", grp.Name, err)
+			continue
+		}
+		existingGroupIDs[savedGroup.ID] = true
+		existingGroupNames[savedGroup.Name] = savedGroup.ID
+		groupIDMap[oldID] = savedGroup.ID
+		importedGroupsCount++
+	}
+
+	importedServersCount := 0
+	for _, srv := range exportData.Servers {
+		// 若 ID 冲突或为空，分配新 UUID
+		if existingServerIDs[srv.ID] || srv.ID == "" {
+			srv.ID = uuid.NewString()
+		}
+
+		// 检查分组映射
+		if srv.GroupID != "" {
+			if newGroupID, ok := groupIDMap[srv.GroupID]; ok {
+				srv.GroupID = newGroupID
+			} else if !existingGroupIDs[srv.GroupID] {
+				// 所属分组既不在映射中，也不在本地分组中，置为空（移至未分组）
+				srv.GroupID = ""
+			}
+		}
+
+		// 保证名称非空
+		if srv.Name == "" {
+			srv.Name = srv.Host
+		}
+
+		savedSrv, err := c.Store.Save(srv)
+		if err != nil {
+			logger.Warnf("导入连接 [%s] 失败: %v", srv.Name, err)
+			continue
+		}
+		existingServerIDs[savedSrv.ID] = true
+		importedServersCount++
+	}
+
+	logger.Infof("已成功从 [%s] 导入配置: %d 个连接, %d 个分组", filePath, importedServersCount, importedGroupsCount)
+	return &ConfigIOResult{
+		Success:      true,
+		FilePath:     filePath,
+		ServersCount: importedServersCount,
+		GroupsCount:  importedGroupsCount,
+		Message:      fmt.Sprintf("成功导入 %d 个连接配置与 %d 个分组", importedServersCount, importedGroupsCount),
+	}, nil
 }
 
 func (s *SystemService) SelectPrivateKey() (string, error) {

@@ -43,6 +43,7 @@ func main() {
 	dockerSvc := services.NewDockerService()
 	k8sSvc := services.NewK8sService()
 	wikiSvc := services.NewWikiService()
+	mcpSvc := services.NewMcpService()
 
 	app := application.New(application.Options{
 		Name:        "xTerminal",
@@ -62,6 +63,7 @@ func main() {
 			application.NewService(dockerSvc),
 			application.NewService(k8sSvc),
 			application.NewService(wikiSvc),
+			application.NewService(mcpSvc),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

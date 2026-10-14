@@ -40,6 +40,9 @@ type AppSettings struct {
 	AiReasoningEffort       string        `json:"aiReasoningEffort"` // "low" | "medium" | "high"
 	AiEnableVerifier        bool          `json:"aiEnableVerifier"`
 	AiMaxParallel           int           `json:"aiMaxParallel"`
+	McpServerEnabled        bool          `json:"mcpServerEnabled"`
+	McpServerPort           int           `json:"mcpServerPort"`
+	McpServerHost           string        `json:"mcpServerHost"`
 	CloseAction             string        `json:"closeAction"` // "ask" | "minimize" | "quit"
 }
 
@@ -80,6 +83,9 @@ func DefaultAppSettings() AppSettings {
 		AiReasoningEffort:       "medium",
 		AiEnableVerifier:        false,
 		AiMaxParallel:           4,
+		McpServerEnabled:        false,
+		McpServerPort:           4096,
+		McpServerHost:           "127.0.0.1",
 		CloseAction:             "ask",
 	}
 }

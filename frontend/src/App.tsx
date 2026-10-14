@@ -28,6 +28,7 @@ import {
     ServerConfig,
     ServerGroup,
     AppSettings,
+    emptyServer,
 } from '@/types'
 import { errorMessage } from '@/utils'
 import { applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings } from '@/utils/theme'
@@ -241,8 +242,11 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
 
     /* ---------------- 服务器配置管理 ---------------- */
 
-    const addServer = useCallback(() => {
-        setDialog({ open: true, initial: null })
+    const addServer = useCallback((groupId?: string) => {
+        setDialog({
+            open: true,
+            initial: groupId ? ({ ...emptyServer(), groupId } as ServerConfig) : null,
+        })
     }, [])
 
     const editServer = useCallback((cfg: ServerConfig) => {
@@ -266,6 +270,28 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             },
         })
     }, [reloadServers])
+
+    const handleExportConfig = useCallback(async () => {
+        try {
+            const res = await API.exportServersConfig()
+            if (!res || res.cancelled) return
+            message.success(res.message || `成功导出 ${res.serversCount} 个连接配置与 ${res.groupsCount} 个分组`)
+        } catch (err: any) {
+            message.error(`导出配置失败: ${errorMessage(err)}`)
+        }
+    }, [])
+
+    const handleImportConfig = useCallback(async () => {
+        try {
+            const res = await API.importServersConfig()
+            if (!res || res.cancelled) return
+            await reloadGroups()
+            await reloadServers()
+            message.success(res.message || `成功导入 ${res.serversCount} 个连接配置与 ${res.groupsCount} 个分组`)
+        } catch (err: any) {
+            message.error(`导入配置失败: ${errorMessage(err)}`)
+        }
+    }, [reloadGroups, reloadServers])
 
     /* ---------------- 连接逻辑统一分发 ---------------- */
 
@@ -371,6 +397,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                     onDeleteGroup={deleteGroup}
                     onMoveServer={moveServer}
                     onOpenSettings={() => setSettingsOpen(true)}
+                    onExportConfig={handleExportConfig}
+                    onImportConfig={handleImportConfig}
                 />
 
                 <main className={a.main}>

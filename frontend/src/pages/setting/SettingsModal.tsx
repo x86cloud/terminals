@@ -1,10 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Button } from 'antd'
-import { ArrowLeft, Palette, Bot, Info } from 'lucide-react'
+import { ArrowLeft, Palette, Bot, Server, Info } from 'lucide-react'
 import { AppSettings, AiModelItem } from '@/types'
 import { applyThemeMode, applyGlobalFont } from '@/utils/theme'
 import AppearanceTab from '@/pages/setting/AppearanceTab'
 import AiAgentTab from '@/pages/setting/AiAgentTab'
+import McpServerTab from '@/pages/setting/McpServerTab'
 import AboutTab from '@/pages/setting/AboutTab'
 import s from '@/pages/setting/SettingsModal.module.less'
 
@@ -15,7 +16,7 @@ interface Props {
     onSave: (newSettings: AppSettings) => void
 }
 
-type SettingsTab = 'appearance' | 'aiAgent' | 'about'
+type SettingsTab = 'appearance' | 'aiAgent' | 'mcp' | 'about'
 
 export default function SettingsModal({ open, settings, onClose, onSave }: Props) {
     const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
@@ -43,6 +44,9 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const [aiMaxParallel, setAiMaxParallel] = useState(4)
     const [aiSystemPrompt, setAiSystemPrompt] = useState('你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
     const [aiWorkspaceDir, setAiWorkspaceDir] = useState('')
+    const [mcpServerEnabled, setMcpServerEnabled] = useState(false)
+    const [mcpServerPort, setMcpServerPort] = useState(4096)
+    const [mcpServerHost, setMcpServerHost] = useState('127.0.0.1')
 
     const prevOpenRef = useRef(false)
     useEffect(() => {
@@ -72,6 +76,9 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             setAiMaxParallel(settings.aiMaxParallel || 4)
             setAiSystemPrompt(settings.aiSystemPrompt || '你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
             setAiWorkspaceDir(settings.aiWorkspaceDir || '')
+            setMcpServerEnabled(!!settings.mcpServerEnabled)
+            setMcpServerPort(settings.mcpServerPort || 4096)
+            setMcpServerHost(settings.mcpServerHost || '127.0.0.1')
         }
         prevOpenRef.current = open
     }, [open, settings])
@@ -114,9 +121,12 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiSystemPrompt,
             aiWorkspaceDir,
             closeAction,
+            mcpServerEnabled,
+            mcpServerPort,
+            mcpServerHost,
             ...partial,
         })
-    }, [settings, themeMode, globalFontFamily, closeAction, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiModelContextTokens, aiContextCompressRatio, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, onSave])
+    }, [settings, themeMode, globalFontFamily, closeAction, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiModelContextTokens, aiContextCompressRatio, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, mcpServerEnabled, mcpServerPort, mcpServerHost, onSave])
 
     if (!open) return null
 
@@ -178,6 +188,13 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         persistSettings(fields)
     }
 
+    const handleMcpChange = (fields: Partial<AppSettings>) => {
+        if (fields.mcpServerEnabled !== undefined) setMcpServerEnabled(fields.mcpServerEnabled)
+        if (fields.mcpServerPort !== undefined) setMcpServerPort(fields.mcpServerPort)
+        if (fields.mcpServerHost !== undefined) setMcpServerHost(fields.mcpServerHost)
+        persistSettings(fields)
+    }
+
     return (
         <div className={s.fullPane}>
             {/* 左侧 Sidebar 导航区 */}
@@ -212,6 +229,14 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left', height: 36, marginBottom: 4 }}
                     >
                         AI 智能体
+                    </Button>
+                    <Button
+                        type={activeTab === 'mcp' ? 'primary' : 'text'}
+                        icon={<Server size={15} />}
+                        onClick={() => setActiveTab('mcp')}
+                        style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left', height: 36, marginBottom: 4 }}
+                    >
+                        MCP 服务
                     </Button>
                     <Button
                         type={activeTab === 'about' ? 'primary' : 'text'}
@@ -259,6 +284,15 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         aiMaxParallel={aiMaxParallel}
                         aiSystemPrompt={aiSystemPrompt}
                         onChange={handleAiAgentChange}
+                    />
+                )}
+
+                {activeTab === 'mcp' && (
+                    <McpServerTab
+                        mcpServerEnabled={mcpServerEnabled}
+                        mcpServerPort={mcpServerPort}
+                        mcpServerHost={mcpServerHost}
+                        onChange={handleMcpChange}
                     />
                 )}
 

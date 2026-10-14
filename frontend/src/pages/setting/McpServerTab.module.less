@@ -1,0 +1,289 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 24px;
+}
+
+.headerSection {
+    margin-bottom: 4px;
+}
+
+.sectionTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: @text;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sectionDesc {
+    font-size: 12px;
+    color: @text-dim;
+    line-height: 1.5;
+}
+
+.card {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    .cardTitle {
+        font-size: 13px;
+        font-weight: 600;
+        color: @text;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding-bottom: 8px;
+        border-bottom: 1px solid @border;
+        margin-bottom: 2px;
+    }
+}
+
+.controlRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    .labelInfo {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+
+        .rowTitle {
+            font-size: 13px;
+            font-weight: 500;
+            color: @text;
+        }
+
+        .rowSub {
+            font-size: 11.5px;
+            color: @text-dim;
+        }
+    }
+}
+
+.statusBanner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+    border-radius: @radius-md;
+    background: @bg-1;
+    border: 1px solid @border;
+    transition: all 0.25s ease;
+
+    &.running {
+        border-color: rgba(47, 158, 68, 0.4);
+        background: linear-gradient(180deg, rgba(47, 158, 68, 0.05) 0%, @bg-1 100%);
+    }
+
+    &.stopped {
+        border-color: @border;
+        background: @bg-1;
+    }
+}
+
+.statusHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.metricsGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+.metricCard {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .metricLabel {
+        font-size: 11px;
+        color: @text-dim;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .metricVal {
+        font-size: 16px;
+        font-weight: 600;
+        color: @text;
+        font-family: @font-mono;
+    }
+}
+
+.endpointBox {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 8px 12px;
+    font-family: @font-mono;
+    font-size: 12px;
+    color: @text;
+
+    .endpointLabel {
+        color: @text-dim;
+        margin-right: 8px;
+        font-family: @font-family;
+        font-size: 11.5px;
+    }
+
+    .endpointUrl {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.configCard {
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+
+    .configHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 12px;
+        font-weight: 500;
+        color: @text;
+    }
+
+    .filePathHint {
+        font-size: 11px;
+        color: @text-dim;
+        background: @bg-2;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-family: @font-mono;
+        word-break: break-all;
+    }
+
+    .codeBlock {
+        position: relative;
+        background: @bg-2;
+        border: 1px solid @border;
+        border-radius: 4px;
+        padding: 10px 12px;
+        font-family: @font-mono;
+        font-size: 11.5px;
+        color: @text;
+        white-space: pre;
+        overflow-x: auto;
+        line-height: 1.5;
+    }
+}
+
+.toolsToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.toolItem {
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.2s ease;
+
+    &:hover {
+        border-color: @accent;
+    }
+
+    .toolHeader {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+
+        .toolName {
+            font-family: @font-mono;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: @text;
+        }
+    }
+
+    .toolDesc {
+        font-size: 11.5px;
+        color: @text-dim;
+        line-height: 1.4;
+    }
+
+    .schemaPreview {
+        margin-top: 4px;
+        font-family: @font-mono;
+        font-size: 11px;
+        background: @bg-2;
+        padding: 6px 8px;
+        border-radius: 4px;
+        border: 1px solid @border;
+        max-height: 160px;
+        overflow-y: auto;
+        white-space: pre-wrap;
+        color: @text-dim;
+    }
+}
+
+.sessionItem {
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-sm;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+
+    .sessionMeta {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+
+        .sessionId {
+            font-family: @font-mono;
+            font-size: 12px;
+            font-weight: 600;
+            color: @text;
+        }
+
+        .sessionClient {
+            font-size: 11px;
+            color: @text-dim;
+        }
+    }
+}

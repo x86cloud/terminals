@@ -59,6 +59,9 @@ export interface AppSettings {
     "aiReasoningEffort": string;
     "aiEnableVerifier": boolean;
     "aiMaxParallel": number;
+    "mcpServerEnabled": boolean;
+    "mcpServerPort": number;
+    "mcpServerHost": string;
 
     /**
      * "ask" | "minimize" | "quit"

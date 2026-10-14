@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue } from 'react'
 import {
     Input,
     Button,
@@ -54,6 +54,9 @@ export default function WikiClient({ onClose }: Props) {
     const [originalContent, setOriginalContent] = useState<string>('')
     const [saving, setSaving] = useState<boolean>(false)
     const [viewMode, setViewMode] = useState<ViewMode>('preview')
+
+    // 延迟渲染 Markdown 内容，避免编辑输入时全量频繁重建 AST 和大量垃圾对象
+    const deferredContent = useDeferredValue(content)
 
     // 目录树展开节点
     const [expandedKeys, setExpandedKeys] = useState<string[]>([])
@@ -164,7 +167,7 @@ export default function WikiClient({ onClose }: Props) {
     }
 
     // 保存当前文档
-    const handleSave = async () => {
+    const handleSave = useCallback(async () => {
         if (!selectedPath || !isDirty) return
         setSaving(true)
         try {
@@ -178,19 +181,22 @@ export default function WikiClient({ onClose }: Props) {
         } finally {
             setSaving(false)
         }
-    }
+    }, [selectedPath, isDirty, content, loadTree])
+
+    const saveRef = useRef(handleSave)
+    saveRef.current = handleSave
 
     // 快捷键监听 (Ctrl+S / Cmd+S)
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
                 e.preventDefault()
-                void handleSave()
+                void saveRef.current()
             }
         }
         window.addEventListener('keydown', handleKeyDown)
         return () => window.removeEventListener('keydown', handleKeyDown)
-    }, [handleSave])
+    }, [])
 
     // 打开系统文件管理器
     const handleOpenDir = async () => {
@@ -613,7 +619,7 @@ export default function WikiClient({ onClose }: Props) {
                         <div className={s.workArea}>
                             {viewMode === 'preview' && (
                                 <div className={s.previewOnly}>
-                                    <MarkdownViewer content={content} />
+                                    <MarkdownViewer content={deferredContent} />
                                 </div>
                             )}
 
@@ -641,7 +647,7 @@ export default function WikiClient({ onClose }: Props) {
                                         />
                                     </div>
                                     <div className={s.splitPreview}>
-                                        <MarkdownViewer content={content} />
+                                        <MarkdownViewer content={deferredContent} />
                                     </div>
                                 </div>
                             )}

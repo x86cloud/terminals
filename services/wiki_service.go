@@ -104,15 +104,26 @@ func (s *WikiService) CompileSessionToWiki(sessionID string, messages []agent.Fr
 	}
 	logger.Infof("提炼会话内容至 Wiki [SessionID=%s, MessageCount=%d]", sessionID, len(messages))
 	var sb strings.Builder
+	const maxSingleMsgLen = 4000
+	const maxTotalLen = 50000
+
 	for _, m := range messages {
-		if strings.TrimSpace(m.Content) == "" {
+		content := strings.TrimSpace(m.Content)
+		if content == "" {
 			continue
+		}
+		if len(content) > maxSingleMsgLen {
+			content = content[:maxSingleMsgLen/2] + "\n...(已省略中间超长日志/输出)...\n" + content[len(content)-maxSingleMsgLen/2:]
 		}
 		roleName := "用户"
 		if m.Role == "assistant" {
 			roleName = "助手"
 		}
-		sb.WriteString(roleName + ": " + m.Content + "\n\n")
+		if sb.Len()+len(content) > maxTotalLen {
+			sb.WriteString("\n...(会话历史过长，已截断更早内容保留核心上下文)...\n")
+			break
+		}
+		sb.WriteString(roleName + ": " + content + "\n\n")
 	}
 	res, err := wiki.CompileSession(context.Background(), agent.DefaultRuntime.Router, sessionID, sb.String())
 	if err != nil {

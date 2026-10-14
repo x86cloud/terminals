@@ -25,7 +25,7 @@ interface Props {
     servers: ServerConfig[]
     groups: ServerGroup[]
     connectingId: string | null
-    onNew: () => void
+    onNew: (groupId?: string) => void
     onEdit: (cfg: ServerConfig) => void
     onDelete: (cfg: ServerConfig) => void
     onConnect: (cfg: ServerConfig) => void
@@ -34,6 +34,8 @@ interface Props {
     onDeleteGroup: (id: string) => void
     onMoveServer: (serverId: string, groupId: string) => void
     onOpenSettings: () => void
+    onExportConfig?: () => void
+    onImportConfig?: () => void
     // 可选参数（兼容旧调用）
     sessions?: SessionInfo[]
     activeSessionId?: string | null
@@ -91,6 +93,8 @@ export default function Sidebar({
     onDeleteGroup,
     onMoveServer,
     onOpenSettings,
+    onExportConfig,
+    onImportConfig,
     onOpenAiAgent,
     onOpenApi,
     onOpenDevTools,
@@ -192,6 +196,7 @@ export default function Sidebar({
                     }}
                     onContextMenu={(e) => {
                         e.preventDefault()
+                        e.stopPropagation()
                         const items: MenuItem[] = [
                             {
                                 key: 'connect',
@@ -350,6 +355,37 @@ export default function Sidebar({
 
                 <div
                     className={`${s.serverList}${dropGroup === '__none__' ? ' ' + s.dropActive : ''}`}
+                    onContextMenu={(e) => {
+                        e.preventDefault()
+                        const items: MenuItem[] = [
+                            {
+                                key: 'new-server',
+                                label: '新建连接',
+                                icon: 'plug',
+                                onClick: () => onNew(),
+                            },
+                            {
+                                key: 'new-group',
+                                label: '新建分组',
+                                icon: 'newfolder',
+                                onClick: startCreateGroup,
+                            },
+                            { key: 'd1', label: '', divider: true },
+                            {
+                                key: 'import-cfg',
+                                label: '导入配置…',
+                                icon: 'upload',
+                                onClick: () => onImportConfig?.(),
+                            },
+                            {
+                                key: 'export-cfg',
+                                label: '导出配置…',
+                                icon: 'download',
+                                onClick: () => onExportConfig?.(),
+                            },
+                        ]
+                        setMenu({ open: true, x: e.clientX, y: e.clientY, items })
+                    }}
                     onDragOver={(e) => {
                         if (!dragId) return
                         e.preventDefault()
@@ -401,7 +437,47 @@ export default function Sidebar({
                                     setDragId(null)
                                 }}
                             >
-                                <div className={s.groupHeader}>
+                                <div
+                                    className={s.groupHeader}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        const items: MenuItem[] = [
+                                            {
+                                                key: 'new-in-group',
+                                                label: '在此分组下新建连接',
+                                                icon: 'plug',
+                                                onClick: () => onNew(grp.id),
+                                            },
+                                            {
+                                                key: 'rename-group',
+                                                label: '重命名分组',
+                                                icon: 'edit',
+                                                onClick: () => setEditingGroup({ id: grp.id, name: grp.name }),
+                                            },
+                                            { key: 'd1', label: '', divider: true },
+                                            {
+                                                key: 'delete-group',
+                                                label: '删除分组',
+                                                icon: 'trash',
+                                                danger: true,
+                                                onClick: () => {
+                                                    setConfirm({
+                                                        open: true,
+                                                        title: '删除分组',
+                                                        danger: true,
+                                                        message: `删除分组「${grp.name}」？分组下的服务器不会被删除，仅移出分组。`,
+                                                        onConfirm: () => {
+                                                            setConfirm(emptyConfirm)
+                                                            onDeleteGroup(grp.id)
+                                                        },
+                                                    })
+                                                },
+                                            },
+                                        ]
+                                        setMenu({ open: true, x: e.clientX, y: e.clientY, items })
+                                    }}
+                                >
                                     <Tooltip title={isOpen ? '折叠' : '展开'}>
                                         <Button
                                             size="small"

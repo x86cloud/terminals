@@ -9,6 +9,10 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 // @ts-ignore: Unused imports
 import * as core$0 from "../core/models.js";
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
+import * as $models from "./models.js";
+
 export function CheckForUpdates(): $CancellablePromise<core$0.UpdateCheckResult> {
     return $Call.ByID(2981386841);
 }
@@ -21,6 +25,13 @@ export function DeleteServer(id: string): $CancellablePromise<void> {
     return $Call.ByID(4081336458, id);
 }
 
+/**
+ * ExportServersConfig 弹出原生保存对话框并导出所有服务器连接与分组配置
+ */
+export function ExportServersConfig(): $CancellablePromise<$models.ConfigIOResult | null> {
+    return $Call.ByID(2376071942);
+}
+
 export function GetAppSettings(): $CancellablePromise<core$0.AppSettings> {
     return $Call.ByID(3489392456);
 }
@@ -31,6 +42,13 @@ export function GetAppVersion(): $CancellablePromise<core$0.AppVersionInfo> {
 
 export function HideWindow(): $CancellablePromise<void> {
     return $Call.ByID(627431966);
+}
+
+/**
+ * ImportServersConfig 弹出原生选择对话框并增量智能合并导入服务器连接与分组配置
+ */
+export function ImportServersConfig(): $CancellablePromise<$models.ConfigIOResult | null> {
+    return $Call.ByID(3453008359);
 }
 
 export function ListGroups(): $CancellablePromise<core$0.ServerGroup[] | null> {

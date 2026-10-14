@@ -4,6 +4,7 @@ import (
 	"context"
 	"sync"
 	"terminal/agent"
+	"terminal/agent/mcp"
 	"terminal/core"
 	"terminal/db"
 	"terminal/docker"
@@ -28,6 +29,7 @@ type Container struct {
 	SqliteMgr   *db.SqliteManager
 	DockerMgr   *docker.DockerManager
 	K8sMgr      *k8s.K8sManager
+	McpServer   *mcp.Server
 }
 
 var (
@@ -55,6 +57,7 @@ func GetContainer() *Container {
 			SqliteMgr:   db.NewSqliteManager(),
 			DockerMgr:   docker.NewDockerManager(),
 			K8sMgr:      k8s.NewK8sManager(),
+			McpServer:   mcp.NewServer(mcp.NewToolAdapter(agent.DefaultRuntime.ToolBus)),
 		}
 	})
 	return GlobalContainer
@@ -82,11 +85,27 @@ func (c *Container) Startup(ctx context.Context) {
 		if err := agent.DefaultRuntime.InitOrUpdate(settings); err != nil {
 			logger.Warnf("初始化智能体运行时设置失败: %v", err)
 		}
+		if settings.McpServerEnabled && c.McpServer != nil {
+			host := settings.McpServerHost
+			if host == "" {
+				host = "127.0.0.1"
+			}
+			port := settings.McpServerPort
+			if port <= 0 {
+				port = 4096
+			}
+			if err := c.McpServer.Start(host, port); err != nil {
+				logger.Errorf("自动启动 MCP Server 失败: %v", err)
+			}
+		}
 	}
 	logger.Info("服务容器启动完成")
 }
 
 func (c *Container) Shutdown(ctx context.Context) {
+	if c.McpServer != nil {
+		_ = c.McpServer.Stop()
+	}
 	c.Transfers.CancelAll()
 	c.Sessions.CloseAll()
 	c.RedisMgr.CloseAll()

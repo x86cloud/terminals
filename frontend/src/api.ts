@@ -13,6 +13,7 @@ import * as AgentService from '../bindings/terminal/services/agentservice'
 import * as DockerService from '../bindings/terminal/services/dockerservice'
 import * as K8sService from '../bindings/terminal/services/k8sservice'
 import * as WikiService from '../bindings/terminal/services/wikiservice'
+import * as McpService from '../bindings/terminal/services/mcpservice'
 
 import type {
     DirListing,
@@ -70,6 +71,10 @@ import type {
     UpdateCheckResult,
     WikiNode,
     WikiCatalogItem,
+    McpServerStatus,
+    McpSessionInfo,
+    McpToolItem,
+    ConfigIOResult,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -161,6 +166,12 @@ export const API = {
     deleteGroup: (id: string): Promise<void> => SystemService.DeleteGroup(id),
     moveServerToGroup: (serverId: string, groupId: string): Promise<void> =>
         SystemService.MoveServerToGroup(serverId, groupId),
+
+    // 配置导入/导出
+    exportServersConfig: (): Promise<ConfigIOResult> =>
+        SystemService.ExportServersConfig() as any,
+    importServersConfig: (): Promise<ConfigIOResult> =>
+        SystemService.ImportServersConfig() as any,
 
     // 会话
     listSessions: (): Promise<SessionInfo[]> => SshService.ListSessions().then(r => (r || []) as any),
@@ -896,6 +907,16 @@ export const API = {
     wikiDeleteNode: (relPath: string): Promise<void> => WikiService.DeleteWikiNode(relPath),
     wikiCompileSession: (sessionId: string, messages: FrontendMessage[]): Promise<string> =>
         WikiService.CompileSessionToWiki(sessionId, messages as any),
+
+    // 内置 MCP Server
+    getMcpServerStatus: (): Promise<McpServerStatus> =>
+        McpService.GetMcpServerStatus().then((r) => r as any),
+    restartMcpServer: (): Promise<McpServerStatus> =>
+        McpService.RestartMcpServer().then((r) => r as any),
+    getMcpTools: (): Promise<McpToolItem[]> =>
+        McpService.GetMcpTools().then((r) => (r || []) as any),
+    getMcpSessions: (): Promise<McpSessionInfo[]> =>
+        McpService.GetMcpSessions().then((r) => (r || []) as any),
 }
 
 /* ------------------------------------------------------------------ */

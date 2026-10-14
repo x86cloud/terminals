@@ -5,6 +5,7 @@ import * as AgentService from "./agentservice.js";
 import * as ApiService from "./apiservice.js";
 import * as DockerService from "./dockerservice.js";
 import * as K8sService from "./k8sservice.js";
+import * as McpService from "./mcpservice.js";
 import * as MongoService from "./mongoservice.js";
 import * as MqttService from "./mqttservice.js";
 import * as MysqlService from "./mysqlservice.js";
@@ -20,6 +21,7 @@ export {
     ApiService,
     DockerService,
     K8sService,
+    McpService,
     MongoService,
     MqttService,
     MysqlService,
@@ -33,6 +35,7 @@ export {
 };
 
 export type {
+    ConfigIOResult,
     DockerGenerateComposeRequest,
     K8sGenerateYAMLRequest
 } from "./models.js";

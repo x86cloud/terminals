@@ -1038,7 +1038,34 @@ export interface AppSettings {
     aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
     aiEnableVerifier?: boolean
     aiMaxParallel?: number
+    mcpServerEnabled?: boolean
+    mcpServerPort?: number
+    mcpServerHost?: string
     closeAction?: 'ask' | 'minimize' | 'quit'
+}
+
+export interface McpServerStatus {
+    running: boolean
+    host: string
+    port: number
+    endpoint: string
+    toolsCount: number
+    sessionsCount: number
+    uptimeSeconds: number
+}
+
+export interface McpSessionInfo {
+    id: string
+    remoteAddr: string
+    userAgent: string
+    connectedAt: string
+    lastActiveAt: string
+}
+
+export interface McpToolItem {
+    name: string
+    description?: string
+    inputSchema: Record<string, any> | null
 }
 
 export interface ToolCallItem {
@@ -1240,6 +1267,15 @@ export interface WikiNode {
     size?: number
     updated_at: number
     children?: WikiNode[] | null
+}
+
+export interface ConfigIOResult {
+    success: boolean
+    cancelled: boolean
+    filePath: string
+    serversCount: number
+    groupsCount: number
+    message: string
 }
 
 
