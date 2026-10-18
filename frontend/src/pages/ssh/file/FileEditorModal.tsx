@@ -21,17 +21,25 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose }: 
 
     useEffect(() => {
         if (!open || !filePath) return
+        let mounted = true
         setLoading(true)
         API.readRemoteFile(sessionId, filePath)
             .then((text) => {
+                if (!mounted) return
                 setContent(text || '')
                 setOriginalContent(text || '')
             })
             .catch((err) => {
+                if (!mounted) return
                 message.error(`读取文件失败: ${errorMessage(err)}`)
                 onClose()
             })
-            .finally(() => setLoading(false))
+            .finally(() => {
+                if (mounted) setLoading(false)
+            })
+        return () => {
+            mounted = false
+        }
     }, [open, sessionId, filePath, onClose])
 
     const isModified = content !== originalContent

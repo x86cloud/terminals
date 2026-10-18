@@ -5,6 +5,7 @@ import CodeEditor from '@/components/CodeEditor'
 import { useSession } from '@/contexts/SessionContext'
 import a from '@/pages/api/HttpRequest.module.less'
 import type { ApiState } from '@/pages/api/useApi'
+import { downloadText } from '@/utils'
 
 const methodColorMap: Record<string, string> = {
     GET: '#52c41a',
@@ -229,13 +230,7 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
 
     const downloadResponse = () => {
         if (!response?.body) return
-        const blob = new Blob([response.body], { type: 'text/plain;charset=utf-8' })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `response_${Date.now()}.${respLang === 'json' ? 'json' : 'txt'}`
-        a.click()
-        URL.revokeObjectURL(url)
+        downloadText(`response_${Date.now()}.${respLang === 'json' ? 'json' : 'txt'}`, response.body)
     }
 
     return (

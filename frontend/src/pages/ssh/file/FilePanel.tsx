@@ -7,7 +7,7 @@ import FileEditorModal from '@/pages/ssh/file/FileEditorModal'
 import TransferBar from '@/components/TransferBar'
 import { API, subscribe } from '@/api'
 import { FileItem, Transfer } from '@/types'
-import { bytesToBase64, errorMessage, formatSize, formatTime, parentRemote } from '@/utils'
+import { bytesToBase64, copyText, errorMessage, formatSize, formatTime, parentRemote } from '@/utils'
 import g from '@/styles/global.module.less'
 import fp from '@/pages/ssh/file/FilePanel.module.less'
 
@@ -258,15 +258,6 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                 }
             },
         })
-    }
-
-    const copyText = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text)
-            message.success('已复制到剪贴板')
-        } catch {
-            message.error('复制失败')
-        }
     }
 
     const itemMenu = (item: FileItem, targets: string[]): MenuItem[] => [

@@ -4,6 +4,7 @@ import { Search, Plus, Trash2, Copy, Clock } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
+import { copyText } from '@/utils'
 import s from './viewers.module.less'
 
 interface Props {
@@ -135,15 +136,6 @@ export default function StreamViewer({ session, selected, value, onReload, flash
             onReload()
         } catch (e: any) {
             message.error('删除失败: ' + (e?.message || e))
-        }
-    }
-
-    const copyText = async (text: string) => {
-        try {
-            await navigator.clipboard.writeText(text)
-            message.success('已复制到剪贴板')
-        } catch {
-            message.error('复制失败')
         }
     }
 

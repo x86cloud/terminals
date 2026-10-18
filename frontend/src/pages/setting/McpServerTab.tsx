@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
     Switch,
     InputNumber,
@@ -58,15 +58,36 @@ export default function McpServerTab({
     const [expandedTool, setExpandedTool] = useState<string | null>(null)
     const [copiedKey, setCopiedKey] = useState<string | null>(null)
 
+    const mountedRef = useRef(true)
+    const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+    const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    useEffect(() => {
+        mountedRef.current = true
+        return () => {
+            mountedRef.current = false
+            if (restartTimerRef.current) {
+                clearTimeout(restartTimerRef.current)
+                restartTimerRef.current = null
+            }
+            if (copyTimerRef.current) {
+                clearTimeout(copyTimerRef.current)
+                copyTimerRef.current = null
+            }
+        }
+    }, [])
+
     const fetchStatusAndData = useCallback(async () => {
         try {
             const st = await API.getMcpServerStatus()
+            if (!mountedRef.current) return
             setStatus(st)
             if (st && st.running) {
                 const [toolList, sessList] = await Promise.all([
                     API.getMcpTools(),
                     API.getMcpSessions(),
                 ])
+                if (!mountedRef.current) return
                 setTools(toolList || [])
                 setSessions(sessList || [])
             } else {
@@ -88,14 +109,25 @@ export default function McpServerTab({
     const handleToggleEnabled = async (checked: boolean) => {
         onChange({ mcpServerEnabled: checked })
         setRestarting(true)
+        if (restartTimerRef.current) {
+            clearTimeout(restartTimerRef.current)
+            restartTimerRef.current = null
+        }
         try {
             // Give settings a moment to persist then restart
-            setTimeout(async () => {
-                const res = await API.restartMcpServer()
-                setStatus(res)
-                await fetchStatusAndData()
-                setRestarting(false)
-                message.success(checked ? 'MCP 服务已启用并启动' : 'MCP 服务已停止')
+            restartTimerRef.current = setTimeout(async () => {
+                try {
+                    const res = await API.restartMcpServer()
+                    if (!mountedRef.current) return
+                    setStatus(res)
+                    await fetchStatusAndData()
+                    setRestarting(false)
+                    message.success(checked ? 'MCP 服务已启用并启动' : 'MCP 服务已停止')
+                } catch (e: any) {
+                    if (!mountedRef.current) return
+                    setRestarting(false)
+                    message.error(`切换 MCP 服务状态失败: ${e?.message || e}`)
+                }
             }, 100)
         } catch (e: any) {
             setRestarting(false)
@@ -107,24 +139,40 @@ export default function McpServerTab({
         setRestarting(true)
         try {
             const res = await API.restartMcpServer()
+            if (!mountedRef.current) return
             setStatus(res)
             await fetchStatusAndData()
             message.success(res.running ? 'MCP 服务已成功应用并重启' : 'MCP 服务已停止')
         } catch (e: any) {
-            message.error(`重启 MCP 服务失败: ${e?.message || e}`)
+            if (mountedRef.current) {
+                message.error(`重启 MCP 服务失败: ${e?.message || e}`)
+            }
         } finally {
-            setRestarting(false)
+            if (mountedRef.current) {
+                setRestarting(false)
+            }
         }
     }
 
     const handleCopy = async (text: string, key: string) => {
         try {
             await navigator.clipboard.writeText(text)
+            if (!mountedRef.current) return
             setCopiedKey(key)
             message.success('已复制到剪贴板')
-            setTimeout(() => setCopiedKey(null), 2000)
+            if (copyTimerRef.current) {
+                clearTimeout(copyTimerRef.current)
+                copyTimerRef.current = null
+            }
+            copyTimerRef.current = setTimeout(() => {
+                if (mountedRef.current) {
+                    setCopiedKey(null)
+                }
+            }, 2000)
         } catch {
-            message.error('复制失败，请手动选择复制')
+            if (mountedRef.current) {
+                message.error('复制失败，请手动选择复制')
+            }
         }
     }
 

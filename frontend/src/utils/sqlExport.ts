@@ -1,5 +1,3 @@
-import { message } from 'antd'
-
 export type SqlDialect = 'mysql' | 'postgres' | 'sqlite'
 
 /**
@@ -112,31 +110,4 @@ export function buildUpdateSql({
     return `UPDATE ${escapedTable}\nSET ${setClauses}\nWHERE ${whereClauses};`
 }
 
-/**
- * 复制文本到系统剪贴板并给出反馈提示
- */
-export async function copyTextToClipboard(text: string, successMsg?: string): Promise<boolean> {
-    try {
-        if (navigator?.clipboard?.writeText) {
-            await navigator.clipboard.writeText(text)
-        } else {
-            const textarea = document.createElement('textarea')
-            textarea.value = text
-            textarea.style.position = 'fixed'
-            textarea.style.opacity = '0'
-            document.body.appendChild(textarea)
-            textarea.focus()
-            textarea.select()
-            document.execCommand('copy')
-            document.body.removeChild(textarea)
-        }
-        if (successMsg) {
-            message.success(successMsg)
-        }
-        return true
-    } catch (err) {
-        console.error('写入剪贴板失败:', err)
-        message.error('复制到剪贴板失败，请重试')
-        return false
-    }
-}
+export { copyTextToClipboard } from './clipboard'

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react'
 import { Button, Input, Switch, Segmented } from 'antd'
 import { Copy, Download } from 'lucide-react'
 import { md5 } from '@/utils/md5'
+import { downloadText, toBase64, fromBase64 } from '@/utils'
 import CodeEditor from '@/components/CodeEditor'
 import g from '@/styles/global.module.less'
 import dt from '@/components/DevTools.module.less'
@@ -191,17 +192,9 @@ function TimestampTool() {
 }
 
 /* ---------------- Base64 ---------------- */
-function toBase64(str: string) {
+function safeFromBase64(b64: string) {
     try {
-        return btoa(unescape(encodeURIComponent(str)))
-    } catch {
-        return ''
-    }
-}
-
-function fromBase64(b64: string) {
-    try {
-        return decodeURIComponent(escape(atob(b64)))
+        return fromBase64(b64)
     } catch {
         return '解码失败：不是合法的 Base64'
     }
@@ -212,7 +205,7 @@ function Base64Tool() {
     const [input, setInput] = useState('')
     const result = useMemo(() => {
         if (!input) return ''
-        return mode === 'encode' ? toBase64(input) : fromBase64(input)
+        return mode === 'encode' ? toBase64(input) : safeFromBase64(input)
     }, [input, mode])
 
     return (
@@ -248,18 +241,6 @@ function Base64Tool() {
 }
 
 /* ---------------- JSON 格式化 ---------------- */
-function downloadText(filename: string, text: string) {
-    const blob = new Blob([text], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = filename
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
 function findPos(msg: string): number | null {
     const m = /position (\d+)/.exec(msg)
     return m ? Number(m[1]) : null

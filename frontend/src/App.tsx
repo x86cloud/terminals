@@ -32,6 +32,7 @@ import {
 } from '@/types'
 import { errorMessage } from '@/utils'
 import { applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings } from '@/utils/theme'
+import { useStartupUpdateCheck } from '@/utils/updater'
 import a from '@/components/App.module.less'
 
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
@@ -188,6 +189,9 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         void reloadServers()
         void reloadGroups()
     }, [reloadServers, reloadGroups])
+
+    // 软件启动后静默检查新版本
+    useStartupUpdateCheck()
 
     useEffect(() => {
         const offClosed = subscribe('session:closed', (sessionId: string) => {

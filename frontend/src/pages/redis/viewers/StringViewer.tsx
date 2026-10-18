@@ -5,6 +5,7 @@ import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
 import { formatBytes } from '../redisTypes'
+import { stringToBase64 } from '@/utils'
 import s from './viewers.module.less'
 
 interface Props {
@@ -110,7 +111,7 @@ export default function StringViewer({ session, selected, value, onReload, flash
     // Base64 representation
     const base64Content = (() => {
         try {
-            return btoa(unescape(encodeURIComponent(content)))
+            return stringToBase64(content)
         } catch {
             return '(无法进行 Base64 编码)'
         }

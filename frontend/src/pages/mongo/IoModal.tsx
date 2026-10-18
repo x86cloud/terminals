@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { Modal, Radio, Button, Input, Alert, message } from 'antd'
 import { Download, Copy } from 'lucide-react'
-import { copyTextToClipboard } from '@/utils/sqlExport'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
+import { errorMessage, copyTextToClipboard, downloadText } from '@/utils'
 
 export type MongoExportFormat = 'json' | 'extended-json' | 'csv'
 export type MongoExportScope = 'current' | 'all'
@@ -60,15 +59,7 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
 
     const triggerDownload = (content: string, ext: string) => {
         const mime = ext === 'csv' ? 'text/csv;charset=utf-8;' : 'application/json;charset=utf-8;'
-        const blob = new Blob([content], { type: mime })
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `${filename || coll}.${ext}`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
+        downloadText(`${filename || coll}.${ext}`, content, mime)
     }
 
     const fetchExportDocs = async (): Promise<string[]> => {

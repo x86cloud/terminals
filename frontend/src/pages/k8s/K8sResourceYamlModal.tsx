@@ -40,6 +40,7 @@ export default function K8sResourceYamlModal({
     // 当弹窗打开时，若没有传入 initialYaml 且指定了 name，则主动从集群拉取实时 YAML
     useEffect(() => {
         if (!open) return
+        let mounted = true
 
         if (initialYaml) {
             setContent(initialYaml)
@@ -50,17 +51,25 @@ export default function K8sResourceYamlModal({
             setLoading(true)
             API.k8sGetResourceYAML(serverId, kind, namespace, name)
                 .then((yamlStr) => {
+                    if (!mounted) return
                     setContent(yamlStr || '')
                 })
                 .catch((err: any) => {
+                    if (!mounted) return
                     message.error(`获取 YAML 失败: ${err.message || String(err)}`)
                     setContent('')
                 })
                 .finally(() => {
-                    setLoading(false)
+                    if (mounted) {
+                        setLoading(false)
+                    }
                 })
         } else {
             setContent(initialYaml || '')
+        }
+
+        return () => {
+            mounted = false
         }
     }, [open, serverId, kind, namespace, name, initialYaml, mode])
 

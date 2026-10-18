@@ -193,12 +193,7 @@ export function formatTtl(ttlSec: number | undefined | null): { text: string; is
     return { text: h > 0 ? `${d}天 ${h}小时` : `${d}天`, isPermanent: false, isExpired: false }
 }
 
-export function formatBytes(bytes: number): string {
-    if (!bytes || bytes <= 0) return '0 B'
-    const units = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(1024))
-    return `${(bytes / Math.pow(1024, i)).toFixed(i === 0 ? 0 : 1)} ${units[i]}`
-}
+export { formatBytes } from '@/utils'
 
 export function formatValue(v: RedisValue): string {
     if (!v) return ''

@@ -195,14 +195,16 @@ export default function MqttClient({ session, onClose }: Props) {
 
     // Auto-scroll message stream
     useEffect(() => {
-        if (autoScroll) {
-            requestAnimationFrame(() => {
-                if (bottomRef.current) {
-                    bottomRef.current.scrollIntoView({ behavior: 'auto', block: 'end' })
-                } else if (logRef.current) {
-                    logRef.current.scrollTop = logRef.current.scrollHeight
-                }
-            })
+        if (!autoScroll) return
+        const rafId = requestAnimationFrame(() => {
+            if (bottomRef.current) {
+                bottomRef.current.scrollIntoView({ behavior: 'auto', block: 'end' })
+            } else if (logRef.current) {
+                logRef.current.scrollTop = logRef.current.scrollHeight
+            }
+        })
+        return () => {
+            cancelAnimationFrame(rafId)
         }
     }, [displayedMessages.length, autoScroll])
 

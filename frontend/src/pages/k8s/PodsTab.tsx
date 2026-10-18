@@ -29,7 +29,7 @@ import { API } from '@/api'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
 import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
 import type { K8sPodInfo, K8sContainerSummary } from '@/types'
-import { errorMessage } from '@/utils'
+import { errorMessage, downloadText } from '@/utils'
 import s from './K8sClient.module.less'
 
 interface Props {
@@ -631,13 +631,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                             size="small"
                             icon={<Download size={12} />}
                             onClick={() => {
-                                const blob = new Blob([logsContent], { type: 'text/plain;charset=utf-8' })
-                                const url = URL.createObjectURL(blob)
-                                const a = document.createElement('a')
-                                a.href = url
-                                a.download = `${activePod?.name}_${selectedContainer || 'log'}.log`
-                                a.click()
-                                URL.revokeObjectURL(url)
+                                downloadText(`${activePod?.name}_${selectedContainer || 'log'}.log`, logsContent)
                             }}
                         >
                             导出

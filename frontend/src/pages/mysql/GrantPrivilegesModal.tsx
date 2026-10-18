@@ -61,10 +61,12 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
 
     // Load tables when DB changes
     useEffect(() => {
+        let mounted = true
         if (scope === 'table' && selectedDb && sessionId) {
             setLoadingTables(true)
             API.mysqlTables(sessionId, selectedDb)
                 .then((tbls) => {
+                    if (!mounted) return
                     const list = tbls || []
                     setTables(list)
                     if (list.length > 0 && !list.includes(selectedTable)) {
@@ -72,8 +74,15 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                         form.setFieldsValue({ table: list[0] })
                     }
                 })
-                .catch(() => setTables([]))
-                .finally(() => setLoadingTables(false))
+                .catch(() => {
+                    if (mounted) setTables([])
+                })
+                .finally(() => {
+                    if (mounted) setLoadingTables(false)
+                })
+        }
+        return () => {
+            mounted = false
         }
     }, [scope, selectedDb, sessionId])
 

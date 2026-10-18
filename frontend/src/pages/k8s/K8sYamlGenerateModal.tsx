@@ -55,19 +55,26 @@ export default function K8sYamlGenerateModal({
     // 加载当前集群已有的命名空间列表
     useEffect(() => {
         if (!open) return
+        let mounted = true
         setNamespace(currentNamespace || 'default')
 
         if (serverId) {
             API.k8sListNamespaces(serverId)
                 .then((list) => {
+                    if (!mounted) return
                     if (Array.isArray(list) && list.length > 0) {
                         const names = list.map((item: any) => (typeof item === 'string' ? item : item.name || 'default'))
                         setNsList(Array.from(new Set(names)))
                     }
                 })
                 .catch(() => {
+                    if (!mounted) return
                     setNsList(['default', 'kube-system', 'kube-public'])
                 })
+        }
+
+        return () => {
+            mounted = false
         }
     }, [open, serverId, currentNamespace])
 
