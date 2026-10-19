@@ -311,9 +311,9 @@ export default function MqttClient({ session, onClose }: Props) {
                 {/* Connection Info Card */}
                 <div className={m.connCard}>
                     <div className={m.connHeader}>
-                        <div className={m.connTitle} title={`${session.host}:${session.port}`}>
+                        <div className={m.connTitle} title={session.title ? `${session.title} (${session.host}:${session.port})` : `${session.host}:${session.port}`}>
                             <Radio size={14} color="var(--accent)" />
-                            <span>{session.host}:{session.port}</span>
+                            <span>{session.title || `${session.host}:${session.port}`}</span>
                         </div>
                         <span className={`${m.statusPill} ${status.connected ? m.connected : m.disconnected}`}>
                             <span className={`${m.statusDot} ${status.connected ? m.pulsing : ''}`} />

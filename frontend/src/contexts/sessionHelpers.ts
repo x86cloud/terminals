@@ -102,6 +102,7 @@ export async function connectMqttHelper(cfg: ServerConfig): Promise<MqttSessionI
     return {
         id: cfg.id,
         serverId: cfg.id,
+        title: cfg.name || `${cfg.host}:${cfg.port || 1883}`,
         host: cfg.host,
         port: cfg.port || 1883,
         username: cfg.username,

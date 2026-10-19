@@ -327,7 +327,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                     case 'mqtt': {
                         const info = await connectMqttHelper(cfg)
                         addSession('mqtt', info)
-                        message.success(`已连接 MQTT ${info.host}:${info.port}`)
+                        message.success(`已连接 MQTT ${info.title}`)
                         break
                     }
                     case 'mongo': {

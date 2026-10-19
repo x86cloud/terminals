@@ -1387,11 +1387,17 @@ func (m *MongoManager) MongoFind(id string, spec MongoQuerySpec) (MongoFindResul
 	out.Count = len(raws)
 	out.DurationMs = time.Since(start).Milliseconds()
 
-	// 总数用于分页；大集合下 CountDocuments 可能较慢，失败则忽略
+	// 总数用于分页；大集合下 CountDocuments 可能较慢，空条件优先使用毫秒级 EstimatedDocumentCount
 	cctx, ccancel := mc.opCtx()
 	defer ccancel()
-	if total, err := coll.CountDocuments(cctx, filter); err == nil {
-		out.Total = total
+	if len(filter) == 0 {
+		if est, err := coll.EstimatedDocumentCount(cctx); err == nil {
+			out.Total = est
+		}
+	} else {
+		if total, err := coll.CountDocuments(cctx, filter); err == nil {
+			out.Total = total
+		}
 	}
 	return out, nil
 }
@@ -2037,3 +2043,433 @@ func (m *MongoManager) MongoIndexStats(id, db, coll string) ([]string, error) {
 	}
 	return docsToJSON(raws), nil
 }
+
+// ===================== 高级集合创建 =====================
+
+// MongoCreateCollOptions 高级集合创建选项
+type MongoCreateCollOptions struct {
+	Name         string `json:"name"`
+	Capped       bool   `json:"capped,omitempty"`
+	Size         int64  `json:"size,omitempty"`
+	Max          int64  `json:"max,omitempty"`
+	IsTimeseries bool   `json:"isTimeseries,omitempty"`
+	TimeField    string `json:"timeField,omitempty"`
+	MetaField    string `json:"metaField,omitempty"`
+	Granularity  string `json:"granularity,omitempty"` // "seconds", "minutes", "hours"
+}
+
+// MongoCreateCollectionAdvanced 创建具备高级属性（封顶或时序）的集合。
+func (m *MongoManager) MongoCreateCollectionAdvanced(id, db string, opt MongoCreateCollOptions) error {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return err
+	}
+	name := strings.TrimSpace(opt.Name)
+	if name == "" {
+		return errors.New("集合名不能为空")
+	}
+
+	cmd := bson.D{{Key: "create", Value: name}}
+	if opt.Capped {
+		cmd = append(cmd, bson.E{Key: "capped", Value: true})
+		size := opt.Size
+		if size <= 0 {
+			size = 10485760 // 默认 10MB
+		}
+		cmd = append(cmd, bson.E{Key: "size", Value: size})
+		if opt.Max > 0 {
+			cmd = append(cmd, bson.E{Key: "max", Value: opt.Max})
+		}
+	}
+	if opt.IsTimeseries && strings.TrimSpace(opt.TimeField) != "" {
+		tsDoc := bson.M{
+			"timeField": strings.TrimSpace(opt.TimeField),
+		}
+		if strings.TrimSpace(opt.MetaField) != "" {
+			tsDoc["metaField"] = strings.TrimSpace(opt.MetaField)
+		}
+		if g := strings.TrimSpace(opt.Granularity); g != "" {
+			tsDoc["granularity"] = g
+		} else {
+			tsDoc["granularity"] = "seconds"
+		}
+		cmd = append(cmd, bson.E{Key: "timeseries", Value: tsDoc})
+	}
+
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+	start := time.Now()
+	var res bson.M
+	err = mc.client.Database(db).RunCommand(ctx, cmd).Decode(&res)
+	mc.track(start, err)
+	return err
+}
+
+// ===================== 集合克隆 =====================
+
+// MongoCloneCollReq 克隆集合请求
+type MongoCloneCollReq struct {
+	SourceDB   string `json:"sourceDb"`
+	SourceColl string `json:"sourceColl"`
+	TargetDB   string `json:"targetDb"`
+	TargetColl string `json:"targetColl"`
+	CopyData   bool   `json:"copyData"` // 是否同时拷贝文档数据
+}
+
+// MongoCloneCollection 克隆集合结构、索引及可选数据
+func (m *MongoManager) MongoCloneCollection(id string, req MongoCloneCollReq) (int64, error) {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return 0, err
+	}
+	if strings.TrimSpace(req.SourceColl) == "" || strings.TrimSpace(req.TargetColl) == "" {
+		return 0, errors.New("源集合名和目标集合名不能为空")
+	}
+	sDB := strings.TrimSpace(req.SourceDB)
+	tDB := strings.TrimSpace(req.TargetDB)
+	if tDB == "" {
+		tDB = sDB
+	}
+
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	srcCollection := mc.client.Database(sDB).Collection(req.SourceColl)
+	tgtCollection := mc.client.Database(tDB).Collection(req.TargetColl)
+
+	// 1. 创建目标集合
+	_ = mc.client.Database(tDB).CreateCollection(ctx, req.TargetColl)
+
+	// 2. 复制索引 (除 _id_ 以外)
+	cur, err := srcCollection.Indexes().List(ctx)
+	if err == nil {
+		defer cur.Close(ctx)
+		var indexes []bson.M
+		if err := cur.All(ctx, &indexes); err == nil {
+			var newModels []mongo.IndexModel
+			for _, idx := range indexes {
+				name, _ := idx["name"].(string)
+				if name == "_id_" {
+					continue
+				}
+				keys, ok := idx["key"].(bson.M)
+				if !ok {
+					continue
+				}
+				opt := options.Index().SetName(name)
+				if u, ok := idx["unique"].(bool); ok && u {
+					opt.SetUnique(true)
+				}
+				if sp, ok := idx["sparse"].(bool); ok && sp {
+					opt.SetSparse(true)
+				}
+				if ttl, ok := idx["expireAfterSeconds"].(int32); ok {
+					opt.SetExpireAfterSeconds(ttl)
+				}
+				newModels = append(newModels, mongo.IndexModel{
+					Keys:    keys,
+					Options: opt,
+				})
+			}
+			if len(newModels) > 0 {
+				_, _ = tgtCollection.Indexes().CreateMany(ctx, newModels)
+			}
+		}
+	}
+
+	// 3. 复制数据 (如果 copyData 为 true)
+	var copiedCount int64 = 0
+	if req.CopyData {
+		curDocs, err := srcCollection.Find(ctx, bson.M{})
+		if err != nil {
+			return 0, fmt.Errorf("读取源数据失败: %w", err)
+		}
+		defer curDocs.Close(ctx)
+
+		batch := make([]any, 0, 1000)
+		for curDocs.Next(ctx) {
+			var rawDoc bson.Raw
+			if err := curDocs.Decode(&rawDoc); err == nil {
+				batch = append(batch, rawDoc)
+				copiedCount++
+			}
+			if len(batch) >= 1000 {
+				_, _ = tgtCollection.InsertMany(ctx, batch)
+				batch = batch[:0]
+			}
+		}
+		if len(batch) > 0 {
+			_, _ = tgtCollection.InsertMany(ctx, batch)
+		}
+	}
+
+	return copiedCount, nil
+}
+
+// ===================== 用户与角色权限管理 =====================
+
+// MongoRoleItem 角色项
+type MongoRoleItem struct {
+	Role string `json:"role"`
+	DB   string `json:"db"`
+}
+
+// MongoUserInfo 用户详情
+type MongoUserInfo struct {
+	User       string          `json:"user"`
+	DB         string          `json:"db"`
+	Roles      []MongoRoleItem `json:"roles"`
+	CustomData map[string]any  `json:"customData,omitempty"`
+}
+
+// MongoCreateUserReq 新建用户请求
+type MongoCreateUserReq struct {
+	User  string          `json:"user"`
+	Pwd   string          `json:"pwd"`
+	DB    string          `json:"db"`
+	Roles []MongoRoleItem `json:"roles"`
+}
+
+// MongoUpdateUserReq 更新用户请求
+type MongoUpdateUserReq struct {
+	User  string          `json:"user"`
+	DB    string          `json:"db"`
+	Pwd   string          `json:"pwd,omitempty"`
+	Roles []MongoRoleItem `json:"roles,omitempty"`
+}
+
+// MongoUsers 获取用户列表
+func (m *MongoManager) MongoUsers(id, db string) ([]MongoUserInfo, error) {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return nil, err
+	}
+	targetDB := strings.TrimSpace(db)
+	if targetDB == "" {
+		targetDB = "admin"
+	}
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	cmd := bson.D{{Key: "usersInfo", Value: 1}}
+	start := time.Now()
+	var res struct {
+		Users []struct {
+			User       string          `bson:"user"`
+			DB         string          `bson:"db"`
+			Roles      []struct {
+				Role string `bson:"role"`
+				DB   string `bson:"db"`
+			} `bson:"roles"`
+			CustomData map[string]any `bson:"customData"`
+		} `bson:"users"`
+	}
+	err = mc.client.Database(targetDB).RunCommand(ctx, cmd).Decode(&res)
+	mc.track(start, err)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []MongoUserInfo
+	for _, u := range res.Users {
+		var roles []MongoRoleItem
+		for _, r := range u.Roles {
+			roles = append(roles, MongoRoleItem{Role: r.Role, DB: r.DB})
+		}
+		out = append(out, MongoUserInfo{
+			User:       u.User,
+			DB:         u.DB,
+			Roles:      roles,
+			CustomData: u.CustomData,
+		})
+	}
+	return out, nil
+}
+
+// MongoCreateUser 创建用户
+func (m *MongoManager) MongoCreateUser(id string, req MongoCreateUserReq) error {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(req.User) == "" || strings.TrimSpace(req.Pwd) == "" {
+		return errors.New("用户名和密码不能为空")
+	}
+	targetDB := strings.TrimSpace(req.DB)
+	if targetDB == "" {
+		targetDB = "admin"
+	}
+	rolesBson := bson.A{}
+	for _, r := range req.Roles {
+		roleDB := strings.TrimSpace(r.DB)
+		if roleDB == "" {
+			roleDB = targetDB
+		}
+		rolesBson = append(rolesBson, bson.M{"role": r.Role, "db": roleDB})
+	}
+
+	cmd := bson.D{
+		{Key: "createUser", Value: req.User},
+		{Key: "pwd", Value: req.Pwd},
+		{Key: "roles", Value: rolesBson},
+	}
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	start := time.Now()
+	var res bson.M
+	err = mc.client.Database(targetDB).RunCommand(ctx, cmd).Decode(&res)
+	mc.track(start, err)
+	return err
+}
+
+// MongoUpdateUser 修改用户密码或角色
+func (m *MongoManager) MongoUpdateUser(id string, req MongoUpdateUserReq) error {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return err
+	}
+	if strings.TrimSpace(req.User) == "" {
+		return errors.New("用户名不能为空")
+	}
+	targetDB := strings.TrimSpace(req.DB)
+	if targetDB == "" {
+		targetDB = "admin"
+	}
+
+	cmd := bson.D{{Key: "updateUser", Value: req.User}}
+	if strings.TrimSpace(req.Pwd) != "" {
+		cmd = append(cmd, bson.E{Key: "pwd", Value: req.Pwd})
+	}
+	if len(req.Roles) > 0 {
+		rolesBson := bson.A{}
+		for _, r := range req.Roles {
+			roleDB := strings.TrimSpace(r.DB)
+			if roleDB == "" {
+				roleDB = targetDB
+			}
+			rolesBson = append(rolesBson, bson.M{"role": r.Role, "db": roleDB})
+		}
+		cmd = append(cmd, bson.E{Key: "roles", Value: rolesBson})
+	}
+
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	start := time.Now()
+	var res bson.M
+	err = mc.client.Database(targetDB).RunCommand(ctx, cmd).Decode(&res)
+	mc.track(start, err)
+	return err
+}
+
+// MongoDropUser 删除用户
+func (m *MongoManager) MongoDropUser(id, db, username string) error {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return err
+	}
+	targetDB := strings.TrimSpace(db)
+	if targetDB == "" {
+		targetDB = "admin"
+	}
+	cmd := bson.D{{Key: "dropUser", Value: username}}
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	start := time.Now()
+	var res bson.M
+	err = mc.client.Database(targetDB).RunCommand(ctx, cmd).Decode(&res)
+	mc.track(start, err)
+	return err
+}
+
+// ===================== 慢查询与 Profiling =====================
+
+// MongoGetProfilingStatus 获取当前数据库的 Profiling 状态 (level: 0, 1, 2)
+func (m *MongoManager) MongoGetProfilingStatus(id, db string) (map[string]any, error) {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return nil, err
+	}
+	targetDB := strings.TrimSpace(db)
+	if targetDB == "" {
+		targetDB = "admin"
+	}
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	cmd := bson.D{{Key: "profile", Value: -1}}
+	start := time.Now()
+	var res bson.M
+	err = mc.client.Database(targetDB).RunCommand(ctx, cmd).Decode(&res)
+	mc.track(start, err)
+	if err != nil {
+		return nil, err
+	}
+	out := map[string]any{}
+	for k, v := range res {
+		out[k] = v
+	}
+	return out, nil
+}
+
+// MongoSetProfilingStatus 设置 Profiling 级别与慢查询阈值 (slowms)
+func (m *MongoManager) MongoSetProfilingStatus(id, db string, level int, slowms int) error {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return err
+	}
+	targetDB := strings.TrimSpace(db)
+	if targetDB == "" {
+		targetDB = "admin"
+	}
+	if slowms <= 0 {
+		slowms = 100
+	}
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	cmd := bson.D{
+		{Key: "profile", Value: level},
+		{Key: "slowms", Value: slowms},
+	}
+	start := time.Now()
+	var res bson.M
+	err = mc.client.Database(targetDB).RunCommand(ctx, cmd).Decode(&res)
+	mc.track(start, err)
+	return err
+}
+
+// MongoSlowQueries 从指定库的 system.profile 集合中读取最近的慢查询记录
+func (m *MongoManager) MongoSlowQueries(id, db string, limit int) ([]string, error) {
+	mc, err := m.mustMongo(id)
+	if err != nil {
+		return nil, err
+	}
+	targetDB := strings.TrimSpace(db)
+	if targetDB == "" {
+		targetDB = "admin"
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	ctx, cancel := mc.opCtx()
+	defer cancel()
+
+	start := time.Now()
+	coll := mc.client.Database(targetDB).Collection("system.profile")
+	cur, err := coll.Find(ctx, bson.M{}, options.Find().SetSort(bson.D{{Key: "ts", Value: -1}}).SetLimit(int64(limit)))
+	mc.track(start, err)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+
+	var raws []bson.Raw
+	if err := cur.All(ctx, &raws); err != nil {
+		return nil, err
+	}
+	return docsToJSON(raws), nil
+}
+

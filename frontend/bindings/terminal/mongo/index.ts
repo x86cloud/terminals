@@ -3,8 +3,14 @@
 
 export type {
     MongoBulkOp,
+    MongoCloneCollReq,
+    MongoCreateCollOptions,
+    MongoCreateUserReq,
     MongoFindResult,
     MongoQuerySpec,
+    MongoRoleItem,
     MongoTxOp,
-    MongoURIInfo
+    MongoURIInfo,
+    MongoUpdateUserReq,
+    MongoUserInfo
 } from "./models.js";

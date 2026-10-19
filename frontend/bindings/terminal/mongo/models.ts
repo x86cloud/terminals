@@ -23,6 +23,49 @@ export interface MongoBulkOp {
 }
 
 /**
+ * MongoCloneCollReq 克隆集合请求
+ */
+export interface MongoCloneCollReq {
+    "sourceDb": string;
+    "sourceColl": string;
+    "targetDb": string;
+    "targetColl": string;
+
+    /**
+     * 是否同时拷贝文档数据
+     */
+    "copyData": boolean;
+}
+
+/**
+ * MongoCreateCollOptions 高级集合创建选项
+ */
+export interface MongoCreateCollOptions {
+    "name": string;
+    "capped"?: boolean;
+    "size"?: number;
+    "max"?: number;
+    "isTimeseries"?: boolean;
+    "timeField"?: string;
+    "metaField"?: string;
+
+    /**
+     * "seconds", "minutes", "hours"
+     */
+    "granularity"?: string;
+}
+
+/**
+ * MongoCreateUserReq 新建用户请求
+ */
+export interface MongoCreateUserReq {
+    "user": string;
+    "pwd": string;
+    "db": string;
+    "roles": MongoRoleItem[] | null;
+}
+
+/**
  * MongoFindResult 查询结果。
  */
 export interface MongoFindResult {
@@ -71,6 +114,14 @@ export interface MongoQuerySpec {
 }
 
 /**
+ * MongoRoleItem 角色项
+ */
+export interface MongoRoleItem {
+    "role": string;
+    "db": string;
+}
+
+/**
  * MongoTxOp 事务中的一个操作。
  */
 export interface MongoTxOp {
@@ -100,4 +151,24 @@ export interface MongoURIInfo {
     "tls": boolean;
     "srv": boolean;
     "options": { [_ in string]?: string } | null;
+}
+
+/**
+ * MongoUpdateUserReq 更新用户请求
+ */
+export interface MongoUpdateUserReq {
+    "user": string;
+    "db": string;
+    "pwd"?: string;
+    "roles"?: MongoRoleItem[] | null;
+}
+
+/**
+ * MongoUserInfo 用户详情
+ */
+export interface MongoUserInfo {
+    "user": string;
+    "db": string;
+    "roles": MongoRoleItem[] | null;
+    "customData"?: { [_ in string]?: any } | null;
 }

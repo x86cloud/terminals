@@ -28,6 +28,10 @@ export function MongoClientStats(id: string): $CancellablePromise<{ [_ in string
     return $Call.ByID(1923382133, id);
 }
 
+export function MongoCloneCollection(id: string, req: mongo$0.MongoCloneCollReq): $CancellablePromise<number> {
+    return $Call.ByID(4027486946, id, req);
+}
+
 export function MongoClose(id: string): $CancellablePromise<void> {
     return $Call.ByID(431906195, id);
 }
@@ -52,12 +56,20 @@ export function MongoCreateCollection(id: string, dbName: string, coll: string):
     return $Call.ByID(935981625, id, dbName, coll);
 }
 
+export function MongoCreateCollectionAdvanced(id: string, db: string, opt: mongo$0.MongoCreateCollOptions): $CancellablePromise<void> {
+    return $Call.ByID(3882573927, id, db, opt);
+}
+
 export function MongoCreateDatabase(id: string, dbName: string, firstCollection: string): $CancellablePromise<void> {
     return $Call.ByID(3469255360, id, dbName, firstCollection);
 }
 
 export function MongoCreateIndex(id: string, dbName: string, coll: string, keysJSON: string, name: string, unique: boolean, sparse: boolean, expireAfterSeconds: number): $CancellablePromise<string> {
     return $Call.ByID(411226355, id, dbName, coll, keysJSON, name, unique, sparse, expireAfterSeconds);
+}
+
+export function MongoCreateUser(id: string, req: mongo$0.MongoCreateUserReq): $CancellablePromise<void> {
+    return $Call.ByID(1024483418, id, req);
 }
 
 export function MongoCurrentOps(id: string): $CancellablePromise<string[] | null> {
@@ -92,6 +104,10 @@ export function MongoDropIndex(id: string, dbName: string, coll: string, name: s
     return $Call.ByID(2160040248, id, dbName, coll, name);
 }
 
+export function MongoDropUser(id: string, db: string, username: string): $CancellablePromise<void> {
+    return $Call.ByID(860046175, id, db, username);
+}
+
 export function MongoExplain(id: string, spec: mongo$0.MongoQuerySpec, verbosity: string): $CancellablePromise<string> {
     return $Call.ByID(901413100, id, spec, verbosity);
 }
@@ -102,6 +118,10 @@ export function MongoFind(id: string, spec: mongo$0.MongoQuerySpec): $Cancellabl
 
 export function MongoFindOneAndUpdate(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, returnNew: boolean): $CancellablePromise<string> {
     return $Call.ByID(2539216562, id, dbName, coll, filterJSON, updateJSON, returnNew);
+}
+
+export function MongoGetProfilingStatus(id: string, db: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(152554533, id, db);
 }
 
 export function MongoGetValidator(id: string, dbName: string, coll: string): $CancellablePromise<{ [_ in string]?: any } | null> {
@@ -152,8 +172,16 @@ export function MongoServerStatus(id: string): $CancellablePromise<{ [_ in strin
     return $Call.ByID(2809245196, id);
 }
 
+export function MongoSetProfilingStatus(id: string, db: string, level: number, slowms: number): $CancellablePromise<void> {
+    return $Call.ByID(2220061561, id, db, level, slowms);
+}
+
 export function MongoSetValidator(id: string, dbName: string, coll: string, validatorJSON: string, level: string, action: string): $CancellablePromise<void> {
     return $Call.ByID(3176020167, id, dbName, coll, validatorJSON, level, action);
+}
+
+export function MongoSlowQueries(id: string, db: string, limit: number): $CancellablePromise<string[] | null> {
+    return $Call.ByID(3482017304, id, db, limit);
 }
 
 export function MongoTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
@@ -174,6 +202,14 @@ export function MongoUpdateMany(id: string, dbName: string, coll: string, filter
 
 export function MongoUpdateOne(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean): $CancellablePromise<{ [_ in string]?: any } | null> {
     return $Call.ByID(2043631192, id, dbName, coll, filterJSON, updateJSON, upsert);
+}
+
+export function MongoUpdateUser(id: string, req: mongo$0.MongoUpdateUserReq): $CancellablePromise<void> {
+    return $Call.ByID(3862912615, id, req);
+}
+
+export function MongoUsers(id: string, db: string): $CancellablePromise<mongo$0.MongoUserInfo[] | null> {
+    return $Call.ByID(2558212963, id, db);
 }
 
 export function MongoValidateDocument(id: string, dbName: string, coll: string, docJSON: string): $CancellablePromise<{ [_ in string]?: any } | null> {

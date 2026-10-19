@@ -14,6 +14,8 @@ import {
     Layers,
     SlidersHorizontal,
     Edit,
+    Shield,
+    CopyPlus,
 } from 'lucide-react'
 import { API } from '@/api'
 import ClientIcon from '@/components/ClientIcon'
@@ -23,6 +25,7 @@ import TabBar, { TabItem } from '@/components/common/TabBar'
 import DataTab from './DataTab'
 import MqlEditor from './MqlEditor'
 import StatusPanel from './StatusPanel'
+import UsersTab from './UsersTab'
 import ObjModal, { MongoObjModalKind } from './ObjModal'
 import IoModal from './IoModal'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
@@ -56,6 +59,13 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
             key: 'status',
             label: '性能监控',
             type: 'status',
+            dbName: currentDb,
+            closable: false,
+        },
+        {
+            key: 'users',
+            label: '用户与权限',
+            type: 'users',
             dbName: currentDb,
             closable: false,
         },
@@ -212,8 +222,18 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         }
     }
 
-    // 弹窗确认操作
-    const handleObjConfirm = async (extra?: { capped?: boolean; size?: number; max?: number; firstColl?: string }) => {
+    const handleObjConfirm = async (extra?: {
+        capped?: boolean
+        size?: number
+        max?: number
+        firstColl?: string
+        isTimeseries?: boolean
+        timeField?: string
+        metaField?: string
+        granularity?: string
+        targetDb?: string
+        copyData?: boolean
+    }) => {
         if (!objModal) return
         setObjBusy(true)
         setObjMsg('')
@@ -227,20 +247,38 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                     break
                 }
                 case 'createcoll': {
-                    if (extra?.capped) {
-                        const cmd: Record<string, any> = {
-                            create: objName,
-                            capped: true,
-                            size: extra.size || 10485760,
-                        }
-                        if (extra.max) cmd.max = extra.max
-                        await API.mongoRunCommand(id, objDb, JSON.stringify(cmd))
+                    if (extra?.capped || extra?.isTimeseries) {
+                        await API.mongoCreateCollectionAdvanced(id, objDb, {
+                            name: objName,
+                            capped: Boolean(extra.capped),
+                            size: extra.size,
+                            max: extra.max,
+                            isTimeseries: Boolean(extra.isTimeseries),
+                            timeField: extra.timeField,
+                            metaField: extra.metaField,
+                            granularity: extra.granularity,
+                        })
                     } else {
                         await API.mongoCreateCollection(id, objDb, objName)
                     }
                     message.success(`集合 ${objName} 创建成功`)
                     await loadCollections(objDb)
                     openCollectionTab(objDb, objName)
+                    break
+                }
+                case 'clonecoll': {
+                    const targetDb = extra?.targetDb || objDb
+                    const copyData = extra?.copyData ?? true
+                    const count = await API.mongoCloneCollection(id, {
+                        sourceDb: objDb,
+                        sourceColl: objColl,
+                        targetDb,
+                        targetColl: objName,
+                        copyData,
+                    })
+                    message.success(`集合已成功克隆至 ${targetDb}.${objName}${copyData ? ` (已拷贝 ${count} 条文档)` : ''}`)
+                    await loadCollections(targetDb)
+                    openCollectionTab(targetDb, objName)
                     break
                 }
                 case 'renamecoll': {
@@ -255,6 +293,11 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 case 'truncatecoll': {
                     const count = await API.mongoDeleteMany(id, objDb, objColl, '{}')
                     message.success(`已清空集合 ${objColl} (${count} 条文档)`)
+                    const tabKey = `data:${objDb}.${objColl}`
+                    if (tabs.some((t) => t.key === tabKey)) {
+                        handleCloseTab(tabKey)
+                        setTimeout(() => openCollectionTab(objDb, objColl), 50)
+                    }
                     break
                 }
                 case 'dropcoll': {
@@ -374,6 +417,17 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
             onClick: () => setExportModal({ db: dbName, coll: collName }),
         },
         {
+            key: 'clone-coll',
+            icon: <CopyPlus size={13} />,
+            label: '克隆集合 (结构/数据)',
+            onClick: () => {
+                setObjDb(dbName)
+                setObjColl(collName)
+                setObjName(`${collName}_copy`)
+                setObjModal('clonecoll')
+            },
+        },
+        {
             key: 'truncate',
             icon: <Trash2 size={13} />,
             label: '清空集合数据',
@@ -421,6 +475,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         return tabs.map((t) => {
             let icon: React.ReactNode = <TableIcon size={13} />
             if (t.type === 'status') icon = <Activity size={13} color="#10b981" />
+            else if (t.type === 'users') icon = <Shield size={13} color="#8b5cf6" />
             else if (t.type === 'query') icon = <Play size={13} color="#0ea5e9" />
 
             return {
@@ -460,7 +515,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                     <div className={m.sideTitle}>
                         <ClientIcon kind="mongo" size={16} />
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            MongoDB · {session.host}:{session.port}
+                            {session.host}:{session.port}
                         </span>
                     </div>
                     <Space size={2}>
@@ -657,7 +712,18 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                         }
 
                         if (t.type === 'status') {
-                            return <StatusPanel key={t.key} session={session} />
+                            return <StatusPanel key={t.key} session={session} databases={databases} />
+                        }
+
+                        if (t.type === 'users') {
+                            return (
+                                <UsersTab
+                                    key={t.key}
+                                    session={session}
+                                    databases={databases}
+                                    currentDb={currentDb}
+                                />
+                            )
                         }
 
                         return null
@@ -665,7 +731,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 </div>
             </main>
 
-            {/* 对象管理模态框 (新建库/集合/删除/清空/重命名) */}
+            {/* 对象管理模态框 (新建库/集合/克隆/删除/清空/重命名) */}
             {objModal && (
                 <ObjModal
                     kind={objModal}
@@ -674,6 +740,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                     busy={objBusy}
                     msg={objMsg}
                     name={objName}
+                    databases={databases}
                     onName={setObjName}
                     onClose={() => setObjModal(null)}
                     onConfirm={handleObjConfirm}

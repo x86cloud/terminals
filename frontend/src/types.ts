@@ -520,6 +520,7 @@ export interface PostgresSessionInfo {
 export interface MqttSessionInfo {
     id: string
     serverId: string
+    title: string
     host: string
     port: number
     username: string
@@ -829,6 +830,69 @@ export interface MongoTxResult {
     committed: boolean
     durationMs: number
     error?: string
+}
+
+// 用户与角色管理
+export interface MongoRoleItem {
+    role: string
+    db: string
+}
+
+export interface MongoUserInfo {
+    user: string
+    db: string
+    roles: MongoRoleItem[]
+    customData?: Record<string, any>
+}
+
+export interface MongoCreateUserReq {
+    user: string
+    pwd: string
+    db: string
+    roles: MongoRoleItem[]
+}
+
+export interface MongoUpdateUserReq {
+    user: string
+    db: string
+    pwd?: string
+    roles?: MongoRoleItem[]
+}
+
+// 高级集合创建选项
+export interface MongoCreateCollOptions {
+    name: string
+    capped?: boolean
+    size?: number
+    max?: number
+    isTimeseries?: boolean
+    timeField?: string
+    metaField?: string
+    granularity?: string
+}
+
+// 集合克隆请求
+export interface MongoCloneCollReq {
+    sourceDb: string
+    sourceColl: string
+    targetDb: string
+    targetColl: string
+    copyData: boolean
+}
+
+// 慢查询分析
+export interface MongoSlowQueryItem {
+    ts?: string
+    millis: number
+    op: string
+    ns: string
+    command?: Record<string, any>
+    docsExamined?: number
+    keysExamined?: number
+    nreturned?: number
+    responseLength?: number
+    client?: string
+    raw: string
 }
 
 // 性能监控

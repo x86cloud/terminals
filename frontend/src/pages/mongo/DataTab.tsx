@@ -799,57 +799,65 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                 <div className={d.filterBuilder}>
                     <div className={d.filterGrid}>
                         <div className={d.filterField}>
-                            <span>过滤条件 Filter (JSON)</span>
+                            <span className={d.filterLabel}>过滤条件 Filter (JSON)</span>
                             <CodeEditor
                                 lang="json"
                                 height="65px"
                                 value={filterText}
                                 onChange={setFilterText}
+                                onModEnter={() => runQuery(1, pageSize)}
                                 placeholder='{"status": "active"}'
                             />
                         </div>
                         <div className={d.filterField}>
-                            <span>投影 Projection (可选)</span>
+                            <span className={d.filterLabel}>投影 Projection (可选)</span>
                             <CodeEditor
                                 lang="json"
                                 height="65px"
                                 value={projectionText}
                                 onChange={setProjectionText}
+                                onModEnter={() => runQuery(1, pageSize)}
                                 placeholder='{"name": 1, "_id": 0}'
                             />
                         </div>
                         <div className={d.filterField}>
-                            <span>排序 Sort (可选)</span>
+                            <span className={d.filterLabel}>排序 Sort (可选)</span>
                             <CodeEditor
                                 lang="json"
                                 height="65px"
                                 value={sortText}
                                 onChange={setSortText}
+                                onModEnter={() => runQuery(1, pageSize)}
                                 placeholder='{"createdAt": -1}'
                             />
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: 120 }}>
-                            <Button
-                                type="primary"
-                                size="small"
-                                icon={<Search size={12} />}
-                                loading={busy}
-                                onClick={() => runQuery(1, pageSize)}
-                            >
-                                执行查询
-                            </Button>
-                            <Button
-                                size="small"
-                                onClick={() => {
-                                    setFilterText('{}')
-                                    setProjectionText('')
-                                    setSortText('{}')
-                                    setFilters({})
-                                    setSkip(0)
-                                }}
-                            >
-                                重置全部
-                            </Button>
+                        <div className={d.filterActions}>
+                            <span className={d.filterLabelPlaceholder}>&nbsp;</span>
+                            <div className={d.actionButtonGroup}>
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<Search size={12} />}
+                                    loading={busy}
+                                    onClick={() => runQuery(1, pageSize)}
+                                    className={d.queryBtn}
+                                >
+                                    执行查询
+                                </Button>
+                                <Button
+                                    size="small"
+                                    onClick={() => {
+                                        setFilterText('{}')
+                                        setProjectionText('')
+                                        setSortText('{}')
+                                        setFilters({})
+                                        setSkip(0)
+                                    }}
+                                    className={d.resetBtn}
+                                >
+                                    重置全部
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>

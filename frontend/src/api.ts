@@ -44,6 +44,11 @@ import type {
     MongoFieldInfo,
     MongoValidationResult,
     MongoIndexInfo,
+    MongoUserInfo,
+    MongoCreateUserReq,
+    MongoUpdateUserReq,
+    MongoCreateCollOptions,
+    MongoCloneCollReq,
     MqttSubscription,
     SqliteTableInfo,
     SqliteColumnInfo,
@@ -666,6 +671,24 @@ export const API = {
     ): Promise<string> => MongoService.MongoWatch(id, scope, dbName, coll, pipelineJSON, fullDocument),
     mongoUnwatch: (id: string, watchKey: string): Promise<void> => MongoService.MongoUnwatch(id, watchKey),
     mongoWatchList: (id: string): Promise<string[]> => MongoService.MongoWatchList(id).then(r => r || []),
+    mongoUsers: (id: string, dbName: string): Promise<MongoUserInfo[]> =>
+        (MongoService as any).MongoUsers(id, dbName).then((r: any) => r || []),
+    mongoCreateUser: (id: string, req: MongoCreateUserReq): Promise<void> =>
+        (MongoService as any).MongoCreateUser(id, req),
+    mongoUpdateUser: (id: string, req: MongoUpdateUserReq): Promise<void> =>
+        (MongoService as any).MongoUpdateUser(id, req),
+    mongoDropUser: (id: string, dbName: string, username: string): Promise<void> =>
+        (MongoService as any).MongoDropUser(id, dbName, username),
+    mongoCreateCollectionAdvanced: (id: string, dbName: string, opt: MongoCreateCollOptions): Promise<void> =>
+        (MongoService as any).MongoCreateCollectionAdvanced(id, dbName, opt),
+    mongoCloneCollection: (id: string, req: MongoCloneCollReq): Promise<number> =>
+        (MongoService as any).MongoCloneCollection(id, req),
+    mongoGetProfilingStatus: (id: string, dbName: string): Promise<Record<string, any>> =>
+        (MongoService as any).MongoGetProfilingStatus(id, dbName).then((r: any) => r || {}),
+    mongoSetProfilingStatus: (id: string, dbName: string, level: number, slowms: number): Promise<void> =>
+        (MongoService as any).MongoSetProfilingStatus(id, dbName, level, slowms),
+    mongoSlowQueries: (id: string, dbName: string, limit: number): Promise<string[]> =>
+        (MongoService as any).MongoSlowQueries(id, dbName, limit).then((r: any) => r || []),
 
     // SQLite
     sqliteOpenFile: (): Promise<string> => SqliteService.SqliteOpenFile(),

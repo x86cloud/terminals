@@ -2,7 +2,7 @@
 
 export type MongoTabKey = 'documents' | 'aggregate' | 'indexes' | 'schema' | 'monitor' | 'stream'
 
-export type MongoTabType = 'status' | 'query' | 'data'
+export type MongoTabType = 'status' | 'query' | 'data' | 'users'
 
 export interface MongoTabItem {
     key: string

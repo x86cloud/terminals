@@ -85,7 +85,7 @@ export default function SessionTabs() {
         sessions.mqtt.forEach((s) => {
             list.push({
                 key: `mqtt:${s.id}`,
-                label: `${s.host}:${s.port}`,
+                label: s.title || `${s.host}:${s.port}`,
                 icon: <ClientIcon kind="mqtt" size={14} />,
                 dotOn: true,
                 closable: true,

@@ -329,3 +329,46 @@ func (s *MongoService) MongoUnwatch(id, watchKey string) error {
 func (s *MongoService) MongoWatchList(id string) ([]string, error) {
 	return GetContainer().MongoMgr.MongoWatchList(id)
 }
+
+func (s *MongoService) MongoUsers(id, db string) ([]mongo.MongoUserInfo, error) {
+	return GetContainer().MongoMgr.MongoUsers(id, db)
+}
+
+func (s *MongoService) MongoCreateUser(id string, req mongo.MongoCreateUserReq) error {
+	logger.Infof("MongoDB 创建用户 [ID=%s, User=%s, DB=%s]", id, req.User, req.DB)
+	return GetContainer().MongoMgr.MongoCreateUser(id, req)
+}
+
+func (s *MongoService) MongoUpdateUser(id string, req mongo.MongoUpdateUserReq) error {
+	logger.Infof("MongoDB 更新用户 [ID=%s, User=%s, DB=%s]", id, req.User, req.DB)
+	return GetContainer().MongoMgr.MongoUpdateUser(id, req)
+}
+
+func (s *MongoService) MongoDropUser(id, db, username string) error {
+	logger.Infof("MongoDB 删除用户 [ID=%s, DB=%s, User=%s]", id, db, username)
+	return GetContainer().MongoMgr.MongoDropUser(id, db, username)
+}
+
+func (s *MongoService) MongoCreateCollectionAdvanced(id, db string, opt mongo.MongoCreateCollOptions) error {
+	logger.Infof("MongoDB 创建高级集合 [ID=%s, DB=%s, Coll=%s, Capped=%v, TimeSeries=%v]", id, db, opt.Name, opt.Capped, opt.IsTimeseries)
+	return GetContainer().MongoMgr.MongoCreateCollectionAdvanced(id, db, opt)
+}
+
+func (s *MongoService) MongoCloneCollection(id string, req mongo.MongoCloneCollReq) (int64, error) {
+	logger.Infof("MongoDB 克隆集合 [ID=%s, Source=%s.%s, Target=%s.%s, CopyData=%v]", id, req.SourceDB, req.SourceColl, req.TargetDB, req.TargetColl, req.CopyData)
+	return GetContainer().MongoMgr.MongoCloneCollection(id, req)
+}
+
+func (s *MongoService) MongoGetProfilingStatus(id, db string) (map[string]any, error) {
+	return GetContainer().MongoMgr.MongoGetProfilingStatus(id, db)
+}
+
+func (s *MongoService) MongoSetProfilingStatus(id, db string, level int, slowms int) error {
+	logger.Infof("MongoDB 设置 Profiling [ID=%s, DB=%s, Level=%d, SlowMS=%d]", id, db, level, slowms)
+	return GetContainer().MongoMgr.MongoSetProfilingStatus(id, db, level, slowms)
+}
+
+func (s *MongoService) MongoSlowQueries(id, db string, limit int) ([]string, error) {
+	return GetContainer().MongoMgr.MongoSlowQueries(id, db, limit)
+}
+

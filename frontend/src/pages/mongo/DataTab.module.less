@@ -81,20 +81,60 @@
 .filterGrid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr auto;
-    gap: 10px;
+    gap: 12px;
     align-items: start;
 }
 
 .filterField {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 5px;
+    min-width: 0;
+}
 
-    span {
-        font-size: 11.5px;
-        color: @text-dim;
-        font-weight: 500;
-    }
+.filterLabel {
+    font-size: 11.5px;
+    color: @text-dim;
+    font-weight: 500;
+    height: 18px;
+    line-height: 18px;
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.filterActions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    width: 100px;
+    flex-shrink: 0;
+}
+
+.filterLabelPlaceholder {
+    height: 18px;
+    line-height: 18px;
+    display: block;
+    user-select: none;
+    visibility: hidden;
+}
+
+.actionButtonGroup {
+    display: flex;
+    flex-direction: column;
+    height: 65px;
+    justify-content: space-between;
+}
+
+.queryBtn,
+.resetBtn {
+    height: 28px !important;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 .viewArea {

@@ -8,6 +8,11 @@ import {
     Segmented,
     Popconfirm,
     Tooltip,
+    Select,
+    Radio,
+    InputNumber,
+    Modal,
+    Alert,
     message,
 } from 'antd'
 import {
@@ -16,19 +21,23 @@ import {
     Server,
     Zap,
     Cpu,
-    Radio,
+    Radio as RadioIcon,
     HardDrive,
     Search,
     XOctagon,
     AlertTriangle,
+    Sliders,
+    Copy,
 } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
+import { copyTextToClipboard } from '@/utils/sqlExport'
 import { MongoSessionInfo, MongoHealthInfo, MongoServerStatus } from '@/types'
 import s from './StatusPanel.module.less'
 
 interface Props {
     session: MongoSessionInfo
+    databases?: string[]
 }
 
 interface ParsedCurrentOp {
@@ -59,9 +68,9 @@ function fmtMb(mb?: number): string {
     return `${mb} MB`
 }
 
-export default function StatusPanel({ session }: Props) {
+export default function StatusPanel({ session, databases = [] }: Props) {
     const id = session.id
-    const [subTab, setSubTab] = useState<'overview' | 'currentOps' | 'serverStatus'>('overview')
+    const [subTab, setSubTab] = useState<'overview' | 'currentOps' | 'slowQueries' | 'serverStatus'>('overview')
     const [health, setHealth] = useState<MongoHealthInfo | null>(null)
     const [status, setStatus] = useState<MongoServerStatus | null>(null)
     const [client, setClient] = useState<Record<string, any>>({})
@@ -70,6 +79,18 @@ export default function StatusPanel({ session }: Props) {
     const [error, setError] = useState('')
     const [searchParam, setSearchParam] = useState('')
     const [killingOp, setKillingOp] = useState<string | number | null>(null)
+
+    // 慢查询分析与 Profiler 状态
+    const [profilerDb, setProfilerDb] = useState<string>(session.database || databases[0] || 'admin')
+    const [profilerStatus, setProfilerStatus] = useState<{ was?: number; slowms?: number } | null>(null)
+    const [rawSlowQueries, setRawSlowQueries] = useState<string[]>([])
+    const [loadingSlow, setLoadingSlow] = useState(false)
+    const [slowError, setSlowError] = useState('')
+    const [profilerModalOpen, setProfilerModalOpen] = useState(false)
+    const [editLevel, setEditLevel] = useState<number>(1)
+    const [editSlowMs, setEditSlowMs] = useState<number>(100)
+    const [savingProfiler, setSavingProfiler] = useState(false)
+    const [cmdDetailModal, setCmdDetailModal] = useState<{ open: boolean; title: string; json: string } | null>(null)
 
     const loadData = useCallback(async () => {
         setBusy(true)
@@ -176,6 +197,97 @@ export default function StatusPanel({ session }: Props) {
         )
     }, [flattenedParams, searchParam])
 
+    // 加载指定库的慢查询与 Profiler 状态
+    const loadSlowQueries = useCallback(async () => {
+        setLoadingSlow(true)
+        setSlowError('')
+        try {
+            const [prof, queries] = await Promise.all([
+                API.mongoGetProfilingStatus(id, profilerDb).catch(() => null),
+                API.mongoSlowQueries(id, profilerDb, 100).catch(() => [] as string[]),
+            ])
+            setProfilerStatus(prof)
+            if (prof?.was !== undefined) {
+                setEditLevel(Number(prof.was))
+            }
+            if (prof?.slowms !== undefined) {
+                setEditSlowMs(Number(prof.slowms))
+            }
+            setRawSlowQueries(queries || [])
+        } catch (e: any) {
+            setSlowError(errorMessage(e))
+        } finally {
+            setLoadingSlow(false)
+        }
+    }, [id, profilerDb])
+
+    useEffect(() => {
+        if (subTab === 'slowQueries') {
+            void loadSlowQueries()
+        }
+    }, [subTab, loadSlowQueries])
+
+    // 保存 Profiler 配置
+    const handleSaveProfiler = async () => {
+        setSavingProfiler(true)
+        try {
+            await API.mongoSetProfilingStatus(id, profilerDb, editLevel, editSlowMs)
+            message.success(`已更新数据库 [${profilerDb}] 的 Profiling 级别为 Level ${editLevel}`)
+            setProfilerModalOpen(false)
+            void loadSlowQueries()
+        } catch (e: any) {
+            message.error(errorMessage(e))
+        } finally {
+            setSavingProfiler(false)
+        }
+    }
+
+    // 解析慢查询列表
+    const parsedSlowQueries = useMemo(() => {
+        return rawSlowQueries.map((str, idx) => {
+            let obj: any = {}
+            try {
+                obj = JSON.parse(str)
+            } catch {
+                obj = { raw: str }
+            }
+
+            let cmdStr = ''
+            if (obj.command) {
+                try {
+                    cmdStr = JSON.stringify(obj.command, null, 2)
+                } catch {
+                    cmdStr = String(obj.command)
+                }
+            }
+
+            let tsStr = '-'
+            if (obj.ts) {
+                if (typeof obj.ts === 'object' && obj.ts.$date) {
+                    tsStr = new Date(obj.ts.$date).toLocaleString()
+                } else {
+                    tsStr = String(obj.ts)
+                }
+            }
+
+            return {
+                key: idx,
+                ts: tsStr,
+                millis: Number(obj.millis) || 0,
+                op: obj.op || '-',
+                ns: obj.ns || '-',
+                keysExamined: obj.keysExamined !== undefined ? obj.keysExamined : '-',
+                docsExamined: obj.docsExamined !== undefined ? obj.docsExamined : '-',
+                nreturned: obj.nreturned !== undefined ? obj.nreturned : '-',
+                responseLength: obj.responseLength,
+                client: obj.client || '-',
+                commandSummary: cmdStr ? cmdStr.slice(0, 120) : '-',
+                cmdStr,
+                raw: str,
+            }
+        })
+    }, [rawSlowQueries])
+
     // KPI 数据推导
     const connCurrent = status?.connections?.current ?? client.activeConn ?? 0
     const connAvailable = status?.connections?.available ?? client.maxPoolSize ?? 0
@@ -204,6 +316,11 @@ export default function StatusPanel({ session }: Props) {
                                 value: 'currentOps',
                                 icon: <Zap size={12} />,
                             },
+                            {
+                                label: `慢查询分析 (${parsedSlowQueries.length})`,
+                                value: 'slowQueries',
+                                icon: <AlertTriangle size={12} />,
+                            },
                             { label: '系统参数检索', value: 'serverStatus', icon: <Search size={12} /> },
                         ]}
                     />
@@ -215,8 +332,14 @@ export default function StatusPanel({ session }: Props) {
                         size="small"
                         type="primary"
                         icon={<RotateCw size={12} />}
-                        loading={busy}
-                        onClick={loadData}
+                        loading={busy || loadingSlow}
+                        onClick={() => {
+                            if (subTab === 'slowQueries') {
+                                void loadSlowQueries()
+                            } else {
+                                void loadData()
+                            }
+                        }}
                     >
                         刷新指标
                     </Button>
@@ -229,7 +352,7 @@ export default function StatusPanel({ session }: Props) {
                 <div className={s.kpiCard}>
                     <div className={s.kpiLabel}>
                         <span>服务健康度</span>
-                        <Radio size={13} style={{ color: health?.ok ? '#22c55e' : '#ef4444' }} />
+                        <RadioIcon size={13} style={{ color: health?.ok ? '#22c55e' : '#ef4444' }} />
                     </div>
                     <div className={s.kpiValue} style={{ color: health?.ok ? '#22c55e' : '#ef4444' }}>
                         {health ? (health.ok ? '健康正常' : '服务异常') : '-'}
@@ -470,6 +593,172 @@ export default function StatusPanel({ session }: Props) {
                 </div>
             )}
 
+            {/* 子视图：慢查询分析 (Profiler) */}
+            {subTab === 'slowQueries' && (
+                <div className={s.sectionBox}>
+                    <div className={s.sectionHeader}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <span>慢查询分析 (system.profile)</span>
+                            <Select
+                                size="small"
+                                style={{ width: 140 }}
+                                value={profilerDb}
+                                onChange={(v) => setProfilerDb(v)}
+                                options={[
+                                    { label: 'admin 库', value: 'admin' },
+                                    ...databases.filter((d) => d !== 'admin').map((d) => ({ label: d, value: d })),
+                                ]}
+                            />
+                            {profilerStatus?.was === 0 && (
+                                <Tag color="default">Profiler 未开启 (Level 0)</Tag>
+                            )}
+                            {profilerStatus?.was === 1 && (
+                                <Tag color="green">
+                                    Profiler 仅慢操作 (Level 1, 阈值: {profilerStatus.slowms ?? 100}ms)
+                                </Tag>
+                            )}
+                            {profilerStatus?.was === 2 && (
+                                <Tag color="warning">
+                                    Profiler 全量操作 (Level 2)
+                                </Tag>
+                            )}
+                        </div>
+
+                        <Space size={8}>
+                            <Button
+                                size="small"
+                                icon={<Sliders size={12} />}
+                                onClick={() => setProfilerModalOpen(true)}
+                            >
+                                配置 Profiler
+                            </Button>
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<RotateCw size={12} className={loadingSlow ? 'spin' : ''} />}
+                                onClick={() => void loadSlowQueries()}
+                            >
+                                刷新
+                            </Button>
+                        </Space>
+                    </div>
+
+                    {slowError && (
+                        <Alert
+                            type="info"
+                            showIcon
+                            message={`提示: ${slowError}`}
+                            description="若提示集合不存在，说明当前库尚未开启 Profiler 或尚未产生慢查询记录。可点击上方「配置 Profiler」开启记录。"
+                        />
+                    )}
+
+                    <Table
+                        size="small"
+                        rowKey="key"
+                        loading={loadingSlow}
+                        dataSource={parsedSlowQueries}
+                        pagination={{ pageSize: 20, size: 'small', showSizeChanger: true }}
+                        columns={[
+                            {
+                                title: '执行时间',
+                                dataIndex: 'ts',
+                                width: 160,
+                                render: (ts) => <span style={{ fontSize: 11 }}>{ts}</span>,
+                            },
+                            {
+                                title: '耗时',
+                                dataIndex: 'millis',
+                                width: 90,
+                                sorter: (a, b) => a.millis - b.millis,
+                                render: (ms) => {
+                                    let color = '#22c55e'
+                                    if (ms >= 1000) color = '#ef4444'
+                                    else if (ms >= 300) color = '#f97316'
+                                    else if (ms >= 100) color = '#eab308'
+                                    return (
+                                        <Tag style={{ color, borderColor: color, background: 'transparent', fontWeight: 600 }}>
+                                            {ms}ms
+                                        </Tag>
+                                    )
+                                },
+                            },
+                            {
+                                title: '类型',
+                                dataIndex: 'op',
+                                width: 85,
+                                render: (op) => {
+                                    const map: Record<string, string> = {
+                                        query: 'blue',
+                                        insert: 'green',
+                                        update: 'orange',
+                                        remove: 'red',
+                                        command: 'cyan',
+                                    }
+                                    return <Tag color={map[op] || 'default'}>{op}</Tag>
+                                },
+                            },
+                            {
+                                title: '命名空间 (ns)',
+                                dataIndex: 'ns',
+                                width: 160,
+                                ellipsis: true,
+                                render: (ns) => <span style={{ fontFamily: 'monospace', fontSize: 11.5 }}>{ns}</span>,
+                            },
+                            {
+                                title: '扫描 / 返回比',
+                                width: 170,
+                                render: (_, r) => (
+                                    <span style={{ fontSize: 11, fontFamily: 'monospace' }}>
+                                        扫描 {r.docsExamined} / 索引 {r.keysExamined} / 返回 {r.nreturned}
+                                    </span>
+                                ),
+                            },
+                            {
+                                title: '客户端',
+                                dataIndex: 'client',
+                                width: 130,
+                                ellipsis: true,
+                                render: (cl) => <span style={{ fontSize: 11 }}>{cl}</span>,
+                            },
+                            {
+                                title: '命令摘要',
+                                dataIndex: 'commandSummary',
+                                ellipsis: true,
+                                render: (cmd, r) => (
+                                    <span
+                                        style={{ fontFamily: 'monospace', fontSize: 11, cursor: 'pointer', color: 'var(--accent)' }}
+                                        onClick={() =>
+                                            setCmdDetailModal({
+                                                open: true,
+                                                title: `慢查询详情 (${r.ns} - ${r.millis}ms)`,
+                                                json: r.cmdStr || r.raw,
+                                            })
+                                        }
+                                    >
+                                        {cmd}
+                                    </span>
+                                ),
+                            },
+                            {
+                                title: '操作',
+                                width: 80,
+                                align: 'center',
+                                render: (_, r) => (
+                                    <Tooltip title="复制命令 JSON">
+                                        <Button
+                                            size="small"
+                                            type="text"
+                                            icon={<Copy size={12} />}
+                                            onClick={() => copyTextToClipboard(r.cmdStr || r.raw, '已复制慢查询命令')}
+                                        />
+                                    </Tooltip>
+                                ),
+                            },
+                        ]}
+                    />
+                </div>
+            )}
+
             {/* 子视图 3：ServerStatus 参数检索 */}
             {subTab === 'serverStatus' && (
                 <div className={s.sectionBox}>
@@ -514,6 +803,101 @@ export default function StatusPanel({ session }: Props) {
                     />
                 </div>
             )}
+
+            {/* 慢查询详情弹窗 */}
+            <Modal
+                title={cmdDetailModal?.title || '慢查询详情'}
+                open={Boolean(cmdDetailModal?.open)}
+                onCancel={() => setCmdDetailModal(null)}
+                footer={[
+                    <Button
+                        key="copy"
+                        icon={<Copy size={12} />}
+                        onClick={() => {
+                            if (cmdDetailModal) {
+                                copyTextToClipboard(cmdDetailModal.json, '已复制完整命令')
+                            }
+                        }}
+                    >
+                        复制 JSON
+                    </Button>,
+                    <Button key="close" type="primary" onClick={() => setCmdDetailModal(null)}>
+                        关闭
+                    </Button>,
+                ]}
+                width={650}
+            >
+                <div style={{ maxHeight: 420, overflow: 'auto', background: 'var(--bg-2, #181a1f)', padding: 12, borderRadius: 6, margin: '10px 0' }}>
+                    <pre style={{ margin: 0, fontSize: 12, fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                        {cmdDetailModal?.json}
+                    </pre>
+                </div>
+            </Modal>
+
+            {/* 配置 Profiler 弹窗 */}
+            <Modal
+                title={`配置数据库 [${profilerDb}] Profiler`}
+                open={profilerModalOpen}
+                onCancel={() => !savingProfiler && setProfilerModalOpen(false)}
+                onOk={handleSaveProfiler}
+                confirmLoading={savingProfiler}
+                okText="保存配置"
+                cancelText="取消"
+                width={480}
+            >
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>
+                    <div>
+                        <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8 }}>分析日志级别 (Profiling Level)：</div>
+                        <Radio.Group
+                            value={editLevel}
+                            onChange={(e) => setEditLevel(e.target.value)}
+                            style={{ display: 'flex', flexDirection: 'column', gap: 8 }}
+                        >
+                            <Radio value={0}>
+                                <div>
+                                    <span style={{ fontWeight: 600 }}>Level 0 - 关闭</span>
+                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>不收集任何查询日志，零性能损耗</div>
+                                </div>
+                            </Radio>
+                            <Radio value={1}>
+                                <div>
+                                    <span style={{ fontWeight: 600 }}>Level 1 - 仅慢查询 (推荐)</span>
+                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>仅记录耗时超过阈值的操作到 system.profile</div>
+                                </div>
+                            </Radio>
+                            <Radio value={2}>
+                                <div>
+                                    <span style={{ fontWeight: 600 }}>Level 2 - 全量收集 (调试)</span>
+                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>记录库内所有读写操作，会产生一定 I/O 写入开销</div>
+                                </div>
+                            </Radio>
+                        </Radio.Group>
+                    </div>
+
+                    {editLevel > 0 && (
+                        <div>
+                            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>慢查询耗时阈值 (slowms)：</div>
+                            <Space size={8}>
+                                <InputNumber
+                                    min={1}
+                                    max={60000}
+                                    value={editSlowMs}
+                                    onChange={(v) => setEditSlowMs(v || 100)}
+                                    addonAfter="ms"
+                                    style={{ width: 140 }}
+                                />
+                                <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>默认 100ms</span>
+                            </Space>
+                        </div>
+                    )}
+
+                    <Alert
+                        type="info"
+                        showIcon
+                        message="提示：MongoDB 的 system.profile 是一个固定集合 (Capped Collection)，不会无限增长，重启或手动调用即可重置。"
+                    />
+                </div>
+            </Modal>
         </div>
     )
 }
