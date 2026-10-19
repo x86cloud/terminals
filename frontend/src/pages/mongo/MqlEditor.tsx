@@ -337,6 +337,7 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
             {/* 编辑区 */}
             <div className={e.editorPane}>
                 <CodeEditor
+                    bordered={false}
                     lang="json"
                     value={code}
                     onChange={setCode}
@@ -406,8 +407,8 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                                                     val === null || val === undefined
                                                         ? 'null'
                                                         : typeof val === 'object'
-                                                        ? JSON.stringify(val)
-                                                        : String(val)
+                                                            ? JSON.stringify(val)
+                                                            : String(val)
                                                 return (
                                                     <td key={c.key} title={str}>
                                                         {str}

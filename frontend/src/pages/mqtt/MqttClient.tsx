@@ -22,8 +22,6 @@ import {
     ChevronUp,
     Sparkles,
     Minimize2,
-    ArrowDownToLine,
-    ArrowUpFromLine,
     Inbox,
     Filter,
     Layers,
@@ -313,7 +311,7 @@ export default function MqttClient({ session, onClose }: Props) {
                     <div className={m.connHeader}>
                         <div className={m.connTitle} title={session.title ? `${session.title} (${session.host}:${session.port})` : `${session.host}:${session.port}`}>
                             <Radio size={14} color="var(--accent)" />
-                            <span>{session.title || `${session.host}:${session.port}`}</span>
+                            <span>{session.host}:{session.port}</span>
                         </div>
                         <span className={`${m.statusPill} ${status.connected ? m.connected : m.disconnected}`}>
                             <span className={`${m.statusDot} ${status.connected ? m.pulsing : ''}`} />
@@ -326,19 +324,6 @@ export default function MqttClient({ session, onClose }: Props) {
                             @{session.clientId || 'auto'}
                         </Tag>
                         <span style={{ fontSize: 11 }}>QoS 0/1/2</span>
-                    </div>
-
-                    <div className={m.statsBar}>
-                        <div className={m.statItem} title="接收到的消息总量">
-                            <ArrowDownToLine size={11} color="#10b981" />
-                            <span>接收</span>
-                            <strong>{totalIn}</strong>
-                        </div>
-                        <div className={m.statItem} title="发出的消息总量">
-                            <ArrowUpFromLine size={11} color="#3b82f6" />
-                            <span>发送</span>
-                            <strong>{totalOut}</strong>
-                        </div>
                     </div>
                 </div>
 
@@ -472,9 +457,9 @@ export default function MqttClient({ session, onClose }: Props) {
                             value={dirFilter}
                             onChange={(v) => setDirFilter(v as any)}
                             options={[
-                                { label: '全部', value: 'all' },
-                                { label: '📥 接收', value: 'in' },
-                                { label: '📤 发送', value: 'out' },
+                                { label: `全部 (${messages.length})`, value: 'all' },
+                                { label: `📥 接收 (${totalIn})`, value: 'in' },
+                                { label: `📤 发送 (${totalOut})`, value: 'out' },
                             ]}
                         />
 
