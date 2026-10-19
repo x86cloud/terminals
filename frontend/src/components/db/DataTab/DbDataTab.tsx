@@ -10,6 +10,10 @@ import {
     Dropdown,
     MenuProps,
     Modal,
+    Input,
+    Select,
+    Switch,
+    Popconfirm,
 } from 'antd'
 import {
     RotateCw,
@@ -37,7 +41,17 @@ import ColumnFilterPopover, {
 } from '@/components/ColumnFilterPopover'
 import { buildInsertSql, buildUpdateSql, copyTextToClipboard } from '@/utils/sqlExport'
 import CellEditorInline from '@/components/common/CellEditorInline'
-import { DbAdapter, DbTableStructure } from '../types'
+import { DbAdapter, DbTableStructure, DbColumnMeta, DbConstraintMeta, AlterTablePlan } from '../types'
+import {
+    getDialectTypeCategories,
+    splitDataType,
+    combineDataType,
+    isLengthSupported,
+    getDefaultLength,
+} from '../dialectTypes'
+import AlterTableModal from './AlterTableModal'
+import CreateIndexModal from './CreateIndexModal'
+import CreateConstraintModal from './CreateConstraintModal'
 import s from './DbDataTab.module.less'
 
 const ROW_NUM_W = 46
@@ -69,6 +83,15 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
     // 描述与结构
     const [structure, setStructure] = useState<DbTableStructure | null>(null)
     const [ddlText, setDdlText] = useState('')
+
+    // 结构编辑状态
+    const [origCols, setOrigCols] = useState<DbColumnMeta[]>([])
+    const [structCols, setStructCols] = useState<DbColumnMeta[]>([])
+    const [alterModalOpen, setAlterModalOpen] = useState(false)
+    const [alterPlan, setAlterPlan] = useState<AlterTablePlan | null>(null)
+    const [alterLoading, setAlterLoading] = useState(false)
+    const [createIndexOpen, setCreateIndexOpen] = useState(false)
+    const [createConstraintOpen, setCreateConstraintOpen] = useState(false)
 
     // 编辑与脏数据管理
     const [editingCell, setEditingCell] = useState<{ rowIdx: number; col: string } | null>(null)
@@ -244,6 +267,252 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             loadDDL()
         }
     }, [viewMode])
+
+    useEffect(() => {
+        if (structure?.columns) {
+            const cols = structure.columns.map((c) => ({
+                ...c,
+                origName: c.origName || c.name,
+            }))
+            setOrigCols(cols)
+            setStructCols(cols.map((c) => ({ ...c })))
+        }
+    }, [structure])
+
+    const allTypeOptions = useMemo(() => {
+        const standardCats = getDialectTypeCategories(adapter.dialect)
+        const standardSet = new Set<string>()
+        standardCats.forEach((cat) => cat.options.forEach((o) => standardSet.add(o.value.toLowerCase())))
+
+        // 收集自定义类型（原表中存在但未在标准列表中的类型）
+        const customTypes = new Set<string>()
+        structCols.forEach((c) => {
+            const { baseType } = splitDataType(c.dataType || '')
+            if (baseType && !standardSet.has(baseType.toLowerCase())) {
+                customTypes.add(baseType)
+            }
+        })
+
+        const options = standardCats.map((cat) => ({
+            label: (
+                <span style={{ fontWeight: 600, fontSize: 11, color: 'var(--accent, #1677ff)' }}>
+                    {cat.label}
+                </span>
+            ),
+            options: cat.options.map((opt) => ({
+                value: opt.value,
+                label: (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{opt.label}</span>
+                        {opt.desc && (
+                            <span style={{ fontSize: 11, color: 'var(--text-dim, #888)', marginLeft: 8 }}>
+                                {opt.desc}
+                            </span>
+                        )}
+                    </div>
+                ),
+            })),
+        }))
+
+        if (customTypes.size > 0) {
+            options.push({
+                label: (
+                    <span style={{ fontWeight: 600, fontSize: 11, color: '#fa8c16' }}>
+                        自定义 / 现有类型 (Custom Types)
+                    </span>
+                ),
+                options: Array.from(customTypes).map((ct) => ({
+                    value: ct,
+                    label: (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{ct}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-dim, #888)', marginLeft: 8 }}>
+                                现有字段类型
+                            </span>
+                        </div>
+                    ),
+                })),
+            })
+        }
+
+        return options
+    }, [adapter.dialect, structCols])
+
+    const handleBaseTypeChange = (idx: number, newBase: string) => {
+        const { length: curLen } = splitDataType(structCols[idx]?.dataType || '')
+        const supportsLen = isLengthSupported(adapter.dialect, newBase)
+        let targetLen = ''
+        if (supportsLen) {
+            targetLen = curLen || getDefaultLength(adapter.dialect, newBase)
+        }
+        const combined = combineDataType(newBase, targetLen)
+        handleStructColChange(idx, { dataType: combined })
+    }
+
+    const handleLengthChange = (idx: number, newLen: string) => {
+        const { baseType } = splitDataType(structCols[idx]?.dataType || '')
+        const combined = combineDataType(baseType, newLen)
+        handleStructColChange(idx, { dataType: combined })
+    }
+
+    const structDirtyState = useMemo(() => {
+        const origMap = new Map<string, DbColumnMeta>()
+        origCols.forEach((c) => origMap.set(c.name, c))
+
+        const currentOrigNames = new Set<string>()
+        structCols.forEach((c) => {
+            if (c.origName) currentOrigNames.add(c.origName)
+        })
+
+        const droppedCount = origCols.filter((c) => !currentOrigNames.has(c.name)).length
+        let modifiedCount = 0
+        let newCount = 0
+
+        for (const col of structCols) {
+            if (col.isNew || !col.origName || !origMap.has(col.origName)) {
+                newCount++
+            } else {
+                const orig = origMap.get(col.origName)!
+                const isChanged =
+                    col.name !== orig.name ||
+                    col.dataType !== orig.dataType ||
+                    col.isNullable !== orig.isNullable ||
+                    (col.defaultVal || '') !== (orig.defaultVal || '') ||
+                    (col.comment || '') !== (orig.comment || '')
+                if (isChanged) {
+                    modifiedCount++
+                }
+            }
+        }
+
+        const totalDirty = droppedCount + newCount + modifiedCount
+        return {
+            isDirty: totalDirty > 0,
+            totalDirty,
+            droppedCount,
+            newCount,
+            modifiedCount,
+            origMap,
+        }
+    }, [structCols, origCols])
+
+    const handleStructColChange = (index: number, patch: Partial<DbColumnMeta>) => {
+        setStructCols((prev) => {
+            const next = [...prev]
+            next[index] = { ...next[index], ...patch }
+            return next
+        })
+    }
+
+    const handleAddStructCol = () => {
+        const defaultType =
+            adapter.dialect === 'mysql'
+                ? 'varchar(255)'
+                : adapter.dialect === 'postgres'
+                ? 'varchar(255)'
+                : 'TEXT'
+        const newCol: DbColumnMeta = {
+            name: `new_column_${structCols.length + 1}`,
+            dataType: defaultType,
+            isNullable: true,
+            defaultVal: '',
+            comment: '',
+            isPrimaryKey: false,
+            isForeignKey: false,
+            isNew: true,
+        }
+        setStructCols((prev) => [...prev, newCol])
+    }
+
+    const handleDropStructCol = (index: number) => {
+        setStructCols((prev) => prev.filter((_, i) => i !== index))
+    }
+
+    const handleDiscardStructChanges = () => {
+        setStructCols(origCols.map((c) => ({ ...c })))
+        message.info('已撤销所有未保存的结构修改')
+    }
+
+    const handleSaveStructChanges = async () => {
+        if (!structDirtyState.isDirty) return
+        if (!adapter.generateAlterTableSql) {
+            message.error('当前数据库驱动不支持在线修改表结构')
+            return
+        }
+
+        const names = structCols.map((c) => c.name.trim())
+        if (names.some((n) => !n)) {
+            message.warning('存在空的列名，请检查后再保存')
+            return
+        }
+        const nameSet = new Set<string>()
+        for (const n of names) {
+            if (nameSet.has(n.toLowerCase())) {
+                message.warning(`列名 [${n}] 重复，请修改后再保存`)
+                return
+            }
+            nameSet.add(n.toLowerCase())
+        }
+
+        try {
+            const plan = await adapter.generateAlterTableSql(structCols, origCols)
+            if (!plan.sqls || plan.sqls.length === 0) {
+                message.info('未检测到实质性 DDL 变更')
+                return
+            }
+            setAlterPlan(plan)
+            setAlterModalOpen(true)
+        } catch (e: any) {
+            message.error('生成变更 SQL 失败: ' + (e.message || e))
+        }
+    }
+
+    const handleExecuteAlterTable = async () => {
+        if (!alterPlan || !adapter.executeAlterTable) return
+        setAlterLoading(true)
+        try {
+            await adapter.executeAlterTable(alterPlan.sqls)
+            message.success('表结构修改已成功应用！')
+            setAlterModalOpen(false)
+            setAlterPlan(null)
+            await Promise.all([loadStructure(), loadDDL()])
+            if (viewMode === 'data') {
+                loadData(page, pageSize, activeWhere)
+            }
+        } catch (e: any) {
+            message.error('执行表结构变更失败: ' + (e.message || e))
+        } finally {
+            setAlterLoading(false)
+        }
+    }
+
+    const handleDropIndex = async (indexName: string) => {
+        if (!adapter.dropIndex) {
+            message.error('当前驱动不支持删除索引')
+            return
+        }
+        try {
+            await adapter.dropIndex(indexName)
+            message.success(`索引 [${indexName}] 已成功删除`)
+            await Promise.all([loadStructure(), loadDDL()])
+        } catch (e: any) {
+            message.error('删除索引失败: ' + (e.message || e))
+        }
+    }
+
+    const handleDropConstraint = async (c: DbConstraintMeta) => {
+        if (!adapter.dropConstraint) {
+            message.error('当前驱动不支持删除约束')
+            return
+        }
+        try {
+            await adapter.dropConstraint(c)
+            message.success(`约束 [${c.name}] 已成功删除`)
+            await Promise.all([loadStructure(), loadDDL()])
+        } catch (e: any) {
+            message.error('删除约束失败: ' + (e.message || e))
+        }
+    }
 
     // 行内编辑保存
     const handleCommitCell = (rowIdx: number, col: string, val: any, isNull: boolean) => {
@@ -740,7 +1009,14 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             </span>
                         </>
                     ) : viewMode === 'struct' ? (
-                        (structure?.columns?.length ?? 0) + ' 列'
+                        <>
+                            <span>{structCols.length} 列</span>
+                            {structDirtyState.isDirty && (
+                                <span style={{ color: '#fa8c16', marginLeft: 4 }}>
+                                    *{structDirtyState.totalDirty} 待保存
+                                </span>
+                            )}
+                        </>
                     ) : viewMode === 'index' ? (
                         (structure?.indexes?.length ?? 0) + ' 个索引'
                     ) : viewMode === 'constraints' ? (
@@ -782,6 +1058,60 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 )}
 
                 <div className={s.crudActions}>
+                    {viewMode === 'struct' && (
+                        <Space size={6}>
+                            <Button
+                                size="small"
+                                icon={<Plus size={13} />}
+                                onClick={handleAddStructCol}
+                            >
+                                添加列
+                            </Button>
+
+                            <Tooltip title="保存表结构变更 (预览 ALTER 脚本)">
+                                <Button
+                                    size="small"
+                                    type={structDirtyState.isDirty ? 'primary' : 'default'}
+                                    icon={<Save size={13} />}
+                                    disabled={!structDirtyState.isDirty}
+                                    onClick={handleSaveStructChanges}
+                                >
+                                    保存修改 {structDirtyState.totalDirty > 0 ? `(${structDirtyState.totalDirty})` : ''}
+                                </Button>
+                            </Tooltip>
+
+                            {structDirtyState.isDirty && (
+                                <Button size="small" onClick={handleDiscardStructChanges}>
+                                    放弃
+                                </Button>
+                            )}
+                        </Space>
+                    )}
+
+                    {viewMode === 'index' && (
+                        <Space size={6}>
+                            <Button
+                                size="small"
+                                icon={<Plus size={13} />}
+                                onClick={() => setCreateIndexOpen(true)}
+                            >
+                                添加索引
+                            </Button>
+                        </Space>
+                    )}
+
+                    {viewMode === 'constraints' && (
+                        <Space size={6}>
+                            <Button
+                                size="small"
+                                icon={<Plus size={13} />}
+                                onClick={() => setCreateConstraintOpen(true)}
+                            >
+                                添加约束
+                            </Button>
+                        </Space>
+                    )}
+
                     {viewMode === 'data' && (
                         <Space size={6}>
                             <Button
@@ -1014,52 +1344,152 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                     <table className={s.dbTable}>
                         <thead>
                             <tr>
-                                <th style={{ width: 40, textAlign: 'center' }}>#</th>
-                                <th>列名 (Column)</th>
-                                <th>数据类型 (Data Type)</th>
-                                <th>允许为空 (Nullable)</th>
-                                <th>默认值 (Default)</th>
-                                <th>主键 (PK)</th>
-                                <th>外键 (FK)</th>
-                                <th>注释 (Comment)</th>
+                                <th style={{ width: 44, textAlign: 'center' }}>#</th>
+                                <th style={{ minWidth: 150 }}>列名 (Column)</th>
+                                <th style={{ minWidth: 170 }}>数据类型 (Data Type)</th>
+                                <th style={{ width: 110 }}>长度/精度 (Length)</th>
+                                <th style={{ width: 100, textAlign: 'center' }}>允许为空 (Nullable)</th>
+                                <th style={{ minWidth: 130 }}>默认值 (Default)</th>
+                                <th style={{ width: 55, textAlign: 'center' }}>主键 (PK)</th>
+                                <th style={{ width: 55, textAlign: 'center' }}>外键 (FK)</th>
+                                <th style={{ minWidth: 150 }}>注释 (Comment)</th>
+                                <th style={{ width: 55, textAlign: 'center' }}>操作</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {(structure?.columns || []).map((col, idx) => (
-                                <tr key={col.name}>
-                                    <td style={{ textAlign: 'center', color: 'var(--text-faint)' }}>{idx + 1}</td>
-                                    <td>
-                                        <strong style={{ fontFamily: 'monospace' }}>{col.name}</strong>
-                                    </td>
-                                    <td>
-                                        <Tag color="blue">{col.dataType}</Tag>
-                                        {col.udtName && col.udtName !== col.dataType && (
-                                            <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 4 }}>
-                                                ({col.udtName})
-                                            </span>
-                                        )}
-                                    </td>
-                                    <td>
-                                        {col.isNullable ? (
-                                            <Tag color="default">YES</Tag>
-                                        ) : (
-                                            <Tag color="error">NO (NOT NULL)</Tag>
-                                        )}
-                                    </td>
-                                    <td style={{ fontFamily: 'monospace', fontSize: 12 }}>
-                                        {col.defaultVal || <span className={s.nullText}>-</span>}
-                                    </td>
-                                    <td>{col.isPrimaryKey && <span className={s.pkBadge}>PK</span>}</td>
-                                    <td>{col.isForeignKey && <span className={s.fkBadge}>FK</span>}</td>
-                                    <td style={{ color: 'var(--text-dim)' }}>
-                                        {col.comment || col.extra || '-'}
-                                    </td>
-                                </tr>
-                            ))}
-                            {(!structure || structure.columns.length === 0) && (
+                            {structCols.map((col, idx) => {
+                                const orig = col.origName ? structDirtyState.origMap.get(col.origName) : undefined
+                                const isNew = col.isNew || !col.origName || !orig
+                                const isRenamed = Boolean(orig && col.name !== orig.name)
+                                const isTypeChanged = Boolean(orig && col.dataType !== orig.dataType)
+                                const isNullChanged = Boolean(orig && col.isNullable !== orig.isNullable)
+                                const isDefChanged = Boolean(orig && (col.defaultVal || '') !== (orig.defaultVal || ''))
+                                const isCommentChanged = Boolean(orig && (col.comment || '') !== (orig.comment || ''))
+                                const isModified = Boolean(
+                                    orig && (isRenamed || isTypeChanged || isNullChanged || isDefChanged || isCommentChanged)
+                                )
+                                const rowClass = isNew ? s.structRowNew : isModified ? s.structRowModified : ''
+
+                                const { baseType, length } = splitDataType(col.dataType || '')
+                                const origSplit = orig ? splitDataType(orig.dataType || '') : undefined
+                                const supportsLen = isLengthSupported(adapter.dialect, baseType)
+                                const isBaseTypeChanged = Boolean(origSplit && baseType.toLowerCase() !== origSplit.baseType.toLowerCase())
+                                const isLengthChanged = Boolean(origSplit && supportsLen && length !== origSplit.length)
+
+                                return (
+                                    <tr key={col.origName || `col_${idx}`} className={rowClass}>
+                                        <td style={{ textAlign: 'center', color: 'var(--text-faint)' }}>
+                                            {isNew ? (
+                                                <span className={s.structNewBadge} title="新增列" />
+                                            ) : isModified ? (
+                                                <span className={s.structModifiedBadge} title="已修改" />
+                                            ) : null}
+                                            {idx + 1}
+                                        </td>
+                                        <td>
+                                            <Input
+                                                size="small"
+                                                className={s.structColInput}
+                                                value={col.name}
+                                                status={isRenamed ? 'warning' : undefined}
+                                                placeholder="列名"
+                                                onChange={(e) => handleStructColChange(idx, { name: e.target.value })}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Select
+                                                size="small"
+                                                showSearch
+                                                style={{ width: '100%' }}
+                                                className={s.structColInput}
+                                                options={allTypeOptions}
+                                                value={baseType}
+                                                status={isBaseTypeChanged ? 'warning' : undefined}
+                                                placeholder="选择数据类型"
+                                                onChange={(val) => handleBaseTypeChange(idx, val)}
+                                                optionFilterProp="value"
+                                                filterOption={(input: string, option?: any) => {
+                                                    if (!option || !option.value) return false
+                                                    return String(option.value).toLowerCase().includes(input.toLowerCase())
+                                                }}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Input
+                                                size="small"
+                                                className={s.structColInput}
+                                                disabled={!supportsLen}
+                                                value={supportsLen ? length : ''}
+                                                status={isLengthChanged ? 'warning' : undefined}
+                                                placeholder={supportsLen ? '如 255 或 10,2' : '-'}
+                                                onChange={(e) => handleLengthChange(idx, e.target.value)}
+                                            />
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <Switch
+                                                size="small"
+                                                checked={col.isNullable}
+                                                checkedChildren="YES"
+                                                unCheckedChildren="NO"
+                                                onChange={(checked) => handleStructColChange(idx, { isNullable: checked })}
+                                            />
+                                        </td>
+                                        <td>
+                                            <Input
+                                                size="small"
+                                                className={s.structColInput}
+                                                value={col.defaultVal || ''}
+                                                status={isDefChanged ? 'warning' : undefined}
+                                                placeholder="默认值 (留空为无)"
+                                                onChange={(e) => handleStructColChange(idx, { defaultVal: e.target.value })}
+                                            />
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            {col.isPrimaryKey ? <span className={s.pkBadge}>PK</span> : '-'}
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            {col.isForeignKey ? <span className={s.fkBadge}>FK</span> : '-'}
+                                        </td>
+                                        <td>
+                                            <Input
+                                                size="small"
+                                                className={s.structColInput}
+                                                value={col.comment || ''}
+                                                disabled={adapter.dialect === 'sqlite'}
+                                                status={isCommentChanged ? 'warning' : undefined}
+                                                placeholder={adapter.dialect === 'sqlite' ? 'SQLite 不支持列注释' : '列注释说明'}
+                                                onChange={(e) => handleStructColChange(idx, { comment: e.target.value })}
+                                            />
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <Popconfirm
+                                                title="确定删除该列？"
+                                                description={
+                                                    isNew
+                                                        ? '移除该新增列草稿'
+                                                        : `将生成 DROP COLUMN 并在应用时永久删除列 [${col.name}]`
+                                                }
+                                                okText="删除"
+                                                cancelText="取消"
+                                                okButtonProps={{ danger: true }}
+                                                onConfirm={() => handleDropStructCol(idx)}
+                                            >
+                                                <Button
+                                                    size="small"
+                                                    type="text"
+                                                    danger
+                                                    icon={<Trash2 size={13} />}
+                                                    title="删除此列"
+                                                />
+                                            </Popconfirm>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
+                            {structCols.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} className={s.dbEmpty}>
-                                        暂无结构信息
+                                    <td colSpan={10} className={s.dbEmpty}>
+                                        暂无列信息，可点击上方「添加列」进行新增
                                     </td>
                                 </tr>
                             )}
@@ -1080,6 +1510,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 <th>包含列 (Columns)</th>
                                 <th>占用大小 (Size)</th>
                                 <th>定义 / 详情 (Definition / Comment)</th>
+                                <th style={{ width: 60, textAlign: 'center' }}>操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1113,11 +1544,35 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                     >
                                         {idx.def || idx.comment || '-'}
                                     </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        {idx.isPrimary ? (
+                                            <Tooltip title="主键索引不可直接删除，请在表结构中修改主键设置">
+                                                <Button size="small" type="text" disabled icon={<Trash2 size={13} />} />
+                                            </Tooltip>
+                                        ) : (
+                                            <Popconfirm
+                                                title="确定删除此索引？"
+                                                description={`将执行删除索引 [${idx.name}]`}
+                                                okText="删除"
+                                                cancelText="取消"
+                                                okButtonProps={{ danger: true }}
+                                                onConfirm={() => handleDropIndex(idx.name)}
+                                            >
+                                                <Button
+                                                    size="small"
+                                                    type="text"
+                                                    danger
+                                                    icon={<Trash2 size={13} />}
+                                                    title="删除索引"
+                                                />
+                                            </Popconfirm>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                             {(!structure || structure.indexes.length === 0) && (
                                 <tr>
-                                    <td colSpan={6} className={s.dbEmpty}>
+                                    <td colSpan={7} className={s.dbEmpty}>
                                         暂无索引
                                     </td>
                                 </tr>
@@ -1138,6 +1593,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 <th>约束类型 (Type)</th>
                                 <th>受约束列 (Column)</th>
                                 <th>定义 / 引用目标 (Definition / References)</th>
+                                <th style={{ width: 60, textAlign: 'center' }}>操作</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1175,11 +1631,39 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                             c.def || '-'
                                         )}
                                     </td>
+                                    <td style={{ textAlign: 'center' }}>
+                                        {c.type === 'PRIMARY KEY' ? (
+                                            <Tooltip title="主键约束不可在此删除，请在表结构中修改主键设置">
+                                                <Button size="small" type="text" disabled icon={<Trash2 size={13} />} />
+                                            </Tooltip>
+                                        ) : (
+                                            <Popconfirm
+                                                title="确定删除此约束？"
+                                                description={
+                                                    adapter.dialect === 'sqlite'
+                                                        ? `SQLite 删除约束 [${c.name}] 将执行事务安全重建表`
+                                                        : `将执行 DROP CONSTRAINT 删除约束 [${c.name}]`
+                                                }
+                                                okText="删除"
+                                                cancelText="取消"
+                                                okButtonProps={{ danger: true }}
+                                                onConfirm={() => handleDropConstraint(c)}
+                                            >
+                                                <Button
+                                                    size="small"
+                                                    type="text"
+                                                    danger
+                                                    icon={<Trash2 size={13} />}
+                                                    title="删除约束"
+                                                />
+                                            </Popconfirm>
+                                        )}
+                                    </td>
                                 </tr>
                             ))}
                             {(!structure || structure.constraints.length === 0) && (
                                 <tr>
-                                    <td colSpan={5} className={s.dbEmpty}>
+                                    <td colSpan={6} className={s.dbEmpty}>
                                         暂无约束
                                     </td>
                                 </tr>
@@ -1234,6 +1718,42 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                     />
                 </Dropdown>
             )}
+
+            {/* 表结构变更预览与确认弹窗 */}
+            <AlterTableModal
+                open={alterModalOpen}
+                tableName={tableName}
+                plan={alterPlan}
+                loading={alterLoading}
+                onOk={handleExecuteAlterTable}
+                onCancel={() => setAlterModalOpen(false)}
+            />
+
+            {/* 新建索引弹窗 */}
+            <CreateIndexModal
+                open={createIndexOpen}
+                tableName={tableName}
+                schema={schema}
+                columns={columns}
+                adapter={adapter}
+                onSuccess={async () => {
+                    await Promise.all([loadStructure(), loadDDL()])
+                }}
+                onCancel={() => setCreateIndexOpen(false)}
+            />
+
+            {/* 新建约束弹窗 */}
+            <CreateConstraintModal
+                open={createConstraintOpen}
+                tableName={tableName}
+                schema={schema}
+                columns={columns}
+                adapter={adapter}
+                onSuccess={async () => {
+                    await Promise.all([loadStructure(), loadDDL()])
+                }}
+                onCancel={() => setCreateConstraintOpen(false)}
+            />
         </div>
     )
 }

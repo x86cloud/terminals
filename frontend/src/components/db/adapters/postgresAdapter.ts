@@ -12,6 +12,9 @@ import {
     DbIndexMeta,
     DbConstraintMeta,
     ExplainPlanResult,
+    AlterTablePlan,
+    CreateIndexParams,
+    CreateConstraintParams,
 } from '../types'
 
 function renderPgPlanNode(plan: any): any {
@@ -59,6 +62,7 @@ export function createPostgresAdapter(
     tableName: string
 ): DbAdapter {
     const quoteIdent = (name: string) => `"${name.replace(/"/g, '""')}"`
+    const fullTable = schema ? `${quoteIdent(schema)}.${quoteIdent(tableName)}` : quoteIdent(tableName)
 
     return {
         dialect: 'postgres',
@@ -82,6 +86,7 @@ export function createPostgresAdapter(
 
             const columns: DbColumnMeta[] = (desc.columns || []).map((c: any) => ({
                 name: c.name,
+                origName: c.name,
                 dataType: c.dataType,
                 udtName: c.udtName,
                 isNullable: c.isNullable,
@@ -206,6 +211,158 @@ export function createPostgresAdapter(
                 '',
                 limit
             )
+        },
+
+        async generateAlterTableSql(currentCols: DbColumnMeta[], origCols: DbColumnMeta[]): Promise<AlterTablePlan> {
+            const sqls: string[] = []
+            const fullTable = schema ? `${quoteIdent(schema)}.${quoteIdent(tableName)}` : quoteIdent(tableName)
+            const origMap = new Map<string, DbColumnMeta>()
+            origCols.forEach((c) => origMap.set(c.name, c))
+
+            const currentOrigNames = new Set<string>()
+            currentCols.forEach((c) => {
+                if (c.origName) currentOrigNames.add(c.origName)
+            })
+
+            // 1. 删除列
+            const droppedCols = origCols.filter((c) => !currentOrigNames.has(c.name))
+            for (const col of droppedCols) {
+                sqls.push(`ALTER TABLE ${fullTable} DROP COLUMN ${quoteIdent(col.name)};`)
+            }
+
+            // 2. 变更现有列与新增列
+            for (const col of currentCols) {
+                if (col.isNew || !col.origName || !origMap.has(col.origName)) {
+                    // 新增列
+                    const nullSql = col.isNullable ? '' : ' NOT NULL'
+                    let defSql = ''
+                    if (col.defaultVal !== undefined && col.defaultVal.trim() !== '') {
+                        const dv = col.defaultVal.trim()
+                        if (dv.toUpperCase() === 'NULL' || dv.toUpperCase().includes('()') || /^-?\d+(\.\d+)?$/.test(dv)) {
+                            defSql = ` DEFAULT ${dv}`
+                        } else {
+                            defSql = ` DEFAULT '${dv.replace(/'/g, "''")}'`
+                        }
+                    }
+                    sqls.push(`ALTER TABLE ${fullTable} ADD COLUMN ${quoteIdent(col.name)} ${col.dataType}${nullSql}${defSql};`)
+                    if (col.comment) {
+                        sqls.push(`COMMENT ON COLUMN ${fullTable}.${quoteIdent(col.name)} IS '${col.comment.replace(/'/g, "''")}';`)
+                    }
+                } else {
+                    const orig = origMap.get(col.origName)!
+                    let workingColName = col.origName
+
+                    // 2.1 重命名
+                    if (col.name !== col.origName) {
+                        sqls.push(`ALTER TABLE ${fullTable} RENAME COLUMN ${quoteIdent(col.origName)} TO ${quoteIdent(col.name)};`)
+                        workingColName = col.name
+                    }
+
+                    // 2.2 修改类型 (带 USING "col"::type 强转)
+                    if (col.dataType !== orig.dataType) {
+                        sqls.push(`ALTER TABLE ${fullTable} ALTER COLUMN ${quoteIdent(workingColName)} TYPE ${col.dataType} USING ${quoteIdent(workingColName)}::${col.dataType};`)
+                    }
+
+                    // 2.3 修改可空约束
+                    if (col.isNullable !== orig.isNullable) {
+                        if (col.isNullable) {
+                            sqls.push(`ALTER TABLE ${fullTable} ALTER COLUMN ${quoteIdent(workingColName)} DROP NOT NULL;`)
+                        } else {
+                            sqls.push(`ALTER TABLE ${fullTable} ALTER COLUMN ${quoteIdent(workingColName)} SET NOT NULL;`)
+                        }
+                    }
+
+                    // 2.4 修改默认值
+                    if (col.defaultVal !== orig.defaultVal) {
+                        const dv = (col.defaultVal || '').trim()
+                        if (!dv || dv.toUpperCase() === 'NULL') {
+                            sqls.push(`ALTER TABLE ${fullTable} ALTER COLUMN ${quoteIdent(workingColName)} DROP DEFAULT;`)
+                        } else {
+                            if (dv.toUpperCase().includes('()') || /^-?\d+(\.\d+)?$/.test(dv) || dv.toUpperCase().startsWith('CURRENT_')) {
+                                sqls.push(`ALTER TABLE ${fullTable} ALTER COLUMN ${quoteIdent(workingColName)} SET DEFAULT ${dv};`)
+                            } else {
+                                sqls.push(`ALTER TABLE ${fullTable} ALTER COLUMN ${quoteIdent(workingColName)} SET DEFAULT '${dv.replace(/'/g, "''")}';`)
+                            }
+                        }
+                    }
+
+                    // 2.5 修改注释
+                    if ((col.comment || '') !== (orig.comment || '')) {
+                        const cm = col.comment ? `'${col.comment.replace(/'/g, "''")}'` : 'NULL'
+                        sqls.push(`COMMENT ON COLUMN ${fullTable}.${quoteIdent(workingColName)} IS ${cm};`)
+                    }
+                }
+            }
+
+            return {
+                sqls,
+                isRebuild: false,
+                warning: droppedCols.length > 0 ? `警告：本次修改将永久删除 [${droppedCols.map((c) => c.name).join(', ')}] 列及其所有数据！` : undefined,
+            }
+        },
+
+        async executeAlterTable(sqls: string[]): Promise<void> {
+            for (const sql of sqls) {
+                const trimmed = sql.trim()
+                if (!trimmed) continue
+                await API.postgresRun(serverId, dbName, trimmed)
+            }
+        },
+
+        previewCreateIndexSql(params: CreateIndexParams): string {
+            const typeSql = params.isUnique ? 'UNIQUE ' : ''
+            const colsSql = (params.columns || []).map((c) => quoteIdent(c)).join(', ')
+            return `CREATE ${typeSql}INDEX ${quoteIdent(params.name)} ON ${fullTable} (${colsSql});`
+        },
+
+        async createIndex(params: CreateIndexParams): Promise<void> {
+            const sql = this.previewCreateIndexSql!(params)
+            await API.postgresRun(serverId, dbName, sql)
+        },
+
+        previewDropIndexSql(indexName: string): string {
+            const schemaPrefix = schema ? `${quoteIdent(schema)}.` : ''
+            return `DROP INDEX ${schemaPrefix}${quoteIdent(indexName)};`
+        },
+
+        async dropIndex(indexName: string): Promise<void> {
+            const sql = this.previewDropIndexSql!(indexName)
+            await API.postgresRun(serverId, dbName, sql)
+        },
+
+        previewCreateConstraintSql(params: CreateConstraintParams): string {
+            if (params.type === 'FOREIGN KEY') {
+                const targetRef = params.foreignTable ? (schema ? `${quoteIdent(schema)}.${quoteIdent(params.foreignTable)}` : quoteIdent(params.foreignTable)) : ''
+                let sql = `ALTER TABLE ${fullTable} ADD CONSTRAINT ${quoteIdent(params.name)} FOREIGN KEY (${quoteIdent(params.column || '')}) REFERENCES ${targetRef} (${quoteIdent(params.foreignColumn || '')})`
+                if (params.onDelete && params.onDelete !== 'RESTRICT') sql += ` ON DELETE ${params.onDelete}`
+                if (params.onUpdate && params.onUpdate !== 'RESTRICT') sql += ` ON UPDATE ${params.onUpdate}`
+                return sql + ';'
+            }
+            return `ALTER TABLE ${fullTable} ADD CONSTRAINT ${quoteIdent(params.name)} CHECK (${params.checkExpr || ''});`
+        },
+
+        async createConstraint(params: CreateConstraintParams): Promise<void> {
+            const sql = this.previewCreateConstraintSql!(params) as string
+            await API.postgresRun(serverId, dbName, sql)
+        },
+
+        previewDropConstraintSql(constraint: DbConstraintMeta): string {
+            return `ALTER TABLE ${fullTable} DROP CONSTRAINT ${quoteIdent(constraint.name)};`
+        },
+
+        async dropConstraint(constraint: DbConstraintMeta): Promise<void> {
+            const sql = this.previewDropConstraintSql!(constraint) as string
+            await API.postgresRun(serverId, dbName, sql)
+        },
+
+        async listTables(): Promise<string[]> {
+            const tables = await API.postgresTables(serverId, dbName, schema)
+            return (tables || []).map((t: any) => (typeof t === 'string' ? t : t.table_name || t.name || ''))
+        },
+
+        async listTableColumns(targetTable: string): Promise<string[]> {
+            const desc = await API.postgresDescribe(serverId, dbName, schema, targetTable)
+            return (desc?.columns || []).map((c: any) => String(c.name || ''))
         },
     }
 }

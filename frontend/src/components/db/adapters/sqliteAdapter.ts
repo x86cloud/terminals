@@ -10,6 +10,9 @@ import {
     DbIndexMeta,
     DbConstraintMeta,
     ExplainPlanResult,
+    AlterTablePlan,
+    CreateIndexParams,
+    CreateConstraintParams,
 } from '../types'
 
 function isNumeric(val: string): boolean {
@@ -126,6 +129,7 @@ export function createSqliteAdapter(
                 const isPk = Number(c.pk) > 0
                 return {
                     name: c.name,
+                    origName: c.name,
                     dataType: c.type || 'TEXT',
                     isNullable: Number(c.notnull) === 0,
                     defaultVal: c.default === null || c.default === undefined ? '' : String(c.default),
@@ -275,6 +279,327 @@ export function createSqliteAdapter(
                 return res.rows[0].sql + ';'
             }
             return '-- 未能获取到 DDL'
+        },
+
+        async generateAlterTableSql(currentCols: DbColumnMeta[], origCols: DbColumnMeta[]): Promise<AlterTablePlan> {
+            const origMap = new Map<string, DbColumnMeta>()
+            origCols.forEach((c) => origMap.set(c.name, c))
+
+            const currentOrigNames = new Set<string>()
+            currentCols.forEach((c) => {
+                if (c.origName) currentOrigNames.add(c.origName)
+            })
+
+            const droppedCols = origCols.filter((c) => !currentOrigNames.has(c.name))
+
+            // 判断是否需要重建表：如果存在既有列修改了数据类型、可空性或默认值，SQLite 必须重建表
+            let requiresRebuild = false
+            for (const col of currentCols) {
+                if (col.origName && origMap.has(col.origName)) {
+                    const orig = origMap.get(col.origName)!
+                    if (
+                        (col.dataType || '').toUpperCase() !== (orig.dataType || '').toUpperCase() ||
+                        col.isNullable !== orig.isNullable ||
+                        (col.defaultVal || '') !== (orig.defaultVal || '') ||
+                        Boolean(col.isPrimaryKey) !== Boolean(orig.isPrimaryKey)
+                    ) {
+                        requiresRebuild = true
+                        break
+                    }
+                }
+            }
+
+            const sqls: string[] = []
+            let warning: string | undefined
+
+            if (droppedCols.length > 0) {
+                warning = `警告：本次修改将永久删除 [${droppedCols.map((c) => c.name).join(', ')}] 列及其所有数据！`
+            }
+
+            if (requiresRebuild) {
+                const rebuildWarning = `⚠️ SQLite 原生不支持直接修改列的数据类型/默认值/主键/可空性约束。本次操作将通过安全事务临时表（12 步迁移法）进行全表数据迁移与重建。`
+                warning = warning ? `${warning}\n${rebuildWarning}` : rebuildWarning
+
+                const tempTableName = `${tableName}_dg_tmp`
+
+                sqls.push(`PRAGMA foreign_keys = OFF;`)
+                sqls.push(`BEGIN TRANSACTION;`)
+
+                // 构建 CREATE TABLE temp
+                const colDefs: string[] = []
+                const pkCols: string[] = []
+                for (const col of currentCols) {
+                    let cDef = `${quoteIdent(col.name)} ${col.dataType || 'TEXT'}`
+                    if (!col.isNullable) {
+                        cDef += ' NOT NULL'
+                    }
+                    if (col.defaultVal !== undefined && col.defaultVal.trim() !== '') {
+                        const dv = col.defaultVal.trim()
+                        if (
+                            dv.toUpperCase() === 'NULL' ||
+                            dv.toUpperCase().includes('()') ||
+                            /^-?\d+(\.\d+)?$/.test(dv) ||
+                            dv.toUpperCase().startsWith('CURRENT_')
+                        ) {
+                            cDef += ` DEFAULT ${dv}`
+                        } else {
+                            cDef += ` DEFAULT '${dv.replace(/'/g, "''")}'`
+                        }
+                    }
+                    if (col.isPrimaryKey) {
+                        pkCols.push(quoteIdent(col.name))
+                    }
+                    colDefs.push(cDef)
+                }
+
+                if (pkCols.length > 0) {
+                    colDefs.push(`PRIMARY KEY (${pkCols.join(', ')})`)
+                }
+
+                sqls.push(`CREATE TABLE ${quoteIdent(tempTableName)} (\n  ${colDefs.join(',\n  ')}\n);`)
+
+                // 复制数据 (仅从原表存在的旧列中读取)
+                const matchedCols = currentCols.filter((c) => c.origName && origMap.has(c.origName))
+                if (matchedCols.length > 0) {
+                    const targetNames = matchedCols.map((c) => quoteIdent(c.name)).join(', ')
+                    const sourceNames = matchedCols.map((c) => quoteIdent(c.origName!)).join(', ')
+                    sqls.push(`INSERT INTO ${quoteIdent(tempTableName)} (${targetNames}) SELECT ${sourceNames} FROM ${quoteIdent(tableName)};`)
+                }
+
+                // 删除旧表
+                sqls.push(`DROP TABLE ${quoteIdent(tableName)};`)
+
+                // 重命名临时表为原表名
+                sqls.push(`ALTER TABLE ${quoteIdent(tempTableName)} RENAME TO ${quoteIdent(tableName)};`)
+
+                sqls.push(`COMMIT;`)
+                sqls.push(`PRAGMA foreign_keys = ON;`)
+
+                return {
+                    sqls,
+                    isRebuild: true,
+                    warning,
+                }
+            }
+
+            // 无需重建时（仅列重命名、新增列、删除列），使用原生轻量 ALTER TABLE
+            // 1. 删除列 (SQLite 3.35.0+)
+            for (const col of droppedCols) {
+                sqls.push(`ALTER TABLE ${quoteIdent(tableName)} DROP COLUMN ${quoteIdent(col.name)};`)
+            }
+
+            // 2. 列重命名 (SQLite 3.25.0+)
+            for (const col of currentCols) {
+                if (col.origName && origMap.has(col.origName) && col.name !== col.origName) {
+                    sqls.push(`ALTER TABLE ${quoteIdent(tableName)} RENAME COLUMN ${quoteIdent(col.origName)} TO ${quoteIdent(col.name)};`)
+                }
+            }
+
+            // 3. 新增列
+            for (const col of currentCols) {
+                if (col.isNew || !col.origName || !origMap.has(col.origName)) {
+                    let cDef = `${quoteIdent(col.name)} ${col.dataType || 'TEXT'}`
+                    if (!col.isNullable) {
+                        cDef += ' NOT NULL'
+                    }
+                    if (col.defaultVal !== undefined && col.defaultVal.trim() !== '') {
+                        const dv = col.defaultVal.trim()
+                        if (
+                            dv.toUpperCase() === 'NULL' ||
+                            dv.toUpperCase().includes('()') ||
+                            /^-?\d+(\.\d+)?$/.test(dv) ||
+                            dv.toUpperCase().startsWith('CURRENT_')
+                        ) {
+                            cDef += ` DEFAULT ${dv}`
+                        } else {
+                            cDef += ` DEFAULT '${dv.replace(/'/g, "''")}'`
+                        }
+                    }
+                    sqls.push(`ALTER TABLE ${quoteIdent(tableName)} ADD COLUMN ${cDef};`)
+                }
+            }
+
+            return {
+                sqls,
+                isRebuild: false,
+                warning,
+            }
+        },
+
+        async executeAlterTable(sqls: string[]): Promise<void> {
+            for (const sql of sqls) {
+                const trimmed = sql.trim()
+                if (!trimmed) continue
+                await API.sqliteRun(sessionId, trimmed)
+            }
+        },
+
+        previewCreateIndexSql(params: CreateIndexParams): string {
+            const typeSql = params.isUnique ? 'UNIQUE ' : ''
+            const colsSql = (params.columns || []).map((c) => quoteIdent(c)).join(', ')
+            return `CREATE ${typeSql}INDEX ${quoteIdent(params.name)} ON ${quoteIdent(tableName)} (${colsSql});`
+        },
+
+        async createIndex(params: CreateIndexParams): Promise<void> {
+            const sql = this.previewCreateIndexSql!(params)
+            await API.sqliteRun(sessionId, sql)
+        },
+
+        previewDropIndexSql(indexName: string): string {
+            return `DROP INDEX ${quoteIdent(indexName)};`
+        },
+
+        async dropIndex(indexName: string): Promise<void> {
+            const sql = this.previewDropIndexSql!(indexName)
+            await API.sqliteRun(sessionId, sql)
+        },
+
+        async previewCreateConstraintSql(params: CreateConstraintParams): Promise<AlterTablePlan> {
+            const struct = await this.loadStructure()
+            const tempTable = `${tableName}_dg_tmp`
+            const colDefs: string[] = []
+            const pkCols: string[] = []
+            for (const col of struct.columns) {
+                let cDef = `${quoteIdent(col.name)} ${col.dataType || 'TEXT'}`
+                if (!col.isNullable) cDef += ' NOT NULL'
+                if (col.defaultVal) {
+                    const dv = col.defaultVal.trim()
+                    if (
+                        dv.toUpperCase() === 'NULL' ||
+                        dv.toUpperCase().includes('()') ||
+                        /^-?\d+(\.\d+)?$/.test(dv) ||
+                        dv.toUpperCase().startsWith('CURRENT_')
+                    ) {
+                        cDef += ` DEFAULT ${dv}`
+                    } else {
+                        cDef += ` DEFAULT '${dv.replace(/'/g, "''")}'`
+                    }
+                }
+                if (col.isPrimaryKey) pkCols.push(quoteIdent(col.name))
+                colDefs.push(cDef)
+            }
+            if (pkCols.length > 0) {
+                colDefs.push(`PRIMARY KEY (${pkCols.join(', ')})`)
+            }
+
+            // 既有外键
+            for (const c of struct.constraints) {
+                if (c.type === 'FOREIGN KEY' && c.foreignTable && c.column && c.foreignColumn) {
+                    colDefs.push(
+                        `CONSTRAINT ${quoteIdent(c.name)} FOREIGN KEY (${quoteIdent(c.column)}) REFERENCES ${quoteIdent(
+                            c.foreignTable
+                        )} (${quoteIdent(c.foreignColumn)})`
+                    )
+                }
+            }
+
+            // 新增约束
+            if (params.type === 'FOREIGN KEY' && params.foreignTable && params.column && params.foreignColumn) {
+                let fkSql = `CONSTRAINT ${quoteIdent(params.name)} FOREIGN KEY (${quoteIdent(
+                    params.column
+                )}) REFERENCES ${quoteIdent(params.foreignTable)} (${quoteIdent(params.foreignColumn)})`
+                if (params.onDelete && params.onDelete !== 'RESTRICT') fkSql += ` ON DELETE ${params.onDelete}`
+                if (params.onUpdate && params.onUpdate !== 'RESTRICT') fkSql += ` ON UPDATE ${params.onUpdate}`
+                colDefs.push(fkSql)
+            } else if (params.type === 'CHECK' && params.checkExpr) {
+                colDefs.push(`CONSTRAINT ${quoteIdent(params.name)} CHECK (${params.checkExpr})`)
+            }
+
+            const sqls: string[] = [
+                `PRAGMA foreign_keys = OFF;`,
+                `BEGIN TRANSACTION;`,
+                `CREATE TABLE ${quoteIdent(tempTable)} (\n  ${colDefs.join(',\n  ')}\n);`,
+                `INSERT INTO ${quoteIdent(tempTable)} SELECT * FROM ${quoteIdent(tableName)};`,
+                `DROP TABLE ${quoteIdent(tableName)};`,
+                `ALTER TABLE ${quoteIdent(tempTable)} RENAME TO ${quoteIdent(tableName)};`,
+                `COMMIT;`,
+                `PRAGMA foreign_keys = ON;`,
+            ]
+
+            return {
+                sqls,
+                isRebuild: true,
+                warning:
+                    '⚠️ SQLite 原生不支持 ALTER TABLE 动态添加约束。本次将通过 12 步事务临时表进行全表数据迁移与重建，已自动包裹在安全事务中。',
+            }
+        },
+
+        async createConstraint(params: CreateConstraintParams): Promise<void> {
+            const plan = (await this.previewCreateConstraintSql!(params)) as AlterTablePlan
+            await this.executeAlterTable!(plan.sqls)
+        },
+
+        async previewDropConstraintSql(constraint: DbConstraintMeta): Promise<AlterTablePlan> {
+            const struct = await this.loadStructure()
+            const tempTable = `${tableName}_dg_tmp`
+            const colDefs: string[] = []
+            const pkCols: string[] = []
+            for (const col of struct.columns) {
+                let cDef = `${quoteIdent(col.name)} ${col.dataType || 'TEXT'}`
+                if (!col.isNullable) cDef += ' NOT NULL'
+                if (col.defaultVal) {
+                    const dv = col.defaultVal.trim()
+                    if (
+                        dv.toUpperCase() === 'NULL' ||
+                        dv.toUpperCase().includes('()') ||
+                        /^-?\d+(\.\d+)?$/.test(dv) ||
+                        dv.toUpperCase().startsWith('CURRENT_')
+                    ) {
+                        cDef += ` DEFAULT ${dv}`
+                    } else {
+                        cDef += ` DEFAULT '${dv.replace(/'/g, "''")}'`
+                    }
+                }
+                if (col.isPrimaryKey) pkCols.push(quoteIdent(col.name))
+                colDefs.push(cDef)
+            }
+            if (pkCols.length > 0) {
+                colDefs.push(`PRIMARY KEY (${pkCols.join(', ')})`)
+            }
+
+            // 保留未被删除的约束
+            for (const c of struct.constraints) {
+                if (c.name === constraint.name) continue
+                if (c.type === 'FOREIGN KEY' && c.foreignTable && c.column && c.foreignColumn) {
+                    colDefs.push(
+                        `CONSTRAINT ${quoteIdent(c.name)} FOREIGN KEY (${quoteIdent(c.column)}) REFERENCES ${quoteIdent(
+                            c.foreignTable
+                        )} (${quoteIdent(c.foreignColumn)})`
+                    )
+                }
+            }
+
+            const sqls: string[] = [
+                `PRAGMA foreign_keys = OFF;`,
+                `BEGIN TRANSACTION;`,
+                `CREATE TABLE ${quoteIdent(tempTable)} (\n  ${colDefs.join(',\n  ')}\n);`,
+                `INSERT INTO ${quoteIdent(tempTable)} SELECT * FROM ${quoteIdent(tableName)};`,
+                `DROP TABLE ${quoteIdent(tableName)};`,
+                `ALTER TABLE ${quoteIdent(tempTable)} RENAME TO ${quoteIdent(tableName)};`,
+                `COMMIT;`,
+                `PRAGMA foreign_keys = ON;`,
+            ]
+
+            return {
+                sqls,
+                isRebuild: true,
+                warning: `⚠️ SQLite 原生不支持 ALTER TABLE 动态删除约束。本次将通过 12 步事务临时表进行全表数据迁移与重建，已自动包裹在安全事务中。`,
+            }
+        },
+
+        async dropConstraint(constraint: DbConstraintMeta): Promise<void> {
+            const plan = (await this.previewDropConstraintSql!(constraint)) as AlterTablePlan
+            await this.executeAlterTable!(plan.sqls)
+        },
+
+        async listTables(): Promise<string[]> {
+            const tables = await API.sqliteTables(sessionId)
+            return (tables || []).map((t: any) => (typeof t === 'string' ? t : t.name || ''))
+        },
+
+        async listTableColumns(targetTable: string): Promise<string[]> {
+            const cols = await API.sqliteDescribe(sessionId, targetTable)
+            return (cols || []).map((c: any) => String(c.name || ''))
         },
     }
 }

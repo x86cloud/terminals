@@ -409,3 +409,36 @@
     color: @text-faint;
     font-style: italic;
 }
+
+.structRowModified {
+    background: color-mix(in srgb, #fa8c16 10%, @bg-1) !important;
+}
+
+.structRowNew {
+    background: color-mix(in srgb, #52c41a 12%, @bg-1) !important;
+}
+
+.structColInput {
+    font-family: @font-mono;
+    font-size: 12px;
+}
+
+.structModifiedBadge {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #fa8c16;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+.structNewBadge {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #52c41a;
+    margin-right: 4px;
+    vertical-align: middle;
+}

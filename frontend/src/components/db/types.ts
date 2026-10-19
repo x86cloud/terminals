@@ -4,6 +4,7 @@ export type DbDialect = 'mysql' | 'postgres' | 'sqlite'
 
 export interface DbColumnMeta {
     name: string
+    origName?: string
     dataType: string
     udtName?: string
     isNullable: boolean
@@ -12,6 +13,7 @@ export interface DbColumnMeta {
     isForeignKey?: boolean
     extra?: string
     comment?: string
+    isNew?: boolean
 }
 
 export interface DbIndexMeta {
@@ -61,6 +63,30 @@ export interface DbQueryResult {
     error?: string
 }
 
+export interface AlterTablePlan {
+    sqls: string[]
+    isRebuild: boolean
+    warning?: string
+}
+
+export interface CreateIndexParams {
+    name: string
+    isUnique: boolean
+    columns: string[]
+    type?: string
+}
+
+export interface CreateConstraintParams {
+    name: string
+    type: 'FOREIGN KEY' | 'CHECK'
+    column?: string
+    foreignTable?: string
+    foreignColumn?: string
+    onDelete?: string
+    onUpdate?: string
+    checkExpr?: string
+}
+
 export interface DbAdapter {
     dialect: DbDialect
     tableName: string
@@ -81,6 +107,31 @@ export interface DbAdapter {
     deleteRow: (row: any, pkList: string[]) => Promise<void>
     loadDDL: () => Promise<string>
     exportToFile?: (mode: 'csv' | 'json', limit?: number) => Promise<string>
+    generateAlterTableSql?: (
+        currentCols: DbColumnMeta[],
+        origCols: DbColumnMeta[]
+    ) => Promise<AlterTablePlan>
+    executeAlterTable?: (sqls: string[]) => Promise<void>
+
+    // 索引管理
+    createIndex?: (params: CreateIndexParams) => Promise<void>
+    dropIndex?: (indexName: string) => Promise<void>
+    previewCreateIndexSql?: (params: CreateIndexParams) => string
+    previewDropIndexSql?: (indexName: string) => string
+
+    // 约束管理
+    createConstraint?: (params: CreateConstraintParams) => Promise<void>
+    dropConstraint?: (constraint: DbConstraintMeta) => Promise<void>
+    previewCreateConstraintSql?: (
+        params: CreateConstraintParams
+    ) => Promise<string | AlterTablePlan> | string | AlterTablePlan
+    previewDropConstraintSql?: (
+        constraint: DbConstraintMeta
+    ) => Promise<string | AlterTablePlan> | string | AlterTablePlan
+
+    // 元数据关联查询
+    listTables?: () => Promise<string[]>
+    listTableColumns?: (targetTable: string) => Promise<string[]>
 }
 
 export interface ExplainPlanResult {

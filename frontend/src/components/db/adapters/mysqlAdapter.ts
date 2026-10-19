@@ -12,6 +12,9 @@ import {
     DbIndexMeta,
     DbConstraintMeta,
     ExplainPlanResult,
+    AlterTablePlan,
+    CreateIndexParams,
+    CreateConstraintParams,
 } from '../types'
 
 function renderMysqlPlanNode(node: any): any {
@@ -152,6 +155,7 @@ export function createMysqlAdapter(
                     if (isPri) primaryKeys[field] = true
                     columns.push({
                         name: field,
+                        origName: field,
                         dataType: typ,
                         isNullable: isNull,
                         defaultVal: defVal,
@@ -296,6 +300,133 @@ export function createMysqlAdapter(
 
         async exportToFile(mode: 'csv' | 'json', limit = 0): Promise<string> {
             return API.mysqlExportToFileEx(serverId, dbName, mode, 'table', tableName, '', limit)
+        },
+
+        async generateAlterTableSql(currentCols: DbColumnMeta[], origCols: DbColumnMeta[]): Promise<AlterTablePlan> {
+            const sqls: string[] = []
+            const origMap = new Map<string, DbColumnMeta>()
+            origCols.forEach((c) => origMap.set(c.name, c))
+
+            const currentOrigNames = new Set<string>()
+            currentCols.forEach((c) => {
+                if (c.origName) currentOrigNames.add(c.origName)
+            })
+
+            // 1. 查找被删除的列
+            const droppedCols = origCols.filter((c) => !currentOrigNames.has(c.name))
+            for (const col of droppedCols) {
+                sqls.push(`ALTER TABLE ${quoteIdent(tableName)} DROP COLUMN ${quoteIdent(col.name)};`)
+            }
+
+            // 2. 查找新增列与修改列
+            for (const col of currentCols) {
+                const nullSql = col.isNullable ? 'NULL' : 'NOT NULL'
+                let defSql = ''
+                if (col.defaultVal !== undefined && col.defaultVal.trim() !== '') {
+                    const dv = col.defaultVal.trim()
+                    if (dv.toUpperCase() === 'NULL' || dv.toUpperCase() === 'CURRENT_TIMESTAMP' || /^-?\d+(\.\d+)?$/.test(dv)) {
+                        defSql = ` DEFAULT ${dv}`
+                    } else {
+                        defSql = ` DEFAULT '${dv.replace(/'/g, "''")}'`
+                    }
+                }
+                const commentSql = col.comment ? ` COMMENT '${col.comment.replace(/'/g, "''")}'` : ''
+
+                if (col.isNew || !col.origName || !origMap.has(col.origName)) {
+                    // 新增列
+                    sqls.push(`ALTER TABLE ${quoteIdent(tableName)} ADD COLUMN ${quoteIdent(col.name)} ${col.dataType} ${nullSql}${defSql}${commentSql};`)
+                } else {
+                    const orig = origMap.get(col.origName)!
+                    const isRenamed = col.name !== col.origName
+                    const isChanged =
+                        isRenamed ||
+                        col.dataType !== orig.dataType ||
+                        col.isNullable !== orig.isNullable ||
+                        col.defaultVal !== orig.defaultVal ||
+                        (col.comment || '') !== (orig.comment || '')
+
+                    if (isChanged) {
+                        if (isRenamed) {
+                            sqls.push(`ALTER TABLE ${quoteIdent(tableName)} CHANGE COLUMN ${quoteIdent(col.origName)} ${quoteIdent(col.name)} ${col.dataType} ${nullSql}${defSql}${commentSql};`)
+                        } else {
+                            sqls.push(`ALTER TABLE ${quoteIdent(tableName)} MODIFY COLUMN ${quoteIdent(col.name)} ${col.dataType} ${nullSql}${defSql}${commentSql};`)
+                        }
+                    }
+                }
+            }
+
+            return {
+                sqls,
+                isRebuild: false,
+                warning: droppedCols.length > 0 ? `警告：本次修改将永久删除 [${droppedCols.map((c) => c.name).join(', ')}] 列及其所有数据！` : undefined,
+            }
+        },
+
+        async executeAlterTable(sqls: string[]): Promise<void> {
+            for (const sql of sqls) {
+                const trimmed = sql.trim()
+                if (!trimmed) continue
+                await API.mysqlRun(serverId, dbName, trimmed)
+            }
+        },
+
+        previewCreateIndexSql(params: CreateIndexParams): string {
+            const typeSql = params.isUnique ? 'UNIQUE ' : ''
+            const colsSql = (params.columns || []).map((c) => quoteIdent(c)).join(', ')
+            return `CREATE ${typeSql}INDEX ${quoteIdent(params.name)} ON ${quoteIdent(tableName)} (${colsSql});`
+        },
+
+        async createIndex(params: CreateIndexParams): Promise<void> {
+            const sql = this.previewCreateIndexSql!(params)
+            await API.mysqlRun(serverId, dbName, sql)
+        },
+
+        previewDropIndexSql(indexName: string): string {
+            return `ALTER TABLE ${quoteIdent(tableName)} DROP INDEX ${quoteIdent(indexName)};`
+        },
+
+        async dropIndex(indexName: string): Promise<void> {
+            const sql = this.previewDropIndexSql!(indexName)
+            await API.mysqlRun(serverId, dbName, sql)
+        },
+
+        previewCreateConstraintSql(params: CreateConstraintParams): string {
+            if (params.type === 'FOREIGN KEY') {
+                let sql = `ALTER TABLE ${quoteIdent(tableName)} ADD CONSTRAINT ${quoteIdent(params.name)} FOREIGN KEY (${quoteIdent(params.column || '')}) REFERENCES ${quoteIdent(params.foreignTable || '')} (${quoteIdent(params.foreignColumn || '')})`
+                if (params.onDelete && params.onDelete !== 'RESTRICT') sql += ` ON DELETE ${params.onDelete}`
+                if (params.onUpdate && params.onUpdate !== 'RESTRICT') sql += ` ON UPDATE ${params.onUpdate}`
+                return sql + ';'
+            }
+            return `ALTER TABLE ${quoteIdent(tableName)} ADD CONSTRAINT ${quoteIdent(params.name)} CHECK (${params.checkExpr || ''});`
+        },
+
+        async createConstraint(params: CreateConstraintParams): Promise<void> {
+            const sql = this.previewCreateConstraintSql!(params) as string
+            await API.mysqlRun(serverId, dbName, sql)
+        },
+
+        previewDropConstraintSql(constraint: DbConstraintMeta): string {
+            if (constraint.type === 'FOREIGN KEY') {
+                return `ALTER TABLE ${quoteIdent(tableName)} DROP FOREIGN KEY ${quoteIdent(constraint.name)};`
+            }
+            if (constraint.type === 'CHECK') {
+                return `ALTER TABLE ${quoteIdent(tableName)} DROP CHECK ${quoteIdent(constraint.name)};`
+            }
+            return `ALTER TABLE ${quoteIdent(tableName)} DROP CONSTRAINT ${quoteIdent(constraint.name)};`
+        },
+
+        async dropConstraint(constraint: DbConstraintMeta): Promise<void> {
+            const sql = this.previewDropConstraintSql!(constraint) as string
+            await API.mysqlRun(serverId, dbName, sql)
+        },
+
+        async listTables(): Promise<string[]> {
+            return API.mysqlTables(serverId, dbName)
+        },
+
+        async listTableColumns(targetTable: string): Promise<string[]> {
+            const res = await API.mysqlDescribe(serverId, dbName, targetTable)
+            return (res?.rows || []).map((r: any) => String(r.Field || r.COLUMN_NAME || ''))
         },
     }
 }
