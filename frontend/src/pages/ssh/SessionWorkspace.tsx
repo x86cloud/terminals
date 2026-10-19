@@ -30,7 +30,7 @@ export default function SessionWorkspace({
         if (num >= 300 && num <= 1400) return num
         return 540
     })
-    const [showPanel, setShowPanel] = useState<boolean>(true)
+    const [showPanel, setShowPanel] = useState<boolean>(false)
     const [isMaximized, setIsMaximized] = useState<boolean>(false)
     const [activeTab, setActiveTab] = useState<'files' | 'process' | 'service' | 'cron' | 'dashboard'>('files')
     const [isDragging, setIsDragging] = useState(false)

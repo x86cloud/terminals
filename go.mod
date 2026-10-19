@@ -14,7 +14,8 @@ require (
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/pkg/sftp v1.13.11
 	github.com/redis/go-redis/v9 v9.23.0
-	github.com/wailsapp/wails/v3 v3.0.0-beta.28
+	github.com/wailsapp/wails/v3 v3.0.0-beta.32
+	github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2
 	go.mongodb.org/mongo-driver/v2 v2.9.2
 	golang.org/x/crypto v0.58.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
@@ -23,6 +24,7 @@ require (
 	k8s.io/apimachinery v0.36.4
 	k8s.io/client-go v0.36.4
 	modernc.org/sqlite v1.60.1
+	mvdan.cc/sh/v3 v3.12.0
 )
 
 require (
@@ -87,6 +89,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
+	github.com/rogpeppe/go-internal v1.15.0 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/slongfield/pyfmt v0.0.0-20220222012616-ea85ff4c361f // indirect
 	github.com/spf13/pflag v1.0.10 // indirect

@@ -29,7 +29,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
 
     const steps = useMemo(() => getStepsForMessage(message), [message])
 
-    const handleCopyAssistant = () => {
+    const handleCopy = () => {
         if (!message.content) return
         navigator.clipboard.writeText(message.content).then(() => {
             setCopied(true)
@@ -40,16 +40,17 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
     if (isUser) {
         return (
             <div className={s.messageItem}>
-                <div className={s.userBlock}>
-                    {message.images && message.images.length > 0 && (
-                        <div className={s.imagesGrid}>
-                            {message.images.map((img, i) => (
-                                <img key={i} src={img} alt="attachment" />
-                            ))}
-                        </div>
-                    )}
-
-                    <div className={s.userContent}>{message.content}</div>
+                <div className={s.userRow}>
+                    <div className={s.userBubble}>
+                        {message.images && message.images.length > 0 && (
+                            <div className={s.imagesGrid}>
+                                {message.images.map((img, i) => (
+                                    <img key={i} src={img} alt="attachment" />
+                                ))}
+                            </div>
+                        )}
+                        <div className={s.userContent}>{message.content}</div>
+                    </div>
                 </div>
             </div>
         )
@@ -66,16 +67,18 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
                     </div>
                 )}
 
-                {/* Reasoning & Process Steps with Tools */}
+                {/* 推演过程与工具调用 (微型胶囊折叠) */}
                 <ProcessStepsList
                     steps={steps}
                     isStreaming={isStreaming}
                 />
 
-                {/* Flat Markdown Viewer */}
-                {message.content && !message.plan && <MarkdownViewer content={message.content} />}
+                {/* Markdown 渲染正文 (支持流式动画与代码块优化) */}
+                {message.content && !message.plan && (
+                    <MarkdownViewer content={message.content} streaming={isStreaming} />
+                )}
 
-                {/* Embedded Plan Card */}
+                {/* 方案推演卡片 */}
                 {message.plan && (
                     <MessagePlanCard
                         plan={message.plan}
@@ -86,7 +89,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
                     />
                 )}
 
-                {/* Bottom Action Bar */}
+                {/* 底部轻量操作栏 */}
                 {!isStreaming && message.content && (
                     <div className={s.assistantActions}>
                         <Tooltip title={copied ? '已复制到剪贴板' : '复制全文'}>
@@ -94,17 +97,17 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
                                 size="small"
                                 type="text"
                                 className={s.actionBtn}
-                                icon={copied ? <Check size={12} color="var(--ok)" /> : <Copy size={12} />}
-                                onClick={handleCopyAssistant}
+                                icon={copied ? <Check size={11} color="#10b981" /> : <Copy size={11} />}
+                                onClick={handleCopy}
                             >
-                                {copied ? '已复制' : '复制全文'}
+                                {copied ? '已复制' : '复制'}
                             </Button>
                         </Tooltip>
                     </div>
                 )}
             </div>
 
-            {/* Subtle divider separating Q&A rounds */}
+            {/* 会话轮次微细分隔线 */}
             <div className={s.turnDivider} />
         </div>
     )

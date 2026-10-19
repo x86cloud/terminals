@@ -72,6 +72,7 @@ func NewAgentRuntime() *AgentRuntime {
 	r := router.NewModelRouter()
 	tb := tools.NewToolBus(g, eb)
 	wm := tools.NewWorkspaceManager("")
+	g.SetWorkspaceDir(wm.GetDir())
 	sk := skills.NewSkillsRegistry(st)
 	pl := planner.NewPlanner(r, g, eb)
 	pg := planner.NewPlanGate()
@@ -185,6 +186,9 @@ func (rt *AgentRuntime) InitOrUpdate(cfg core.AppSettings) error {
 	if rt.Guard != nil {
 		rt.Guard.SetEnableGuard(cfg.AiEnablePermissionGuard)
 		rt.Guard.SetBlockHighRiskCommands(cfg.AiBlockHighRiskCommands)
+		if cfg.AiWorkspaceDir != "" {
+			rt.Guard.SetWorkspaceDir(cfg.AiWorkspaceDir)
+		}
 	}
 
 	// Wire dynamic web search tool availability

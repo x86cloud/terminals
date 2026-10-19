@@ -415,7 +415,7 @@ export const Composer: React.FC<ComposerProps> = ({
                     onCompositionEnd={() => setIsComposing(false)}
                     onKeyDown={handleInternalKeyDown}
                     placeholder={placeholderText}
-                    autoSize={{ minRows: 2, maxRows: 8 }}
+                    autoSize={{ minRows: 2, maxRows: 6 }}
                     variant="borderless"
                 />
             </div>
