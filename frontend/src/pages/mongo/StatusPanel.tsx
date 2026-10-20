@@ -582,9 +582,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                             danger
                                             icon={<XOctagon size={12} />}
                                             loading={killingOp === record.opid}
-                                        >
-                                            Kill
-                                        </Button>
+                                        />
                                     </Popconfirm>
                                 ),
                             },
