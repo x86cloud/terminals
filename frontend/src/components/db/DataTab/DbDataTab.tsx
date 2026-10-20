@@ -430,7 +430,6 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
 
     const handleDiscardStructChanges = () => {
         setStructCols(origCols.map((c) => ({ ...c })))
-        message.info('已撤销所有未保存的结构修改')
     }
 
     const handleSaveStructChanges = async () => {
@@ -457,7 +456,6 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         try {
             const plan = await adapter.generateAlterTableSql(structCols, origCols)
             if (!plan.sqls || plan.sqls.length === 0) {
-                message.info('未检测到实质性 DDL 变更')
                 return
             }
             setAlterPlan(plan)
@@ -671,7 +669,6 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         setNewRows([])
         setEditingCell(null)
         setEditingNewCell(null)
-        message.info('已放弃所有未保存修改')
     }
 
     // 删除单行
@@ -853,7 +850,6 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 label: '移除该新增行草稿',
                 onClick: () => {
                     setNewRows((prev) => prev.filter((_, i) => i !== rowIdx))
-                    message.info('已移除新增行草稿')
                 },
             })
         } else {
