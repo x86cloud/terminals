@@ -411,8 +411,13 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 : adapter.dialect === 'postgres'
                     ? 'varchar(255)'
                     : 'TEXT'
+        const existingNames = new Set(structCols.map((c) => c.name.toLowerCase()))
+        let colIdx = structCols.length + 1
+        while (existingNames.has(`new_column_${colIdx}`)) {
+            colIdx++
+        }
         const newCol: DbColumnMeta = {
-            name: `new_column_${structCols.length + 1}`,
+            name: `new_column_${colIdx}`,
             dataType: defaultType,
             isNullable: true,
             defaultVal: '',
@@ -1745,6 +1750,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 columns={columns}
                 adapter={adapter}
                 onSuccess={async () => {
+                    setCreateIndexOpen(false)
                     await Promise.all([loadStructure(), loadDDL()])
                 }}
                 onCancel={() => setCreateIndexOpen(false)}
@@ -1758,6 +1764,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 columns={columns}
                 adapter={adapter}
                 onSuccess={async () => {
+                    setCreateConstraintOpen(false)
                     await Promise.all([loadStructure(), loadDDL()])
                 }}
                 onCancel={() => setCreateConstraintOpen(false)}

@@ -75,6 +75,26 @@ export function buildSqliteWhereClause(filters: Record<string, ColumnFilterState
     return parts.join(' AND ')
 }
 
+async function getExistingIndexSqls(sessionId: string, tableName: string): Promise<string[]> {
+    try {
+        const res = await API.sqliteRun(
+            sessionId,
+            `SELECT sql FROM sqlite_master WHERE type = 'index' AND tbl_name = '${tableName.replace(/'/g, "''")}' AND sql IS NOT NULL;`
+        )
+        if (res && res.rows) {
+            return res.rows
+                .map((r: any) => {
+                    const s = r.sql ? String(r.sql).trim() : ''
+                    return s.endsWith(';') ? s : s ? s + ';' : ''
+                })
+                .filter((s: string) => Boolean(s))
+        }
+    } catch (e) {
+        console.warn('获取 SQLite 既有索引失败:', e)
+    }
+    return []
+}
+
 export function createSqliteAdapter(
     sessionId: string,
     tableName: string,
@@ -356,6 +376,7 @@ export function createSqliteAdapter(
                     colDefs.push(`PRIMARY KEY (${pkCols.join(', ')})`)
                 }
 
+                sqls.push(`DROP TABLE IF EXISTS ${quoteIdent(tempTableName)};`)
                 sqls.push(`CREATE TABLE ${quoteIdent(tempTableName)} (\n  ${colDefs.join(',\n  ')}\n);`)
 
                 // 复制数据 (仅从原表存在的旧列中读取)
@@ -371,6 +392,15 @@ export function createSqliteAdapter(
 
                 // 重命名临时表为原表名
                 sqls.push(`ALTER TABLE ${quoteIdent(tempTableName)} RENAME TO ${quoteIdent(tableName)};`)
+
+                // 重新创建未受影响的既有二级索引
+                const existingIndexes = await getExistingIndexSqls(sessionId, tableName)
+                for (const idxSql of existingIndexes) {
+                    const hasDroppedCol = droppedCols.some((dc) => idxSql.toLowerCase().includes(dc.name.toLowerCase()))
+                    if (!hasDroppedCol) {
+                        sqls.push(idxSql)
+                    }
+                }
 
                 sqls.push(`COMMIT;`)
                 sqls.push(`PRAGMA foreign_keys = ON;`)
@@ -505,13 +535,18 @@ export function createSqliteAdapter(
                 colDefs.push(`CONSTRAINT ${quoteIdent(params.name)} CHECK (${params.checkExpr})`)
             }
 
+            const colNames = struct.columns.map((c) => quoteIdent(c.name)).join(', ')
+            const indexSqls = await getExistingIndexSqls(sessionId, tableName)
+
             const sqls: string[] = [
                 `PRAGMA foreign_keys = OFF;`,
                 `BEGIN TRANSACTION;`,
+                `DROP TABLE IF EXISTS ${quoteIdent(tempTable)};`,
                 `CREATE TABLE ${quoteIdent(tempTable)} (\n  ${colDefs.join(',\n  ')}\n);`,
-                `INSERT INTO ${quoteIdent(tempTable)} SELECT * FROM ${quoteIdent(tableName)};`,
+                `INSERT INTO ${quoteIdent(tempTable)} (${colNames}) SELECT ${colNames} FROM ${quoteIdent(tableName)};`,
                 `DROP TABLE ${quoteIdent(tableName)};`,
                 `ALTER TABLE ${quoteIdent(tempTable)} RENAME TO ${quoteIdent(tableName)};`,
+                ...indexSqls,
                 `COMMIT;`,
                 `PRAGMA foreign_keys = ON;`,
             ]
@@ -569,13 +604,18 @@ export function createSqliteAdapter(
                 }
             }
 
+            const colNames = struct.columns.map((c) => quoteIdent(c.name)).join(', ')
+            const indexSqls = await getExistingIndexSqls(sessionId, tableName)
+
             const sqls: string[] = [
                 `PRAGMA foreign_keys = OFF;`,
                 `BEGIN TRANSACTION;`,
+                `DROP TABLE IF EXISTS ${quoteIdent(tempTable)};`,
                 `CREATE TABLE ${quoteIdent(tempTable)} (\n  ${colDefs.join(',\n  ')}\n);`,
-                `INSERT INTO ${quoteIdent(tempTable)} SELECT * FROM ${quoteIdent(tableName)};`,
+                `INSERT INTO ${quoteIdent(tempTable)} (${colNames}) SELECT ${colNames} FROM ${quoteIdent(tableName)};`,
                 `DROP TABLE ${quoteIdent(tableName)};`,
                 `ALTER TABLE ${quoteIdent(tempTable)} RENAME TO ${quoteIdent(tableName)};`,
+                ...indexSqls,
                 `COMMIT;`,
                 `PRAGMA foreign_keys = ON;`,
             ]

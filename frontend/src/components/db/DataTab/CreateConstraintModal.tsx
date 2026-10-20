@@ -65,9 +65,11 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                 adapter
                     .listTables()
                     .then((tbls) => {
-                        setTables(tbls.filter((t) => t.toLowerCase() !== tableName.toLowerCase()))
+                        setTables(tbls)
                     })
-                    .catch(() => {})
+                    .catch((err) => {
+                        console.warn('获取候选关联表列表失败:', err)
+                    })
                     .finally(() => setLoadingTables(false))
             }
         }
@@ -75,7 +77,22 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
 
     // 目标表变动时加载目标表列
     useEffect(() => {
-        if (foreignTable && adapter.listTableColumns) {
+        if (!foreignTable) {
+            setTargetCols([])
+            setForeignCol('')
+            return
+        }
+
+        // 如果是本表自引用外键，直接使用本表列定义
+        if (foreignTable.toLowerCase() === tableName.toLowerCase() && columns.length > 0) {
+            setTargetCols(columns)
+            if (!columns.includes(foreignCol)) {
+                setForeignCol(columns[0])
+            }
+            return
+        }
+
+        if (adapter.listTableColumns) {
             setLoadingCols(true)
             adapter
                 .listTableColumns(foreignTable)
@@ -85,23 +102,27 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                         setForeignCol(cols[0])
                     }
                 })
-                .catch(() => {})
+                .catch((err) => {
+                    console.warn('获取目标表列列表失败:', err)
+                })
                 .finally(() => setLoadingCols(false))
         } else {
             setTargetCols([])
             setForeignCol('')
         }
-    }, [foreignTable, adapter])
+    }, [foreignTable, tableName, columns, adapter])
 
     // 智能建议约束名称
     useEffect(() => {
         if (!isCustomName) {
             if (constraintType === 'FOREIGN KEY') {
                 if (localCol) {
-                    setName(`fk_${tableName}_${localCol}`)
+                    const rawName = `fk_${tableName}_${localCol}`
+                    setName(rawName.length > 60 ? rawName.slice(0, 60) : rawName)
                 }
             } else {
-                setName(`chk_${tableName}_1`)
+                const rawName = `chk_${tableName}_1`
+                setName(rawName.length > 60 ? rawName.slice(0, 60) : rawName)
             }
         }
     }, [constraintType, localCol, tableName, isCustomName])
@@ -113,6 +134,8 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
     })
 
     useEffect(() => {
+        let active = true
+
         if (!name.trim() || !adapter.previewCreateConstraintSql) {
             setPreviewState({
                 sqlText: '-- 请完整填写约束名称与必要参数',
@@ -153,8 +176,9 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
             if (typeof res === 'string') {
                 setPreviewState({ sqlText: res, isRebuild: false })
             } else if (res && typeof (res as any).then === 'function') {
-                // 支持 Promise 异步计算重建计划 (如 SQLite)
+                // 支持 Promise 异步计算重建计划 (如 SQLite)，带 active 防竞态
                 Promise.resolve(res).then((resolved) => {
+                    if (!active) return
                     if (typeof resolved === 'string') {
                         setPreviewState({ sqlText: resolved, isRebuild: false })
                     } else {
@@ -174,10 +198,16 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                 })
             }
         } catch (e: any) {
-            setPreviewState({
-                sqlText: '-- 生成 SQL 失败: ' + (e.message || e),
-                isRebuild: false,
-            })
+            if (active) {
+                setPreviewState({
+                    sqlText: '-- 生成 SQL 失败: ' + (e.message || e),
+                    isRebuild: false,
+                })
+            }
+        }
+
+        return () => {
+            active = false
         }
     }, [constraintType, name, localCol, foreignTable, foreignCol, onDelete, onUpdate, checkExpr, adapter])
 

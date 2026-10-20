@@ -324,7 +324,15 @@ export function createMysqlAdapter(
                 let defSql = ''
                 if (col.defaultVal !== undefined && col.defaultVal.trim() !== '') {
                     const dv = col.defaultVal.trim()
-                    if (dv.toUpperCase() === 'NULL' || dv.toUpperCase() === 'CURRENT_TIMESTAMP' || /^-?\d+(\.\d+)?$/.test(dv)) {
+                    const dvUpper = dv.toUpperCase()
+                    if (
+                        dvUpper === 'NULL' ||
+                        dvUpper === 'TRUE' ||
+                        dvUpper === 'FALSE' ||
+                        dvUpper.includes('()') ||
+                        dvUpper.startsWith('CURRENT_') ||
+                        /^-?\d+(\.\d+)?$/.test(dv)
+                    ) {
                         defSql = ` DEFAULT ${dv}`
                     } else {
                         defSql = ` DEFAULT '${dv.replace(/'/g, "''")}'`

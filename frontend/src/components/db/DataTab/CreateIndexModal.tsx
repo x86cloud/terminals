@@ -45,7 +45,8 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
             if (selectedCols.length > 0) {
                 const prefix = isUnique ? 'uk' : 'idx'
                 const colsPart = selectedCols.slice(0, 3).join('_')
-                setName(`${prefix}_${tableName}_${colsPart}`)
+                const rawName = `${prefix}_${tableName}_${colsPart}`
+                setName(rawName.length > 60 ? rawName.slice(0, 60) : rawName)
             } else {
                 setName('')
             }
