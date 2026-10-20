@@ -59,6 +59,40 @@ func DefaultConfig() Config {
 		Compress:   true,
 		Level:      slog.LevelWarn,
 	}
+
+	if v := os.Getenv("XCLIENT_LOG_MAX_SIZE"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			cfg.MaxSize = n
+		}
+	}
+	if v := os.Getenv("XCLIENT_LOG_MAX_BACKUPS"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			cfg.MaxBackups = n
+		}
+	}
+	if v := os.Getenv("XCLIENT_LOG_MAX_AGE"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			cfg.MaxAge = n
+		}
+	}
+	if v := os.Getenv("XCLIENT_LOG_COMPRESS"); v != "" {
+		if b, err := strconv.ParseBool(v); err == nil {
+			cfg.Compress = b
+		}
+	}
+	if v := os.Getenv("XCLIENT_LOG_LEVEL"); v != "" {
+		switch strings.ToLower(strings.TrimSpace(v)) {
+		case "debug":
+			cfg.Level = slog.LevelDebug
+		case "info":
+			cfg.Level = slog.LevelInfo
+		case "warn", "warning":
+			cfg.Level = slog.LevelWarn
+		case "error":
+			cfg.Level = slog.LevelError
+		}
+	}
+
 	return cfg
 }
 

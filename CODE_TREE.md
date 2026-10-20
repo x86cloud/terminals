@@ -2,7 +2,7 @@
 
 **Languages:** `go`, `typescript` | **Go Version:** `1.27.1` | **Root:** `D:\system\Desktop\Terminal\terminal_v3`
 
-> 📊 **Metrics:** 87 Packages | 333 Files (go: 102, typescript: 231) | 316 Classes/Structs | 367 Interfaces | 1352 Functions | 947 Methods | ~114650 Est. Tokens
+> 📊 **Metrics:** 87 Packages | 338 Files (go: 102, typescript: 236) | 322 Classes/Structs | 389 Interfaces | 1391 Functions | 966 Methods | ~117690 Est. Tokens
 
 ## 📁 File Structure
 
@@ -189,6 +189,9 @@
 │   │   │   │   └── TabBar.tsx
 │   │   │   ├── db/
 │   │   │   │   ├── DataTab/
+│   │   │   │   │   ├── AlterTableModal.tsx
+│   │   │   │   │   ├── CreateConstraintModal.tsx
+│   │   │   │   │   ├── CreateIndexModal.tsx
 │   │   │   │   │   ├── DbDataTab.tsx
 │   │   │   │   │   └── index.ts
 │   │   │   │   ├── SqlEditor/
@@ -199,6 +202,7 @@
 │   │   │   │   │   ├── mysqlAdapter.ts
 │   │   │   │   │   ├── postgresAdapter.ts
 │   │   │   │   │   └── sqliteAdapter.ts
+│   │   │   │   ├── dialectTypes.ts
 │   │   │   │   ├── index.ts
 │   │   │   │   └── types.ts
 │   │   │   ├── server-forms/
@@ -292,6 +296,7 @@
 │   │   │   │   ├── ObjModal.tsx
 │   │   │   │   ├── SchemaTab.tsx
 │   │   │   │   ├── StatusPanel.tsx
+│   │   │   │   ├── UsersTab.tsx
 │   │   │   │   └── mongoTypes.ts
 │   │   │   ├── mqtt/
 │   │   │   │   └── MqttClient.tsx
@@ -2827,7 +2832,7 @@ func NewVerifier(r *router.ModelRouter) *Verifier { ... }
 
 ### Package `wiki` (`agent/wiki`)
 
-- **Imports (15):** `bufio`, `context`, `encoding/json`, `fmt`, `github.com/cloudwego/eino/schema`, `os`, `os/exec`, `path/filepath`, `runtime`, `sort`, `strings`, `sync`, `terminal/agent/router`, `terminal/core`, `terminal/storage`
+- **Imports (16):** `bufio`, `context`, `encoding/json`, `fmt`, `github.com/cloudwego/eino/schema`, `os`, `os/exec`, `path/filepath`, `runtime`, `sort`, `strings`, `sync`, `terminal/agent/router`, `terminal/core`, `terminal/logger`, `terminal/storage`
 
 #### Constants & Variables
 
@@ -2875,7 +2880,7 @@ func CreateNode(parentPath string, name string, isFolder bool) (string, error) {
 func DeleteNode(relPath string) error { ... }
 
 // GetCatalog 提取紧凑的 Wiki 目录与摘要列表，供 LLM 上下文感知
-// Calls: [GetWikiDir, bufio.NewScanner, d.Info, d.IsDir, d.Name, file.Close, filepath.Ext, filepath.Rel, filepath.ToSlash, filepath.WalkDir, info.ModTime, info.ModTime().UnixMilli, os.Open, scanner.Scan, scanner.Text, sort.Slice, strings.HasPrefix, strings.HasSuffix, strings.ToLower, strings.TrimLeft, strings.TrimSpace, strings.TrimSuffix, summaryBuilder.Len, summaryBuilder.String, summaryBuilder.WriteString, wikiMu.RLock, wikiMu.RUnlock]
+// Calls: [GetWikiDir, bufio.NewScanner, d.Info, d.IsDir, d.Name, file.Close, filepath.Ext, filepath.Rel, filepath.ToSlash, filepath.WalkDir, info.ModTime, info.ModTime().UnixMilli, logger.Warnf, os.Open, scanner.Err, scanner.Scan, scanner.Text, sort.Slice, strings.HasPrefix, strings.HasSuffix, strings.ToLower, strings.TrimLeft, strings.TrimSpace, strings.TrimSuffix, summaryBuilder.Len, summaryBuilder.String, summaryBuilder.WriteString, wikiMu.RLock, wikiMu.RUnlock]
 func GetCatalog() ([]WikiCatalogItem, error) { ... }
 
 // GetWikiDir 获取本地 Wiki 知识库根目录路径
@@ -3050,13 +3055,13 @@ const authTypePassword = "password"
 const authTypeKey = "key"
 var isAppQuitting atomic.Bool
 // Injected via ldflags during build:
-// -ldflags "-X 'terminal/core.Version=v1.0.13' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-18'"
+// -ldflags "-X 'terminal/core.Version=v1.1.0' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-20'"
 var Version
 // Injected via ldflags during build:
-// -ldflags "-X 'terminal/core.Version=v1.0.13' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-18'"
+// -ldflags "-X 'terminal/core.Version=v1.1.0' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-20'"
 var GitCommit
 // Injected via ldflags during build:
-// -ldflags "-X 'terminal/core.Version=v1.0.13' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-18'"
+// -ldflags "-X 'terminal/core.Version=v1.1.0' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-20'"
 var BuildDate
 ```
 
@@ -3953,7 +3958,7 @@ func (m *MysqlManagerEx) MysqlUsers(id string) ([]map[string]any, error) { ... }
 // Calls: [m.queryEx]
 func (m *MysqlManagerEx) MysqlVariables(id string) (map[string]any, error) { ... }
 
-// Calls: [buildMysqlDSNExtended, cancel, context.Background, context.WithTimeout, db.Close, db.Ping, db.SetConnMaxLifetime, db.SetMaxIdleConns, db.SetMaxOpenConns, fmt.Errorf, isSameMysqlConfig, m.mu.Lock, m.mu.Unlock, old.db.PingContext, sql.Open, time.Duration, toClose.db.Close, toClose.tunnel.close, tunnel.close]
+// Calls: [buildMysqlDSNExtended, cancel, context.Background, context.WithTimeout, db.Close, db.Ping, db.SetConnMaxIdleTime, db.SetConnMaxLifetime, db.SetMaxIdleConns, db.SetMaxOpenConns, fmt.Errorf, isSameMysqlConfig, m.mu.Lock, m.mu.Unlock, old.db.PingContext, sql.Open, time.Duration, toClose.db.Close, toClose.tunnel.close, tunnel.close]
 func (m *MysqlManagerEx) Open(id string, cfg core.ServerConfig) error { ... }
 
 // Calls: [errors.New, fmt.Errorf, m.mu.Lock, m.mu.Unlock, strings.EqualFold, strings.TrimSpace]
@@ -4363,11 +4368,11 @@ func (m *SqliteManager) SqliteConnect(id string, path string) (bool, error) { ..
 func (m *SqliteManager) SqliteCount(id string, table string) (int64, error) { ... }
 
 // SqliteDescribe 返回表结构（列名、类型、可否为空、默认值、是否主键）。
-// Calls: [errors.New, fmt.Sprintf, m.Get, mc.db.Query, quoteSqliteIdent, rows.Close, rows.Err, rows.Next, rows.Scan]
+// Calls: [cancel, context.Background, context.WithTimeout, errors.New, fmt.Sprintf, m.Get, mc.db.QueryContext, quoteSqliteIdent, rows.Close, rows.Err, rows.Next, rows.Scan]
 func (m *SqliteManager) SqliteDescribe(id string, table string) ([]map[string]any, error) { ... }
 
 // SqliteIndexes 返回表的索引信息。
-// Calls: [errors.New, fmt.Sprintf, m.Get, mc.db.Query, quoteSqliteIdent, rows.Close, rows.Err, rows.Next, rows.Scan]
+// Calls: [cancel, context.Background, context.WithTimeout, errors.New, fmt.Sprintf, m.Get, mc.db.QueryContext, quoteSqliteIdent, rows.Close, rows.Err, rows.Next, rows.Scan]
 func (m *SqliteManager) SqliteIndexes(id string, table string) ([]map[string]any, error) { ... }
 
 // SqliteInfo 返回当前连接的基本信息：文件路径与大小。
@@ -4379,7 +4384,7 @@ func (m *SqliteManager) SqliteInfo(id string) (map[string]any, error) { ... }
 func (m *SqliteManager) SqliteOpenFile() (string, error) { ... }
 
 // SqliteRun 执行任意 SQL：只读查询返回结果集，写操作返回影响行数。
-// Calls: [errors.New, m.Get, m.querySqlite, mc.db.Exec, res.RowsAffected, sqliteIsReadQuery, strings.HasPrefix, strings.ToUpper, strings.TrimSpace]
+// Calls: [cancel, context.Background, context.WithTimeout, errors.New, m.Get, m.querySqlite, mc.db.ExecContext, res.RowsAffected, sqliteIsReadQuery, strings.HasPrefix, strings.ToUpper, strings.TrimSpace]
 func (m *SqliteManager) SqliteRun(id string, sqlText string) (map[string]any, error) { ... }
 
 // SqliteSchema 返回所有表的列信息，供前端绘制 ER 图（外键作为关系）。
@@ -4391,11 +4396,11 @@ func (m *SqliteManager) SqliteSchema(id string) (map[string]any, error) { ... }
 func (m *SqliteManager) SqliteSelect(id string, table string, limit int, offset int) (map[string]any, error) { ... }
 
 // SqliteTables 返回数据库中的用户表与视图（排除 SQLite 内部表）。
-// Calls: [errors.New, m.Get, mc.db.Query, rows.Close, rows.Err, rows.Next, rows.Scan]
+// Calls: [cancel, context.Background, context.WithTimeout, errors.New, m.Get, mc.db.QueryContext, rows.Close, rows.Err, rows.Next, rows.Scan]
 func (m *SqliteManager) SqliteTables(id string) ([]map[string]any, error) { ... }
 
 // querySqlite 执行查询并返回列名与行数据。
-// Calls: [errors.New, m.Get, mc.db.Query, normalizeSqliteVal, res.Close, res.Columns, res.Err, res.Next, res.Scan]
+// Calls: [cancel, context.Background, context.WithTimeout, errors.New, m.Get, mc.db.QueryContext, normalizeSqliteVal, res.Close, res.Columns, res.Err, res.Next, res.Scan]
 func (m *SqliteManager) querySqlite(id string, sqlText string) (columns []string, rows []map[string]any, err error) { ... }
 
 // ---- 扩展 mysqlConn：携带 SSH 隧道以便关闭时释放 ----
@@ -4676,7 +4681,7 @@ func (d *DockerClient) GetComposeStack(ctx context.Context, projectName string) 
 func (d *DockerClient) GetComposeStackLogs(ctx context.Context, projectName string, tail int) (string, error) { ... }
 
 // GetContainerLogs 获取容器日志。
-// Calls: [buf.String, buf.Write, d.cli.ContainerLogs, int, io.ReadAll, reader.Close, strconv.Itoa]
+// Calls: [buf.String, buf.Write, d.cli.ContainerLogs, int, io.LimitReader, io.ReadAll, reader.Close, strconv.Itoa]
 func (d *DockerClient) GetContainerLogs(ctx context.Context, id string, tail int, timestamps bool) (string, error) { ... }
 
 // GetOverview 获取系统概览。
@@ -5384,7 +5389,7 @@ type K8sExecSession struct {
 }
 
 // Close 关闭终端会话并释放资源。
-// Calls: [s.cancel, s.closeOnce.Do, s.mu.Lock, s.mu.Unlock, s.stdinWriter.Close]
+// Calls: [s.cancel, s.closeOnce.Do, s.mu.Lock, s.mu.Unlock, s.sizeQueue.Close, s.stdinWriter.Close]
 func (s *K8sExecSession) Close() error { ... }
 
 // Resize 调整终端行列尺寸。
@@ -5540,13 +5545,19 @@ type K8sServiceInfo struct {
 // K8sTerminalSizeQueue 实现 remotecommand.TerminalSizeQueue 接口。
 type K8sTerminalSizeQueue struct {
 	sizeChan chan remotecommand.TerminalSize
+	mu sync.Mutex
+	closed bool
 }
+
+// Close 安全关闭尺寸更新通道。
+// Calls: [q.mu.Lock, q.mu.Unlock]
+func (q *K8sTerminalSizeQueue) Close() { ... }
 
 // Next 获取下一个终端尺寸。
 func (q *K8sTerminalSizeQueue) Next() *remotecommand.TerminalSize { ... }
 
 // Push 动态更新终端窗口大小。
-// Calls: [uint16]
+// Calls: [q.mu.Lock, q.mu.Unlock, uint16]
 func (q *K8sTerminalSizeQueue) Push(cols int, rows int) { ... }
 
 // KubeconfigContextInfo 描述解析出来的 Kubeconfig 上下文及集群信息。
@@ -5661,7 +5672,7 @@ func Debug(msg string, args ...any) { ... }
 func Debugf(format string, args ...any) { ... }
 
 // DefaultConfig 获取默认日志配置，并根据环境变量进行覆盖。
-// Calls: [defaultLogPath]
+// Calls: [defaultLogPath, os.Getenv, strconv.Atoi, strconv.ParseBool, strings.ToLower, strings.TrimSpace]
 func DefaultConfig() Config { ... }
 
 // EnsureInitialized 确保日志库已经初始化；若尚未显式调用 Init()，则自动使用默认配置初始化。
@@ -5770,6 +5781,37 @@ type MongoBulkOp struct {
 	Upsert bool `json:"upsert"`
 }
 
+// MongoCloneCollReq 克隆集合请求
+type MongoCloneCollReq struct {
+	SourceDB string `json:"sourceDb"`
+	SourceColl string `json:"sourceColl"`
+	TargetDB string `json:"targetDb"`
+	TargetColl string `json:"targetColl"`
+	// 是否同时拷贝文档数据
+	CopyData bool `json:"copyData"`
+}
+
+// MongoCreateCollOptions 高级集合创建选项
+type MongoCreateCollOptions struct {
+	Name string `json:"name"`
+	Capped bool `json:"capped,omitempty"`
+	Size int64 `json:"size,omitempty"`
+	Max int64 `json:"max,omitempty"`
+	IsTimeseries bool `json:"isTimeseries,omitempty"`
+	TimeField string `json:"timeField,omitempty"`
+	MetaField string `json:"metaField,omitempty"`
+	// "seconds", "minutes", "hours"
+	Granularity string `json:"granularity,omitempty"`
+}
+
+// MongoCreateUserReq 新建用户请求
+type MongoCreateUserReq struct {
+	User string `json:"user"`
+	Pwd string `json:"pwd"`
+	DB string `json:"db"`
+	Roles []MongoRoleItem `json:"roles"`
+}
+
 // MongoFindResult 查询结果。
 type MongoFindResult struct {
 	// Extended JSON 字符串数组
@@ -5821,6 +5863,10 @@ func (m *MongoManager) MongoBulkWrite(id string, db string, coll string, ops []M
 // Calls: [m.mustMongo, mc.stats.snapshot]
 func (m *MongoManager) MongoClientStats(id string) (map[string]any, error) { ... }
 
+// MongoCloneCollection 克隆集合结构、索引及可选数据
+// Calls: [cancel, cur.All, cur.Close, curDocs.Close, curDocs.Decode, curDocs.Err, curDocs.Next, errors.New, fmt.Errorf, int64, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.client.Database().CreateCollection, mc.opCtx, opt.SetExpireAfterSeconds, opt.SetSparse, opt.SetUnique, options.Index, options.Index().SetName, srcCollection.Find, srcCollection.Indexes, srcCollection.Indexes().List, strings.TrimSpace, tgtCollection.Indexes, tgtCollection.Indexes().CreateMany, tgtCollection.InsertMany]
+func (m *MongoManager) MongoCloneCollection(id string, req MongoCloneCollReq) (int64, error) { ... }
+
 // MongoCollectionStats 返回集合统计（文档数、大小、索引）。
 // Calls: [cancel, cur.Close, cur.Decode, cur.Next, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.client.Database().Collection().Aggregate, mc.opCtx, mc.track, time.Now, toBsonMap]
 func (m *MongoManager) MongoCollectionStats(id string, db string, coll string) (map[string]any, error) { ... }
@@ -5837,6 +5883,10 @@ func (m *MongoManager) MongoCountDocuments(id string, db string, coll string, fi
 // Calls: [cancel, errors.New, m.mustMongo, mc.client.Database, mc.client.Database().CreateCollection, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
 func (m *MongoManager) MongoCreateCollection(id string, db string, coll string) error { ... }
 
+// MongoCreateCollectionAdvanced 创建具备高级属性（封顶或时序）的集合。
+// Calls: [cancel, errors.New, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoCreateCollectionAdvanced(id string, db string, opt MongoCreateCollOptions) error { ... }
+
 // MongoCreateDatabase 通过创建首个集合来隐式建库。
 // Calls: [m.MongoCreateCollection, strings.TrimSpace]
 func (m *MongoManager) MongoCreateDatabase(id string, db string, firstCollection string) error { ... }
@@ -5844,6 +5894,10 @@ func (m *MongoManager) MongoCreateDatabase(id string, db string, firstCollection
 // MongoCreateIndex 创建索引。keysJSON 形如 {"field":1,"other":-1}。
 // Calls: [cancel, errors.New, fmt.Errorf, idxOpts.SetExpireAfterSeconds, idxOpts.SetName, int32, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.client.Database().Collection().Indexes, mc.client.Database().Collection().Indexes().CreateOne, mc.opCtx, mc.track, options.Index, options.Index().SetUnique, options.Index().SetUnique().SetSparse, parseJSONDoc, strings.TrimSpace, time.Now]
 func (m *MongoManager) MongoCreateIndex(id string, db string, coll string, keysJSON string, name string, unique bool, sparse bool, expireAfterSeconds int) (string, error) { ... }
+
+// MongoCreateUser 创建用户
+// Calls: [cancel, errors.New, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoCreateUser(id string, req MongoCreateUserReq) error { ... }
 
 // MongoCurrentOps 返回正在执行的操作，便于定位慢查询。
 // Calls: [cancel, cur.All, cur.Close, docsToJSON, m.mustMongo, mc.client.Database, mc.client.Database().Aggregate, mc.opCtx]
@@ -5877,17 +5931,25 @@ func (m *MongoManager) MongoDropDatabase(id string, db string) error { ... }
 // Calls: [cancel, errors.New, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.client.Database().Collection().Indexes, mc.client.Database().Collection().Indexes().DropOne, mc.opCtx, mc.track, time.Now]
 func (m *MongoManager) MongoDropIndex(id string, db string, coll string, name string) error { ... }
 
+// MongoDropUser 删除用户
+// Calls: [cancel, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoDropUser(id string, db string, username string) error { ... }
+
 // MongoExplain 返回查询执行计划，用于性能分析。
 // Calls: [cancel, docToJSON, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, parseJSONDoc, strings.TrimSpace, time.Now]
 func (m *MongoManager) MongoExplain(id string, spec MongoQuerySpec, verbosity string) (string, error) { ... }
 
 // MongoFind 按查询构建器规格执行查询。
-// Calls: [cancel, ccancel, coll.CountDocuments, coll.Find, cur.All, cur.Close, docsToJSON, fmt.Errorf, int64, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.opCtx, mc.track, opt.SetHint, opt.SetLimit, opt.SetProjection, opt.SetSkip, opt.SetSort, options.Find, parseJSONDoc, strings.HasPrefix, strings.TrimSpace, time.Now, time.Since, time.Since().Milliseconds]
+// Calls: [cancel, ccancel, coll.CountDocuments, coll.EstimatedDocumentCount, coll.Find, cur.All, cur.Close, docsToJSON, fmt.Errorf, int64, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.opCtx, mc.track, opt.SetHint, opt.SetLimit, opt.SetProjection, opt.SetSkip, opt.SetSort, options.Find, parseJSONDoc, strings.HasPrefix, strings.TrimSpace, time.Now, time.Since, time.Since().Milliseconds]
 func (m *MongoManager) MongoFind(id string, spec MongoQuerySpec) (MongoFindResult, error) { ... }
 
 // MongoFindOneAndUpdate 原子地查找并更新，返回更新后的文档。
 // Calls: [cancel, docToJSON, errors.Is, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.client.Database().Collection().FindOneAndUpdate, mc.client.Database().Collection().FindOneAndUpdate().Decode, mc.opCtx, mc.track, options.FindOneAndUpdate, options.FindOneAndUpdate().SetReturnDocument, parseJSONDoc, strings.HasPrefix, time.Now]
 func (m *MongoManager) MongoFindOneAndUpdate(id string, db string, coll string, filterJSON string, updateJSON string, returnNew bool) (string, error) { ... }
+
+// MongoGetProfilingStatus 获取当前数据库的 Profiling 状态 (level: 0, 1, 2)
+// Calls: [cancel, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoGetProfilingStatus(id string, db string) (map[string]any, error) { ... }
 
 // MongoGetValidator 读取集合当前的 JSON Schema 校验规则。
 // Calls: [cancel, cur.Close, cur.Decode, cur.Next, docToJSON, m.mustMongo, mc.client.Database, mc.client.Database().ListCollections, mc.opCtx, toBsonMap]
@@ -5934,10 +5996,18 @@ func (m *MongoManager) MongoRunCommand(id string, db string, commandJSON string)
 // Calls: [cancel, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.stats.snapshot, mc.track, time.Now, toBsonMap]
 func (m *MongoManager) MongoServerStatus(id string) (map[string]any, error) { ... }
 
+// MongoSetProfilingStatus 设置 Profiling 级别与慢查询阈值 (slowms)
+// Calls: [cancel, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoSetProfilingStatus(id string, db string, level int, slowms int) error { ... }
+
 // MongoSetValidator 设置 / 更新集合的 JSON Schema 校验规则。
 // level: off | moderate | strict；action: error | warn。
 // Calls: [cancel, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Err, mc.opCtx, mc.track, parseJSONDoc, time.Now]
 func (m *MongoManager) MongoSetValidator(id string, db string, coll string, validatorJSON string, level string, action string) error { ... }
+
+// MongoSlowQueries 从指定库的 system.profile 集合中读取最近的慢查询记录
+// Calls: [cancel, coll.Find, cur.All, cur.Close, docsToJSON, int64, m.mustMongo, mc.client.Database, mc.client.Database().Collection, mc.opCtx, mc.track, options.Find, options.Find().SetSort, options.Find().SetSort().SetLimit, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoSlowQueries(id string, db string, limit int) ([]string, error) { ... }
 
 // MongoTransaction 在单个事务中按顺序执行多个操作，全部成功才提交。
 // 需要副本集或分片集群；单机实例不支持事务。
@@ -5955,6 +6025,14 @@ func (m *MongoManager) MongoUpdateMany(id string, db string, coll string, filter
 // MongoUpdateOne 更新单个文档。update 需为含 $set 等操作符的 JSON。
 // Calls: [m.mongoUpdate]
 func (m *MongoManager) MongoUpdateOne(id string, db string, coll string, filterJSON string, updateJSON string, upsert bool) (map[string]any, error) { ... }
+
+// MongoUpdateUser 修改用户密码或角色
+// Calls: [cancel, errors.New, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoUpdateUser(id string, req MongoUpdateUserReq) error { ... }
+
+// MongoUsers 获取用户列表
+// Calls: [cancel, m.mustMongo, mc.client.Database, mc.client.Database().RunCommand, mc.client.Database().RunCommand().Decode, mc.opCtx, mc.track, strings.TrimSpace, time.Now]
+func (m *MongoManager) MongoUsers(id string, db string) ([]MongoUserInfo, error) { ... }
 
 // MongoValidateDocument 用集合现有校验规则试跑一个文档，返回是否通过。
 // 通过在事务/临时校验中执行 insert 再回滚的方式避免脏数据。
@@ -6010,6 +6088,12 @@ type MongoQuerySpec struct {
 	Collation string `json:"collation"`
 }
 
+// MongoRoleItem 角色项
+type MongoRoleItem struct {
+	Role string `json:"role"`
+	DB string `json:"db"`
+}
+
 // MongoTxOp 事务中的一个操作。
 type MongoTxOp struct {
 	// insert | update | updateMany | delete | deleteMany | replace
@@ -6034,6 +6118,22 @@ type MongoURIInfo struct {
 	TLS bool `json:"tls"`
 	SRV bool `json:"srv"`
 	Options map[string]string `json:"options"`
+}
+
+// MongoUpdateUserReq 更新用户请求
+type MongoUpdateUserReq struct {
+	User string `json:"user"`
+	DB string `json:"db"`
+	Pwd string `json:"pwd,omitempty"`
+	Roles []MongoRoleItem `json:"roles,omitempty"`
+}
+
+// MongoUserInfo 用户详情
+type MongoUserInfo struct {
+	User string `json:"user"`
+	DB string `json:"db"`
+	Roles []MongoRoleItem `json:"roles"`
+	CustomData map[string]any `json:"customData,omitempty"`
 }
 
 // mongoClient 表示一个 MongoDB 会话。
@@ -6503,7 +6603,7 @@ func (m *RedisManager) RenameKey(id string, oldKey string, newKey string) error 
 // Calls: [errors.New, fmt.Errorf, m.mu.Lock, m.mu.Unlock, strings.EqualFold, strings.TrimSpace]
 func (m *RedisManager) ResolveID(idOrName string) (string, error) { ... }
 
-// Calls: [context.Background, errors.New, int64, m.Get, rc.client.Scan, rc.client.Scan().Result, rc.client.TTL, rc.client.TTL().Result, rc.client.Type, rc.client.Type().Result, rc.do, ttl.Seconds]
+// Calls: [context.Background, errors.New, int64, m.Get, pipe.Exec, pipe.TTL, pipe.Type, rc.client.Pipeline, rc.client.Scan, rc.client.Scan().Result, rc.do, ttl.Seconds, ttlCmds[i].Err, ttlCmds[i].Val, typeCmds[i].Err, typeCmds[i].Val]
 func (m *RedisManager) ScanKeys(id string, pattern string, cursor uint64, count int64) (RedisKeysResult, error) { ... }
 
 // Calls: [context.Background, errors.New, m.Get, rc.client.Do, rc.client.Do().Err, rc.do, strconv.Itoa]
@@ -7255,6 +7355,9 @@ func (s *MongoService) MongoBulkWrite(id string, dbName string, coll string, ops
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoClientStats]
 func (s *MongoService) MongoClientStats(id string) (map[string]any, error) { ... }
 
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoCloneCollection, logger.Infof]
+func (s *MongoService) MongoCloneCollection(id string, req mongo.MongoCloneCollReq) (int64, error) { ... }
+
 // Calls: [GetContainer, GetContainer().MongoMgr.Close, logger.Infof]
 func (s *MongoService) MongoClose(id string) error { ... }
 
@@ -7273,11 +7376,17 @@ func (s *MongoService) MongoCountDocuments(id string, dbName string, coll string
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoCreateCollection, logger.Errorf, logger.Infof]
 func (s *MongoService) MongoCreateCollection(id string, dbName string, coll string) error { ... }
 
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoCreateCollectionAdvanced, logger.Infof]
+func (s *MongoService) MongoCreateCollectionAdvanced(id string, db string, opt mongo.MongoCreateCollOptions) error { ... }
+
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoCreateDatabase, logger.Errorf, logger.Infof]
 func (s *MongoService) MongoCreateDatabase(id string, dbName string, firstCollection string) error { ... }
 
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoCreateIndex, logger.Errorf, logger.Infof]
 func (s *MongoService) MongoCreateIndex(id string, dbName string, coll string, keysJSON string, name string, unique bool, sparse bool, expireAfterSeconds int) (string, error) { ... }
+
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoCreateUser, logger.Infof]
+func (s *MongoService) MongoCreateUser(id string, req mongo.MongoCreateUserReq) error { ... }
 
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoCurrentOps]
 func (s *MongoService) MongoCurrentOps(id string) ([]string, error) { ... }
@@ -7303,6 +7412,9 @@ func (s *MongoService) MongoDropDatabase(id string, dbName string) error { ... }
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoDropIndex, logger.Errorf, logger.Infof]
 func (s *MongoService) MongoDropIndex(id string, dbName string, coll string, name string) error { ... }
 
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoDropUser, logger.Infof]
+func (s *MongoService) MongoDropUser(id string, db string, username string) error { ... }
+
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoExplain]
 func (s *MongoService) MongoExplain(id string, spec mongo.MongoQuerySpec, verbosity string) (string, error) { ... }
 
@@ -7311,6 +7423,9 @@ func (s *MongoService) MongoFind(id string, spec mongo.MongoQuerySpec) (mongo.Mo
 
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoFindOneAndUpdate, logger.Infof]
 func (s *MongoService) MongoFindOneAndUpdate(id string, dbName string, coll string, filterJSON string, updateJSON string, returnNew bool) (string, error) { ... }
+
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoGetProfilingStatus]
+func (s *MongoService) MongoGetProfilingStatus(id string, db string) (map[string]any, error) { ... }
 
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoGetValidator]
 func (s *MongoService) MongoGetValidator(id string, dbName string, coll string) (map[string]any, error) { ... }
@@ -7348,8 +7463,14 @@ func (s *MongoService) MongoRunCommand(id string, dbName string, commandJSON str
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoServerStatus]
 func (s *MongoService) MongoServerStatus(id string) (map[string]any, error) { ... }
 
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoSetProfilingStatus, logger.Infof]
+func (s *MongoService) MongoSetProfilingStatus(id string, db string, level int, slowms int) error { ... }
+
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoSetValidator, logger.Errorf, logger.Infof]
 func (s *MongoService) MongoSetValidator(id string, dbName string, coll string, validatorJSON string, level string, action string) error { ... }
+
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoSlowQueries]
+func (s *MongoService) MongoSlowQueries(id string, db string, limit int) ([]string, error) { ... }
 
 // Calls: [GetContainer, GetContainer().MongoMgr.TestConnection, logger.Errorf, logger.Infof]
 func (s *MongoService) MongoTestConnection(cfg core.ServerConfig) (map[string]any, error) { ... }
@@ -7365,6 +7486,12 @@ func (s *MongoService) MongoUpdateMany(id string, dbName string, coll string, fi
 
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoUpdateOne, logger.Errorf, logger.Infof]
 func (s *MongoService) MongoUpdateOne(id string, dbName string, coll string, filterJSON string, updateJSON string, upsert bool) (map[string]any, error) { ... }
+
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoUpdateUser, logger.Infof]
+func (s *MongoService) MongoUpdateUser(id string, req mongo.MongoUpdateUserReq) error { ... }
+
+// Calls: [GetContainer, GetContainer().MongoMgr.MongoUsers]
+func (s *MongoService) MongoUsers(id string, db string) ([]mongo.MongoUserInfo, error) { ... }
 
 // Calls: [GetContainer, GetContainer().MongoMgr.MongoValidateDocument]
 func (s *MongoService) MongoValidateDocument(id string, dbName string, coll string, docJSON string) (map[string]any, error) { ... }
@@ -8076,7 +8203,7 @@ func NewWikiService() *WikiService { ... }
 
 ### Package `ssh` (`ssh`)
 
-- **Imports (18):** `context`, `encoding/base64`, `errors`, `fmt`, `github.com/google/uuid`, `github.com/pkg/sftp`, `golang.org/x/crypto/ssh`, `io`, `io/fs`, `net`, `os`, `path`, `path/filepath`, `sort`, `strings`, `sync`, `terminal/core`, `time`
+- **Imports (19):** `bytes`, `context`, `encoding/base64`, `errors`, `fmt`, `github.com/google/uuid`, `github.com/pkg/sftp`, `golang.org/x/crypto/ssh`, `io`, `io/fs`, `net`, `os`, `path`, `path/filepath`, `sort`, `strings`, `sync`, `terminal/core`, `time`
 
 #### Constants & Variables
 
@@ -8446,7 +8573,7 @@ func (m *SessionManager) StartDownload(tm *TransferManager, sessionID string, re
 // Calls: [NormalizeRemote, filepath.Base, info.IsDir, info.Size, localTreeSize, m.Get, m.NotifyDirChanged, m.uploadFile, m.uploadTree, os.Stat, path.Join, session.sftpConn, tm.create, tm.finish, tm.setSize]
 func (m *SessionManager) StartUpload(tm *TransferManager, sessionID string, remoteDir string, localPath string) error { ... }
 
-// Calls: [NormalizeRemote, base64.StdEncoding.DecodeString, client.Create, f.Close, fmt.Errorf, int64, io.CopyBuffer, m.Get, m.NotifyDirChanged, mkdirAllRemote, path.Join, session.sftpConn, string, strings.NewReader, tm.addProgress, tm.create, tm.finish, tm.setSize]
+// Calls: [NormalizeRemote, base64.StdEncoding.DecodeString, bytes.NewReader, client.Create, f.Close, fmt.Errorf, int64, io.CopyBuffer, m.Get, m.NotifyDirChanged, mkdirAllRemote, path.Join, session.sftpConn, tm.addProgress, tm.create, tm.finish, tm.setSize]
 func (m *SessionManager) UploadBase64(tm *TransferManager, sessionID string, remoteDir string, name string, data string) error { ... }
 
 // Calls: [client.Chmod, client.Create, dst.Close, errors.New, fmt.Errorf, fmt.Sprintf, info.IsDir, info.Mode, info.Mode().Perm, io.CopyBuffer, localFile.Close, localFile.Stat, m.Get, m.NotifyDirChanged, mkdirAllRemote, os.Open, path.Dir, session.ExecCombined, session.ResolveRemotePath, session.client.NewSession, session.isClosed, session.sftpConn, sshSess.Close, sshSess.Start, sshSess.StdinPipe, sshSess.Wait, stdinPipe.Close]
@@ -9036,6 +9163,21 @@ export interface MongoBulkOp {
 	...
 }
 
+// MongoCloneCollReq 克隆集合请求
+export interface MongoCloneCollReq {
+	...
+}
+
+// MongoCreateCollOptions 高级集合创建选项
+export interface MongoCreateCollOptions {
+	...
+}
+
+// MongoCreateUserReq 新建用户请求
+export interface MongoCreateUserReq {
+	...
+}
+
 // MongoFindResult 查询结果。
 export interface MongoFindResult {
 	...
@@ -9046,6 +9188,11 @@ export interface MongoQuerySpec {
 	...
 }
 
+// MongoRoleItem 角色项
+export interface MongoRoleItem {
+	...
+}
+
 // MongoTxOp 事务中的一个操作。
 export interface MongoTxOp {
 	...
@@ -9053,6 +9200,16 @@ export interface MongoTxOp {
 
 // MongoURIInfo 是连接串解析结果，供前端回填表单。
 export interface MongoURIInfo {
+	...
+}
+
+// MongoUpdateUserReq 更新用户请求
+export interface MongoUpdateUserReq {
+	...
+}
+
+// MongoUserInfo 用户详情
+export interface MongoUserInfo {
 	...
 }
 
@@ -9628,6 +9785,9 @@ export function MongoBulkWrite(id: string, dbName: string, coll: string, ops: mo
 export function MongoClientStats(id: string): $CancellablePromise< { ... }
 
 // Calls: [Call.ByID]
+export function MongoCloneCollection(id: string, req: mongo$0.MongoCloneCollReq): $CancellablePromise<number> { ... }
+
+// Calls: [Call.ByID]
 export function MongoClose(id: string): $CancellablePromise<void> { ... }
 
 // Calls: [Call.ByID]
@@ -9646,10 +9806,16 @@ export function MongoCountDocuments(id: string, dbName: string, coll: string, fi
 export function MongoCreateCollection(id: string, dbName: string, coll: string): $CancellablePromise<void> { ... }
 
 // Calls: [Call.ByID]
+export function MongoCreateCollectionAdvanced(id: string, db: string, opt: mongo$0.MongoCreateCollOptions): $CancellablePromise<void> { ... }
+
+// Calls: [Call.ByID]
 export function MongoCreateDatabase(id: string, dbName: string, firstCollection: string): $CancellablePromise<void> { ... }
 
 // Calls: [Call.ByID]
 export function MongoCreateIndex(id: string, dbName: string, coll: string, keysJSON: string, name: string, unique: boolean, sparse: boolean, expireAfterSeconds: number): $CancellablePromise<string> { ... }
+
+// Calls: [Call.ByID]
+export function MongoCreateUser(id: string, req: mongo$0.MongoCreateUserReq): $CancellablePromise<void> { ... }
 
 // Calls: [Call.ByID]
 export function MongoCurrentOps(id: string): $CancellablePromise<string[] | null> { ... }
@@ -9676,6 +9842,9 @@ export function MongoDropDatabase(id: string, dbName: string): $CancellablePromi
 export function MongoDropIndex(id: string, dbName: string, coll: string, name: string): $CancellablePromise<void> { ... }
 
 // Calls: [Call.ByID]
+export function MongoDropUser(id: string, db: string, username: string): $CancellablePromise<void> { ... }
+
+// Calls: [Call.ByID]
 export function MongoExplain(id: string, spec: mongo$0.MongoQuerySpec, verbosity: string): $CancellablePromise<string> { ... }
 
 // Calls: [Call.ByID]
@@ -9683,6 +9852,9 @@ export function MongoFind(id: string, spec: mongo$0.MongoQuerySpec): $Cancellabl
 
 // Calls: [Call.ByID]
 export function MongoFindOneAndUpdate(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, returnNew: boolean): $CancellablePromise<string> { ... }
+
+// Calls: [Call.ByID]
+export function MongoGetProfilingStatus(id: string, db: string): $CancellablePromise< { ... }
 
 // Calls: [Call.ByID]
 export function MongoGetValidator(id: string, dbName: string, coll: string): $CancellablePromise< { ... }
@@ -9721,7 +9893,13 @@ export function MongoRunCommand(id: string, dbName: string, commandJSON: string)
 export function MongoServerStatus(id: string): $CancellablePromise< { ... }
 
 // Calls: [Call.ByID]
+export function MongoSetProfilingStatus(id: string, db: string, level: number, slowms: number): $CancellablePromise<void> { ... }
+
+// Calls: [Call.ByID]
 export function MongoSetValidator(id: string, dbName: string, coll: string, validatorJSON: string, level: string, action: string): $CancellablePromise<void> { ... }
+
+// Calls: [Call.ByID]
+export function MongoSlowQueries(id: string, db: string, limit: number): $CancellablePromise<string[] | null> { ... }
 
 // Calls: [Call.ByID]
 export function MongoTestConnection(cfg: core$0.ServerConfig): $CancellablePromise< { ... }
@@ -9737,6 +9915,12 @@ export function MongoUpdateMany(id: string, dbName: string, coll: string, filter
 
 // Calls: [Call.ByID]
 export function MongoUpdateOne(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean): $CancellablePromise< { ... }
+
+// Calls: [Call.ByID]
+export function MongoUpdateUser(id: string, req: mongo$0.MongoUpdateUserReq): $CancellablePromise<void> { ... }
+
+// Calls: [Call.ByID]
+export function MongoUsers(id: string, db: string): $CancellablePromise<mongo$0.MongoUserInfo[] | null> { ... }
 
 // Calls: [Call.ByID]
 export function MongoValidateDocument(id: string, dbName: string, coll: string, docJSON: string): $CancellablePromise< { ... }
@@ -10682,6 +10866,38 @@ export interface MongoTxResult {
 	...
 }
 
+// 用户与角色管理
+export interface MongoRoleItem {
+	...
+}
+
+export interface MongoUserInfo {
+	...
+}
+
+export interface MongoCreateUserReq {
+	...
+}
+
+export interface MongoUpdateUserReq {
+	...
+}
+
+// 高级集合创建选项
+export interface MongoCreateCollOptions {
+	...
+}
+
+// 集合克隆请求
+export interface MongoCloneCollReq {
+	...
+}
+
+// 慢查询分析
+export interface MongoSlowQueryItem {
+	...
+}
+
 // 性能监控
 export interface MongoServerStatus {
 	...
@@ -11212,7 +11428,7 @@ export function handleClose(key: string) { ... }
 
 ### TypeScript Module `common` (`frontend/src/components/common`)
 
-- **Imports (15):** `./CellEditorInline.module.less`, `./MarkdownViewer.module.less`, `./TabBar.module.less`, `@/api`, `@/contexts/ThemeContext`, `@/theme`, `@/utils`, `@ant-design/x-markdown`, `@xterm/addon-fit`, `@xterm/addon-web-links`, `@xterm/xterm`, `@xterm/xterm/css/xterm.css`, `antd`, `lucide-react`, `react`
+- **Imports (17):** `./CellEditorInline.module.less`, `./MarkdownViewer.module.less`, `./TabBar.module.less`, `@/api`, `@/contexts/ThemeContext`, `@/theme`, `@/utils`, `@xterm/addon-fit`, `@xterm/addon-web-links`, `@xterm/xterm`, `@xterm/xterm/css/xterm.css`, `antd`, `highlight.js`, `highlight.js/styles/atom-one-dark.css`, `lucide-react`, `markdown-it`, `react`
 
 ```typescript
 export interface ContainerExecTarget {
@@ -11249,6 +11465,14 @@ export function handleClear() { ... }
 
 // Calls: [if, message.info, message.success, navigator.clipboard.writeText, termRef.current.getSelection, termRef.current.hasSelection]
 export function handleCopy() { ... }
+
+// 辅助函数：渲染统一且紧凑的代码块卡片
+// Calls: [cleanContent.split, content.replace, encodeURIComponent, hljs.getLanguage, hljs.highlight, if, md.utils.escapeHtml, rawLang.toLowerCase, replace]
+export function renderCodeCard(content: string, rawLang: string): string { ... }
+
+// 事件委托：处理复制代码按钮与展开超长代码块操作
+// Calls: [card.classList.contains, card.classList.toggle, copyBtn.classList.add, copyBtn.classList.remove, copyBtn.getAttribute, copyBtn.querySelector, decodeURIComponent, e.preventDefault, e.stopPropagation, expandBtn.closest, if, navigator.clipboard.writeText, target.closest, then]
+export function handleClick(e: React.MouseEvent<HTMLDivElement>) { ... }
 
 // Calls: [if, setHasOverflow]
 export function checkOverflow() { ... }
@@ -11313,12 +11537,33 @@ export function isDescendant(parentKey: string, childKey: string, nodes: TreeNod
 
 ### TypeScript Module `DataTab` (`frontend/src/components/db/DataTab`)
 
-- **Imports (7):** `../types`, `./DbDataTab.module.less`, `@/components/ResizableTable`, `@/components/common/CellEditorInline`, `@/utils`, `@/utils/sqlExport`, `react`
+- **Imports (13):** `../types`, `./AlterTableModal`, `./CreateConstraintModal`, `./CreateIndexModal`, `./DbDataTab.module.less`, `@/components/CodeEditor`, `@/components/ResizableTable`, `@/components/common/CellEditorInline`, `@/utils`, `@/utils/sqlExport`, `antd`, `lucide-react`, `react`
 
 ```typescript
+export interface AlterTableModalProps {
+	...
+}
+
+export interface CreateConstraintModalProps {
+	...
+}
+
+export interface CreateIndexModalProps {
+	...
+}
+
 export interface DbDataTabProps {
 	...
 }
+
+// Calls: [if, message.success, navigator.clipboard.writeText]
+export function handleCopy() { ... }
+
+// Calls: [adapter.createConstraint, catch, checkExpr.trim, if, message.error, message.success, message.warning, name.trim, onSuccess, setLoading]
+export async function handleOk() { ... }
+
+// Calls: [adapter.createIndex, catch, if, message.error, message.success, message.warning, name.trim, onSuccess, setLoading]
+export async function handleOk() { ... }
 
 // Calls: [adapter.buildWhereClause, calcColWidthFromName, columns.join, filter, if, map, setColWidths, structure.columns.filter, useEffect, useMemo, useRef, useState]
 export function getColW(key: string, isPk = false, isFk = false) { ... }
@@ -11344,6 +11589,36 @@ export function handleClearAllFilters() { ... }
 // Calls: [if, loadData, setPage, setSortCol, setSortOrder]
 export function handleHeaderSort(colName: string) { ... }
 
+// Calls: [combineDataType, getDefaultLength, handleStructColChange, if, isLengthSupported, splitDataType]
+export function handleBaseTypeChange(idx: number, newBase: string) { ... }
+
+// Calls: [combineDataType, handleStructColChange, splitDataType]
+export function handleLengthChange(idx: number, newLen: string) { ... }
+
+// Calls: [setStructCols]
+export function handleStructColChange(index: number, patch: Partial<DbColumnMeta>) { ... }
+
+// Calls: [Set, c.name.toLowerCase, existingNames.has, setStructCols, structCols.map, varchar, while]
+export function handleAddStructCol() { ... }
+
+// Calls: [prev.filter, setStructCols]
+export function handleDropStructCol(index: number) { ... }
+
+// Calls: [origCols.map, setStructCols]
+export function handleDiscardStructChanges() { ... }
+
+// Calls: [adapter.generateAlterTableSql, c.name.trim, catch, for, if, message.error, message.warning, n.toLowerCase, nameSet.add, nameSet.has, names.some, setAlterModalOpen, setAlterPlan, structCols.map]
+export async function handleSaveStructChanges() { ... }
+
+// Calls: [adapter.executeAlterTable, catch, if, loadDDL, loadData, loadStructure, message.error, message.success, setAlterLoading, setAlterModalOpen, setAlterPlan]
+export async function handleExecuteAlterTable() { ... }
+
+// Calls: [adapter.dropIndex, catch, if, loadDDL, loadStructure, message.error, message.success]
+export async function handleDropIndex(indexName: string) { ... }
+
+// Calls: [adapter.dropConstraint, catch, if, loadDDL, loadStructure, message.error, message.success]
+export async function handleDropConstraint(c: DbConstraintMeta) { ... }
+
 // 行内编辑保存
 // Calls: [coerceCellValue, if, isSameCellValue, setEditingCell, setRowDrafts]
 export function handleCommitCell(rowIdx: number, col: string, val: any, isNull: boolean) { ... }
@@ -11364,7 +11639,7 @@ export function handleSaveNewCellInline(rowIdx: number, col: string, val: any, i
 export function handleKeyDown(e: KeyboardEvent) { ... }
 
 // 放弃所有草稿修改
-// Calls: [message.info, setEditingCell, setEditingNewCell, setNewRows, setRowDrafts]
+// Calls: [setEditingCell, setEditingNewCell, setNewRows, setRowDrafts]
 export function handleDiscardAll() { ... }
 
 // 删除单行
@@ -11441,8 +11716,8 @@ export function handleExportCsv() { ... }
 // Calls: [Math.random, React.createElement, children.filter, children.push, if, qb.nested_loop.forEach, renderMysqlPlanNode, toString, var]
 export function renderMysqlPlanNode(node: any): any { ... }
 
-// Calls: [API.mysqlCount, API.mysqlDelete, API.mysqlDescribe, API.mysqlExportToFileEx, API.mysqlIndexes, API.mysqlInsert, API.mysqlRun, API.mysqlSelect, API.mysqlUpdate, COUNT, catch, cols.map, columns.push, constraintRows.map, countData, deleteRow, descRes.rows.forEach, exportToFile, filter, fkColMap.add, fkColMap.has, for, idxList.forEach, if, indexes.push, insertRows, loadDDL, loadData, loadStructure, pkList.map, push, quoteIdent, replace, updateRows, where.trim]
-export function quoteIdent(name: string) { ... }
+// Calls: [API.mysqlCount, API.mysqlDelete, API.mysqlDescribe, API.mysqlExportToFileEx, API.mysqlIndexes, API.mysqlInsert, API.mysqlRun, API.mysqlSelect, API.mysqlUpdate, COUNT, catch, col.comment.replace, col.defaultVal.trim, cols.map, columns.push, constraintRows.map, countData, currentCols.forEach, currentOrigNames.add, currentOrigNames.has, deleteRow, descRes.rows.forEach, droppedCols.map, dv.replace, dv.toUpperCase, dvUpper.includes, dvUpper.startsWith, executeAlterTable, exportToFile, filter, fkColMap.add, fkColMap.has, for, generateAlterTableSql, idxList.forEach, if, indexes.push, insertRows, join, loadDDL, loadData, loadStructure, origCols.filter, origCols.forEach, origMap.get, origMap.has, origMap.set, pkList.map, previewCreateIndexSql, push, quoteIdent, replace, sql.trim, sqls.push, test, updateRows, where.trim]
+export function colsSql(params.columns || []).map((c) { ... }
 
 // Calls: [API.mysqlRun, explainSql, if, performance.now, renderMysqlPlanNode, runSql]
 export function createMysqlSqlAdapter(serverId: string, dbName: string): DbSqlEditorAdapter { ... }
@@ -11450,8 +11725,11 @@ export function createMysqlSqlAdapter(serverId: string, dbName: string): DbSqlEd
 // Calls: [Math.random, React.createElement, if, map, ms, renderPgPlanNode, toString, var]
 export function renderPgPlanNode(plan: any): any { ... }
 
-// Calls: [API.postgresCount, API.postgresDelete, API.postgresDescribe, API.postgresExportToFile, API.postgresInsert, API.postgresSelect, API.postgresTableDDL, API.postgresUpdate, cols.map, countData, deleteRow, exportToFile, filter, for, if, insertRows, loadDDL, loadData, loadStructure, map, pkList.map, updateRows]
+// Calls: [quoteIdent]
 export function quoteIdent(name: string) { ... }
+
+// Calls: [quoteIdent]
+export function colsSql(params.columns || []).map((c) { ... }
 
 // Calls: [isNaN, val.trim]
 export function isNumeric(val: string): boolean { ... }
@@ -11462,8 +11740,11 @@ export function sqlVal(v: any): string { ... }
 // Calls: [CAST, col.replace, f.value.replace, for, if, isNumeric, parts.join, parts.push, switch]
 export function buildSqliteWhereClause(filters: Record<string, ColumnFilterState>): string { ... }
 
-// Calls: [API.sqliteCount, API.sqliteDescribe, API.sqliteIndexes, API.sqliteRun, API.sqliteSelect, COUNT, IN, VALUES, catch, col.replace, columns.forEach, countData, deleteRow, fkColSet.add, fkColSet.has, fkRows.map, for, foreign_key_list, if, insertRows, loadDDL, loadData, loadStructure, map, pk.replace, pkList.map, replace, setParts.join, setParts.push, sortCol.replace, sqlVal, tableName.replace, updateRows, validCols.join, validCols.push, validVals.join, validVals.push, where.trim, whereParts.join]
-export function quoteIdent(name: string) { ... }
+// Calls: [API.sqliteRun, catch, filter, if, map, s.endsWith, tableName.replace, trim]
+export async function getExistingIndexSqls(sessionId: string, tableName: string): Promise<string[]> { ... }
+
+// Calls: [API.sqliteCount, API.sqliteDescribe, API.sqliteIndexes, API.sqliteRun, API.sqliteSelect, COUNT, IN, KEY, VALUES, catch, col.defaultVal.trim, col.replace, colDefs.join, colDefs.push, columns.forEach, countData, currentCols.filter, currentCols.forEach, currentOrigNames.add, currentOrigNames.has, dc.name.toLowerCase, deleteRow, droppedCols.map, droppedCols.some, dv.replace, dv.toUpperCase, executeAlterTable, fkColSet.add, fkColSet.has, fkRows.map, for, foreign_key_list, generateAlterTableSql, getExistingIndexSqls, idxSql.toLowerCase, if, includes, insertRows, join, loadDDL, loadData, loadStructure, map, matchedCols.map, origCols.filter, origCols.forEach, origMap.get, origMap.has, origMap.set, pk.replace, pkCols.join, pkCols.push, pkList.map, previewCreateIndexSql, quoteIdent, replace, setParts.join, setParts.push, sortCol.replace, sql.trim, sqlVal, sqls.push, startsWith, tableName.replace, test, toUpperCase, updateRows, validCols.join, validCols.push, validVals.join, validVals.push, where.trim, whereParts.join]
+export function colsSql(params.columns || []).map((c) { ... }
 
 ```
 
@@ -11471,9 +11752,17 @@ export function quoteIdent(name: string) { ... }
 
 ### TypeScript Module `db` (`frontend/src/components/db`)
 
-- **Imports (1):** `@/components/ColumnFilterPopover`
+- **Imports (2):** `./types`, `@/components/ColumnFilterPopover`
 
 ```typescript
+export interface DataTypeOption {
+	...
+}
+
+export interface DataTypeCategory {
+	...
+}
+
 export interface DbColumnMeta {
 	...
 }
@@ -11498,6 +11787,18 @@ export interface DbQueryResult {
 	...
 }
 
+export interface AlterTablePlan {
+	...
+}
+
+export interface CreateIndexParams {
+	...
+}
+
+export interface CreateConstraintParams {
+	...
+}
+
 export interface DbAdapter {
 	...
 }
@@ -11511,6 +11812,30 @@ export interface DbSqlEditorAdapter {
 }
 
 export type DbDialect = 'mysql' | 'postgres' | 'sqlite';
+
+// Calls: [switch]
+export function getDialectTypeCategories(dialect: DbDialect): DataTypeCategory[] { ... }
+
+// 拆分完整数据类型表达式为基础类型与长度/精度参数
+// 例：
+// varchar(255) -> { baseType: 'varchar', length: '255' }
+// decimal(10, 2) -> { baseType: 'decimal', length: '10, 2' }
+// integer -> { baseType: 'integer', length: '' }
+// timestamp without time zone -> { baseType: 'timestamp without time zone', length: '' }
+// Calls: [fullType.trim, if, trim, trimmed.match]
+export function splitDataType(fullType: string) { ... }
+
+// 组装基础类型与长度/精度参数为完整 SQL 类型
+// Calls: [if, trim]
+export function combineDataType(baseType: string, length?: string): string { ... }
+
+// 判断指定方言下的基础类型是否支持/需要长度与精度输入
+// Calls: [for, getDialectTypeCategories, if, includes, opt.value.toLowerCase, toLowerCase, trim]
+export function isLengthSupported(dialect: DbDialect, baseType: string): boolean { ... }
+
+// 获取切换到该类型时的智能默认长度
+// Calls: [for, getDialectTypeCategories, if, opt.value.toLowerCase, toLowerCase, trim]
+export function getDefaultLength(dialect: DbDialect, baseType: string): string { ... }
 
 ```
 
@@ -11725,7 +12050,7 @@ export type SlashCommandType = 'plan' | 'grill-me';
 export function handleCustomSubmit() { ... }
 
 // Calls: [if, navigator.clipboard.writeText, setCopied, then]
-export function handleCopyAssistant() { ... }
+export function handleCopy() { ... }
 
 // Calls: [FileReader, Promise, reader.readAsDataURL, resolve]
 export function readFileAsDataURL(file: File): Promise<string> { ... }
@@ -12350,7 +12675,7 @@ export function renderKindIcon(kind: string) { ... }
 
 ### TypeScript Module `mongo` (`frontend/src/pages/mongo`)
 
-- **Imports (28):** `./ChangeStreamTab`, `./DataTab`, `./DataTab.module.less`, `./IndexesTab`, `./IoModal`, `./MongoClient.module.less`, `./MqlEditor`, `./MqlEditor.module.less`, `./ObjModal`, `./SchemaTab`, `./StatusPanel`, `./StatusPanel.module.less`, `./mongoTypes`, `@/api`, `@/components/ClientIcon`, `@/components/CodeEditor`, `@/components/ColumnFilterPopover`, `@/components/Modal`, `@/components/ResizableTable`, `@/components/common/TabBar`, `@/components/common/Tree`, `@/pages/mongo/mongoShared.module.less`, `@/types`, `@/utils`, `@/utils/sqlExport`, `antd`, `lucide-react`, `react`
+- **Imports (30):** `./ChangeStreamTab`, `./DataTab`, `./DataTab.module.less`, `./IndexesTab`, `./IoModal`, `./MongoClient.module.less`, `./MqlEditor`, `./MqlEditor.module.less`, `./ObjModal`, `./SchemaTab`, `./StatusPanel`, `./StatusPanel.module.less`, `./UsersTab`, `./UsersTab.module.less`, `./mongoTypes`, `@/api`, `@/components/ClientIcon`, `@/components/CodeEditor`, `@/components/ColumnFilterPopover`, `@/components/Modal`, `@/components/ResizableTable`, `@/components/common/TabBar`, `@/components/common/Tree`, `@/pages/mongo/mongoShared.module.less`, `@/types`, `@/utils`, `@/utils/sqlExport`, `antd`, `lucide-react`, `react`
 
 ```typescript
 export interface Props {
@@ -12393,6 +12718,10 @@ export interface ParsedCurrentOp {
 	...
 }
 
+export interface Props {
+	...
+}
+
 export interface MongoTabItem {
 	...
 }
@@ -12404,7 +12733,7 @@ export type MongoExportScope = 'current' | 'all';
 // MongoDB 子组件共享的工具与类型
 export type MongoTabKey = 'documents' | 'aggregate' | 'indexes' | 'schema' | 'monitor' | 'stream';
 
-export type MongoTabType = 'status' | 'query' | 'data';
+export type MongoTabType = 'status' | 'query' | 'data' | 'users';
 
 export function pretty(text: string): string { ... }
 
@@ -12489,10 +12818,6 @@ export function handleCloseLeftTabs(targetKey: string) { ... }
 // Calls: [if, nextTabs.some, setActiveTabKey, setTabs, tabs.filter, tabs.findIndex]
 export function handleCloseRightTabs(targetKey: string) { ... }
 
-// 弹窗确认操作
-// Calls: [API.mongoCreateCollection, API.mongoCreateDatabase, API.mongoDeleteMany, API.mongoDropCollection, API.mongoDropDatabase, API.mongoRenameCollection, API.mongoRunCommand, catch, handleCloseTab, if, initConnection, loadCollections, message.success, openCollectionTab, setObjBusy, setObjModal, setObjMsg, switch]
-export async function handleObjConfirm(extra?: { capped?: boolean; size?: number; max?: number; firstColl?: string }) { ... }
-
 // 数据库右键菜单
 // Calls: [setObjDb, setObjModal, setObjName]
 export function getDbMenuItems(dbName: string): MenuProps['items'] { ... }
@@ -12509,7 +12834,7 @@ export function formatCode() { ... }
 // Calls: [API.mongoRunCommand, Date.now, catch, code.trim, errorMessage, if, setBusy, setDuration, setError, setExplainText, setResultMode]
 export async function handleExplain() { ... }
 
-// Calls: [firstColl.trim, if, includes, onConfirm, useState]
+// Calls: [firstColl.trim, if, includes, metaField.trim, onConfirm, timeField.trim, useState]
 export function handleOk() { ... }
 
 // Calls: [API.mongoGetValidator, API.mongoInferSchema, API.mongoSetValidator, async, catch, errorMessage, if, infer, loadValidator, message.success, setAction, setBusy, setError, setFields, setLevel, setValidator, setValidatorBusy, setValidatorMsg, useCallback, useEffect, useState]
@@ -12530,6 +12855,30 @@ export async function handleKillOp(opid: string | number) { ... }
 
 // Calls: [for, if, list.push, walk]
 export function walk(obj: any, prefix = '', section = '') { ... }
+
+// 保存 Profiler 配置
+// Calls: [API.mongoSetProfilingStatus, catch, errorMessage, loadSlowQueries, message.error, message.success, setProfilerModalOpen, setSavingProfiler]
+export async function handleSaveProfiler() { ... }
+
+// 处理新建用户
+// Calls: [API.mongoCreateUser, API.mongoUsers, async, catch, errorMessage, if, includes, loadUsers, message.success, newPassword.trim, newUsername.trim, r.db.toLowerCase, r.role.toLowerCase, searchQuery.toLowerCase, searchQuery.trim, setCreateBusy, setCreateMsg, setCreateOpen, setError, setLoading, setNewPassword, setNewUsername, setUsers, some, u.db.toLowerCase, u.user.toLowerCase, useCallback, useEffect, useMemo, useState, users.filter]
+export async function handleCreateUser() { ... }
+
+// 处理更新密码
+// Calls: [API.mongoUpdateUser, catch, errorMessage, if, message.error, message.success, message.warning, pwdModal.newPwd.trim, setPwdBusy, setPwdModal]
+export async function handleUpdatePassword() { ... }
+
+// 处理更新角色
+// Calls: [API.mongoUpdateUser, catch, errorMessage, if, loadUsers, message.error, message.success, setRolesBusy, setRolesModal]
+export async function handleUpdateRoles() { ... }
+
+// 删除用户
+// Calls: [API.mongoDropUser, catch, errorMessage, loadUsers, message.error, message.success]
+export async function handleDeleteUser(u: MongoUserInfo) { ... }
+
+// 复制连接凭据模板
+// Calls: [copyTextToClipboard]
+export function handleCopyUri(u: MongoUserInfo) { ... }
 
 // 美化 Extended JSON 字符串（已是 JSON，直接格式化）
 // Calls: [if]
@@ -13520,10 +13869,10 @@ export interface SessionWorkspaceProps {
 	...
 }
 
-// Calls: [if, rootRef.current.getBoundingClientRect, setPanelWidth]
+// Calls: [Math.abs, if, requestAnimationFrame, rootRef.current.getBoundingClientRect, setPanelWidth]
 export function onMouseMove(e: MouseEvent) { ... }
 
-// Calls: [appStorage.set, setIsDragging]
+// Calls: [appStorage.set, cancelAnimationFrame, if, setIsDragging, setPanelWidth, setShowPanel]
 export function onMouseUp() { ... }
 
 ```
@@ -13701,14 +14050,23 @@ export async function openLogs(svc: SSHServiceInfo) { ... }
 
 ### TypeScript Module `terminal` (`frontend/src/pages/ssh/terminal`)
 
-- **Imports (14):** `@/api`, `@/components/ContextMenu`, `@/contexts/ThemeContext`, `@/pages/ssh/terminal/Terminal.module.less`, `@/theme`, `@/utils`, `@xterm/addon-fit`, `@xterm/addon-search`, `@xterm/addon-web-links`, `@xterm/xterm`, `@xterm/xterm/css/xterm.css`, `antd`, `lucide-react`, `react`
+- **Imports (16):** `@/api`, `@/components/ContextMenu`, `@/contexts/ThemeContext`, `@/pages/ssh/terminal/Terminal.module.less`, `@/theme`, `@/utils`, `@xterm/addon-canvas`, `@xterm/addon-fit`, `@xterm/addon-search`, `@xterm/addon-web-links`, `@xterm/addon-webgl`, `@xterm/xterm`, `@xterm/xterm/css/xterm.css`, `antd`, `lucide-react`, `react`
 
 ```typescript
 export interface Props {
 	...
 }
 
-// Calls: [API.resize, API.sendInput, API.terminalAttach, Date.now, FitAddon, ResizeObserver, SearchAddon, Terminal, WebLinksAddon, async, base64ToBytes, catch, copySelection, debouncedResize, e.preventDefault, e.stopPropagation, fit, fit.fit, focus, getSelection, getTerminalTheme, if, indexOf, navigator.clipboard.readText, navigator.clipboard.writeText, navigator.platform.toUpperCase, observer.disconnect, observer.observe, offClosed, offData, paste, return, searchRef.current.findNext, select, setMenu, setSearchOpen, subscribe, term.attachCustomKeyEventHandler, term.clear, term.dispose, term.focus, term.hasSelection, term.loadAddon, term.onData, term.onResize, term.open, term.write, term.writeln, termRef.current.paste, useCallback, useEffect, useState, useTheme, window.clearTimeout, window.setTimeout]
+// Calls: [API.resize, CanvasAddon, Date.now, FitAddon, SearchAddon, Terminal, WebLinksAddon, async, catch, focus, getSelection, getTerminalTheme, if, navigator.clipboard.readText, navigator.clipboard.writeText, setMenu, term.loadAddon, term.open, termRef.current.paste, useCallback, useEffect, useState, useTheme, window.clearTimeout, window.setTimeout]
+export function tryCanvas() { ... }
+
+// Calls: [WebglAddon, addon.dispose, addon.onContextLoss, catch, if, term.loadAddon, tryCanvas]
+export function attachRenderer() { ... }
+
+// Calls: [Uint8Array, for, if, merged.set, termRef.current.write, window.clearTimeout]
+export function flushOutput() { ... }
+
+// Calls: [if, searchRef.current.findNext]
 export function handleSearchNext() { ... }
 
 // Calls: [if, searchRef.current.findPrevious]
@@ -13717,7 +14075,7 @@ export function handleSearchPrev() { ... }
 // Calls: [handleSearchNext, handleSearchPrev, if, setSearchOpen]
 export function handleSearchKeyDown(e: React.KeyboardEvent<HTMLInputElement>) { ... }
 
-// Calls: [if, searchRef.current.findNext, setSearchQuery]
+// Calls: [findNext, if, setSearchQuery, window.clearTimeout, window.setTimeout]
 export function handleSearchChange(e: React.ChangeEvent<HTMLInputElement>) { ... }
 
 ```
@@ -13808,7 +14166,7 @@ export function joinRemote(dir: string, name: string): string { ... }
 // Calls: [if, p.replace, trimmed.lastIndexOf, trimmed.slice]
 export function parentRemote(p: string): string { ... }
 
-// Calls: [Uint8Array, atob, binary.charCodeAt, for, if]
+// Calls: [Uint8Array, atob, b64.charCodeAt, binary.charCodeAt, for, fromBase64, if, return, typeof]
 export function base64ToBytes(b64: string): Uint8Array { ... }
 
 // Calls: [Array.from, String.fromCharCode.apply, Uint8Array, btoa, bytes.subarray, for]

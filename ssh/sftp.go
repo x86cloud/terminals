@@ -1,6 +1,7 @@
 package ssh
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"errors"
@@ -619,7 +620,7 @@ func (m *SessionManager) UploadBase64(tm *TransferManager, sessionID, remoteDir,
 				return err
 			}
 			defer f.Close()
-			reader := &progressReader{r: strings.NewReader(string(raw)), ctx: ctx, report: func(n int64) {
+			reader := &progressReader{r: bytes.NewReader(raw), ctx: ctx, report: func(n int64) {
 				tm.addProgress(t, n)
 			}}
 			_, err = io.CopyBuffer(f, reader, make([]byte, 256*1024))

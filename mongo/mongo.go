@@ -2189,17 +2189,34 @@ func (m *MongoManager) MongoCloneCollection(id string, req MongoCloneCollReq) (i
 		batch := make([]any, 0, 1000)
 		for curDocs.Next(ctx) {
 			var rawDoc bson.Raw
-			if err := curDocs.Decode(&rawDoc); err == nil {
-				batch = append(batch, rawDoc)
-				copiedCount++
+			if err := curDocs.Decode(&rawDoc); err != nil {
+				return copiedCount, fmt.Errorf("解析文档失败: %w", err)
 			}
+			batch = append(batch, rawDoc)
 			if len(batch) >= 1000 {
-				_, _ = tgtCollection.InsertMany(ctx, batch)
+				res, err := tgtCollection.InsertMany(ctx, batch)
+				if err != nil {
+					if res != nil {
+						copiedCount += int64(len(res.InsertedIDs))
+					}
+					return copiedCount, fmt.Errorf("插入目标集合失败: %w", err)
+				}
+				copiedCount += int64(len(res.InsertedIDs))
 				batch = batch[:0]
 			}
 		}
+		if err := curDocs.Err(); err != nil {
+			return copiedCount, fmt.Errorf("游标遍历失败: %w", err)
+		}
 		if len(batch) > 0 {
-			_, _ = tgtCollection.InsertMany(ctx, batch)
+			res, err := tgtCollection.InsertMany(ctx, batch)
+			if err != nil {
+				if res != nil {
+					copiedCount += int64(len(res.InsertedIDs))
+				}
+				return copiedCount, fmt.Errorf("插入目标集合失败: %w", err)
+			}
+			copiedCount += int64(len(res.InsertedIDs))
 		}
 	}
 

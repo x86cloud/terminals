@@ -461,18 +461,37 @@ func (m *RedisManager) ScanKeys(id, pattern string, cursor uint64, count int64) 
 		return RedisKeysResult{}, err
 	}
 
-	items := make([]RedisKeyItem, 0, len(keys))
-	for _, k := range keys {
-		ctx := context.Background()
-		t, _ := rc.client.Type(ctx, k).Result()
-		ttl, _ := rc.client.TTL(ctx, k).Result()
-		ttlSec := int64(-1)
-		if ttl > 0 {
-			ttlSec = int64(ttl.Seconds())
-		} else if ttl == -2*time.Second {
-			ttlSec = -2
+	items := make([]RedisKeyItem, len(keys))
+	if len(keys) > 0 {
+		typeCmds := make([]*goredis.StatusCmd, len(keys))
+		ttlCmds := make([]*goredis.DurationCmd, len(keys))
+
+		_ = rc.do(context.Background(), func(c context.Context) error {
+			pipe := rc.client.Pipeline()
+			for i, k := range keys {
+				typeCmds[i] = pipe.Type(c, k)
+				ttlCmds[i] = pipe.TTL(c, k)
+			}
+			_, _ = pipe.Exec(c)
+			return nil
+		})
+
+		for i, k := range keys {
+			t := ""
+			if typeCmds[i] != nil && typeCmds[i].Err() == nil {
+				t = typeCmds[i].Val()
+			}
+			ttlSec := int64(-1)
+			if ttlCmds[i] != nil && ttlCmds[i].Err() == nil {
+				ttl := ttlCmds[i].Val()
+				if ttl > 0 {
+					ttlSec = int64(ttl.Seconds())
+				} else if ttl == -2*time.Second {
+					ttlSec = -2
+				}
+			}
+			items[i] = RedisKeyItem{Key: k, Type: t, TTL: ttlSec}
 		}
-		items = append(items, RedisKeyItem{Key: k, Type: t, TTL: ttlSec})
 	}
 	return RedisKeysResult{Keys: items, Cursor: nextCursor}, nil
 }

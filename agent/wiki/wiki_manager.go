@@ -15,6 +15,7 @@ import (
 
 	"terminal/agent/router"
 	"terminal/core"
+	"terminal/logger"
 	"terminal/storage"
 
 	"github.com/cloudwego/eino/schema"
@@ -257,6 +258,14 @@ func GetCatalog() ([]WikiCatalogItem, error) {
 					summaryBuilder.WriteString(line)
 				}
 			}
+			// 早期退出优化：提取到标题与充足摘要后直接终止扫描，避免大文档全量解析
+			if title != "" && summaryBuilder.Len() >= 120 {
+				break
+			}
+		}
+
+		if err := scanner.Err(); err != nil {
+			logger.Warnf("读取 Wiki 文档 [%s] 元数据异常: %v", rel, err)
 		}
 
 		if title == "" {

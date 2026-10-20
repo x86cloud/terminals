@@ -166,7 +166,10 @@ func (m *SqliteManager) querySqlite(id, sqlText string) (columns []string, rows 
 	if !ok {
 		return nil, nil, errors.New("SQLite 连接不存在或已断开，请重新打开文件")
 	}
-	res, e := mc.db.Query(sqlText)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	res, e := mc.db.QueryContext(ctx, sqlText)
 	if e != nil {
 		return nil, nil, e
 	}
@@ -175,8 +178,12 @@ func (m *SqliteManager) querySqlite(id, sqlText string) (columns []string, rows 
 	if e != nil {
 		return nil, nil, e
 	}
+	const maxQueryRows = 50000
 	out := make([]map[string]any, 0)
 	for res.Next() {
+		if len(out) >= maxQueryRows {
+			break
+		}
 		vals := make([]any, len(cols))
 		ptrs := make([]any, len(cols))
 		for i := range vals {
@@ -254,7 +261,10 @@ func (m *SqliteManager) SqliteTables(id string) ([]map[string]any, error) {
 	if !ok {
 		return nil, errors.New("SQLite 连接不存在或已断开")
 	}
-	rows, err := mc.db.Query(
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	rows, err := mc.db.QueryContext(ctx,
 		"SELECT name, type FROM sqlite_master WHERE type IN ('table','view') AND name NOT LIKE 'sqlite_%' ORDER BY name")
 	if err != nil {
 		return nil, err
@@ -277,7 +287,10 @@ func (m *SqliteManager) SqliteDescribe(id, table string) ([]map[string]any, erro
 	if !ok {
 		return nil, errors.New("SQLite 连接不存在或已断开")
 	}
-	rows, err := mc.db.Query(fmt.Sprintf("PRAGMA table_info(%s)", quoteSqliteIdent(table)))
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	rows, err := mc.db.QueryContext(ctx, fmt.Sprintf("PRAGMA table_info(%s)", quoteSqliteIdent(table)))
 	if err != nil {
 		return nil, err
 	}
@@ -353,7 +366,10 @@ func (m *SqliteManager) SqliteIndexes(id, table string) ([]map[string]any, error
 	if !ok {
 		return nil, errors.New("SQLite 连接不存在或已断开")
 	}
-	rows, err := mc.db.Query(fmt.Sprintf("PRAGMA index_list(%s)", quoteSqliteIdent(table)))
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	rows, err := mc.db.QueryContext(ctx, fmt.Sprintf("PRAGMA index_list(%s)", quoteSqliteIdent(table)))
 	if err != nil {
 		return nil, err
 	}
@@ -400,7 +416,10 @@ func (m *SqliteManager) SqliteRun(id, sqlText string) (map[string]any, error) {
 		}
 		return map[string]any{"columns": cols, "rows": rows, "rowCount": len(rows), "affected": 0}, nil
 	}
-	res, err := mc.db.Exec(trimmed)
+	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	defer cancel()
+
+	res, err := mc.db.ExecContext(ctx, trimmed)
 	if err != nil {
 		return nil, err
 	}

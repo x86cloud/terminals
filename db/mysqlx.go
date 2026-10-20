@@ -255,14 +255,19 @@ func (m *MysqlManagerEx) Open(id string, cfg core.ServerConfig) error {
 	if cfg.MysqlMaxOpenConns > 0 {
 		db.SetMaxOpenConns(cfg.MysqlMaxOpenConns)
 	} else {
-		db.SetMaxOpenConns(10)
+		db.SetMaxOpenConns(15)
 	}
 	if cfg.MysqlMaxIdleConns > 0 {
 		db.SetMaxIdleConns(cfg.MysqlMaxIdleConns)
+	} else {
+		db.SetMaxIdleConns(5)
 	}
 	if cfg.MysqlConnMaxLifetime > 0 {
 		db.SetConnMaxLifetime(time.Duration(cfg.MysqlConnMaxLifetime) * time.Second)
+	} else {
+		db.SetConnMaxLifetime(30 * time.Minute)
 	}
+	db.SetConnMaxIdleTime(5 * time.Minute)
 	if err := db.Ping(); err != nil {
 		_ = db.Close()
 		if tunnel != nil {

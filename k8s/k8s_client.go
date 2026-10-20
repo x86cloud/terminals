@@ -193,6 +193,12 @@ func NewK8sClient(cfg core.ServerConfig) (*K8sClient, error) {
 	if restConfig.Timeout == 0 {
 		restConfig.Timeout = 15 * time.Second
 	}
+	if restConfig.QPS < 50 {
+		restConfig.QPS = 50
+	}
+	if restConfig.Burst < 100 {
+		restConfig.Burst = 100
+	}
 
 	var sshCli *ssh.Client
 	// 支持通过 SSH 隧道代理访问内网 API Server

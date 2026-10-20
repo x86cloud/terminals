@@ -20,6 +20,8 @@ import (
 // K8sTerminalSizeQueue 实现 remotecommand.TerminalSizeQueue 接口。
 type K8sTerminalSizeQueue struct {
 	sizeChan chan remotecommand.TerminalSize
+	mu       sync.Mutex
+	closed   bool
 }
 
 // Next 获取下一个终端尺寸。
@@ -36,9 +38,24 @@ func (q *K8sTerminalSizeQueue) Push(cols, rows int) {
 	if cols <= 0 || rows <= 0 {
 		return
 	}
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if q.closed {
+		return
+	}
 	select {
 	case q.sizeChan <- remotecommand.TerminalSize{Width: uint16(cols), Height: uint16(rows)}:
 	default:
+	}
+}
+
+// Close 安全关闭尺寸更新通道。
+func (q *K8sTerminalSizeQueue) Close() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	if !q.closed {
+		q.closed = true
+		close(q.sizeChan)
 	}
 }
 
@@ -89,7 +106,7 @@ func (s *K8sExecSession) Close() error {
 			_ = s.stdinWriter.Close()
 		}
 		if s.sizeQueue != nil {
-			close(s.sizeQueue.sizeChan)
+			s.sizeQueue.Close()
 		}
 		if s.cancel != nil {
 			s.cancel()

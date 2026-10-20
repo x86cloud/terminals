@@ -497,8 +497,8 @@ func (d *DockerClient) GetContainerLogs(ctx context.Context, id string, tail int
 	defer reader.Close()
 
 	buf := new(bytes.Buffer)
-	// Docker 头部格式为 8 字节 header，简易过滤控制头保证阅读纯净
-	raw, err := io.ReadAll(reader)
+	// Docker 头部格式为 8 字节 header，简易过滤控制头保证阅读纯净，限制最大读取 10MB 防止海量日志 OOM
+	raw, err := io.ReadAll(io.LimitReader(reader, 10*1024*1024))
 	if err != nil {
 		return "", err
 	}

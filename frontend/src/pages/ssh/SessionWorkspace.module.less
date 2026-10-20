@@ -25,7 +25,7 @@
     z-index: 50;
     min-width: 320px;
     height: 100%;
-    background: @bg-1;
+    background: @bg-1-solid;
     border-left: 1px solid @border;
     display: flex;
     flex-direction: column;
@@ -59,7 +59,7 @@
     align-items: center;
     justify-content: center;
     gap: 4px;
-    background: @bg-elev;
+    background: @bg-elev-solid;
     border: 1px solid @border;
     border-right: none;
     border-radius: 8px 0 0 8px;
@@ -72,7 +72,7 @@
     transition: background 0.2s, color 0.2s, width 0.15s, left 0.15s, box-shadow 0.2s;
 
     &:hover {
-        background: @bg-2;
+        background: @bg-2-solid;
         color: @accent;
         width: 32px;
         left: -32px;
@@ -84,7 +84,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: @bg-2;
+    background: @bg-2-solid;
     border-bottom: 1px solid @border;
     padding: 0;
     height: 36px;
@@ -140,4 +140,5 @@
     position: relative;
     display: flex;
     flex-direction: column;
+    background: @bg-1-solid;
 }
