@@ -196,7 +196,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         setTotalRows(cnt)
                     }
                 })
-                .catch(() => {})
+                .catch(() => { })
                 .finally(() => {
                     if (reqId === loadDataReqIdRef.current) {
                         setCountingRows(false)
@@ -409,8 +409,8 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             adapter.dialect === 'mysql'
                 ? 'varchar(255)'
                 : adapter.dialect === 'postgres'
-                ? 'varchar(255)'
-                : 'TEXT'
+                    ? 'varchar(255)'
+                    : 'TEXT'
         const newCol: DbColumnMeta = {
             name: `new_column_${structCols.length + 1}`,
             dataType: defaultType,
@@ -748,8 +748,8 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             const currentVal = isDraft
                 ? rowDrafts[rowIdx][colKey]
                 : isNewRow
-                ? targetRow[colKey]
-                : targetRow[colKey]
+                    ? targetRow[colKey]
+                    : targetRow[colKey]
             const valStr = currentVal === null || currentVal === undefined ? '' : String(currentVal)
             items.push({
                 key: 'copy-cell',
@@ -1389,6 +1389,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                         <td>
                                             <Input
                                                 size="small"
+                                                variant="borderless"
                                                 className={s.structColInput}
                                                 value={col.name}
                                                 status={isRenamed ? 'warning' : undefined}
@@ -1398,8 +1399,21 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                         </td>
                                         <td>
                                             <Select
+                                                variant="borderless"
                                                 size="small"
-                                                showSearch
+                                                showSearch={{
+                                                    filterOption: (input: string, option?: any) => {
+                                                        if (!option) return false
+                                                        const valMatch = option.value
+                                                            ? String(option.value).toLowerCase().includes(input.toLowerCase())
+                                                            : false
+                                                        const labelMatch =
+                                                            typeof option.label === 'string'
+                                                                ? option.label.toLowerCase().includes(input.toLowerCase())
+                                                                : false
+                                                        return valMatch || labelMatch
+                                                    },
+                                                }}
                                                 style={{ width: '100%' }}
                                                 className={s.structColInput}
                                                 options={allTypeOptions}
@@ -1407,16 +1421,12 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                 status={isBaseTypeChanged ? 'warning' : undefined}
                                                 placeholder="选择数据类型"
                                                 onChange={(val) => handleBaseTypeChange(idx, val)}
-                                                optionFilterProp="value"
-                                                filterOption={(input: string, option?: any) => {
-                                                    if (!option || !option.value) return false
-                                                    return String(option.value).toLowerCase().includes(input.toLowerCase())
-                                                }}
                                             />
                                         </td>
                                         <td>
                                             <Input
                                                 size="small"
+                                                variant="borderless"
                                                 className={s.structColInput}
                                                 disabled={!supportsLen}
                                                 value={supportsLen ? length : ''}
@@ -1436,6 +1446,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                         </td>
                                         <td>
                                             <Input
+                                                variant="borderless"
                                                 size="small"
                                                 className={s.structColInput}
                                                 value={col.defaultVal || ''}
@@ -1452,6 +1463,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                         </td>
                                         <td>
                                             <Input
+                                                variant="borderless"
                                                 size="small"
                                                 className={s.structColInput}
                                                 value={col.comment || ''}
@@ -1609,8 +1621,8 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                 c.type === 'PRIMARY KEY'
                                                     ? 'red'
                                                     : c.type === 'FOREIGN KEY'
-                                                    ? 'purple'
-                                                    : 'cyan'
+                                                        ? 'purple'
+                                                        : 'cyan'
                                             }
                                         >
                                             {c.type}
