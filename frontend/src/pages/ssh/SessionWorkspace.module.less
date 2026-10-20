@@ -4,25 +4,80 @@
 .workspace {
     position: absolute;
     inset: 0;
-    display: flex;
+    overflow: hidden;
     .fill();
 }
 
 .terminalPane {
-    position: relative;
-    flex: 1;
-    min-width: 0;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     background: @term-bg;
+    z-index: 1;
 }
 
-.filePane {
-    flex: none;
+.drawerPane {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    z-index: 50;
     min-width: 320px;
     height: 100%;
-    border-left: 1px solid @border;
     background: @bg-1;
+    border-left: 1px solid @border;
     display: flex;
     flex-direction: column;
+    box-shadow: -4px 0 16px rgba(0, 0, 0, 0.12);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease;
+    will-change: transform;
+
+    &.closed {
+        transform: translateX(100%);
+        box-shadow: none;
+
+        .edgeHandle {
+            cursor: pointer;
+        }
+    }
+
+    &.dragging {
+        transition: none !important;
+    }
+}
+
+.edgeHandle {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: -28px;
+    width: 28px;
+    height: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background: @bg-elev;
+    border: 1px solid @border;
+    border-right: none;
+    border-radius: 8px 0 0 8px;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.08);
+    cursor: col-resize;
+    color: @text-dim;
+    z-index: 60;
+    user-select: none;
+    -webkit-user-select: none;
+    transition: background 0.2s, color 0.2s, width 0.15s, left 0.15s, box-shadow 0.2s;
+
+    &:hover {
+        background: @bg-2;
+        color: @accent;
+        width: 32px;
+        left: -32px;
+        box-shadow: -3px 0 12px rgba(0, 0, 0, 0.12);
+    }
 }
 
 .panelHeader {
@@ -85,33 +140,4 @@
     position: relative;
     display: flex;
     flex-direction: column;
-}
-
-.splitter {
-    width: 4px;
-    cursor: col-resize;
-    background: transparent;
-
-    &:hover {
-        background: @accent-dim;
-    }
-}
-
-.panelToggle {
-    position: absolute;
-    right: @space-md;
-    top: @space-md;
-    display: flex;
-    padding: 5px;
-    background: @bg-elev;
-    border: 1px solid @border;
-    border-radius: @radius-md;
-    color: @text-dim;
-    opacity: .6;
-    cursor: pointer;
-
-    &:hover {
-        opacity: 1;
-        color: @text;
-    }
 }

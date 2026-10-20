@@ -43,8 +43,72 @@ export function parentRemote(p: string): string {
     return trimmed.slice(0, idx)
 }
 
+// 预分配 Base64 解码查找表（0~255），提升高吞吐数据流反解性能
+const b64Lookup = new Uint8Array(256)
+b64Lookup.fill(255)
+const b64Chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+for (let i = 0; i < b64Chars.length; i++) {
+    b64Lookup[b64Chars.charCodeAt(i)] = i
+}
+
 export function base64ToBytes(b64: string): Uint8Array {
     if (!b64) return new Uint8Array(0)
+    // 现代浏览器 / Chromium 128+ 原生高性能 C++ 解码分支
+    if (typeof (Uint8Array as any).fromBase64 === 'function') {
+        try {
+            return (Uint8Array as any).fromBase64(b64)
+        } catch {
+            // fallback
+        }
+    }
+    const len = b64.length
+    // 高吞吐标准 Base64 快速解码路径（避免 atob 产生 DOMString 堆内存分配与垃圾回收）
+    if (len > 0 && len % 4 === 0) {
+        let validLen = len
+        if (b64.charCodeAt(len - 1) === 61) validLen-- // '='
+        if (b64.charCodeAt(len - 2) === 61) validLen-- // '='
+        const byteLen = ((validLen * 3) / 4) | 0
+        const bytes = new Uint8Array(byteLen)
+        let p = 0
+        let ok = true
+        for (let i = 0; i < len; i += 4) {
+            const ch0 = b64.charCodeAt(i)
+            const ch1 = b64.charCodeAt(i + 1)
+            const ch2 = b64.charCodeAt(i + 2)
+            const ch3 = b64.charCodeAt(i + 3)
+            if (ch0 > 127 || ch1 > 127 || ch2 > 127 || ch3 > 127) {
+                ok = false
+                break
+            }
+            const c0 = b64Lookup[ch0]
+            const c1 = b64Lookup[ch1]
+            const c2 = b64Lookup[ch2]
+            const c3 = b64Lookup[ch3]
+            if (c0 === 255 || c1 === 255) {
+                ok = false
+                break
+            }
+            bytes[p++] = (c0 << 2) | (c1 >> 4)
+            if (p < byteLen) {
+                if (c2 === 255) {
+                    ok = false
+                    break
+                }
+                bytes[p++] = ((c1 & 15) << 4) | (c2 >> 2)
+            }
+            if (p < byteLen) {
+                if (c3 === 255) {
+                    ok = false
+                    break
+                }
+                bytes[p++] = ((c2 & 3) << 6) | c3
+            }
+        }
+        if (ok && p === byteLen) {
+            return bytes
+        }
+    }
+    // 针对含换行符或非常规填充字符串的保底分支
     try {
         const binary = atob(b64)
         const bytes = new Uint8Array(binary.length)

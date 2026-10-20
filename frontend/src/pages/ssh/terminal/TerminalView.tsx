@@ -5,6 +5,8 @@ import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
+import { WebglAddon } from '@xterm/addon-webgl'
+import { CanvasAddon } from '@xterm/addon-canvas'
 import '@xterm/xterm/css/xterm.css'
 import { API, emitEvent, subscribe } from '@/api'
 import { base64ToBytes } from '@/utils'
@@ -25,6 +27,12 @@ export default function TerminalView({ sessionId, active }: Props) {
     const fitRef = useRef<FitAddon | null>(null)
     const searchRef = useRef<SearchAddon | null>(null)
     const searchInputRef = useRef<HTMLInputElement>(null)
+    const activeRef = useRef<boolean>(active)
+    activeRef.current = active
+
+    const flushOutputRef = useRef<(() => void) | null>(null)
+    const tryAttachRendererRef = useRef<(() => void) | null>(null)
+    const searchDebounceRef = useRef<number | null>(null)
 
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     const [searchOpen, setSearchOpen] = useState(false)
@@ -111,6 +119,50 @@ export default function TerminalView({ sessionId, active }: Props) {
         term.loadAddon(search)
         term.open(host)
 
+        // 优先加载硬件加速 WebGL 渲染器，失败或掉上下文时自动降级到 Canvas 或 DOM
+        let webglAddon: WebglAddon | null = null
+        let canvasAddon: CanvasAddon | null = null
+        let rendererAttached = false
+
+        const tryCanvas = () => {
+            if (canvasAddon) return
+            try {
+                const addon = new CanvasAddon()
+                term.loadAddon(addon)
+                canvasAddon = addon
+                rendererAttached = true
+            } catch (err) {
+                console.warn('[Terminal] Canvas addon unavailable, fallback to DOM renderer:', err)
+                canvasAddon = null
+            }
+        }
+
+        const attachRenderer = () => {
+            if (rendererAttached) return
+            // 宿主处于隐藏状态（宽或高为 0）时暂不挂载 WebGL，避免 0x0 异常并在激活时再行挂载
+            if (!host || host.clientWidth <= 0 || host.clientHeight <= 0) return
+
+            try {
+                const addon = new WebglAddon()
+                addon.onContextLoss(() => {
+                    console.warn('[Terminal] WebGL context lost, fallback to Canvas/DOM')
+                    addon.dispose()
+                    if (webglAddon === addon) webglAddon = null
+                    tryCanvas()
+                })
+                term.loadAddon(addon)
+                webglAddon = addon
+                rendererAttached = true
+                return
+            } catch (e) {
+                console.warn('[Terminal] WebGL addon unavailable, attempting Canvas:', e)
+            }
+            tryCanvas()
+        }
+
+        tryAttachRendererRef.current = attachRenderer
+        attachRenderer()
+
         termRef.current = term
         fitRef.current = fit
         searchRef.current = search
@@ -174,23 +226,93 @@ export default function TerminalView({ sessionId, active }: Props) {
             return true
         })
 
+        // 帧对齐的终端输出微批次写入队列（将单帧内多条 IPC 数据合并一次性写入 xterm，彻底杜绝掉帧与输入卡顿）
+        let pendingChunks: Uint8Array[] = []
+        let pendingBytes = 0
+        let rafId: number | null = null
+        let bgTimer: number | null = null
+
+        const flushOutput = () => {
+            rafId = null
+            if (bgTimer !== null) {
+                window.clearTimeout(bgTimer)
+                bgTimer = null
+            }
+            if (pendingChunks.length === 0 || !termRef.current) return
+
+            if (pendingChunks.length === 1) {
+                termRef.current.write(pendingChunks[0])
+            } else {
+                const merged = new Uint8Array(pendingBytes)
+                let offset = 0
+                for (let i = 0; i < pendingChunks.length; i++) {
+                    merged.set(pendingChunks[i], offset)
+                    offset += pendingChunks[i].length
+                }
+                termRef.current.write(merged)
+            }
+            pendingChunks = []
+            pendingBytes = 0
+        }
+
+        flushOutputRef.current = flushOutput
+
         const offData = subscribe(`terminal:data:${sessionId}`, (payload: string) => {
-            term.write(base64ToBytes(payload))
+            const bytes = base64ToBytes(payload)
+            if (!bytes || bytes.length === 0) return
+
+            pendingChunks.push(bytes)
+            pendingBytes += bytes.length
+
+            if (activeRef.current) {
+                // 活动 Tab：若突发量超过 64KB 则立即刷入防堆积，否则在下一个显示器刷新帧（RAF）中集中解析渲染
+                if (pendingBytes >= 65536) {
+                    if (rafId !== null) {
+                        cancelAnimationFrame(rafId)
+                        rafId = null
+                    }
+                    flushOutput()
+                    return
+                }
+                if (rafId === null) {
+                    rafId = requestAnimationFrame(flushOutput)
+                }
+            } else {
+                // 后台非激活 Tab：不占用每帧 RAF 与 GPU 渲染，以 200ms 低频归并写入维持 buffer
+                if (pendingBytes >= 131072) {
+                    flushOutput()
+                    return
+                }
+                if (bgTimer === null) {
+                    bgTimer = window.setTimeout(flushOutput, 200)
+                }
+            }
         })
+
         const offClosed = subscribe(`terminal:closed:${sessionId}`, (reason: string) => {
+            flushOutput()
             term.writeln(`\r\n\x1b[33m[${reason || '连接已断开'}]\x1b[0m`)
         })
 
         // 通知后端终端视图已挂载就绪，立即同步实际视口尺寸并回放缓冲的早期 Prompt 与 MOTD
         API.terminalAttach(sessionId, term.cols, term.rows).catch(() => undefined)
 
+        // 视口尺寸监听：通过 RAF 节流，避免在分栏拖拽过程中频繁触发同步测量与 forced layout
+        let resizeRaf: number | null = null
         const observer = new ResizeObserver(() => {
             if (!host.clientWidth || !host.clientHeight) return
-            try {
-                fit.fit()
-            } catch {
-                /* ignore */
+            if (!rendererAttached) {
+                attachRenderer()
             }
+            if (resizeRaf !== null) return
+            resizeRaf = requestAnimationFrame(() => {
+                resizeRaf = null
+                try {
+                    fit.fit()
+                } catch {
+                    /* ignore */
+                }
+            })
         })
         observer.observe(host)
 
@@ -198,9 +320,32 @@ export default function TerminalView({ sessionId, active }: Props) {
             offData()
             offClosed()
             observer.disconnect()
+            if (resizeRaf !== null) {
+                cancelAnimationFrame(resizeRaf)
+                resizeRaf = null
+            }
+            if (rafId !== null) {
+                cancelAnimationFrame(rafId)
+                rafId = null
+            }
+            if (bgTimer !== null) {
+                window.clearTimeout(bgTimer)
+                bgTimer = null
+            }
+            if (searchDebounceRef.current !== null) {
+                window.clearTimeout(searchDebounceRef.current)
+                searchDebounceRef.current = null
+            }
+            flushOutputRef.current = null
+            tryAttachRendererRef.current = null
+            pendingChunks = []
+            pendingBytes = 0
+
             if (resizeTimerRef.current) {
                 window.clearTimeout(resizeTimerRef.current)
             }
+            webglAddon?.dispose()
+            canvasAddon?.dispose()
             term.dispose()
             termRef.current = null
             fitRef.current = null
@@ -210,6 +355,9 @@ export default function TerminalView({ sessionId, active }: Props) {
 
     useEffect(() => {
         if (!active) return
+        // 切换到当前活动 Tab 时，立即将后台累积的输出刷出，确保硬件加速渲染器已就绪，并重新校准 fit
+        flushOutputRef.current?.()
+        tryAttachRendererRef.current?.()
         const timer = window.setTimeout(() => {
             try {
                 fitRef.current?.fit()
@@ -255,8 +403,13 @@ export default function TerminalView({ sessionId, active }: Props) {
     const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const q = e.target.value
         setSearchQuery(q)
+        if (searchDebounceRef.current !== null) {
+            window.clearTimeout(searchDebounceRef.current)
+        }
         if (q && searchRef.current) {
-            searchRef.current.findNext(q, { caseSensitive, incremental: true })
+            searchDebounceRef.current = window.setTimeout(() => {
+                searchRef.current?.findNext(q, { caseSensitive, incremental: true })
+            }, 150)
         }
     }
 
