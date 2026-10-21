@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -13,41 +13,26 @@ import * as mcp$0 from "../agent/mcp/models.js";
  * GetMcpServerStatus 获取当前内置 MCP Server 的运行状态指标
  */
 export function GetMcpServerStatus(): $CancellablePromise<mcp$0.ServerStatus> {
-    return $Call.ByID(260220426).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(260220426);
 }
 
 /**
  * GetMcpSessions 获取当前已连接的外部 MCP 客户端会话列表
  */
-export function GetMcpSessions(): $CancellablePromise<mcp$0.SessionInfo[]> {
-    return $Call.ByID(99098770).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function GetMcpSessions(): $CancellablePromise<mcp$0.SessionInfo[] | null> {
+    return $Call.ByID(99098770);
 }
 
 /**
  * GetMcpTools 获取已注册且对外暴露的标准 MCP 工具定义列表
  */
-export function GetMcpTools(): $CancellablePromise<mcp$0.ToolDefinition[]> {
-    return $Call.ByID(2743963202).then(($result: any) => {
-        return $$createType4($result);
-    });
+export function GetMcpTools(): $CancellablePromise<mcp$0.ToolDefinition[] | null> {
+    return $Call.ByID(2743963202);
 }
 
 /**
  * RestartMcpServer 根据当前最新 AppSettings 重启或平滑启停 MCP Server
  */
 export function RestartMcpServer(): $CancellablePromise<mcp$0.ServerStatus> {
-    return $Call.ByID(722654081).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(722654081);
 }
-
-// Private type creation functions
-const $$createType0 = mcp$0.ServerStatus.createFrom;
-const $$createType1 = mcp$0.SessionInfo.createFrom;
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = mcp$0.ToolDefinition.createFrom;
-const $$createType4 = $Create.Array($$createType3);

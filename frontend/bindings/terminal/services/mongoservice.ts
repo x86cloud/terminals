@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -13,25 +13,19 @@ import * as core$0 from "../core/models.js";
 import * as mongo$0 from "../mongo/models.js";
 
 export function MongoAggregate(id: string, dbName: string, coll: string, pipelineJSON: string, allowDiskUse: boolean, maxTimeMS: number): $CancellablePromise<mongo$0.MongoFindResult> {
-    return $Call.ByID(3809732088, id, dbName, coll, pipelineJSON, allowDiskUse, maxTimeMS).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(3809732088, id, dbName, coll, pipelineJSON, allowDiskUse, maxTimeMS);
 }
 
 export function MongoAggregateExplain(id: string, dbName: string, coll: string, pipelineJSON: string): $CancellablePromise<string> {
     return $Call.ByID(4168453327, id, dbName, coll, pipelineJSON);
 }
 
-export function MongoBulkWrite(id: string, dbName: string, coll: string, ops: mongo$0.MongoBulkOp[], ordered: boolean): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(287098676, id, dbName, coll, ops, ordered).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoBulkWrite(id: string, dbName: string, coll: string, ops: mongo$0.MongoBulkOp[] | null, ordered: boolean): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(287098676, id, dbName, coll, ops, ordered);
 }
 
-export function MongoClientStats(id: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(1923382133, id).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoClientStats(id: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(1923382133, id);
 }
 
 export function MongoCloneCollection(id: string, req: mongo$0.MongoCloneCollReq): $CancellablePromise<number> {
@@ -42,16 +36,12 @@ export function MongoClose(id: string): $CancellablePromise<void> {
     return $Call.ByID(431906195, id);
 }
 
-export function MongoCollectionStats(id: string, dbName: string, coll: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(320211696, id, dbName, coll).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoCollectionStats(id: string, dbName: string, coll: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(320211696, id, dbName, coll);
 }
 
-export function MongoCollections(id: string, dbName: string): $CancellablePromise<{ [_ in string]?: any }[]> {
-    return $Call.ByID(719384470, id, dbName).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function MongoCollections(id: string, dbName: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
+    return $Call.ByID(719384470, id, dbName);
 }
 
 export function MongoConnect(id: string): $CancellablePromise<boolean> {
@@ -82,16 +72,12 @@ export function MongoCreateUser(id: string, req: mongo$0.MongoCreateUserReq): $C
     return $Call.ByID(1024483418, id, req);
 }
 
-export function MongoCurrentOps(id: string): $CancellablePromise<string[]> {
-    return $Call.ByID(2734184362, id).then(($result: any) => {
-        return $$createType3($result);
-    });
+export function MongoCurrentOps(id: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2734184362, id);
 }
 
-export function MongoDatabases(id: string): $CancellablePromise<{ [_ in string]?: any }[]> {
-    return $Call.ByID(3752666561, id).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function MongoDatabases(id: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
+    return $Call.ByID(3752666561, id);
 }
 
 export function MongoDeleteMany(id: string, dbName: string, coll: string, filterJSON: string): $CancellablePromise<number> {
@@ -102,10 +88,8 @@ export function MongoDeleteOne(id: string, dbName: string, coll: string, filterJ
     return $Call.ByID(3112279266, id, dbName, coll, filterJSON);
 }
 
-export function MongoDistinct(id: string, dbName: string, coll: string, field: string, filterJSON: string): $CancellablePromise<string[]> {
-    return $Call.ByID(2696432029, id, dbName, coll, field, filterJSON).then(($result: any) => {
-        return $$createType3($result);
-    });
+export function MongoDistinct(id: string, dbName: string, coll: string, field: string, filterJSON: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(2696432029, id, dbName, coll, field, filterJSON);
 }
 
 export function MongoDropCollection(id: string, dbName: string, coll: string): $CancellablePromise<void> {
@@ -129,55 +113,39 @@ export function MongoExplain(id: string, spec: mongo$0.MongoQuerySpec, verbosity
 }
 
 export function MongoFind(id: string, spec: mongo$0.MongoQuerySpec): $CancellablePromise<mongo$0.MongoFindResult> {
-    return $Call.ByID(3716934922, id, spec).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(3716934922, id, spec);
 }
 
 export function MongoFindOneAndUpdate(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, returnNew: boolean): $CancellablePromise<string> {
     return $Call.ByID(2539216562, id, dbName, coll, filterJSON, updateJSON, returnNew);
 }
 
-export function MongoGetProfilingStatus(id: string, db: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(152554533, id, db).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoGetProfilingStatus(id: string, db: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(152554533, id, db);
 }
 
-export function MongoGetValidator(id: string, dbName: string, coll: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(2183260459, id, dbName, coll).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoGetValidator(id: string, dbName: string, coll: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(2183260459, id, dbName, coll);
 }
 
-export function MongoHealthCheck(id: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(3132008081, id).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoHealthCheck(id: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(3132008081, id);
 }
 
-export function MongoIndexStats(id: string, dbName: string, coll: string): $CancellablePromise<string[]> {
-    return $Call.ByID(1536820550, id, dbName, coll).then(($result: any) => {
-        return $$createType3($result);
-    });
+export function MongoIndexStats(id: string, dbName: string, coll: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1536820550, id, dbName, coll);
 }
 
-export function MongoIndexes(id: string, dbName: string, coll: string): $CancellablePromise<{ [_ in string]?: any }[]> {
-    return $Call.ByID(3907454859, id, dbName, coll).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function MongoIndexes(id: string, dbName: string, coll: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
+    return $Call.ByID(3907454859, id, dbName, coll);
 }
 
-export function MongoInferSchema(id: string, dbName: string, coll: string, sampleSize: number): $CancellablePromise<{ [_ in string]?: any }[]> {
-    return $Call.ByID(2502065264, id, dbName, coll, sampleSize).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function MongoInferSchema(id: string, dbName: string, coll: string, sampleSize: number): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
+    return $Call.ByID(2502065264, id, dbName, coll, sampleSize);
 }
 
-export function MongoInsertMany(id: string, dbName: string, coll: string, docsJSON: string, ordered: boolean): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(2889472911, id, dbName, coll, docsJSON, ordered).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoInsertMany(id: string, dbName: string, coll: string, docsJSON: string, ordered: boolean): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(2889472911, id, dbName, coll, docsJSON, ordered);
 }
 
 export function MongoInsertOne(id: string, dbName: string, coll: string, docJSON: string): $CancellablePromise<string> {
@@ -185,29 +153,23 @@ export function MongoInsertOne(id: string, dbName: string, coll: string, docJSON
 }
 
 export function MongoParseURI(uri: string): $CancellablePromise<mongo$0.MongoURIInfo> {
-    return $Call.ByID(907933238, uri).then(($result: any) => {
-        return $$createType4($result);
-    });
+    return $Call.ByID(907933238, uri);
 }
 
 export function MongoRenameCollection(id: string, dbName: string, coll: string, newName: string): $CancellablePromise<void> {
     return $Call.ByID(2321072987, id, dbName, coll, newName);
 }
 
-export function MongoReplaceOne(id: string, dbName: string, coll: string, filterJSON: string, docJSON: string, upsert: boolean): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(1439479857, id, dbName, coll, filterJSON, docJSON, upsert).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoReplaceOne(id: string, dbName: string, coll: string, filterJSON: string, docJSON: string, upsert: boolean): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(1439479857, id, dbName, coll, filterJSON, docJSON, upsert);
 }
 
 export function MongoRunCommand(id: string, dbName: string, commandJSON: string): $CancellablePromise<string> {
     return $Call.ByID(481433675, id, dbName, commandJSON);
 }
 
-export function MongoServerStatus(id: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(2809245196, id).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoServerStatus(id: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(2809245196, id);
 }
 
 export function MongoSetProfilingStatus(id: string, db: string, level: number, slowms: number): $CancellablePromise<void> {
@@ -218,71 +180,46 @@ export function MongoSetValidator(id: string, dbName: string, coll: string, vali
     return $Call.ByID(3176020167, id, dbName, coll, validatorJSON, level, action);
 }
 
-export function MongoSlowQueries(id: string, db: string, limit: number): $CancellablePromise<string[]> {
-    return $Call.ByID(3482017304, id, db, limit).then(($result: any) => {
-        return $$createType3($result);
-    });
+export function MongoSlowQueries(id: string, db: string, limit: number): $CancellablePromise<string[] | null> {
+    return $Call.ByID(3482017304, id, db, limit);
 }
 
-export function MongoTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(1305815945, cfg).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(1305815945, cfg);
 }
 
-export function MongoTransaction(id: string, ops: mongo$0.MongoTxOp[]): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(2239110451, id, ops).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoTransaction(id: string, ops: mongo$0.MongoTxOp[] | null): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(2239110451, id, ops);
 }
 
 export function MongoUnwatch(id: string, watchKey: string): $CancellablePromise<void> {
     return $Call.ByID(4272295409, id, watchKey);
 }
 
-export function MongoUpdateMany(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(1155622123, id, dbName, coll, filterJSON, updateJSON, upsert).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoUpdateMany(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(1155622123, id, dbName, coll, filterJSON, updateJSON, upsert);
 }
 
-export function MongoUpdateOne(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(2043631192, id, dbName, coll, filterJSON, updateJSON, upsert).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoUpdateOne(id: string, dbName: string, coll: string, filterJSON: string, updateJSON: string, upsert: boolean): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(2043631192, id, dbName, coll, filterJSON, updateJSON, upsert);
 }
 
 export function MongoUpdateUser(id: string, req: mongo$0.MongoUpdateUserReq): $CancellablePromise<void> {
     return $Call.ByID(3862912615, id, req);
 }
 
-export function MongoUsers(id: string, db: string): $CancellablePromise<mongo$0.MongoUserInfo[]> {
-    return $Call.ByID(2558212963, id, db).then(($result: any) => {
-        return $$createType6($result);
-    });
+export function MongoUsers(id: string, db: string): $CancellablePromise<mongo$0.MongoUserInfo[] | null> {
+    return $Call.ByID(2558212963, id, db);
 }
 
-export function MongoValidateDocument(id: string, dbName: string, coll: string, docJSON: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(3729000414, id, dbName, coll, docJSON).then(($result: any) => {
-        return $$createType1($result);
-    });
+export function MongoValidateDocument(id: string, dbName: string, coll: string, docJSON: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(3729000414, id, dbName, coll, docJSON);
 }
 
 export function MongoWatch(id: string, scope: string, dbName: string, coll: string, pipelineJSON: string, fullDocument: string): $CancellablePromise<string> {
     return $Call.ByID(2067847864, id, scope, dbName, coll, pipelineJSON, fullDocument);
 }
 
-export function MongoWatchList(id: string): $CancellablePromise<string[]> {
-    return $Call.ByID(1606688224, id).then(($result: any) => {
-        return $$createType3($result);
-    });
+export function MongoWatchList(id: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(1606688224, id);
 }
-
-// Private type creation functions
-const $$createType0 = mongo$0.MongoFindResult.createFrom;
-const $$createType1 = $Create.Map($Create.Any, $Create.Any);
-const $$createType2 = $Create.Array($$createType1);
-const $$createType3 = $Create.Array($Create.Any);
-const $$createType4 = mongo$0.MongoURIInfo.createFrom;
-const $$createType5 = mongo$0.MongoUserInfo.createFrom;
-const $$createType6 = $Create.Array($$createType5);

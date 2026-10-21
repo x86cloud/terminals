@@ -34,7 +34,7 @@ export {
     WikiService
 };
 
-export {
+export type {
     ConfigIOResult,
     DockerGenerateComposeRequest,
     K8sGenerateYAMLRequest

@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -23,9 +23,6 @@ import * as skills$0 from "../agent/skills/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as store$0 from "../agent/store/models.js";
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore: Unused imports
-import * as tools$0 from "../agent/tools/models.js";
 
 export function AgentAnswerAsk(askID: string, answer: string): $CancellablePromise<boolean> {
     return $Call.ByID(4268168758, askID, answer);
@@ -48,9 +45,7 @@ export function AgentConfirmTool(confirmID: string, approved: boolean): $Cancell
 }
 
 export function AgentCreateSession(title: string): $CancellablePromise<store$0.SessionItem> {
-    return $Call.ByID(526240329, title).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(526240329, title);
 }
 
 export function AgentDecideApproval(confirmID: string, approved: boolean, remember: boolean, reason: string): $CancellablePromise<boolean> {
@@ -66,39 +61,27 @@ export function AgentGenerateSessionTitle(sessionID: string): $CancellablePromis
 }
 
 export function AgentGetActiveConnection(): $CancellablePromise<agent$0.ActiveConnectionInfo | null> {
-    return $Call.ByID(4200676419).then(($result: any) => {
-        return $$createType2($result);
-    });
+    return $Call.ByID(4200676419);
 }
 
-export function AgentGetHistory(): $CancellablePromise<agent$0.FrontendMessage[]> {
-    return $Call.ByID(2067821507).then(($result: any) => {
-        return $$createType4($result);
-    });
+export function AgentGetHistory(): $CancellablePromise<agent$0.FrontendMessage[] | null> {
+    return $Call.ByID(2067821507);
 }
 
-export function AgentGetPendingApprovals(): $CancellablePromise<any[]> {
-    return $Call.ByID(3524130632).then(($result: any) => {
-        return $$createType5($result);
-    });
+export function AgentGetPendingApprovals(): $CancellablePromise<any[] | null> {
+    return $Call.ByID(3524130632);
 }
 
-export function AgentGetPendingAsks(): $CancellablePromise<(ask$0.AskRequest | null)[]> {
-    return $Call.ByID(761804974).then(($result: any) => {
-        return $$createType8($result);
-    });
+export function AgentGetPendingAsks(): $CancellablePromise<(ask$0.AskRequest | null)[] | null> {
+    return $Call.ByID(761804974);
 }
 
-export function AgentGetPendingHitls(): $CancellablePromise<(guard$0.HitlRequest | null)[]> {
-    return $Call.ByID(2086036240).then(($result: any) => {
-        return $$createType11($result);
-    });
+export function AgentGetPendingHitls(): $CancellablePromise<(guard$0.HitlRequest | null)[] | null> {
+    return $Call.ByID(2086036240);
 }
 
-export function AgentGetSessionMessages(sessionID: string): $CancellablePromise<agent$0.FrontendMessage[]> {
-    return $Call.ByID(1040346779, sessionID).then(($result: any) => {
-        return $$createType4($result);
-    });
+export function AgentGetSessionMessages(sessionID: string): $CancellablePromise<agent$0.FrontendMessage[] | null> {
+    return $Call.ByID(1040346779, sessionID);
 }
 
 export function AgentGetSkillsDir(): $CancellablePromise<string> {
@@ -109,16 +92,12 @@ export function AgentGetWorkspaceDir(): $CancellablePromise<string> {
     return $Call.ByID(2272406089);
 }
 
-export function AgentListSessions(): $CancellablePromise<store$0.SessionItem[]> {
-    return $Call.ByID(1371193518).then(($result: any) => {
-        return $$createType12($result);
-    });
+export function AgentListSessions(): $CancellablePromise<store$0.SessionItem[] | null> {
+    return $Call.ByID(1371193518);
 }
 
-export function AgentListSkills(): $CancellablePromise<skills$0.Skill[]> {
-    return $Call.ByID(1436024901).then(($result: any) => {
-        return $$createType14($result);
-    });
+export function AgentListSkills(): $CancellablePromise<skills$0.Skill[] | null> {
+    return $Call.ByID(1436024901);
 }
 
 export function AgentOpenSkillsDir(): $CancellablePromise<string> {
@@ -126,9 +105,7 @@ export function AgentOpenSkillsDir(): $CancellablePromise<string> {
 }
 
 export function AgentProposePlan(sessionID: string, objective: string): $CancellablePromise<planner$0.Plan | null> {
-    return $Call.ByID(3469939612, sessionID, objective).then(($result: any) => {
-        return $$createType16($result);
-    });
+    return $Call.ByID(3469939612, sessionID, objective);
 }
 
 export function AgentResolveHitl(confirmID: string, approved: boolean, reason: string): $CancellablePromise<boolean> {
@@ -136,16 +113,14 @@ export function AgentResolveHitl(confirmID: string, approved: boolean, reason: s
 }
 
 export function AgentRetryPlanStep(planID: string, stepID: string): $CancellablePromise<planner$0.PlanStep | null> {
-    return $Call.ByID(2065472082, planID, stepID).then(($result: any) => {
-        return $$createType18($result);
-    });
+    return $Call.ByID(2065472082, planID, stepID);
 }
 
-export function AgentSaveHistory(messages: agent$0.FrontendMessage[]): $CancellablePromise<void> {
+export function AgentSaveHistory(messages: agent$0.FrontendMessage[] | null): $CancellablePromise<void> {
     return $Call.ByID(40985730, messages);
 }
 
-export function AgentSaveSessionMessages(sessionID: string, messages: agent$0.FrontendMessage[]): $CancellablePromise<void> {
+export function AgentSaveSessionMessages(sessionID: string, messages: agent$0.FrontendMessage[] | null): $CancellablePromise<void> {
     return $Call.ByID(2550534882, sessionID, messages);
 }
 
@@ -153,7 +128,7 @@ export function AgentSelectWorkspaceDir(): $CancellablePromise<string> {
     return $Call.ByID(1569351395);
 }
 
-export function AgentSend(sessionID: string, messages: agent$0.FrontendMessage[]): $CancellablePromise<string> {
+export function AgentSend(sessionID: string, messages: agent$0.FrontendMessage[] | null): $CancellablePromise<string> {
     return $Call.ByID(2963912865, sessionID, messages);
 }
 
@@ -172,24 +147,3 @@ export function AgentStopSend(sessionID: string): $CancellablePromise<boolean> {
 export function AgentUpdateSessionTitle(sessionID: string, title: string): $CancellablePromise<void> {
     return $Call.ByID(2101487052, sessionID, title);
 }
-
-// Private type creation functions
-const $$createType0 = store$0.SessionItem.createFrom;
-const $$createType1 = tools$0.ActiveConnectionInfo.createFrom;
-const $$createType2 = $Create.Nullable($$createType1);
-const $$createType3 = agent$0.FrontendMessage.createFrom;
-const $$createType4 = $Create.Array($$createType3);
-const $$createType5 = $Create.Array($Create.Any);
-const $$createType6 = ask$0.AskRequest.createFrom;
-const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $Create.Array($$createType7);
-const $$createType9 = guard$0.HitlRequest.createFrom;
-const $$createType10 = $Create.Nullable($$createType9);
-const $$createType11 = $Create.Array($$createType10);
-const $$createType12 = $Create.Array($$createType0);
-const $$createType13 = skills$0.Skill.createFrom;
-const $$createType14 = $Create.Array($$createType13);
-const $$createType15 = planner$0.Plan.createFrom;
-const $$createType16 = $Create.Nullable($$createType15);
-const $$createType17 = planner$0.PlanStep.createFrom;
-const $$createType18 = $Create.Nullable($$createType17);

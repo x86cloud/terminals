@@ -45,6 +45,12 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         return cols
     }, [showTime, showMode])
 
+    const onPathChangeRef = useRef(onPathChange)
+    onPathChangeRef.current = onPathChange
+
+    const pathRef = useRef(path)
+    pathRef.current = path
+
     const load = useCallback(
         async (target: string, quiet = false) => {
             if (!quiet) setLoading(true)
@@ -54,14 +60,14 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                 setPath(listing.path)
                 setPathInput(listing.path)
                 setSelected([])
-                onPathChange(listing.path)
+                onPathChangeRef.current?.(listing.path)
             } catch (err) {
                 message.error(errorMessage(err))
             } finally {
                 setLoading(false)
             }
         },
-        [sessionId, onPathChange]
+        [sessionId]
     )
 
     useEffect(() => {
@@ -71,11 +77,11 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
 
     useEffect(() => {
         return subscribe('sftp:changed', (payload: { sessionId: string; path: string }) => {
-            if (payload?.sessionId === sessionId && payload?.path === path) {
-                void load(path, true)
+            if (payload?.sessionId === sessionId && payload?.path === pathRef.current) {
+                void load(pathRef.current, true)
             }
         })
-    }, [sessionId, path, load])
+    }, [sessionId, load])
 
     // ---- 会话专属的传输任务管理 ----
     const [transfers, setTransfers] = useState<Transfer[]>([])

@@ -97,6 +97,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const sessionsRef = useRef(sessions)
     const toolsRef = useRef(tools)
+    const closingSessionsRef = useRef<Set<string>>(new Set())
     useEffect(() => {
         sessionsRef.current = sessions
         toolsRef.current = tools
@@ -328,6 +329,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const updateSession = useCallback(<K extends keyof SessionsState>(kind: K, id: string, updater: Partial<SessionsState[K][number]>) => {
         setSessions((prev) => {
             const list = prev[kind] as Array<{ id: string }>
+            if (!list || !list.some((item) => item.id === id)) {
+                return prev
+            }
             return {
                 ...prev,
                 [kind]: list.map((item) => (item.id === id ? { ...item, ...updater } : item)),
@@ -336,7 +340,23 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const closeSession = useCallback(async (kind: ConnType, id: string) => {
-        await disconnectHelper(kind, id)
+        const sessionKey = `${kind}:${id}`
+        if (closingSessionsRef.current.has(sessionKey)) {
+            return
+        }
+
+        // 若当前状态中该会话已被清除，无需重复执行关闭与重排
+        const list = sessionsRef.current[kind] as Array<{ id: string }> | undefined
+        if (!list || !list.some((s) => s.id === id)) {
+            return
+        }
+
+        closingSessionsRef.current.add(sessionKey)
+        try {
+            await disconnectHelper(kind, id)
+        } finally {
+            closingSessionsRef.current.delete(sessionKey)
+        }
 
         const closedTarget: ActiveTarget = { kind, id }
         const allTabs = getAllOpenTabs(sessionsRef.current, toolsRef.current)
@@ -344,6 +364,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         setSessions((prev) => {
             const currentList = prev[kind] as Array<{ id: string }>
+            if (!currentList.some((s) => s.id === id)) {
+                return prev
+            }
             const nextList = currentList.filter((s) => s.id !== id)
             return {
                 ...prev,

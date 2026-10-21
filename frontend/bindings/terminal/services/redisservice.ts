@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -33,12 +33,10 @@ export function RedisExpire(id: string, key: string, ttl: number): $CancellableP
 }
 
 export function RedisGet(id: string, key: string): $CancellablePromise<redis$0.RedisValue> {
-    return $Call.ByID(1333871869, id, key).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(1333871869, id, key);
 }
 
-export function RedisHashFieldDel(id: string, key: string, fields: string[]): $CancellablePromise<number> {
+export function RedisHashFieldDel(id: string, key: string, fields: string[] | null): $CancellablePromise<number> {
     return $Call.ByID(2485896338, id, key, fields);
 }
 
@@ -55,9 +53,7 @@ export function RedisInfo(id: string, section: string): $CancellablePromise<stri
 }
 
 export function RedisKeys(id: string, pattern: string, cursor: string): $CancellablePromise<redis$0.RedisKeysResult> {
-    return $Call.ByID(941224795, id, pattern, cursor).then(($result: any) => {
-        return $$createType1($result);
-    });
+    return $Call.ByID(941224795, id, pattern, cursor);
 }
 
 export function RedisKeyspaceNotify(id: string, db: number, event: string): $CancellablePromise<void> {
@@ -72,26 +68,20 @@ export function RedisListPush(id: string, key: string, value: string, left: bool
     return $Call.ByID(839654751, id, key, value, left);
 }
 
-export function RedisModeInfo(id: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(4006371584, id).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function RedisModeInfo(id: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(4006371584, id);
 }
 
 export function RedisMonitor(id: string): $CancellablePromise<redis$0.RedisMonitorInfo | null> {
-    return $Call.ByID(1329631539, id).then(($result: any) => {
-        return $$createType4($result);
-    });
+    return $Call.ByID(1329631539, id);
 }
 
 export function RedisPSubscribe(id: string, pattern: string): $CancellablePromise<void> {
     return $Call.ByID(2910252127, id, pattern);
 }
 
-export function RedisPipeline(id: string, commands: string[]): $CancellablePromise<redis$0.RedisPipelineResult> {
-    return $Call.ByID(164353629, id, commands).then(($result: any) => {
-        return $$createType5($result);
-    });
+export function RedisPipeline(id: string, commands: string[] | null): $CancellablePromise<redis$0.RedisPipelineResult> {
+    return $Call.ByID(164353629, id, commands);
 }
 
 export function RedisPublish(id: string, channel: string, message: string): $CancellablePromise<number> {
@@ -99,9 +89,7 @@ export function RedisPublish(id: string, channel: string, message: string): $Can
 }
 
 export function RedisQueueDequeue(id: string, queue: string, mode: string, timeout: number): $CancellablePromise<redis$0.RedisQueueItem | null> {
-    return $Call.ByID(665847288, id, queue, mode, timeout).then(($result: any) => {
-        return $$createType7($result);
-    });
+    return $Call.ByID(665847288, id, queue, mode, timeout);
 }
 
 export function RedisQueueEnqueue(id: string, queue: string, payload: string, mode: string): $CancellablePromise<string> {
@@ -112,10 +100,8 @@ export function RedisQueueLength(id: string, queue: string, mode: string): $Canc
     return $Call.ByID(1258488102, id, queue, mode);
 }
 
-export function RedisRaw(id: string, cmd: string): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(692209427, id, cmd).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function RedisRaw(id: string, cmd: string): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(692209427, id, cmd);
 }
 
 export function RedisRenameKey(id: string, oldKey: string, newKey: string): $CancellablePromise<void> {
@@ -130,18 +116,16 @@ export function RedisSet(id: string, key: string, typ: string, val: string, ttl:
     return $Call.ByID(3479860177, id, key, typ, val, ttl);
 }
 
-export function RedisSetAdd(id: string, key: string, members: string[]): $CancellablePromise<number> {
+export function RedisSetAdd(id: string, key: string, members: string[] | null): $CancellablePromise<number> {
     return $Call.ByID(1521937928, id, key, members);
 }
 
-export function RedisSetRem(id: string, key: string, members: string[]): $CancellablePromise<number> {
+export function RedisSetRem(id: string, key: string, members: string[] | null): $CancellablePromise<number> {
     return $Call.ByID(3422356027, id, key, members);
 }
 
-export function RedisSlowLog(id: string, count: number): $CancellablePromise<redis$0.RedisSlowLogEntry[]> {
-    return $Call.ByID(3665374936, id, count).then(($result: any) => {
-        return $$createType9($result);
-    });
+export function RedisSlowLog(id: string, count: number): $CancellablePromise<redis$0.RedisSlowLogEntry[] | null> {
+    return $Call.ByID(3665374936, id, count);
 }
 
 export function RedisStringAppend(id: string, key: string, value: string): $CancellablePromise<number> {
@@ -152,22 +136,16 @@ export function RedisSubscribe(id: string, channel: string): $CancellablePromise
     return $Call.ByID(4150369645, id, channel);
 }
 
-export function RedisSubscriptions(id: string): $CancellablePromise<string[]> {
-    return $Call.ByID(338012863, id).then(($result: any) => {
-        return $$createType10($result);
-    });
+export function RedisSubscriptions(id: string): $CancellablePromise<string[] | null> {
+    return $Call.ByID(338012863, id);
 }
 
-export function RedisTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any }> {
-    return $Call.ByID(3613865343, cfg).then(($result: any) => {
-        return $$createType2($result);
-    });
+export function RedisTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
+    return $Call.ByID(3613865343, cfg);
 }
 
-export function RedisTransaction(id: string, watch: string[], commands: string[]): $CancellablePromise<redis$0.RedisTransactionResult> {
-    return $Call.ByID(3836761829, id, watch, commands).then(($result: any) => {
-        return $$createType11($result);
-    });
+export function RedisTransaction(id: string, watch: string[] | null, commands: string[] | null): $CancellablePromise<redis$0.RedisTransactionResult> {
+    return $Call.ByID(3836761829, id, watch, commands);
 }
 
 export function RedisUnsubscribe(id: string, channel: string): $CancellablePromise<void> {
@@ -178,20 +156,6 @@ export function RedisZSetAdd(id: string, key: string, member: string, score: num
     return $Call.ByID(1603934208, id, key, member, score);
 }
 
-export function RedisZSetRem(id: string, key: string, members: string[]): $CancellablePromise<number> {
+export function RedisZSetRem(id: string, key: string, members: string[] | null): $CancellablePromise<number> {
     return $Call.ByID(14710723, id, key, members);
 }
-
-// Private type creation functions
-const $$createType0 = redis$0.RedisValue.createFrom;
-const $$createType1 = redis$0.RedisKeysResult.createFrom;
-const $$createType2 = $Create.Map($Create.Any, $Create.Any);
-const $$createType3 = redis$0.RedisMonitorInfo.createFrom;
-const $$createType4 = $Create.Nullable($$createType3);
-const $$createType5 = redis$0.RedisPipelineResult.createFrom;
-const $$createType6 = redis$0.RedisQueueItem.createFrom;
-const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = redis$0.RedisSlowLogEntry.createFrom;
-const $$createType9 = $Create.Array($$createType8);
-const $$createType10 = $Create.Array($Create.Any);
-const $$createType11 = redis$0.RedisTransactionResult.createFrom;

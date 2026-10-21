@@ -3,16 +3,14 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as proto$0 from "../proto/models.js";
 
 export function ApiRequest(req: proto$0.ApiRequest): $CancellablePromise<proto$0.ApiResponse> {
-    return $Call.ByID(1541371874, req).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(1541371874, req);
 }
 
 /**
@@ -48,15 +46,9 @@ export function WsClose(id: string): $CancellablePromise<void> {
 }
 
 export function WsConnect(req: proto$0.WsConnectRequest): $CancellablePromise<proto$0.WsConnectResult> {
-    return $Call.ByID(2673553829, req).then(($result: any) => {
-        return $$createType1($result);
-    });
+    return $Call.ByID(2673553829, req);
 }
 
 export function WsSend(id: string, message: string): $CancellablePromise<void> {
     return $Call.ByID(3856359107, id, message);
 }
-
-// Private type creation functions
-const $$createType0 = proto$0.ApiResponse.createFrom;
-const $$createType1 = proto$0.WsConnectResult.createFrom;

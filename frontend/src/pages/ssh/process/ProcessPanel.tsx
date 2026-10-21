@@ -30,12 +30,19 @@ function fmtBytes(bytes: number): string {
 export default function ProcessPanel({ sessionId, active }: Props) {
     const [procs, setProcs] = useState<SSHProcessInfo[]>([])
     const [busy, setBusy] = useState(false)
+    const [loaded, setLoaded] = useState(false)
     const [error, setError] = useState('')
     const [keyword, setKeyword] = useState('')
     const [lastUpdate, setLastUpdate] = useState<string>('')
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(20)
+
+    useEffect(() => {
+        setLoaded(false)
+        setProcs([])
+        setError('')
+    }, [sessionId])
 
     useEffect(() => {
         setPage(1)
@@ -54,14 +61,15 @@ export default function ProcessPanel({ sessionId, active }: Props) {
             message.error(`读取进程列表失败: ${msg}`)
         } finally {
             setBusy(false)
+            setLoaded(true)
         }
     }, [sessionId])
 
     useEffect(() => {
-        if (active && procs.length === 0 && !busy) {
+        if (active && !loaded && !busy) {
             void fetchProcesses()
         }
-    }, [active, procs.length, busy, fetchProcesses])
+    }, [active, loaded, busy, fetchProcesses])
 
     const filtered = useMemo(() => {
         if (!keyword.trim()) return procs

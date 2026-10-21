@@ -46,10 +46,17 @@ function cleanUptime(str: string): string {
 export default function DashboardPanel({ sessionId, active }: Props) {
     const [data, setData] = useState<SSHDashboardInfo | null>(null)
     const [busy, setBusy] = useState(false)
+    const [loaded, setLoaded] = useState(false)
     const [error, setError] = useState('')
     const [lastUpdate, setLastUpdate] = useState<string>('')
     const [showVirtual, setShowVirtual] = useState(false)
     const [showVirtualNet, setShowVirtualNet] = useState(false)
+
+    useEffect(() => {
+        setLoaded(false)
+        setData(null)
+        setError('')
+    }, [sessionId])
 
     const fetchStats = useCallback(async () => {
         setBusy(true)
@@ -65,14 +72,15 @@ export default function DashboardPanel({ sessionId, active }: Props) {
             message.error(`获取系统仪表盘失败: ${msg}`)
         } finally {
             setBusy(false)
+            setLoaded(true)
         }
     }, [sessionId])
 
     useEffect(() => {
-        if (active && !data && !busy) {
+        if (active && !loaded && !busy) {
             void fetchStats()
         }
-    }, [active, data, busy, fetchStats])
+    }, [active, loaded, busy, fetchStats])
 
     if (!active) return null
 

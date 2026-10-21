@@ -40,6 +40,12 @@ export default function CronPanel({sessionId, active}: Props) {
     const [runCommand, setRunCommand] = useState<string>('')
     const [runBusy, setRunBusy] = useState(false)
 
+    useEffect(() => {
+        setLoaded(false)
+        setItems([])
+        setError('')
+    }, [sessionId])
+
     const fetchCrons = useCallback(async () => {
         setBusy(true)
         setError('')
@@ -47,13 +53,13 @@ export default function CronPanel({sessionId, active}: Props) {
             const list = await API.sshCronList(sessionId)
             setItems(list || [])
             setLastUpdate(new Date().toLocaleTimeString())
-            setLoaded(true)
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
             message.error(`读取 Crontab 任务失败: ${msg}`)
         } finally {
             setBusy(false)
+            setLoaded(true)
         }
     }, [sessionId])
 

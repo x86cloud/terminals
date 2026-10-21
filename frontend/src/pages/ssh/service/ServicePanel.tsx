@@ -17,6 +17,7 @@ type FilterTab = 'all' | 'active' | 'inactive' | 'failed'
 export default function ServicePanel({ sessionId, active }: Props) {
     const [services, setServices] = useState<SSHServiceInfo[]>([])
     const [busy, setBusy] = useState(false)
+    const [loaded, setLoaded] = useState(false)
     const [actionBusy, setActionBusy] = useState<string>('')
     const [error, setError] = useState('')
     const [keyword, setKeyword] = useState('')
@@ -24,6 +25,12 @@ export default function ServicePanel({ sessionId, active }: Props) {
     const [lastUpdate, setLastUpdate] = useState<string>('')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(20)
+
+    useEffect(() => {
+        setLoaded(false)
+        setServices([])
+        setError('')
+    }, [sessionId])
 
     useEffect(() => {
         setPage(1)
@@ -47,14 +54,15 @@ export default function ServicePanel({ sessionId, active }: Props) {
             message.error(`读取 Systemd 服务列表失败: ${msg}`)
         } finally {
             setBusy(false)
+            setLoaded(true)
         }
     }, [sessionId])
 
     useEffect(() => {
-        if (active && services.length === 0 && !busy) {
+        if (active && !loaded && !busy) {
             void fetchServices()
         }
-    }, [active, services.length, busy, fetchServices])
+    }, [active, loaded, busy, fetchServices])
 
     const counts = useMemo(() => {
         let active = 0

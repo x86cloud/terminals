@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -14,9 +14,7 @@ import * as core$0 from "../core/models.js";
 import * as $models from "./models.js";
 
 export function CheckForUpdates(): $CancellablePromise<core$0.UpdateCheckResult> {
-    return $Call.ByID(2981386841).then(($result: any) => {
-        return $$createType0($result);
-    });
+    return $Call.ByID(2981386841);
 }
 
 export function DeleteGroup(id: string): $CancellablePromise<void> {
@@ -31,21 +29,15 @@ export function DeleteServer(id: string): $CancellablePromise<void> {
  * ExportServersConfig 弹出原生保存对话框并导出所有服务器连接与分组配置
  */
 export function ExportServersConfig(): $CancellablePromise<$models.ConfigIOResult | null> {
-    return $Call.ByID(2376071942).then(($result: any) => {
-        return $$createType2($result);
-    });
+    return $Call.ByID(2376071942);
 }
 
 export function GetAppSettings(): $CancellablePromise<core$0.AppSettings> {
-    return $Call.ByID(3489392456).then(($result: any) => {
-        return $$createType3($result);
-    });
+    return $Call.ByID(3489392456);
 }
 
 export function GetAppVersion(): $CancellablePromise<core$0.AppVersionInfo> {
-    return $Call.ByID(2593061335).then(($result: any) => {
-        return $$createType4($result);
-    });
+    return $Call.ByID(2593061335);
 }
 
 export function HideWindow(): $CancellablePromise<void> {
@@ -56,21 +48,15 @@ export function HideWindow(): $CancellablePromise<void> {
  * ImportServersConfig 弹出原生选择对话框并增量智能合并导入服务器连接与分组配置
  */
 export function ImportServersConfig(): $CancellablePromise<$models.ConfigIOResult | null> {
-    return $Call.ByID(3453008359).then(($result: any) => {
-        return $$createType2($result);
-    });
+    return $Call.ByID(3453008359);
 }
 
-export function ListGroups(): $CancellablePromise<core$0.ServerGroup[]> {
-    return $Call.ByID(3810483558).then(($result: any) => {
-        return $$createType6($result);
-    });
+export function ListGroups(): $CancellablePromise<core$0.ServerGroup[] | null> {
+    return $Call.ByID(3810483558);
 }
 
-export function ListServers(): $CancellablePromise<core$0.ServerConfig[]> {
-    return $Call.ByID(2746994206).then(($result: any) => {
-        return $$createType8($result);
-    });
+export function ListServers(): $CancellablePromise<core$0.ServerConfig[] | null> {
+    return $Call.ByID(2746994206);
 }
 
 export function MoveServerToGroup(serverID: string, groupID: string): $CancellablePromise<void> {
@@ -86,21 +72,15 @@ export function QuitApp(): $CancellablePromise<void> {
 }
 
 export function SaveAppSettings(settings: core$0.AppSettings): $CancellablePromise<core$0.AppSettings> {
-    return $Call.ByID(3625395103, settings).then(($result: any) => {
-        return $$createType3($result);
-    });
+    return $Call.ByID(3625395103, settings);
 }
 
 export function SaveGroup(g: core$0.ServerGroup): $CancellablePromise<core$0.ServerGroup> {
-    return $Call.ByID(2147344438, g).then(($result: any) => {
-        return $$createType5($result);
-    });
+    return $Call.ByID(2147344438, g);
 }
 
 export function SaveServer(cfg: core$0.ServerConfig): $CancellablePromise<core$0.ServerConfig> {
-    return $Call.ByID(325269124, cfg).then(($result: any) => {
-        return $$createType7($result);
-    });
+    return $Call.ByID(325269124, cfg);
 }
 
 export function SelectCertFile(): $CancellablePromise<string> {
@@ -114,14 +94,3 @@ export function SelectLocalSqliteFile(): $CancellablePromise<string> {
 export function SelectPrivateKey(): $CancellablePromise<string> {
     return $Call.ByID(2287002800);
 }
-
-// Private type creation functions
-const $$createType0 = core$0.UpdateCheckResult.createFrom;
-const $$createType1 = $models.ConfigIOResult.createFrom;
-const $$createType2 = $Create.Nullable($$createType1);
-const $$createType3 = core$0.AppSettings.createFrom;
-const $$createType4 = core$0.AppVersionInfo.createFrom;
-const $$createType5 = core$0.ServerGroup.createFrom;
-const $$createType6 = $Create.Array($$createType5);
-const $$createType7 = core$0.ServerConfig.createFrom;
-const $$createType8 = $Create.Array($$createType7);
