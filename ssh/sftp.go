@@ -55,6 +55,17 @@ type Transfer struct {
 	UpdatedAt   int64  `json:"updatedAt"`
 }
 
+// UploadEstimate 描述待上传文件与远端磁盘容量预估结果。
+type UploadEstimate struct {
+	TotalSize      int64  `json:"totalSize"`
+	FileCount      int    `json:"fileCount"`
+	FolderCount    int    `json:"folderCount"`
+	RemoteFree     uint64 `json:"remoteFree"`
+	RemoteTotal    uint64 `json:"remoteTotal"`
+	IsInsufficient bool   `json:"isInsufficient"`
+	Supported      bool   `json:"supported"`
+}
+
 const (
 	statusRunning  = "running"
 	statusDone     = "done"
@@ -335,6 +346,131 @@ func (m *SessionManager) removeRemote(client *sftp.Client, target string) error 
 		return client.RemoveDirectory(target)
 	}
 	return client.Remove(target)
+}
+
+// queryRemoteSpace 查询远端目标目录所在文件系统的剩余可用空间与总空间。
+func queryRemoteSpace(client *sftp.Client, remoteDir string) (free, total uint64, ok bool) {
+	if client == nil {
+		return 0, 0, false
+	}
+	if remoteDir == "" {
+		remoteDir = "."
+	}
+	vfs, err := client.StatVFS(remoteDir)
+	if err != nil {
+		if remoteDir != "/" {
+			vfs, err = client.StatVFS("/")
+		}
+	}
+	if err != nil || vfs == nil {
+		return 0, 0, false
+	}
+	return vfs.FreeSpace(), vfs.TotalSpace(), true
+}
+
+// calcLocalPathsStats 递归统计传入的本地文件/目录的字节总大小、文件数与目录数。
+func calcLocalPathsStats(paths []string) (totalSize int64, fileCount int, folderCount int, err error) {
+	for _, p := range paths {
+		info, err := os.Stat(p)
+		if err != nil {
+			return 0, 0, 0, err
+		}
+		if !info.IsDir() {
+			totalSize += info.Size()
+			fileCount++
+			continue
+		}
+		folderCount++
+		walkErr := filepath.WalkDir(p, func(subPath string, d fs.DirEntry, subErr error) error {
+			if subErr != nil {
+				return subErr
+			}
+			if d.IsDir() {
+				if subPath != p {
+					folderCount++
+				}
+				return nil
+			}
+			subInfo, subInfoErr := d.Info()
+			if subInfoErr != nil {
+				return subInfoErr
+			}
+			totalSize += subInfo.Size()
+			fileCount++
+			return nil
+		})
+		if walkErr != nil {
+			return 0, 0, 0, walkErr
+		}
+	}
+	return totalSize, fileCount, folderCount, nil
+}
+
+// EstimateUpload 预估待上传文件的总大小，并检测远端磁盘空间是否足够。
+func (m *SessionManager) EstimateUpload(sessionID string, remoteDir string, localPaths []string) (UploadEstimate, error) {
+	if len(localPaths) == 0 {
+		return UploadEstimate{}, nil
+	}
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return UploadEstimate{}, err
+	}
+	client, err := session.sftpConn()
+	if err != nil {
+		return UploadEstimate{}, err
+	}
+	totalSize, files, folders, err := calcLocalPathsStats(localPaths)
+	if err != nil {
+		return UploadEstimate{}, err
+	}
+
+	remoteDir = NormalizeRemote(remoteDir)
+	free, total, supported := queryRemoteSpace(client, remoteDir)
+
+	isInsufficient := false
+	if supported && free > 0 && uint64(totalSize) > free {
+		isInsufficient = true
+	}
+
+	return UploadEstimate{
+		TotalSize:      totalSize,
+		FileCount:      files,
+		FolderCount:    folders,
+		RemoteFree:     free,
+		RemoteTotal:    total,
+		IsInsufficient: isInsufficient,
+		Supported:      supported,
+	}, nil
+}
+
+// EstimateUploadBase64 针对 Base64 或拖拽纯数据上传进行空间预估。
+func (m *SessionManager) EstimateUploadBase64(sessionID string, remoteDir string, dataSize int64) (UploadEstimate, error) {
+	session, err := m.Get(sessionID)
+	if err != nil {
+		return UploadEstimate{}, err
+	}
+	client, err := session.sftpConn()
+	if err != nil {
+		return UploadEstimate{}, err
+	}
+
+	remoteDir = NormalizeRemote(remoteDir)
+	free, total, supported := queryRemoteSpace(client, remoteDir)
+
+	isInsufficient := false
+	if supported && free > 0 && uint64(dataSize) > free {
+		isInsufficient = true
+	}
+
+	return UploadEstimate{
+		TotalSize:      dataSize,
+		FileCount:      1,
+		FolderCount:    0,
+		RemoteFree:     free,
+		RemoteTotal:    total,
+		IsInsufficient: isInsufficient,
+		Supported:      supported,
+	}, nil
 }
 
 // ---------- 上传 ----------

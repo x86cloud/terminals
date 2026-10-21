@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -24,15 +24,19 @@ import * as $models from "./models.js";
 /**
  * K8sApplyOrchestration 部署并保存 Kubernetes YAML 编排。严格遵循后验强一致性：先部署，成功后再落盘。
  */
-export function K8sApplyOrchestration(serverId: string, record: core$0.K8sOrchestrationRecord): $CancellablePromise<k8s$0.K8sApplyResult[] | null> {
-    return $Call.ByID(819612696, serverId, record);
+export function K8sApplyOrchestration(serverId: string, record: core$0.K8sOrchestrationRecord): $CancellablePromise<k8s$0.K8sApplyResult[]> {
+    return $Call.ByID(819612696, serverId, record).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
  * K8sApplyYAML 声明式部署并应用 YAML 资源清单。
  */
-export function K8sApplyYAML(id: string, yamlContent: string): $CancellablePromise<k8s$0.K8sApplyResult[] | null> {
-    return $Call.ByID(2998105980, id, yamlContent);
+export function K8sApplyYAML(id: string, yamlContent: string): $CancellablePromise<k8s$0.K8sApplyResult[]> {
+    return $Call.ByID(2998105980, id, yamlContent).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
@@ -122,8 +126,10 @@ export function K8sDeleteService(id: string, $namespace: string, name: string): 
 /**
  * K8sDeleteYAML 声明式删除并下线 YAML 资源清单中的资源。
  */
-export function K8sDeleteYAML(id: string, yamlContent: string): $CancellablePromise<k8s$0.K8sDeleteResult[] | null> {
-    return $Call.ByID(3261434137, id, yamlContent);
+export function K8sDeleteYAML(id: string, yamlContent: string): $CancellablePromise<k8s$0.K8sDeleteResult[]> {
+    return $Call.ByID(3261434137, id, yamlContent).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
@@ -165,14 +171,18 @@ export function K8sGenerateYAML(req: $models.K8sGenerateYAMLRequest): $Cancellab
  * K8sGetOrchestrationRecord 获取单个 K8s 编排记录详情。
  */
 export function K8sGetOrchestrationRecord(id: string): $CancellablePromise<core$0.K8sOrchestrationRecord | null> {
-    return $Call.ByID(2076350265, id);
+    return $Call.ByID(2076350265, id).then(($result: any) => {
+        return $$createType5($result);
+    });
 }
 
 /**
  * K8sGetOverview 获取集群概览。
  */
 export function K8sGetOverview(id: string): $CancellablePromise<k8s$0.K8sOverview | null> {
-    return $Call.ByID(2800887056, id);
+    return $Call.ByID(2800887056, id).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
 /**
@@ -192,85 +202,109 @@ export function K8sGetResourceYAML(id: string, kind: string, $namespace: string,
 /**
  * K8sListConfigMaps 获取 ConfigMap 列表。
  */
-export function K8sListConfigMaps(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sConfigMapInfo[] | null> {
-    return $Call.ByID(38720192, id, $namespace);
+export function K8sListConfigMaps(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sConfigMapInfo[]> {
+    return $Call.ByID(38720192, id, $namespace).then(($result: any) => {
+        return $$createType9($result);
+    });
 }
 
 /**
  * K8sListDeployments 获取 Deployment 列表。
  */
-export function K8sListDeployments(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sDeploymentInfo[] | null> {
-    return $Call.ByID(778830219, id, $namespace);
+export function K8sListDeployments(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sDeploymentInfo[]> {
+    return $Call.ByID(778830219, id, $namespace).then(($result: any) => {
+        return $$createType11($result);
+    });
 }
 
 /**
  * K8sListIngresses 获取 Ingress 列表。
  */
-export function K8sListIngresses(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sIngressInfo[] | null> {
-    return $Call.ByID(2840591328, id, $namespace);
+export function K8sListIngresses(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sIngressInfo[]> {
+    return $Call.ByID(2840591328, id, $namespace).then(($result: any) => {
+        return $$createType13($result);
+    });
 }
 
 /**
  * K8sListNamespaces 获取所有命名空间。
  */
-export function K8sListNamespaces(id: string): $CancellablePromise<k8s$0.K8sNamespaceInfo[] | null> {
-    return $Call.ByID(658906885, id);
+export function K8sListNamespaces(id: string): $CancellablePromise<k8s$0.K8sNamespaceInfo[]> {
+    return $Call.ByID(658906885, id).then(($result: any) => {
+        return $$createType15($result);
+    });
 }
 
 /**
  * K8sListNodes 获取所有节点。
  */
-export function K8sListNodes(id: string): $CancellablePromise<k8s$0.K8sNodeInfo[] | null> {
-    return $Call.ByID(452994830, id);
+export function K8sListNodes(id: string): $CancellablePromise<k8s$0.K8sNodeInfo[]> {
+    return $Call.ByID(452994830, id).then(($result: any) => {
+        return $$createType17($result);
+    });
 }
 
 /**
  * K8sListOrchestrationRecords 获取指定集群本地持久化存储的 K8s 编排记录。
  */
-export function K8sListOrchestrationRecords(serverId: string): $CancellablePromise<core$0.K8sOrchestrationRecord[] | null> {
-    return $Call.ByID(416016864, serverId);
+export function K8sListOrchestrationRecords(serverId: string): $CancellablePromise<core$0.K8sOrchestrationRecord[]> {
+    return $Call.ByID(416016864, serverId).then(($result: any) => {
+        return $$createType18($result);
+    });
 }
 
 /**
  * K8sListPVCs 获取 PVC 列表。
  */
-export function K8sListPVCs(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sPVCInfo[] | null> {
-    return $Call.ByID(2819681845, id, $namespace);
+export function K8sListPVCs(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sPVCInfo[]> {
+    return $Call.ByID(2819681845, id, $namespace).then(($result: any) => {
+        return $$createType20($result);
+    });
 }
 
 /**
  * K8sListPods 获取指定命名空间（或全量）的 Pod 列表。
  */
-export function K8sListPods(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sPodInfo[] | null> {
-    return $Call.ByID(1784011433, id, $namespace);
+export function K8sListPods(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sPodInfo[]> {
+    return $Call.ByID(1784011433, id, $namespace).then(($result: any) => {
+        return $$createType22($result);
+    });
 }
 
 /**
  * K8sListSecrets 获取 Secret 列表。
  */
-export function K8sListSecrets(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sSecretInfo[] | null> {
-    return $Call.ByID(2137589570, id, $namespace);
+export function K8sListSecrets(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sSecretInfo[]> {
+    return $Call.ByID(2137589570, id, $namespace).then(($result: any) => {
+        return $$createType24($result);
+    });
 }
 
 /**
  * K8sListServices 获取 Service 列表。
  */
-export function K8sListServices(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sServiceInfo[] | null> {
-    return $Call.ByID(1254326489, id, $namespace);
+export function K8sListServices(id: string, $namespace: string): $CancellablePromise<k8s$0.K8sServiceInfo[]> {
+    return $Call.ByID(1254326489, id, $namespace).then(($result: any) => {
+        return $$createType26($result);
+    });
 }
 
 /**
  * K8sOfflineOrchestration 下线指定的编排资源，支持同时删除本地记录或标记为已下线。
  */
-export function K8sOfflineOrchestration(serverId: string, recordId: string, deleteLocalFile: boolean): $CancellablePromise<k8s$0.K8sDeleteResult[] | null> {
-    return $Call.ByID(848722473, serverId, recordId, deleteLocalFile);
+export function K8sOfflineOrchestration(serverId: string, recordId: string, deleteLocalFile: boolean): $CancellablePromise<k8s$0.K8sDeleteResult[]> {
+    return $Call.ByID(848722473, serverId, recordId, deleteLocalFile).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
  * K8sParseKubeconfig 解析 Kubeconfig 文本或文件获取上下文列表。
  */
 export function K8sParseKubeconfig(kubeconfigData: string, kubeconfigPath: string): $CancellablePromise<k8s$0.KubeconfigContextInfo | null> {
-    return $Call.ByID(1146715323, kubeconfigData, kubeconfigPath);
+    return $Call.ByID(1146715323, kubeconfigData, kubeconfigPath).then(($result: any) => {
+        return $$createType28($result);
+    });
 }
 
 /**
@@ -300,3 +334,34 @@ export function K8sScaleDeployment(id: string, $namespace: string, name: string,
 export function K8sTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<string> {
     return $Call.ByID(3832172761, cfg);
 }
+
+// Private type creation functions
+const $$createType0 = k8s$0.K8sApplyResult.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = k8s$0.K8sDeleteResult.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = core$0.K8sOrchestrationRecord.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = k8s$0.K8sOverview.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = k8s$0.K8sConfigMapInfo.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = k8s$0.K8sDeploymentInfo.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = k8s$0.K8sIngressInfo.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = k8s$0.K8sNamespaceInfo.createFrom;
+const $$createType15 = $Create.Array($$createType14);
+const $$createType16 = k8s$0.K8sNodeInfo.createFrom;
+const $$createType17 = $Create.Array($$createType16);
+const $$createType18 = $Create.Array($$createType4);
+const $$createType19 = k8s$0.K8sPVCInfo.createFrom;
+const $$createType20 = $Create.Array($$createType19);
+const $$createType21 = k8s$0.K8sPodInfo.createFrom;
+const $$createType22 = $Create.Array($$createType21);
+const $$createType23 = k8s$0.K8sSecretInfo.createFrom;
+const $$createType24 = $Create.Array($$createType23);
+const $$createType25 = k8s$0.K8sServiceInfo.createFrom;
+const $$createType26 = $Create.Array($$createType25);
+const $$createType27 = k8s$0.KubeconfigContextInfo.createFrom;
+const $$createType28 = $Create.Nullable($$createType27);

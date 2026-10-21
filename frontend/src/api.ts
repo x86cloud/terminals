@@ -28,6 +28,7 @@ import type {
     ServerConfig,
     SessionInfo,
     Transfer,
+    UploadEstimate,
     ApiRequest,
     ApiResponse,
     MongoURIInfo,
@@ -222,6 +223,10 @@ export const API = {
         SftpService.UploadPaths(sessionId, remoteDir, localPaths),
     uploadData: (sessionId: string, remoteDir: string, name: string, base64Data: string): Promise<void> =>
         SftpService.UploadData(sessionId, remoteDir, name, base64Data),
+    estimateUpload: (sessionId: string, remoteDir: string, localPaths: string[]): Promise<UploadEstimate> =>
+        SftpService.EstimateUpload(sessionId, remoteDir, localPaths) as any,
+    estimateUploadData: (sessionId: string, remoteDir: string, dataSize: number): Promise<UploadEstimate> =>
+        SftpService.EstimateUploadData(sessionId, remoteDir, dataSize) as any,
     downloadPaths: (sessionId: string, remotePaths: string[]): Promise<void> =>
         SftpService.DownloadPaths(sessionId, remotePaths),
     downloadTo: (sessionId: string, remotePaths: string[], localDir: string): Promise<void> =>

@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -40,16 +40,20 @@ export function PostgresCreateTable(serverID: string, dbName: string, schema: st
     return $Call.ByID(1292583229, serverID, dbName, schema, table, defs);
 }
 
-export function PostgresDatabases(serverID: string): $CancellablePromise<db$0.PgDatabase[] | null> {
-    return $Call.ByID(449337431, serverID);
+export function PostgresDatabases(serverID: string): $CancellablePromise<db$0.PgDatabase[]> {
+    return $Call.ByID(449337431, serverID).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
-export function PostgresDelete(serverID: string, dbName: string, schema: string, table: string, whereCols: string[] | null, whereVals: any[] | null): $CancellablePromise<number> {
+export function PostgresDelete(serverID: string, dbName: string, schema: string, table: string, whereCols: string[], whereVals: any[]): $CancellablePromise<number> {
     return $Call.ByID(4056032120, serverID, dbName, schema, table, whereCols, whereVals);
 }
 
-export function PostgresDescribe(serverID: string, dbName: string, schema: string, table: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(1993031478, serverID, dbName, schema, table);
+export function PostgresDescribe(serverID: string, dbName: string, schema: string, table: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(1993031478, serverID, dbName, schema, table).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 export function PostgresDropDatabase(serverID: string, name: string): $CancellablePromise<void> {
@@ -80,8 +84,10 @@ export function PostgresExportToFile(serverID: string, dbName: string, schema: s
     return $Call.ByID(1506876310, serverID, dbName, schema, mode, source, table, sqlText, limit);
 }
 
-export function PostgresFunctions(serverID: string, dbName: string, schema: string): $CancellablePromise<db$0.PgFunction[] | null> {
-    return $Call.ByID(1135313736, serverID, dbName, schema);
+export function PostgresFunctions(serverID: string, dbName: string, schema: string): $CancellablePromise<db$0.PgFunction[]> {
+    return $Call.ByID(1135313736, serverID, dbName, schema).then(($result: any) => {
+        return $$createType4($result);
+    });
 }
 
 export function PostgresGrantPrivileges(serverID: string, dbName: string, roleName: string, schema: string, table: string, privileges: string, isGrant: boolean): $CancellablePromise<void> {
@@ -96,7 +102,7 @@ export function PostgresImportFromFile(serverID: string, dbName: string, schema:
     return $Call.ByID(3460303984, serverID, dbName, schema, mode, table);
 }
 
-export function PostgresInsert(serverID: string, dbName: string, schema: string, table: string, columns: string[] | null, values: any[] | null): $CancellablePromise<number> {
+export function PostgresInsert(serverID: string, dbName: string, schema: string, table: string, columns: string[], values: any[]): $CancellablePromise<number> {
     return $Call.ByID(1217134714, serverID, dbName, schema, table, columns, values);
 }
 
@@ -104,54 +110,91 @@ export function PostgresKillSession(serverID: string, dbName: string, pid: numbe
     return $Call.ByID(842213173, serverID, dbName, pid, terminate);
 }
 
-export function PostgresRoles(serverID: string): $CancellablePromise<db$0.PgRole[] | null> {
-    return $Call.ByID(1236675636, serverID);
+export function PostgresRoles(serverID: string): $CancellablePromise<db$0.PgRole[]> {
+    return $Call.ByID(1236675636, serverID).then(($result: any) => {
+        return $$createType6($result);
+    });
 }
 
 export function PostgresRun(serverID: string, dbName: string, sqlText: string): $CancellablePromise<db$0.PostgresQueryResult> {
-    return $Call.ByID(35376300, serverID, dbName, sqlText);
+    return $Call.ByID(35376300, serverID, dbName, sqlText).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
-export function PostgresSchemas(serverID: string, dbName: string): $CancellablePromise<db$0.PgSchema[] | null> {
-    return $Call.ByID(3602461981, serverID, dbName);
+export function PostgresSchemas(serverID: string, dbName: string): $CancellablePromise<db$0.PgSchema[]> {
+    return $Call.ByID(3602461981, serverID, dbName).then(($result: any) => {
+        return $$createType9($result);
+    });
 }
 
 export function PostgresSelect(serverID: string, dbName: string, schema: string, table: string, limit: number, offset: number, sortCol: string, sortOrder: string, whereClause: string): $CancellablePromise<db$0.PostgresQueryResult> {
-    return $Call.ByID(2671027211, serverID, dbName, schema, table, limit, offset, sortCol, sortOrder, whereClause);
+    return $Call.ByID(2671027211, serverID, dbName, schema, table, limit, offset, sortCol, sortOrder, whereClause).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
-export function PostgresSequences(serverID: string, dbName: string, schema: string): $CancellablePromise<db$0.PgSequence[] | null> {
-    return $Call.ByID(4041483995, serverID, dbName, schema);
+export function PostgresSequences(serverID: string, dbName: string, schema: string): $CancellablePromise<db$0.PgSequence[]> {
+    return $Call.ByID(4041483995, serverID, dbName, schema).then(($result: any) => {
+        return $$createType11($result);
+    });
 }
 
-export function PostgresSessions(serverID: string, dbName: string): $CancellablePromise<db$0.PgSession[] | null> {
-    return $Call.ByID(14253138, serverID, dbName);
+export function PostgresSessions(serverID: string, dbName: string): $CancellablePromise<db$0.PgSession[]> {
+    return $Call.ByID(14253138, serverID, dbName).then(($result: any) => {
+        return $$createType13($result);
+    });
 }
 
 export function PostgresStatus(serverID: string, dbName: string): $CancellablePromise<db$0.PgStatus> {
-    return $Call.ByID(2879645501, serverID, dbName);
+    return $Call.ByID(2879645501, serverID, dbName).then(($result: any) => {
+        return $$createType14($result);
+    });
 }
 
 export function PostgresTableDDL(serverID: string, dbName: string, schema: string, table: string): $CancellablePromise<string> {
     return $Call.ByID(3053588451, serverID, dbName, schema, table);
 }
 
-export function PostgresTables(serverID: string, dbName: string, schema: string): $CancellablePromise<db$0.PgTable[] | null> {
-    return $Call.ByID(2631621146, serverID, dbName, schema);
+export function PostgresTables(serverID: string, dbName: string, schema: string): $CancellablePromise<db$0.PgTable[]> {
+    return $Call.ByID(2631621146, serverID, dbName, schema).then(($result: any) => {
+        return $$createType16($result);
+    });
 }
 
-export function PostgresTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(3632021687, cfg);
+export function PostgresTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(3632021687, cfg).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 export function PostgresTruncateTable(serverID: string, dbName: string, schema: string, table: string, restartIdentity: boolean, cascade: boolean): $CancellablePromise<void> {
     return $Call.ByID(2987398851, serverID, dbName, schema, table, restartIdentity, cascade);
 }
 
-export function PostgresUpdate(serverID: string, dbName: string, schema: string, table: string, setCols: string[] | null, setVals: any[] | null, whereCols: string[] | null, whereVals: any[] | null): $CancellablePromise<number> {
+export function PostgresUpdate(serverID: string, dbName: string, schema: string, table: string, setCols: string[], setVals: any[], whereCols: string[], whereVals: any[]): $CancellablePromise<number> {
     return $Call.ByID(1218229066, serverID, dbName, schema, table, setCols, setVals, whereCols, whereVals);
 }
 
 export function PostgresUpdateRolePassword(serverID: string, roleName: string, newPassword: string): $CancellablePromise<void> {
     return $Call.ByID(2324663015, serverID, roleName, newPassword);
 }
+
+// Private type creation functions
+const $$createType0 = db$0.PgDatabase.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = db$0.PgFunction.createFrom;
+const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = db$0.PgRole.createFrom;
+const $$createType6 = $Create.Array($$createType5);
+const $$createType7 = db$0.PostgresQueryResult.createFrom;
+const $$createType8 = db$0.PgSchema.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = db$0.PgSequence.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = db$0.PgSession.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = db$0.PgStatus.createFrom;
+const $$createType15 = db$0.PgTable.createFrom;
+const $$createType16 = $Create.Array($$createType15);

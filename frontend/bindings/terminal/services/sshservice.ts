@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -13,19 +13,25 @@ import * as core$0 from "../core/models.js";
 import * as ssh$0 from "../ssh/models.js";
 
 export function Connect(serverID: string, cols: number, rows: number): $CancellablePromise<ssh$0.SessionInfo> {
-    return $Call.ByID(788030449, serverID, cols, rows);
+    return $Call.ByID(788030449, serverID, cols, rows).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 export function ConnectWithConfig(cfg: core$0.ServerConfig, cols: number, rows: number): $CancellablePromise<ssh$0.SessionInfo> {
-    return $Call.ByID(3610390663, cfg, cols, rows);
+    return $Call.ByID(3610390663, cfg, cols, rows).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 export function Disconnect(sessionID: string): $CancellablePromise<void> {
     return $Call.ByID(3779980835, sessionID);
 }
 
-export function ListSessions(): $CancellablePromise<ssh$0.SessionInfo[] | null> {
-    return $Call.ByID(1298673048);
+export function ListSessions(): $CancellablePromise<ssh$0.SessionInfo[]> {
+    return $Call.ByID(1298673048).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 export function ResizeTerminal(sessionID: string, cols: number, rows: number): $CancellablePromise<void> {
@@ -36,32 +42,40 @@ export function SSHControlService(sessionID: string, serviceName: string, action
     return $Call.ByID(1845503529, sessionID, serviceName, action);
 }
 
-export function SSHCronList(sessionID: string): $CancellablePromise<ssh$0.SSHCronItem[] | null> {
-    return $Call.ByID(3618916809, sessionID);
+export function SSHCronList(sessionID: string): $CancellablePromise<ssh$0.SSHCronItem[]> {
+    return $Call.ByID(3618916809, sessionID).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 export function SSHDashboardStats(sessionID: string): $CancellablePromise<ssh$0.SSHDashboardInfo | null> {
-    return $Call.ByID(2656132434, sessionID);
+    return $Call.ByID(2656132434, sessionID).then(($result: any) => {
+        return $$createType5($result);
+    });
 }
 
 export function SSHKillProcess(sessionID: string, pid: number): $CancellablePromise<void> {
     return $Call.ByID(1155799794, sessionID, pid);
 }
 
-export function SSHProcessList(sessionID: string): $CancellablePromise<ssh$0.SSHProcessInfo[] | null> {
-    return $Call.ByID(720724354, sessionID);
+export function SSHProcessList(sessionID: string): $CancellablePromise<ssh$0.SSHProcessInfo[]> {
+    return $Call.ByID(720724354, sessionID).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
 export function SSHRunCronCommand(sessionID: string, command: string): $CancellablePromise<string> {
     return $Call.ByID(2227318083, sessionID, command);
 }
 
-export function SSHSaveCronList(sessionID: string, items: ssh$0.SSHCronItem[] | null): $CancellablePromise<void> {
+export function SSHSaveCronList(sessionID: string, items: ssh$0.SSHCronItem[]): $CancellablePromise<void> {
     return $Call.ByID(468750592, sessionID, items);
 }
 
-export function SSHServiceList(sessionID: string): $CancellablePromise<ssh$0.SSHServiceInfo[] | null> {
-    return $Call.ByID(2374008576, sessionID);
+export function SSHServiceList(sessionID: string): $CancellablePromise<ssh$0.SSHServiceInfo[]> {
+    return $Call.ByID(2374008576, sessionID).then(($result: any) => {
+        return $$createType9($result);
+    });
 }
 
 export function SSHServiceLogs(sessionID: string, serviceName: string): $CancellablePromise<string> {
@@ -75,10 +89,25 @@ export function SendInput(sessionID: string, data: string): $CancellablePromise<
 /**
  * SshTestConnection 测试指定配置的 SSH 服务器连通性。
  */
-export function SshTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(4037738301, cfg);
+export function SshTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(4037738301, cfg).then(($result: any) => {
+        return $$createType10($result);
+    });
 }
 
 export function TerminalAttach(sessionID: string, cols: number, rows: number): $CancellablePromise<void> {
     return $Call.ByID(2019728728, sessionID, cols, rows);
 }
+
+// Private type creation functions
+const $$createType0 = ssh$0.SessionInfo.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = ssh$0.SSHCronItem.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = ssh$0.SSHDashboardInfo.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = ssh$0.SSHProcessInfo.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = ssh$0.SSHServiceInfo.createFrom;
+const $$createType9 = $Create.Array($$createType8);
+const $$createType10 = $Create.Map($Create.Any, $Create.Any);

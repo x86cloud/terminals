@@ -3,27 +3,68 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import { Create as $Create } from "@wailsio/runtime";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as planner$0 from "./planner/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
 import * as tools$0 from "./tools/models.js";
 
+export const ActiveConnectionInfo = tools$0.ActiveConnectionInfo;
 export type ActiveConnectionInfo = tools$0.ActiveConnectionInfo;
 
-export interface FrontendMessage {
+export class FrontendMessage {
     "role": string;
     "content": string;
     "reasoning_content"?: string;
-    "process_steps"?: ProcessStep[] | null;
-    "images"?: string[] | null;
-    "tool_calls"?: ToolCallItem[] | null;
+    "process_steps"?: ProcessStep[];
+    "images"?: string[];
+    "tool_calls"?: ToolCallItem[];
     "tool_call_id"?: string;
     "name"?: string;
     "plan"?: planner$0.Plan | null;
     "timestamp"?: number;
+
+    /** Creates a new FrontendMessage instance. */
+    constructor($$source: Partial<FrontendMessage> = {}) {
+        if (!("role" in $$source)) {
+            this["role"] = "";
+        }
+        if (!("content" in $$source)) {
+            this["content"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FrontendMessage instance from a string or object.
+     */
+    static createFrom($$source: any = {}): FrontendMessage {
+        const $$createField3_0 = $$createType1;
+        const $$createField4_0 = $$createType2;
+        const $$createField5_0 = $$createType4;
+        const $$createField8_0 = $$createType6;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("process_steps" in $$parsedSource) {
+            $$parsedSource["process_steps"] = $$createField3_0($$parsedSource["process_steps"]);
+        }
+        if ("images" in $$parsedSource) {
+            $$parsedSource["images"] = $$createField4_0($$parsedSource["images"]);
+        }
+        if ("tool_calls" in $$parsedSource) {
+            $$parsedSource["tool_calls"] = $$createField5_0($$parsedSource["tool_calls"]);
+        }
+        if ("plan" in $$parsedSource) {
+            $$parsedSource["plan"] = $$createField8_0($$parsedSource["plan"]);
+        }
+        return new FrontendMessage($$parsedSource as Partial<FrontendMessage>);
+    }
 }
 
-export interface ProcessStep {
+export class ProcessStep {
     "id": string;
 
     /**
@@ -36,10 +77,71 @@ export interface ProcessStep {
     "timestamp": number;
     "duration_ms"?: number;
     "status"?: string;
+
+    /** Creates a new ProcessStep instance. */
+    constructor($$source: Partial<ProcessStep> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("type" in $$source)) {
+            this["type"] = "";
+        }
+        if (!("title" in $$source)) {
+            this["title"] = "";
+        }
+        if (!("content" in $$source)) {
+            this["content"] = "";
+        }
+        if (!("timestamp" in $$source)) {
+            this["timestamp"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ProcessStep instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ProcessStep {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ProcessStep($$parsedSource as Partial<ProcessStep>);
+    }
 }
 
-export interface ToolCallItem {
+export class ToolCallItem {
     "id": string;
     "name": string;
     "args": string;
+
+    /** Creates a new ToolCallItem instance. */
+    constructor($$source: Partial<ToolCallItem> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("name" in $$source)) {
+            this["name"] = "";
+        }
+        if (!("args" in $$source)) {
+            this["args"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ToolCallItem instance from a string or object.
+     */
+    static createFrom($$source: any = {}): ToolCallItem {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ToolCallItem($$parsedSource as Partial<ToolCallItem>);
+    }
 }
+
+// Private type creation functions
+const $$createType0 = ProcessStep.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $Create.Array($Create.Any);
+const $$createType3 = ToolCallItem.createFrom;
+const $$createType4 = $Create.Array($$createType3);
+const $$createType5 = planner$0.Plan.createFrom;
+const $$createType6 = $Create.Nullable($$createType5);

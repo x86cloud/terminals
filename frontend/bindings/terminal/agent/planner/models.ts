@@ -3,12 +3,16 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import { Create as $Create } from "@wailsio/runtime";
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as json$0 from "../../../encoding/json/models.js";
 
 /**
  * Plan 规划方案实体 (对齐 Antigravity IDE 规范，以 Markdown 为核心资产)
  */
-export interface Plan {
+export class Plan {
     "id": string;
     "session_id": string;
     "objective": string;
@@ -36,7 +40,7 @@ export interface Plan {
     /**
      * 兼容字段
      */
-    "steps"?: PlanStep[] | null;
+    "steps"?: PlanStep[];
 
     /**
      * 兼容字段
@@ -45,9 +49,51 @@ export interface Plan {
     "need_confirm": boolean;
     "reasoning_content"?: string;
     "created_at": number;
+
+    /** Creates a new Plan instance. */
+    constructor($$source: Partial<Plan> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("session_id" in $$source)) {
+            this["session_id"] = "";
+        }
+        if (!("objective" in $$source)) {
+            this["objective"] = "";
+        }
+        if (!("content" in $$source)) {
+            this["content"] = "";
+        }
+        if (!("file_path" in $$source)) {
+            this["file_path"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+        if (!("need_confirm" in $$source)) {
+            this["need_confirm"] = false;
+        }
+        if (!("created_at" in $$source)) {
+            this["created_at"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Plan instance from a string or object.
+     */
+    static createFrom($$source: any = {}): Plan {
+        const $$createField7_0 = $$createType1;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("steps" in $$parsedSource) {
+            $$parsedSource["steps"] = $$createField7_0($$parsedSource["steps"]);
+        }
+        return new Plan($$parsedSource as Partial<Plan>);
+    }
 }
 
-export interface PlanStep {
+export class PlanStep {
     "id": string;
 
     /**
@@ -57,7 +103,7 @@ export interface PlanStep {
     "tool_name"?: string;
     "args"?: json$0.RawMessage;
     "description": string;
-    "depends_on"?: string[] | null;
+    "depends_on"?: string[];
     "expected_out"?: string;
     "exempted"?: boolean;
 
@@ -69,6 +115,36 @@ export interface PlanStep {
     "error"?: string;
     "output"?: any;
     "verdict"?: string;
+
+    /** Creates a new PlanStep instance. */
+    constructor($$source: Partial<PlanStep> = {}) {
+        if (!("id" in $$source)) {
+            this["id"] = "";
+        }
+        if (!("action" in $$source)) {
+            this["action"] = "";
+        }
+        if (!("description" in $$source)) {
+            this["description"] = "";
+        }
+        if (!("status" in $$source)) {
+            this["status"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new PlanStep instance from a string or object.
+     */
+    static createFrom($$source: any = {}): PlanStep {
+        const $$createField5_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("depends_on" in $$parsedSource) {
+            $$parsedSource["depends_on"] = $$createField5_0($$parsedSource["depends_on"]);
+        }
+        return new PlanStep($$parsedSource as Partial<PlanStep>);
+    }
 }
 
 export enum RiskLevel {
@@ -81,3 +157,8 @@ export enum RiskLevel {
     RiskMedium = "medium",
     RiskHigh = "high",
 };
+
+// Private type creation functions
+const $$createType0 = PlanStep.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $Create.Array($Create.Any);

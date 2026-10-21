@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 export function SqliteClose(id: string): $CancellablePromise<void> {
     return $Call.ByID(3627431669, id);
@@ -17,34 +17,52 @@ export function SqliteCount(id: string, table: string): $CancellablePromise<numb
     return $Call.ByID(1324275382, id, table);
 }
 
-export function SqliteDescribe(id: string, table: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(2771097954, id, table);
+export function SqliteDescribe(id: string, table: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(2771097954, id, table).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
-export function SqliteIndexes(id: string, table: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(3368192025, id, table);
+export function SqliteIndexes(id: string, table: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(3368192025, id, table).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
-export function SqliteInfo(id: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(3390329019, id);
+export function SqliteInfo(id: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(3390329019, id).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 export function SqliteOpenFile(): $CancellablePromise<string> {
     return $Call.ByID(2228180493);
 }
 
-export function SqliteRun(id: string, sqlText: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(2058116680, id, sqlText);
+export function SqliteRun(id: string, sqlText: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(2058116680, id, sqlText).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
-export function SqliteSchema(id: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(1872133072, id);
+export function SqliteSchema(id: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(1872133072, id).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
-export function SqliteSelect(id: string, table: string, limit: number, offset: number): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(3852992543, id, table, limit, offset);
+export function SqliteSelect(id: string, table: string, limit: number, offset: number): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(3852992543, id, table, limit, offset).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
-export function SqliteTables(id: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(2499628438, id);
+export function SqliteTables(id: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(2499628438, id).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Map($Create.Any, $Create.Any);
+const $$createType1 = $Create.Array($$createType0);

@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -25,14 +25,22 @@ export function MqttSubscribe(id: string, topic: string, qos: number): $Cancella
     return $Call.ByID(1172909037, id, topic, qos);
 }
 
-export function MqttSubscriptions(id: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(624402751, id);
+export function MqttSubscriptions(id: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(624402751, id).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
-export function MqttTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(917389567, cfg);
+export function MqttTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(917389567, cfg).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 export function MqttUnsubscribe(id: string, topic: string): $CancellablePromise<void> {
     return $Call.ByID(3789405396, id, topic);
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Map($Create.Any, $Create.Any);
+const $$createType1 = $Create.Array($$createType0);

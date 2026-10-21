@@ -121,11 +121,6 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         })
     }, [items, showHidden, filter])
 
-    const selectedItems = useMemo(
-        () => visible.filter((item) => selected.includes(item.path)),
-        [visible, selected]
-    )
-
     /* ---------------- 交互 ---------------- */
 
     const onRowClick = (e: React.MouseEvent, item: FileItem, index: number) => {
@@ -164,11 +159,44 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         }
     }
 
+    const safeUploadPaths = async (remoteDir: string, localPaths: string[]) => {
+        if (!localPaths.length) return
+        try {
+            const est = await API.estimateUpload(sessionId, remoteDir, localPaths)
+            if (est.isInsufficient) {
+                setConfirm({
+                    open: true,
+                    title: '远端存储空间不足',
+                    danger: true,
+                    message: `上传大小 (${formatSize(est.totalSize)}) 超过远端剩余可用空间 (${formatSize(est.remoteFree)})，是否继续上传？`,
+                    confirmText: '确认上传',
+                    cancelText: '取消',
+                    onConfirm: async () => {
+                        setConfirm(emptyConfirm)
+                        try {
+                            await API.uploadPaths(sessionId, remoteDir, localPaths)
+                        } catch (err) {
+                            message.error(errorMessage(err))
+                        }
+                    },
+                })
+                return
+            }
+            await API.uploadPaths(sessionId, remoteDir, localPaths)
+        } catch {
+            try {
+                await API.uploadPaths(sessionId, remoteDir, localPaths)
+            } catch (err) {
+                message.error(errorMessage(err))
+            }
+        }
+    }
+
     const uploadViaDialog = async () => {
         try {
             const files = await API.chooseLocalFiles()
             if (files && files.length) {
-                await API.uploadPaths(sessionId, path, files)
+                await safeUploadPaths(path, files)
             }
         } catch (err) {
             message.error(errorMessage(err))
@@ -178,7 +206,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
     const uploadFolderViaDialog = async () => {
         try {
             const dir = await API.chooseLocalFolder()
-            if (dir) await API.uploadPaths(sessionId, path, [dir])
+            if (dir) await safeUploadPaths(path, [dir])
         } catch (err) {
             message.error(errorMessage(err))
         }
@@ -294,10 +322,38 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         const files = Array.from(e.dataTransfer.files || [])
         for (const file of files) {
             try {
-                const buffer = await file.arrayBuffer()
-                await API.uploadData(sessionId, path, file.name, bytesToBase64(buffer))
-            } catch (err) {
-                message.error(errorMessage(err))
+                const doUpload = async () => {
+                    const buffer = await file.arrayBuffer()
+                    await API.uploadData(sessionId, path, file.name, bytesToBase64(buffer))
+                }
+                const est = await API.estimateUploadData(sessionId, path, file.size)
+                if (est.isInsufficient) {
+                    setConfirm({
+                        open: true,
+                        title: '远端存储空间不足',
+                        danger: true,
+                        message: `上传大小 (${formatSize(est.totalSize)}) 超过远端剩余可用空间 (${formatSize(est.remoteFree)})，是否继续上传？`,
+                        confirmText: '确认上传',
+                        cancelText: '取消',
+                        onConfirm: async () => {
+                            setConfirm(emptyConfirm)
+                            try {
+                                await doUpload()
+                            } catch (err) {
+                                message.error(errorMessage(err))
+                            }
+                        },
+                    })
+                    continue
+                }
+                await doUpload()
+            } catch {
+                try {
+                    const buffer = await file.arrayBuffer()
+                    await API.uploadData(sessionId, path, file.name, bytesToBase64(buffer))
+                } catch (err) {
+                    message.error(errorMessage(err))
+                }
             }
         }
     }
@@ -445,9 +501,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
             />
             <div className={fp.fileStatus}>
                 <span>{visible.length} 项</span>
-                {selectedItems.length > 0 && <span>已选 {selectedItems.length}</span>}
                 <span className={g.spacer} />
-                <span className={fp.hint}>双击/右键编辑文件 · 拖拽上传</span>
             </div>
             <div className={fp.dropHint}>
                 <Upload size={28} />

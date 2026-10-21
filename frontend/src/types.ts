@@ -216,6 +216,16 @@ export interface Transfer {
     updatedAt: number
 }
 
+export interface UploadEstimate {
+    totalSize: number
+    fileCount: number
+    folderCount: number
+    remoteFree: number
+    remoteTotal: number
+    isInsufficient: boolean
+    supported: boolean
+}
+
 export function emptyServer(): ServerConfig {
     return {
         id: '',

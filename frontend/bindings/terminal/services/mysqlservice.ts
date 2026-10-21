@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -52,16 +52,20 @@ export function MysqlCreateUser(serverID: string, user: string, host: string, pa
     return $Call.ByID(2910165566, serverID, user, host, password, authPlugin, lock);
 }
 
-export function MysqlDatabases(serverID: string): $CancellablePromise<string[] | null> {
-    return $Call.ByID(3535624445, serverID);
+export function MysqlDatabases(serverID: string): $CancellablePromise<string[]> {
+    return $Call.ByID(3535624445, serverID).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
-export function MysqlDelete(serverID: string, dbName: string, table: string, whereCols: string[] | null, whereVals: any[] | null): $CancellablePromise<number> {
+export function MysqlDelete(serverID: string, dbName: string, table: string, whereCols: string[], whereVals: any[]): $CancellablePromise<number> {
     return $Call.ByID(3933970934, serverID, dbName, table, whereCols, whereVals);
 }
 
 export function MysqlDescribe(serverID: string, dbName: string, table: string): $CancellablePromise<db$0.MysqlQueryResult> {
-    return $Call.ByID(440693212, serverID, dbName, table);
+    return $Call.ByID(440693212, serverID, dbName, table).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 export function MysqlDropDatabase(serverID: string, name: string): $CancellablePromise<void> {
@@ -92,7 +96,7 @@ export function MysqlExportToFile(serverID: string, dbName: string, mode: string
     return $Call.ByID(1321013220, serverID, dbName, mode, source, table, sqlText, limit);
 }
 
-export function MysqlGrantPrivileges(serverID: string, user: string, host: string, dbName: string, table: string, privs: string[] | null, withGrantOption: boolean): $CancellablePromise<void> {
+export function MysqlGrantPrivileges(serverID: string, user: string, host: string, dbName: string, table: string, privs: string[], withGrantOption: boolean): $CancellablePromise<void> {
     return $Call.ByID(3872778457, serverID, user, host, dbName, table, privs, withGrantOption);
 }
 
@@ -112,16 +116,20 @@ export function MysqlImportJSON(serverID: string, dbName: string, table: string,
     return $Call.ByID(3162791866, serverID, dbName, table, content);
 }
 
-export function MysqlIndexes(serverID: string, dbName: string, table: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(362807455, serverID, dbName, table);
+export function MysqlIndexes(serverID: string, dbName: string, table: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(362807455, serverID, dbName, table).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
-export function MysqlInsert(serverID: string, dbName: string, table: string, columns: string[] | null, values: any[] | null): $CancellablePromise<number> {
+export function MysqlInsert(serverID: string, dbName: string, table: string, columns: string[], values: any[]): $CancellablePromise<number> {
     return $Call.ByID(1196097948, serverID, dbName, table, columns, values);
 }
 
-export function MysqlProcessList(serverID: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(4066607066, serverID);
+export function MysqlProcessList(serverID: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(4066607066, serverID).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 export function MysqlQueryCSV(serverID: string, dbName: string, sqlText: string, limit: number): $CancellablePromise<string> {
@@ -132,40 +140,56 @@ export function MysqlRevokeAllPrivileges(serverID: string, user: string, host: s
     return $Call.ByID(2066560698, serverID, user, host);
 }
 
-export function MysqlRevokePrivileges(serverID: string, user: string, host: string, dbName: string, table: string, privs: string[] | null): $CancellablePromise<void> {
+export function MysqlRevokePrivileges(serverID: string, user: string, host: string, dbName: string, table: string, privs: string[]): $CancellablePromise<void> {
     return $Call.ByID(3115807327, serverID, user, host, dbName, table, privs);
 }
 
 export function MysqlRun(serverID: string, dbName: string, sqlText: string): $CancellablePromise<db$0.MysqlQueryResult> {
-    return $Call.ByID(968298446, serverID, dbName, sqlText);
+    return $Call.ByID(968298446, serverID, dbName, sqlText).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
-export function MysqlSchema(serverID: string, dbName: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(95102882, serverID, dbName);
+export function MysqlSchema(serverID: string, dbName: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(95102882, serverID, dbName).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 export function MysqlSelect(serverID: string, dbName: string, table: string, limit: number, offset: number): $CancellablePromise<db$0.MysqlQueryResult> {
-    return $Call.ByID(3813520953, serverID, dbName, table, limit, offset);
+    return $Call.ByID(3813520953, serverID, dbName, table, limit, offset).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
-export function MysqlSlowLog(serverID: string, limit: number): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(1466844398, serverID, limit);
+export function MysqlSlowLog(serverID: string, limit: number): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(1466844398, serverID, limit).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
-export function MysqlStatus(serverID: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(907222243, serverID);
+export function MysqlStatus(serverID: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(907222243, serverID).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
-export function MysqlTableStatus(serverID: string, dbName: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(1214044397, serverID, dbName);
+export function MysqlTableStatus(serverID: string, dbName: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(1214044397, serverID, dbName).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
-export function MysqlTables(serverID: string, dbName: string): $CancellablePromise<string[] | null> {
-    return $Call.ByID(870810776, serverID, dbName);
+export function MysqlTables(serverID: string, dbName: string): $CancellablePromise<string[]> {
+    return $Call.ByID(870810776, serverID, dbName).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
-export function MysqlTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(3058496949, cfg);
+export function MysqlTestConnection(cfg: core$0.ServerConfig): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(3058496949, cfg).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
 export function MysqlToggleUserLock(serverID: string, user: string, host: string, lock: boolean): $CancellablePromise<void> {
@@ -176,14 +200,24 @@ export function MysqlTruncateTable(serverID: string, dbName: string, table: stri
     return $Call.ByID(2402059821, serverID, dbName, table);
 }
 
-export function MysqlUpdate(serverID: string, dbName: string, table: string, setCols: string[] | null, setVals: any[] | null, whereCols: string[] | null, whereVals: any[] | null): $CancellablePromise<number> {
+export function MysqlUpdate(serverID: string, dbName: string, table: string, setCols: string[], setVals: any[], whereCols: string[], whereVals: any[]): $CancellablePromise<number> {
     return $Call.ByID(4036253216, serverID, dbName, table, setCols, setVals, whereCols, whereVals);
 }
 
-export function MysqlUsers(serverID: string): $CancellablePromise<({ [_ in string]?: any } | null)[] | null> {
-    return $Call.ByID(3320548199, serverID);
+export function MysqlUsers(serverID: string): $CancellablePromise<{ [_ in string]?: any }[]> {
+    return $Call.ByID(3320548199, serverID).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
-export function MysqlVariables(serverID: string): $CancellablePromise<{ [_ in string]?: any } | null> {
-    return $Call.ByID(2702344654, serverID);
+export function MysqlVariables(serverID: string): $CancellablePromise<{ [_ in string]?: any }> {
+    return $Call.ByID(2702344654, serverID).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = db$0.MysqlQueryResult.createFrom;
+const $$createType2 = $Create.Map($Create.Any, $Create.Any);
+const $$createType3 = $Create.Array($$createType2);

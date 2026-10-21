@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -20,7 +20,7 @@ import * as wiki$0 from "../agent/wiki/models.js";
 /**
  * CompileSessionToWiki 调用大模型提炼会话中的关键资产，并自动合并更新到 Wiki
  */
-export function CompileSessionToWiki(sessionID: string, messages: agent$0.FrontendMessage[] | null): $CancellablePromise<string> {
+export function CompileSessionToWiki(sessionID: string, messages: agent$0.FrontendMessage[]): $CancellablePromise<string> {
     return $Call.ByID(1883329833, sessionID, messages);
 }
 
@@ -41,8 +41,10 @@ export function DeleteWikiNode(relPath: string): $CancellablePromise<void> {
 /**
  * GetWikiCatalog 获取知识库紧凑目录与摘要
  */
-export function GetWikiCatalog(): $CancellablePromise<wiki$0.WikiCatalogItem[] | null> {
-    return $Call.ByID(3693254844);
+export function GetWikiCatalog(): $CancellablePromise<wiki$0.WikiCatalogItem[]> {
+    return $Call.ByID(3693254844).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
@@ -55,8 +57,10 @@ export function GetWikiDir(): $CancellablePromise<string> {
 /**
  * ListWikiTree 列出知识库文档树
  */
-export function ListWikiTree(): $CancellablePromise<wiki$0.WikiNode[] | null> {
-    return $Call.ByID(921259459);
+export function ListWikiTree(): $CancellablePromise<wiki$0.WikiNode[]> {
+    return $Call.ByID(921259459).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
@@ -86,3 +90,9 @@ export function RenameWikiNode(oldRelPath: string, newRelPath: string): $Cancell
 export function SaveWikiPage(relPath: string, content: string): $CancellablePromise<void> {
     return $Call.ByID(3170522057, relPath, content);
 }
+
+// Private type creation functions
+const $$createType0 = wiki$0.WikiCatalogItem.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = wiki$0.WikiNode.createFrom;
+const $$createType3 = $Create.Array($$createType2);

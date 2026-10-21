@@ -146,6 +146,16 @@ func (s *SftpService) ReadLocalFileBase64(filePath string) (string, error) {
 	return base64.StdEncoding.EncodeToString(data), nil
 }
 
+func (s *SftpService) EstimateUpload(sessionID string, remoteDir string, localPaths []string) (ssh.UploadEstimate, error) {
+	c := GetContainer()
+	return c.Sessions.EstimateUpload(sessionID, remoteDir, localPaths)
+}
+
+func (s *SftpService) EstimateUploadData(sessionID string, remoteDir string, dataSize int64) (ssh.UploadEstimate, error) {
+	c := GetContainer()
+	return c.Sessions.EstimateUploadBase64(sessionID, remoteDir, dataSize)
+}
+
 func (s *SftpService) UploadPaths(sessionID string, remoteDir string, localPaths []string) error {
 	if len(localPaths) == 0 {
 		return nil

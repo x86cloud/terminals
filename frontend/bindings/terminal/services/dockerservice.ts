@@ -8,7 +8,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -66,8 +66,10 @@ export function DockerCreateNetwork(id: string, name: string, driver: string): $
 /**
  * DockerCreateVolume 创建数据卷。
  */
-export function DockerCreateVolume(id: string, name: string, driver: string, labels: { [_ in string]?: string } | null): $CancellablePromise<docker$0.DockerVolumeInfo | null> {
-    return $Call.ByID(856910861, id, name, driver, labels);
+export function DockerCreateVolume(id: string, name: string, driver: string, labels: { [_ in string]?: string }): $CancellablePromise<docker$0.DockerVolumeInfo | null> {
+    return $Call.ByID(856910861, id, name, driver, labels).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 /**
@@ -123,14 +125,18 @@ export function DockerGenerateCompose(req: $models.DockerGenerateComposeRequest)
  * DockerGetComposeRecord 获取特定 Compose 记录详情。
  */
 export function DockerGetComposeRecord(id: string): $CancellablePromise<core$0.DockerComposeRecord | null> {
-    return $Call.ByID(867706746, id);
+    return $Call.ByID(867706746, id).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
  * DockerGetComposeStack 获取特定 Compose 项目详情。
  */
 export function DockerGetComposeStack(id: string, projectName: string): $CancellablePromise<docker$0.DockerComposeStackInfo | null> {
-    return $Call.ByID(1568367469, id, projectName);
+    return $Call.ByID(1568367469, id, projectName).then(($result: any) => {
+        return $$createType5($result);
+    });
 }
 
 /**
@@ -151,7 +157,9 @@ export function DockerGetContainerLogs(id: string, containerID: string, tail: nu
  * DockerGetOverview 获取概览信息。
  */
 export function DockerGetOverview(id: string): $CancellablePromise<docker$0.DockerOverview | null> {
-    return $Call.ByID(1227453346, id);
+    return $Call.ByID(1227453346, id).then(($result: any) => {
+        return $$createType7($result);
+    });
 }
 
 /**
@@ -171,43 +179,55 @@ export function DockerInspectImage(id: string, imageID: string): $CancellablePro
 /**
  * DockerListComposeRecords 获取指定 Docker 服务器的本地 Compose 记录。
  */
-export function DockerListComposeRecords(serverId: string): $CancellablePromise<core$0.DockerComposeRecord[] | null> {
-    return $Call.ByID(823024045, serverId);
+export function DockerListComposeRecords(serverId: string): $CancellablePromise<core$0.DockerComposeRecord[]> {
+    return $Call.ByID(823024045, serverId).then(($result: any) => {
+        return $$createType8($result);
+    });
 }
 
 /**
  * DockerListComposeStacks 获取所有 Compose 项目。
  */
-export function DockerListComposeStacks(id: string): $CancellablePromise<docker$0.DockerComposeStackInfo[] | null> {
-    return $Call.ByID(4074609764, id);
+export function DockerListComposeStacks(id: string): $CancellablePromise<docker$0.DockerComposeStackInfo[]> {
+    return $Call.ByID(4074609764, id).then(($result: any) => {
+        return $$createType9($result);
+    });
 }
 
 /**
  * DockerListContainers 获取容器列表。
  */
-export function DockerListContainers(id: string, all: boolean): $CancellablePromise<docker$0.DockerContainerInfo[] | null> {
-    return $Call.ByID(3923820975, id, all);
+export function DockerListContainers(id: string, all: boolean): $CancellablePromise<docker$0.DockerContainerInfo[]> {
+    return $Call.ByID(3923820975, id, all).then(($result: any) => {
+        return $$createType11($result);
+    });
 }
 
 /**
  * DockerListImages 获取镜像列表。
  */
-export function DockerListImages(id: string): $CancellablePromise<docker$0.DockerImageInfo[] | null> {
-    return $Call.ByID(432079097, id);
+export function DockerListImages(id: string): $CancellablePromise<docker$0.DockerImageInfo[]> {
+    return $Call.ByID(432079097, id).then(($result: any) => {
+        return $$createType13($result);
+    });
 }
 
 /**
  * DockerListNetworks 获取网络列表。
  */
-export function DockerListNetworks(id: string): $CancellablePromise<docker$0.DockerNetworkInfo[] | null> {
-    return $Call.ByID(3268779360, id);
+export function DockerListNetworks(id: string): $CancellablePromise<docker$0.DockerNetworkInfo[]> {
+    return $Call.ByID(3268779360, id).then(($result: any) => {
+        return $$createType15($result);
+    });
 }
 
 /**
  * DockerListVolumes 获取数据卷列表。
  */
-export function DockerListVolumes(id: string): $CancellablePromise<docker$0.DockerVolumeInfo[] | null> {
-    return $Call.ByID(782015154, id);
+export function DockerListVolumes(id: string): $CancellablePromise<docker$0.DockerVolumeInfo[]> {
+    return $Call.ByID(782015154, id).then(($result: any) => {
+        return $$createType16($result);
+    });
 }
 
 /**
@@ -256,7 +276,9 @@ export function DockerRemoveVolume(id: string, name: string, force: boolean): $C
  * DockerSaveComposeRecord 保存/创建本地 Compose 记录。
  */
 export function DockerSaveComposeRecord(record: core$0.DockerComposeRecord): $CancellablePromise<core$0.DockerComposeRecord | null> {
-    return $Call.ByID(1395318731, record);
+    return $Call.ByID(1395318731, record).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
 
 /**
@@ -270,7 +292,9 @@ export function DockerSaveImage(id: string, imageIDOrTag: string, defaultFilenam
  * DockerSystemPrune 执行系统清理。
  */
 export function DockerSystemPrune(id: string, pruneContainers: boolean, pruneImages: boolean, pruneVolumes: boolean, pruneNetworks: boolean): $CancellablePromise<docker$0.DockerPruneReport | null> {
-    return $Call.ByID(320336006, id, pruneContainers, pruneImages, pruneVolumes, pruneNetworks);
+    return $Call.ByID(320336006, id, pruneContainers, pruneImages, pruneVolumes, pruneNetworks).then(($result: any) => {
+        return $$createType18($result);
+    });
 }
 
 /**
@@ -284,5 +308,28 @@ export function DockerTestConnection(cfg: core$0.ServerConfig): $CancellableProm
  * DockerUpComposeStack 执行类似 docker compose up 的智能增量更新，仅在实例创建/启动成功后才同步保存本地 YAML。
  */
 export function DockerUpComposeStack(serverId: string, record: core$0.DockerComposeRecord, forcePull: boolean, recreate: boolean): $CancellablePromise<core$0.DockerComposeRecord | null> {
-    return $Call.ByID(2251632454, serverId, record, forcePull, recreate);
+    return $Call.ByID(2251632454, serverId, record, forcePull, recreate).then(($result: any) => {
+        return $$createType3($result);
+    });
 }
+
+// Private type creation functions
+const $$createType0 = docker$0.DockerVolumeInfo.createFrom;
+const $$createType1 = $Create.Nullable($$createType0);
+const $$createType2 = core$0.DockerComposeRecord.createFrom;
+const $$createType3 = $Create.Nullable($$createType2);
+const $$createType4 = docker$0.DockerComposeStackInfo.createFrom;
+const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = docker$0.DockerOverview.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = $Create.Array($$createType2);
+const $$createType9 = $Create.Array($$createType4);
+const $$createType10 = docker$0.DockerContainerInfo.createFrom;
+const $$createType11 = $Create.Array($$createType10);
+const $$createType12 = docker$0.DockerImageInfo.createFrom;
+const $$createType13 = $Create.Array($$createType12);
+const $$createType14 = docker$0.DockerNetworkInfo.createFrom;
+const $$createType15 = $Create.Array($$createType14);
+const $$createType16 = $Create.Array($$createType0);
+const $$createType17 = docker$0.DockerPruneReport.createFrom;
+const $$createType18 = $Create.Nullable($$createType17);

@@ -3,7 +3,7 @@
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
-import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wailsio/runtime";
+import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Create } from "@wailsio/runtime";
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -13,8 +13,10 @@ export function CancelTransfer(id: string): $CancellablePromise<void> {
     return $Call.ByID(4127284595, id);
 }
 
-export function ChooseLocalFiles(): $CancellablePromise<string[] | null> {
-    return $Call.ByID(3063354741);
+export function ChooseLocalFiles(): $CancellablePromise<string[]> {
+    return $Call.ByID(3063354741).then(($result: any) => {
+        return $$createType0($result);
+    });
 }
 
 export function ChooseLocalFolder(): $CancellablePromise<string> {
@@ -25,12 +27,24 @@ export function ClearFinishedTransfers(): $CancellablePromise<void> {
     return $Call.ByID(1513193999);
 }
 
-export function DownloadPaths(sessionID: string, remotePaths: string[] | null): $CancellablePromise<void> {
+export function DownloadPaths(sessionID: string, remotePaths: string[]): $CancellablePromise<void> {
     return $Call.ByID(3738390982, sessionID, remotePaths);
 }
 
-export function DownloadTo(sessionID: string, remotePaths: string[] | null, localDir: string): $CancellablePromise<void> {
+export function DownloadTo(sessionID: string, remotePaths: string[], localDir: string): $CancellablePromise<void> {
     return $Call.ByID(3535962535, sessionID, remotePaths, localDir);
+}
+
+export function EstimateUpload(sessionID: string, remoteDir: string, localPaths: string[]): $CancellablePromise<ssh$0.UploadEstimate> {
+    return $Call.ByID(2808881741, sessionID, remoteDir, localPaths).then(($result: any) => {
+        return $$createType1($result);
+    });
+}
+
+export function EstimateUploadData(sessionID: string, remoteDir: string, dataSize: number): $CancellablePromise<ssh$0.UploadEstimate> {
+    return $Call.ByID(3924487181, sessionID, remoteDir, dataSize).then(($result: any) => {
+        return $$createType1($result);
+    });
 }
 
 export function HomeDir(sessionID: string): $CancellablePromise<string> {
@@ -38,11 +52,15 @@ export function HomeDir(sessionID: string): $CancellablePromise<string> {
 }
 
 export function ListDir(sessionID: string, dir: string): $CancellablePromise<ssh$0.DirListing> {
-    return $Call.ByID(999765429, sessionID, dir);
+    return $Call.ByID(999765429, sessionID, dir).then(($result: any) => {
+        return $$createType2($result);
+    });
 }
 
-export function ListTransfers(): $CancellablePromise<ssh$0.Transfer[] | null> {
-    return $Call.ByID(1534918834);
+export function ListTransfers(): $CancellablePromise<ssh$0.Transfer[]> {
+    return $Call.ByID(1534918834).then(($result: any) => {
+        return $$createType4($result);
+    });
 }
 
 export function MakeDir(sessionID: string, parent: string, name: string): $CancellablePromise<void> {
@@ -65,7 +83,7 @@ export function RemovePath(sessionID: string, target: string): $CancellablePromi
     return $Call.ByID(2568987565, sessionID, target);
 }
 
-export function RemovePaths(sessionID: string, targets: string[] | null): $CancellablePromise<void> {
+export function RemovePaths(sessionID: string, targets: string[]): $CancellablePromise<void> {
     return $Call.ByID(3939432058, sessionID, targets);
 }
 
@@ -81,7 +99,7 @@ export function UploadData(sessionID: string, remoteDir: string, name: string, b
     return $Call.ByID(294845087, sessionID, remoteDir, name, base64Data);
 }
 
-export function UploadPaths(sessionID: string, remoteDir: string, localPaths: string[] | null): $CancellablePromise<void> {
+export function UploadPaths(sessionID: string, remoteDir: string, localPaths: string[]): $CancellablePromise<void> {
     return $Call.ByID(2842966921, sessionID, remoteDir, localPaths);
 }
 
@@ -92,3 +110,10 @@ export function WriteLocalFile(filePath: string, content: string): $CancellableP
 export function WriteRemoteFile(sessionID: string, remotePath: string, content: string): $CancellablePromise<void> {
     return $Call.ByID(999941941, sessionID, remotePath, content);
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = ssh$0.UploadEstimate.createFrom;
+const $$createType2 = ssh$0.DirListing.createFrom;
+const $$createType3 = ssh$0.Transfer.createFrom;
+const $$createType4 = $Create.Array($$createType3);

@@ -30,7 +30,7 @@ import {
     AppSettings,
     emptyServer,
 } from '@/types'
-import { errorMessage } from '@/utils'
+import { errorMessage, formatSize } from '@/utils'
 import { applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings } from '@/utils/theme'
 import { useStartupUpdateCheck } from '@/utils/updater'
 import a from '@/components/App.module.less'
@@ -230,9 +230,33 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 return
             }
             const remoteDir = attrPath || pathsRef.current[sessionId] || '/'
-            API.uploadPaths(sessionId, remoteDir, paths).catch((err) =>
-                message.error(errorMessage(err))
-            )
+            const doUpload = () => {
+                API.uploadPaths(sessionId, remoteDir, paths).catch((err) =>
+                    message.error(errorMessage(err))
+                )
+            }
+            API.estimateUpload(sessionId, remoteDir, paths)
+                .then((est) => {
+                    if (est.isInsufficient) {
+                        setConfirm({
+                            open: true,
+                            title: '远端存储空间不足',
+                            danger: true,
+                            message: `上传大小 (${formatSize(est.totalSize)}) 超过远端剩余可用空间 (${formatSize(est.remoteFree)})，是否继续上传？`,
+                            confirmText: '确认上传',
+                            cancelText: '取消',
+                            onConfirm: () => {
+                                setConfirm(emptyConfirm)
+                                doUpload()
+                            },
+                        })
+                        return
+                    }
+                    doUpload()
+                })
+                .catch(() => {
+                    doUpload()
+                })
         })
         setNativeDrop(ok)
         return () => {
