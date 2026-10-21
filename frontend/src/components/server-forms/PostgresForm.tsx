@@ -92,7 +92,7 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                             </Space>
                         ),
                         children: (
-                            <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                            <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                                     <span style={{ fontSize: 12 }}>启用 SSH 隧道连接内网 PG</span>
                                     <Switch

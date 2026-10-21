@@ -21,14 +21,14 @@ export default function AppearanceTab({
     onCloseActionChange,
 }: AppearanceTabProps) {
     return (
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
             <div>
                 <div className={a.sectionTitle}>外观与主题</div>
                 <div className={a.sectionDesc}>切换应用视觉风格与整体界面色彩方案。</div>
             </div>
 
             <Card size="small" style={{ borderRadius: 8 }}>
-                <Space direction="vertical" size={20} style={{ width: '100%' }}>
+                <Space orientation="vertical" size={20} style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                             <div style={{ fontWeight: 600, fontSize: 14 }}>界面主题模式</div>

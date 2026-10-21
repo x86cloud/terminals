@@ -261,7 +261,7 @@ export default function ObjModal(props: Props) {
                             </div>
 
                             {isCapped && (
-                                <Space direction="vertical" style={{ width: '100%', paddingLeft: 12 }} size={10}>
+                                <Space orientation="vertical" style={{ width: '100%', paddingLeft: 12 }} size={10}>
                                     <div>
                                         <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>
                                             最大存储容量 (Bytes，必填)
@@ -311,7 +311,7 @@ export default function ObjModal(props: Props) {
                             </div>
 
                             {isTimeseries && (
-                                <Space direction="vertical" style={{ width: '100%', paddingLeft: 12 }} size={10}>
+                                <Space orientation="vertical" style={{ width: '100%', paddingLeft: 12 }} size={10}>
                                     <div>
                                         <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>
                                             时间戳字段名 (timeField，必填)：

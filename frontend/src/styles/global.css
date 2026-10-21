@@ -6,14 +6,14 @@
 
 :root,
 [data-theme='light'] {
-    --bg: linear-gradient(135deg, #f7f8fa 0%, #f1f3f6 50%, #e9ecef 100%);
+    --bg: linear-gradient(135deg, #eef1f5 0%, #e6e9ee 50%, #dde2e8 100%);
     --bj: var(--bg);
-    --bg-solid: #f3f4f6;
-    --bg-1: rgba(255, 255, 255, 0.90);
+    --bg-solid: #e6e9ee;
+    --bg-1: rgba(255, 255, 255, 0.95);
     --bg-1-solid: #ffffff;
-    --bg-2: rgba(242, 244, 247, 0.85);
-    --bg-2-solid: #f0f2f5;
-    --bg-3: #e4e7ec;
+    --bg-2: rgba(233, 237, 242, 0.90);
+    --bg-2-solid: #e4e8ee;
+    --bg-3: #d8dde5;
     --border: rgba(220, 224, 230, 0.85);
     --text: #1f2733;
     --text-dim: #667085;
@@ -31,11 +31,11 @@
     --warn: #c97a1a;
     --warn-bg: rgba(201, 122, 26, 0.12);
     --warn-text: #8c4c06;
-    --bg-elev: rgba(248, 249, 251, 0.88);
-    --bg-elev-solid: #f8f9fb;
+    --bg-elev: rgba(240, 243, 248, 0.92);
+    --bg-elev-solid: #ebedf2;
     --term-bg: #fcfdfd;
     --tile-bg-1: #ffffff;
-    --tile-bg-2: #f0f2f5;
+    --tile-bg-2: #e8ecf1;
     --tile-border: rgba(0, 0, 0, 0.07);
     --tile-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     --tile-node: #444444;

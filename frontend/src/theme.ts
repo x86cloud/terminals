@@ -64,7 +64,7 @@ export function getAntdTheme(themeMode: 'dark' | 'light' | 'system' = 'dark'): T
             Table: {
                 borderRadius: 10,
                 colorBgContainer: isDark ? '#181a1f' : '#ffffff',
-                headerBg: isDark ? '#20242b' : '#f8f9fa',
+                headerBg: isDark ? '#20242b' : '#e9edf2',
             },
             Tabs: {
                 cardHeight: 34,
@@ -84,7 +84,7 @@ export function getAntdTheme(themeMode: 'dark' | 'light' | 'system' = 'dark'): T
             },
             Collapse: {
                 borderRadiusLG: 12,
-                colorBgContainer: isDark ? '#1b1e23' : '#f8f9fa',
+                colorBgContainer: isDark ? '#1b1e23' : '#eaedf3',
                 colorBorder: isDark ? '#2d333b' : '#e2e8f0',
             },
             Dropdown: {
@@ -99,7 +99,7 @@ export function getAntdTheme(themeMode: 'dark' | 'light' | 'system' = 'dark'): T
             Segmented: {
                 borderRadius: 10,
                 borderRadiusSM: 8,
-                trackBg: isDark ? '#141619' : '#f0f2f5',
+                trackBg: isDark ? '#141619' : '#e2e6ec',
                 itemSelectedBg: isDark ? '#2d333b' : '#ffffff',
             },
             Radio: {

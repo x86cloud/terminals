@@ -933,7 +933,7 @@ export default function ComposeTab({ serverId }: Props) {
                     </AntSpace>
                 }
             >
-                <AntSpace direction="vertical" size={16} style={{ width: '100%' }}>
+                <AntSpace orientation="vertical" size={16} style={{ width: '100%' }}>
                     <div>
                         <div
                             style={{

@@ -178,7 +178,7 @@ export default function AiAgentTab({
     const calculatedTriggerTokens = Math.round((aiModelContextTokens * aiContextCompressRatio) / 100)
 
     return (
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
+        <Space orientation="vertical" size={16} style={{ width: '100%' }}>
             <div>
                 <div className={s.sectionTitle}>
                     <Bot size={18} />
