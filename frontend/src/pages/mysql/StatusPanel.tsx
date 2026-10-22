@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Select, Button, Segmented, Space, Badge, Tag, Tooltip, Input, message, Modal } from 'antd'
+import { Select, Button, Segmented, Space, Badge, Tag, Tooltip, Input, Modal, App } from 'antd'
 import {
     Activity,
     Zap,
@@ -51,6 +51,7 @@ export default function StatusPanel({
     busy,
     onRefresh,
 }: Props) {
+    const { message } = App.useApp()
     const { activeTarget } = useSession()
     const isActive = !sessionId || (activeTarget?.kind === 'mysql' && activeTarget.id === sessionId)
 

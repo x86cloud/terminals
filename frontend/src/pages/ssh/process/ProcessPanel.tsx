@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Input, Button, Table, Tag, Tooltip, Alert, message } from 'antd'
+import { Input, Button, Table, Tag, Tooltip, Alert, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Power } from 'lucide-react'
 import { API } from '@/api'
@@ -28,6 +28,7 @@ function fmtBytes(bytes: number): string {
 }
 
 export default function ProcessPanel({ sessionId, active }: Props) {
+    const { message } = App.useApp()
     const [procs, setProcs] = useState<SSHProcessInfo[]>([])
     const [busy, setBusy] = useState(false)
     const [loaded, setLoaded] = useState(false)

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Button, Tag, Space, Tooltip, Input, Modal, message } from 'antd'
+import { Button, Tag, Space, Tooltip, Input, Modal, App } from 'antd'
 import {
     ShieldCheck,
     User,
@@ -45,6 +45,7 @@ export default function UsersPanel({
     onRefreshUsers,
     onRefreshGrants,
 }: Props) {
+    const { message } = App.useApp()
     const [copied, setCopied] = useState(false)
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
     const [searchKeyword, setSearchKeyword] = useState('')

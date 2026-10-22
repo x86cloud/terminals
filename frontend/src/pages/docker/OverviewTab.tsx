@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Modal as AntdModal, Checkbox, message, Space, Tag } from 'antd'
+import { Button, Modal as AntdModal, Checkbox, Space, Tag, App } from 'antd'
 import {
     Box,
     Layers,
@@ -22,6 +22,7 @@ interface Props {
 }
 
 export default function OverviewTab({ serverId, overview, loading, onRefresh }: Props) {
+    const { message } = App.useApp()
     const [pruneModal, setPruneModal] = useState(false)
     const [pruneContainers, setPruneContainers] = useState(true)
     const [pruneImages, setPruneImages] = useState(true)

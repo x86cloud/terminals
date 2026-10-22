@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Modal, Form, Input, Select, Switch, message } from 'antd'
+import { Modal, Form, Input, Select, Switch, App } from 'antd'
 import { KeyRound, Sparkles } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { DbAdapter } from '../types'
@@ -22,6 +22,7 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
     onSuccess,
     onCancel,
 }) => {
+    const { message } = App.useApp()
     const [name, setName] = useState('')
     const [isUnique, setIsUnique] = useState(false)
     const [selectedCols, setSelectedCols] = useState<string[]>([])

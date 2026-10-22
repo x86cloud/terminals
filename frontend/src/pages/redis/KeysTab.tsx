@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Input, Button, Segmented, Select, Tooltip, Dropdown, message } from 'antd'
+import { Input, Button, Segmented, Select, Tooltip, Dropdown, App } from 'antd'
 import { Folder, Table as TableIcon, Search, RotateCw, Download, Plus, Database, Trash2, Copy } from 'lucide-react'
 import { RedisKeysResult, RedisSessionInfo, RedisValue } from '@/types'
 import { KeyTreeNode, TYPE_COLOR, TYPE_SHORT_LABEL, buildKeyTree } from '@/pages/redis/redisTypes'
@@ -71,6 +71,7 @@ export default function KeysTab({
     flash,
     onOpenCreateKey,
 }: KeysTabProps) {
+    const { message } = App.useApp()
     // Sidebar width resize state
     const [sidebarWidth, setSidebarWidth] = useState(() => {
         return appStorage.getNumber(StorageKey.RedisSidebarWidth, 320)

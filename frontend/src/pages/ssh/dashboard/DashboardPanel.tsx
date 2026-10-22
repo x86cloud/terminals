@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Progress, Checkbox, Table, Tag, Alert, Space, message } from 'antd'
+import { Button, Progress, Checkbox, Table, Tag, Alert, Space, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { RotateCw, Server, Terminal, Database, Plug } from 'lucide-react'
 import { API } from '@/api'
@@ -44,6 +44,7 @@ function cleanUptime(str: string): string {
 }
 
 export default function DashboardPanel({ sessionId, active }: Props) {
+    const { message } = App.useApp()
     const [data, setData] = useState<SSHDashboardInfo | null>(null)
     const [busy, setBusy] = useState(false)
     const [loaded, setLoaded] = useState(false)

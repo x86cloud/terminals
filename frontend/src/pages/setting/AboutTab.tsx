@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button, Tag, Space, Alert, Tooltip, message } from 'antd'
+import { Button, Tag, Space, Alert, Tooltip, App } from 'antd'
 import { RotateCw, CheckCircle2, ArrowUpRight, Copy, GitBranch, Calendar, Laptop, Sparkles } from 'lucide-react'
 import AppLogo from '@/components/AppLogo'
 import { API } from '@/api'
@@ -7,6 +7,7 @@ import { AppVersionInfo, UpdateCheckResult } from '@/types'
 import ab from './AboutTab.module.less'
 
 export default function AboutTab() {
+    const { message } = App.useApp()
     const [versionInfo, setVersionInfo] = useState<AppVersionInfo>({
         version: 'v1.0.3',
         gitCommit: 'dev',

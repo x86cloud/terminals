@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Segmented, Space, Select, Button, message, Modal, Input, Popconfirm, Tooltip } from 'antd'
+import { Segmented, Space, Select, Button, Modal, Input, Popconfirm, Tooltip, App } from 'antd'
 import {
     Activity,
     Layers,
@@ -28,6 +28,7 @@ interface Props {
 }
 
 export default function K8sClient({ session }: Props) {
+    const { message } = App.useApp()
     const [activeTab, setActiveTab] = useState<string>('overview')
     const [overview, setOverview] = useState<K8sOverview | null>(null)
     const [namespaces, setNamespaces] = useState<K8sNamespaceInfo[]>([])

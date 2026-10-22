@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import { Select, Button, Space, Tag, message } from 'antd'
+import { Select, Button, Space, Tag, App } from 'antd'
 import {Play, X} from 'lucide-react'
 import {API, subscribe} from '@/api'
 import {errorMessage} from '@/utils'
@@ -22,6 +22,7 @@ function pretty(text: string): string {
 }
 
 export default function ChangeStreamTab({session, db, collection}: Props) {
+    const { message } = App.useApp()
     const [scope, setScope] = useState<'deployment' | 'database' | 'collection'>('collection')
     const [pipeline, setPipeline] = useState('[]')
     const [fullDoc, setFullDoc] = useState('default')

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Modal, Alert, Button, Space, message } from 'antd'
+import { Modal, Alert, Button, Space, App } from 'antd'
 import { Copy, AlertTriangle, Database } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { AlterTablePlan } from '../types'
@@ -21,6 +21,7 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
     onOk,
     onCancel,
 }) => {
+    const { message } = App.useApp()
     const sqlText = useMemo(() => {
         if (!plan || !plan.sqls || plan.sqls.length === 0) {
             return '-- 无需执行任何 ALTER TABLE 变更'

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react'
-import { Button, Tooltip, Input, Dropdown, Image as AntdImage, message } from 'antd'
+import { Button, Tooltip, Input, Dropdown, Image as AntdImage, App } from 'antd'
 import type { MenuProps } from 'antd'
 import { Folder, Square, X, FileText, MessageSquare, ChevronUp, Check, Image as ImageIcon } from 'lucide-react'
 import { SlashCommandMenu, SlashCommandType, SLASH_COMMANDS } from './SlashCommandMenu'
@@ -84,6 +84,7 @@ export const Composer: React.FC<ComposerProps> = ({
     onSend,
     onKeyDown,
 }) => {
+    const { message } = App.useApp()
     const [isComposing, setIsComposing] = useState(false)
     const [selectedMenuIndex, setSelectedMenuIndex] = useState(0)
     const [isDragging, setIsDragging] = useState(false)

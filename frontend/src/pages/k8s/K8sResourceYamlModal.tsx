@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Modal, Space, Button, message, Tag } from 'antd'
+import { Modal, Space, Button, Tag, App } from 'antd'
 import {
     Code,
     Copy,
@@ -33,6 +33,7 @@ export default function K8sResourceYamlModal({
     mode = 'edit',
     onSuccess,
 }: Props) {
+    const { message } = App.useApp()
     const [content, setContent] = useState(initialYaml)
     const [loading, setLoading] = useState(false)
     const [saving, setSaving] = useState(false)
@@ -147,6 +148,7 @@ export default function K8sResourceYamlModal({
                     onClick={() => {
                         if (!content) return
                         navigator.clipboard.writeText(content)
+                        message.success('已复制 YAML')
                     }}
                 >
                     复制 YAML

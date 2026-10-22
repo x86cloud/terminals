@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Button, Tooltip, Segmented, message, Space, Table, Tree } from 'antd'
+import { Button, Tooltip, Segmented, Space, Table, Tree, App } from 'antd'
 import {
     Play,
     Plus,
@@ -32,6 +32,7 @@ export interface DbSqlEditorProps {
 }
 
 export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
+    const { message } = App.useApp()
     const { dialect, placeholder, defaultSql } = adapter
 
     const [tabs, setTabs] = useState<QueryTab[]>([

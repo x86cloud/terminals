@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Modal, Space, Tag, Button, Tooltip, message } from 'antd'
+import { Modal, Space, Tag, Button, Tooltip, App } from 'antd'
 import {
     Terminal as TerminalIcon,
     RotateCw,
@@ -36,6 +36,7 @@ interface Props {
 }
 
 export default function ContainerTerminalModal({ open, onClose, target }: Props) {
+    const { message } = App.useApp()
     const { isDark } = useTheme()
     const hostRef = useRef<HTMLDivElement>(null)
     const termRef = useRef<Terminal | null>(null)

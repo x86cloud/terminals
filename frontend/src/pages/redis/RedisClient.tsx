@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { message } from 'antd'
+import { App } from 'antd'
 import { Database, Zap, ShieldCheck, Radio, Bell, ListOrdered, Activity } from 'lucide-react'
 import { API, subscribe } from '@/api'
 import type {
@@ -51,6 +51,7 @@ interface Props {
 }
 
 export default function RedisClient({ session, onClose, onDbChange }: Props) {
+    const { message } = App.useApp()
     const [tab, setTab] = useState<Tab>('keys')
     const [createKeyOpen, setCreateKeyOpen] = useState(false)
 

@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, message } from 'antd'
+import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Edit3, Eye, Copy, FileCode, Table as TableIcon } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -24,6 +24,7 @@ interface HashRow {
 }
 
 export default function HashViewer({ session, selected, value, onReload, flash }: Props) {
+    const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
     const [viewMode, setViewMode] = useState<'table' | 'json'>('table')
@@ -378,7 +379,7 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                         <Button
                             size="small"
                             icon={<Copy size={12} />}
-                            onClick={() => copyText(inspectDrawer.val, '值内容')}
+                            onClick={() => copyText(inspectDrawer.val, '值内容', message)}
                         >
                             复制
                         </Button>

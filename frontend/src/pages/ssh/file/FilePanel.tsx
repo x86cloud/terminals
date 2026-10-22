@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Input, Checkbox, Tooltip, message } from 'antd'
+import { Button, Input, Checkbox, Tooltip, App } from 'antd'
 import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload } from 'lucide-react'
 import ContextMenu, { closedMenu, MenuItem, MenuState } from '@/components/ContextMenu'
 import { ConfirmModal, ConfirmState, PromptModal, PromptState } from '@/components/Modal'
@@ -22,6 +22,7 @@ const emptyPrompt: PromptState = { open: false, title: '', value: '' }
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
 
 export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange }: Props) {
+    const { message } = App.useApp()
     const [path, setPath] = useState(homeDir || '/')
     const [pathInput, setPathInput] = useState(homeDir || '/')
     const [items, setItems] = useState<FileItem[]>([])
@@ -300,7 +301,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
             : [{ key: 'edit', label: '编辑文件', icon: 'edit' as const, disabled: targets.length > 1, onClick: () => askEdit(item) }]),
         { key: 'download', label: `下载${targets.length > 1 ? ` (${targets.length})` : ''}`, icon: 'download', onClick: () => download(targets) },
         { key: 'rename', label: '重命名', icon: 'edit', disabled: targets.length > 1, onClick: () => askRename(item) },
-        { key: 'copy', label: '复制路径', icon: 'copy', onClick: () => copyText(targets.join('\n')) },
+        { key: 'copy', label: '复制路径', icon: 'copy', onClick: () => copyText(targets.join('\n'), '路径', message) },
         { key: 'd1', label: '', divider: true },
         { key: 'upload', label: '上传到当前目录', icon: 'upload', onClick: uploadViaDialog },
         { key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile },
@@ -315,7 +316,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         { key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile },
         { key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder },
         { key: 'd1', label: '', divider: true },
-        { key: 'copy', label: '复制当前路径', icon: 'copy', onClick: () => copyText(path) },
+        { key: 'copy', label: '复制当前路径', icon: 'copy', onClick: () => copyText(path, '当前路径', message) },
         { key: 'refresh', label: '刷新', icon: 'refresh', onClick: () => load(path) },
     ]
 

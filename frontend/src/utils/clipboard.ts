@@ -1,26 +1,37 @@
-import { message } from 'antd'
+export interface MessageApiLike {
+    success: (msg: string) => void
+    error?: (msg: string) => void
+}
 
 export interface CopyOptions {
     /** 成功的直接提示文案，如 '已复制整行 JSON' */
     successMsg?: string
     /** 复制的目标内容标签，如 '值内容' 会生成 '已复制值内容' */
     label?: string
-    /** 是否展示 Toast 提示，默认 true */
+    /** 是否展示 Toast 提示，默认 true（仅在传入 messageApi 时生效） */
     showToast?: boolean
+    /** 可选传入 App.useApp() 的 message 实例 */
+    messageApi?: MessageApiLike
 }
 
 /**
  * 复制文本到系统剪贴板并给出交互反馈（支持现代 Clipboard API 与 textarea fallback）
  * @param text 要复制的文本
  * @param optionsOrLabel 可传入成功提示文案、label 字符串，或配置对象
+ * @param messageApi 可选传入 App.useApp() 获得的 message 实例进行状态提示
  */
-export async function copyText(text: string, optionsOrLabel?: string | CopyOptions): Promise<boolean> {
+export async function copyText(
+    text: string,
+    optionsOrLabel?: string | CopyOptions,
+    messageApi?: MessageApiLike
+): Promise<boolean> {
     const opts: CopyOptions =
         typeof optionsOrLabel === 'string'
             ? { successMsg: optionsOrLabel }
             : optionsOrLabel || {}
 
-    const showToast = opts.showToast !== false
+    const api = messageApi || opts.messageApi
+    const showToast = opts.showToast !== false && !!api
 
     try {
         if (navigator?.clipboard?.writeText) {
@@ -38,7 +49,7 @@ export async function copyText(text: string, optionsOrLabel?: string | CopyOptio
             document.body.removeChild(textarea)
         }
 
-        if (showToast) {
+        if (showToast && api) {
             let msg: string
             if (typeof optionsOrLabel === 'string') {
                 msg = optionsOrLabel.startsWith('已复制') ? optionsOrLabel : `已复制${optionsOrLabel}`
@@ -49,13 +60,13 @@ export async function copyText(text: string, optionsOrLabel?: string | CopyOptio
             } else {
                 msg = '已复制到剪贴板'
             }
-            message.success(msg)
+            api.success(msg)
         }
         return true
     } catch (err) {
         console.error('写入剪贴板失败:', err)
-        if (showToast) {
-            message.error('复制失败，请重试')
+        if (showToast && api) {
+            api.error?.('复制失败，请重试')
         }
         return false
     }

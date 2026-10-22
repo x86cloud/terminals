@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Button, Dropdown, MenuProps, message, Tooltip, Space } from 'antd'
+import { Button, Dropdown, MenuProps, Tooltip, Space, App } from 'antd'
 import Tree from '@/components/common/Tree'
 import {
     Database,
@@ -48,6 +48,7 @@ interface TableStatusItem {
 }
 
 export default function MysqlClient({ session, onClose, onChange }: Props) {
+    const { message } = App.useApp()
     const serverId = session.serverId || session.id
     const [currentDb, setCurrentDb] = useState<string>(session.database || '')
 

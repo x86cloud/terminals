@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Modal, Form, Input, Select, message } from 'antd'
+import { Modal, Form, Input, Select, App } from 'antd'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 
@@ -14,6 +14,7 @@ export function CreateDbModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { message } = App.useApp()
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
 
@@ -76,6 +77,7 @@ export function CreateSchemaModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { message } = App.useApp()
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
 
@@ -131,6 +133,7 @@ export function CreateTableModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { message } = App.useApp()
     const [tableName, setTableName] = useState('')
     const [defs, setDefs] = useState(`  id SERIAL PRIMARY KEY,\n  name VARCHAR(100) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
     const [loading, setLoading] = useState(false)

@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useMemo, useState} from 'react'
-import { Input, Button, Switch, Table, Modal, Alert, Space, Tooltip, message } from 'antd'
+import { Input, Button, Switch, Table, Modal, Alert, Space, Tooltip, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Plus, Search, RotateCw, Play, Edit, Trash2 } from 'lucide-react'
 import {ConfirmModal, ConfirmState} from '@/components/Modal'
@@ -15,6 +15,7 @@ interface Props {
 }
 
 export default function CronPanel({sessionId, active}: Props) {
+    const { message } = App.useApp()
     const [items, setItems] = useState<SSHCronItem[]>([])
     const [busy, setBusy] = useState(false)
     const [loaded, setLoaded] = useState(false)

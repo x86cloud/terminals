@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Drawer, Button, Tooltip, message, Tag } from 'antd'
+import { Drawer, Button, Tooltip, Tag, App } from 'antd'
 import {
     FileText,
     Play,
@@ -26,6 +26,7 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
     isGenerating = false,
     onApprove,
 }) => {
+    const { message } = App.useApp()
     const [copied, setCopied] = useState(false)
     const isApproved = plan.status === 'approved'
     const isExpired = plan.status === 'expired'

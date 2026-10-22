@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Modal, Button, Select, Input, message } from 'antd'
+import { Modal, Button, Select, Input, App } from 'antd'
 import { Sparkles, Wand2, Lightbulb } from 'lucide-react'
 import { API } from '@/api'
 
@@ -45,6 +45,7 @@ export default function K8sYamlGenerateModal({
     serverId,
     currentNamespace = 'default',
 }: Props) {
+    const { message } = App.useApp()
     const [namespace, setNamespace] = useState(currentNamespace || 'default')
     const [nsList, setNsList] = useState<string[]>([])
     const [selectedKinds, setSelectedKinds] = useState<string[]>(['Deployment', 'Service'])

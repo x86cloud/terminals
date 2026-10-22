@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Segmented, Input, Button, Table, Badge, Modal, Alert, Space, Spin, Tooltip, message } from 'antd'
+import { Segmented, Input, Button, Table, Badge, Modal, Alert, Space, Spin, Tooltip, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Play, Power, FileText } from 'lucide-react'
 import { API } from '@/api'
@@ -15,6 +15,7 @@ interface Props {
 type FilterTab = 'all' | 'active' | 'inactive' | 'failed'
 
 export default function ServicePanel({ sessionId, active }: Props) {
+    const { message } = App.useApp()
     const [services, setServices] = useState<SSHServiceInfo[]>([])
     const [busy, setBusy] = useState(false)
     const [loaded, setLoaded] = useState(false)

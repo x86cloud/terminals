@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react'
-import { Input, Button, Tag, Tooltip, Modal, message, Dropdown, Select } from 'antd'
+import { Input, Button, Tag, Tooltip, Modal, Dropdown, Select, App } from 'antd'
 import type { MenuProps } from 'antd'
 import Tree, { TreeNodeData, TreeDropInfo } from '@/components/common/Tree'
 import {
@@ -28,6 +28,7 @@ interface Props {
 }
 
 export default function ApiTreeList({ state }: Props) {
+    const { message } = App.useApp()
     const {
         apiTree,
         currentApiId,

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Modal, Button, Select, Input, message, Tag } from 'antd'
+import { Modal, Button, Select, Input, Tag, App } from 'antd'
 import { Sparkles, Wand2, Lightbulb } from 'lucide-react'
 import { API } from '@/api'
 
@@ -44,6 +44,7 @@ export default function DockerComposeGenerateModal({
     onClose,
     onGenerated,
 }: Props) {
+    const { message } = App.useApp()
     const [selectedImages, setSelectedImages] = useState<string[]>(['nginx:alpine', 'redis:7-alpine'])
     const [prompt, setPrompt] = useState('')
     const [loading, setLoading] = useState(false)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Modal, Radio, Button, Input, Alert, message } from 'antd'
+import { Modal, Radio, Button, Input, Alert, App } from 'antd'
 import { Download, Copy } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage, copyTextToClipboard, downloadText } from '@/utils'
@@ -51,6 +51,7 @@ function convertDocsToCsv(docs: any[]): string {
 }
 
 export default function IoModal({ sessionId, db, coll, currentDocs, filter, onClose }: Props) {
+    const { message } = App.useApp()
     const [format, setFormat] = useState<MongoExportFormat>('json')
     const [scope, setScope] = useState<MongoExportScope>('current')
     const [filename, setFilename] = useState(`${coll}_export`)
@@ -114,7 +115,7 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
                 message.success(`已导出 ${rawDocs.length} 条文档`)
                 onClose()
             } else {
-                await copyTextToClipboard(exportText, `已复制 ${rawDocs.length} 条文档到剪贴板`)
+                await copyTextToClipboard(exportText, `已复制 ${rawDocs.length} 条文档到剪贴板`, message)
                 onClose()
             }
         } catch (e) {

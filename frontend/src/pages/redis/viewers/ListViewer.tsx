@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, message } from 'antd'
+import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Edit3, Eye, Copy, CornerDownLeft, CornerDownRight } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -23,6 +23,7 @@ interface ListRow {
 }
 
 export default function ListViewer({ session, selected, value, onReload, flash }: Props) {
+    const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
 
     // Push Modal
@@ -371,7 +372,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                 width={600}
                 extra={
                     <Space size={6}>
-                        <Button size="small" icon={<Copy size={12} />} onClick={() => copyText(inspectDrawer.val)}>
+                        <Button size="small" icon={<Copy size={12} />} onClick={() => copyText(inspectDrawer.val, '值内容', message)}>
                             复制
                         </Button>
                         <Button

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ConfigProvider, App as AntdApp, message } from 'antd'
+import { ConfigProvider, App as AntdApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { getAntdTheme } from './theme'
 import { ThemeContext } from '@/contexts/ThemeContext'
@@ -48,6 +48,7 @@ interface AppContentProps {
 }
 
 function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentProps) {
+    const { message } = AntdApp.useApp()
     const {
         activeTarget,
         addSession,

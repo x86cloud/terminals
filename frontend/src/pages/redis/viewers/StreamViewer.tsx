@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Input, Button, Space, Tooltip, Modal, Popconfirm, message } from 'antd'
+import { Input, Button, Space, Tooltip, Modal, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Copy, Clock } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -22,6 +22,7 @@ interface StreamMessage {
 }
 
 export default function StreamViewer({ session, selected, value, onReload, flash }: Props) {
+    const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
 
     // Add Entry Modal
@@ -191,7 +192,7 @@ export default function StreamViewer({ session, selected, value, onReload, flash
                                             size="small"
                                             type="text"
                                             icon={<Copy size={12} />}
-                                            onClick={() => copyText(JSON.stringify(msg.fields, null, 2))}
+                                            onClick={() => copyText(JSON.stringify(msg.fields, null, 2), '消息内容', message)}
                                         />
                                     </Tooltip>
                                     <Popconfirm

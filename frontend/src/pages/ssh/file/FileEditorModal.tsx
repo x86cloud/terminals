@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Modal, Button, Tag, Spin, Space, message } from 'antd'
+import { Modal, Button, Tag, Spin, Space, App } from 'antd'
 import { FileText, Save } from 'lucide-react'
 import CodeEditor, { LangKey } from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export default function FileEditorModal({ open, sessionId, filePath, onClose }: Props) {
+    const { message } = App.useApp()
     const [content, setContent] = useState('')
     const [originalContent, setOriginalContent] = useState('')
     const [loading, setLoading] = useState(false)

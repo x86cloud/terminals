@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Button, Input, InputNumber, Slider, Space, Tag, Switch, message } from 'antd'
+import { Modal, Button, Input, InputNumber, Slider, Space, Tag, Switch, App } from 'antd'
 import { Sparkles, Server } from 'lucide-react'
 import { AiModelItem } from '@/types'
 import s from './ModelEditModal.module.less'
@@ -68,6 +68,7 @@ export const ModelEditModal: React.FC<Props> = ({
     onSave,
     onClose,
 }) => {
+    const { message } = App.useApp()
     const [name, setName] = useState('')
     const [model, setModel] = useState('')
     const [baseUrl, setBaseUrl] = useState('')

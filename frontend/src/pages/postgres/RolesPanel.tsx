@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Table, Button, Tag, Input, Modal, Form, Checkbox, InputNumber, Popconfirm, message, Space } from 'antd'
+import { Table, Button, Tag, Input, Modal, Form, Checkbox, InputNumber, Popconfirm, Space, App } from 'antd'
 import { UserPlus, Key, Shield, Trash2, RotateCw, Check, X } from 'lucide-react'
 import { API } from '@/api'
 import { PgRole } from './postgresTypes'
@@ -12,6 +12,7 @@ export default function RolesPanel({
     serverId: string
     dbName: string
 }) {
+    const { message } = App.useApp()
     const [roles, setRoles] = useState<PgRole[]>([])
     const [loading, setLoading] = useState(false)
 

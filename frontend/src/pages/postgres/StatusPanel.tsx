@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Table, Button, Tag, Input, Switch, Tooltip, message, Popconfirm, Space, Segmented } from 'antd'
+import { Table, Button, Tag, Input, Switch, Tooltip, Popconfirm, Space, Segmented, App } from 'antd'
 import { RotateCw, Activity, HardDrive, ShieldCheck, Clock, Search, Copy, Check } from 'lucide-react'
 import { API } from '@/api'
 import { useSession } from '@/contexts/SessionContext'
@@ -15,6 +15,7 @@ export default function StatusPanel({
     serverId: string
     dbName: string
 }) {
+    const { message } = App.useApp()
     const { activeTarget } = useSession()
     const isActive = !sessionId || (activeTarget?.kind === 'postgres' && activeTarget.id === sessionId)
 

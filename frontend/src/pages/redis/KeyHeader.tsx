@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Tooltip, Popover, Input, InputNumber, Popconfirm, message, Modal } from 'antd'
+import { Button, Tooltip, Popover, Input, InputNumber, Popconfirm, Modal, App } from 'antd'
 import { Copy, Check, Clock, RefreshCw, Trash2, Edit2, Database } from 'lucide-react'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -32,6 +32,7 @@ export default function KeyHeader({
     onKeyRenamed,
     onKeyDeleted,
 }: Props) {
+    const { message } = App.useApp()
     const [copied, setCopied] = useState(false)
     const [ttlPopoverOpen, setTtlPopoverOpen] = useState(false)
     const [newTtl, setNewTtl] = useState<number>(value.ttl)

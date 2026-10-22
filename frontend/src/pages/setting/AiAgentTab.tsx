@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Card, Input, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, Popconfirm, message } from 'antd'
+import { Card, Input, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, Popconfirm, App } from 'antd'
 import { Bot, Server, Shield, Sparkles, Layers, FolderOpen, BookOpen, Eye, Plus, Edit2, Trash2, Check } from 'lucide-react'
 import { AppSettings, AgentSkillItem, AiModelItem } from '@/types'
 import { API } from '@/api'
@@ -54,6 +54,7 @@ export default function AiAgentTab({
     aiSystemPrompt,
     onChange,
 }: Props) {
+    const { message } = App.useApp()
     const [skills, setSkills] = useState<AgentSkillItem[]>([])
     const [skillsLoading, setSkillsLoading] = useState(false)
     const [selectedSkill, setSelectedSkill] = useState<AgentSkillItem | null>(null)

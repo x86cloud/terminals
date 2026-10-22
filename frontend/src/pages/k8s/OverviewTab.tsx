@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Table, Space, Tag, Button, Input, message, Tooltip } from 'antd'
+import { Table, Space, Tag, Button, Input, Tooltip, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import {
     Server,
@@ -24,6 +24,7 @@ interface Props {
 }
 
 export default function OverviewTab({ serverId, overview, loading, onRefresh }: Props) {
+    const { message } = App.useApp()
     const [nodes, setNodes] = useState<K8sNodeInfo[]>([])
     const [nodeLoading, setNodeLoading] = useState(false)
     const [searchKw, setSearchKw] = useState('')

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Button, Tag, Dropdown, MenuProps, message, Tooltip, Space } from 'antd'
+import { Button, Tag, Dropdown, MenuProps, Tooltip, Space, App } from 'antd'
 import Tree from '@/components/common/Tree'
 import {
     Database,
@@ -40,6 +40,7 @@ interface Props {
 }
 
 export default function PostgresClient({ session, onClose, onChange }: Props) {
+    const { message } = App.useApp()
     const serverId = session.serverId
     const [currentDb, setCurrentDb] = useState<string>(session.database || 'postgres')
     const [currentSchema, setCurrentSchema] = useState<string>(session.schema || 'public')

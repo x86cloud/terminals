@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Button, Space, Tooltip, Input, Dropdown, MenuProps, message } from 'antd'
+import { Button, Space, Tooltip, Input, Dropdown, MenuProps, App } from 'antd'
 import {
     Database,
     Plus,
@@ -42,6 +42,7 @@ function quoteIdent(s: string): string {
 }
 
 export default function SqliteClient({ session, onClose }: Props) {
+    const { message } = App.useApp()
     const [tables, setTables] = useState<SqliteTableInfo[]>([])
     const [filterText, setFilterText] = useState('')
     const [busy, setBusy] = useState(false)

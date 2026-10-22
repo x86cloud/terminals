@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Table, Button, Tag, message, Modal } from 'antd'
+import { Table, Button, Tag, Modal, App } from 'antd'
 import { RotateCw, Edit2 } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -14,6 +14,7 @@ export default function FunctionsPanel({
     dbName: string
     schema: string
 }) {
+    const { message } = App.useApp()
     const [funcs, setFuncs] = useState<PgFunction[]>([])
     const [loading, setLoading] = useState(false)
     const [editingFunc, setEditingFunc] = useState<PgFunction | null>(null)

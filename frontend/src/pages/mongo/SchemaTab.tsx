@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Select, Button, Tag, message } from 'antd'
+import { Select, Button, Tag, App } from 'antd'
 import { RotateCw } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
@@ -14,6 +14,7 @@ interface Props {
 }
 
 export default function SchemaTab({ session, db, collection }: Props) {
+    const { message } = App.useApp()
     const [fields, setFields] = useState<MongoFieldInfo[]>([])
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')

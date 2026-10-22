@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Segmented, Button, Space, Tag, message } from 'antd'
+import { Segmented, Button, Space, Tag, App } from 'antd'
 import {
     Activity,
     Box,
@@ -29,6 +29,7 @@ interface Props {
 type TabKey = 'overview' | 'compose' | 'containers' | 'images' | 'volumes' | 'networks'
 
 export default function DockerClient({ session, onClose }: Props) {
+    const { message } = App.useApp()
     const { activeTarget } = useSession()
     const isActive = activeTarget?.kind === 'docker' && activeTarget.id === session.id
 

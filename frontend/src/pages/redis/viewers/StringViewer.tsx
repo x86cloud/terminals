@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Button, Segmented, Space, Tooltip, Tag, message, Modal, Input } from 'antd'
+import { Button, Segmented, Space, Tooltip, Tag, Modal, Input, App } from 'antd'
 import { Sparkles, Minimize2, Copy, Save, Plus, Check, AlertCircle } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -19,6 +19,7 @@ interface Props {
 type ViewFormat = 'text' | 'json' | 'base64'
 
 export default function StringViewer({ session, selected, value, onReload, flash }: Props) {
+    const { message } = App.useApp()
     const rawVal = typeof value.value === 'string' ? value.value : String(value.value ?? '')
     const [content, setContent] = useState(rawVal)
     const [format, setFormat] = useState<ViewFormat>(() => (/^\s*[[{]/.test(rawVal) ? 'json' : 'text'))

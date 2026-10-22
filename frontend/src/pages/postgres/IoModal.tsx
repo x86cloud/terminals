@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Modal, Segmented, InputNumber, message } from 'antd'
+import { Modal, Segmented, InputNumber, App } from 'antd'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 
@@ -18,6 +18,7 @@ export function ExportModal({
     tableName: string
     onClose: () => void
 }) {
+    const { message } = App.useApp()
     const [mode, setMode] = useState<'csv' | 'json'>('csv')
     const [exportSource, setExportSource] = useState<'table' | 'sql'>('table')
     const [customSql, setCustomSql] = useState(`SELECT * FROM "${schema}"."${tableName}";`)
@@ -118,6 +119,7 @@ export function ImportModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { message } = App.useApp()
     const [mode, setMode] = useState<'csv' | 'sql'>('csv')
     const [loading, setLoading] = useState(false)
 

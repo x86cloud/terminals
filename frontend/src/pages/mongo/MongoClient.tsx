@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Button, Dropdown, MenuProps, message, Tooltip, Space, Tag } from 'antd'
+import { Button, Dropdown, MenuProps, Tooltip, Space, Tag, App } from 'antd'
 import Tree from '@/components/common/Tree'
 import {
     Database,
@@ -39,6 +39,7 @@ interface Props {
 }
 
 export default function MongoClient({ session, onClose, onChange }: Props) {
+    const { message } = App.useApp()
     const id = session.id
     const onChangeRef = useRef(onChange)
     onChangeRef.current = onChange
@@ -367,7 +368,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
             key: 'copy-name',
             icon: <Copy size={13} />,
             label: '复制数据库名',
-            onClick: () => copyTextToClipboard(dbName, '已复制数据库名'),
+            onClick: () => copyTextToClipboard(dbName, '已复制数据库名', message),
         },
         { type: 'divider' },
         {
@@ -453,7 +454,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
             key: 'copy-name',
             icon: <Copy size={13} />,
             label: '复制集合名',
-            onClick: () => copyTextToClipboard(collName, '已复制集合名称'),
+            onClick: () => copyTextToClipboard(collName, '已复制集合名称', message),
         },
         { type: 'divider' },
         {

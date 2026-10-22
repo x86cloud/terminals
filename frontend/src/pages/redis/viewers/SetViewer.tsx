@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, message } from 'antd'
+import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Eye, Copy } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -22,6 +22,7 @@ interface SetRow {
 }
 
 export default function SetViewer({ session, selected, value, onReload, flash }: Props) {
+    const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
 
@@ -274,7 +275,7 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
                 onClose={() => setInspectDrawer({ open: false, member: '' })}
                 width={600}
                 extra={
-                    <Button size="small" icon={<Copy size={12} />} onClick={() => copyText(inspectDrawer.member)}>
+                    <Button size="small" icon={<Copy size={12} />} onClick={() => copyText(inspectDrawer.member, '成员内容', message)}>
                         复制内容
                     </Button>
                 }

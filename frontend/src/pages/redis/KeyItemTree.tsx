@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, Tooltip, Dropdown, message } from 'antd'
+import { Button, Tooltip, Dropdown, App } from 'antd'
 import { FileText, Folder, Trash2, Copy } from 'lucide-react'
 import { KeyTreeNode, TYPE_COLOR, TYPE_SHORT_LABEL } from './redisTypes'
 import t from './KeyItemTree.module.less'
@@ -23,6 +23,7 @@ export default function KeyItemTree({
     onDeleteFolder: (node: KeyTreeNode) => void
     onDeleteKey: (fullKey: string) => void
 }) {
+    const { message } = App.useApp()
     const handleCopy = (keyName: string) => {
         navigator.clipboard.writeText(keyName)
         message.success('已复制键名')

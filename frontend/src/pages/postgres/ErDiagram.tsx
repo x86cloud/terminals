@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
-import { Button, Tooltip, message, Tag, Space } from 'antd'
+import { Button, Tooltip, Tag, Space, App } from 'antd'
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw, Key } from 'lucide-react'
 import { API } from '@/api'
 import { PgColumn, PgConstraint } from './postgresTypes'
@@ -20,6 +20,7 @@ export default function ErDiagram({
     dbName: string
     schema: string
 }) {
+    const { message } = App.useApp()
     const [tablesMeta, setTablesMeta] = useState<TableMeta[]>([])
     const [loading, setLoading] = useState(false)
     const [scale, setScale] = useState(1)

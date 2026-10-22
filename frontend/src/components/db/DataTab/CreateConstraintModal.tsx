@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Form, Input, Select, Radio, Alert, message } from 'antd'
+import { Modal, Form, Input, Select, Radio, Alert, App } from 'antd'
 import { Link2, Sparkles, AlertTriangle } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import { DbAdapter, AlterTablePlan } from '../types'
@@ -29,6 +29,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
     onSuccess,
     onCancel,
 }) => {
+    const { message } = App.useApp()
     const [constraintType, setConstraintType] = useState<'FOREIGN KEY' | 'CHECK'>('FOREIGN KEY')
     const [name, setName] = useState('')
     const [isCustomName, setIsCustomName] = useState(false)

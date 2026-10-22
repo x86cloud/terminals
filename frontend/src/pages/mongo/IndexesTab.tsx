@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Button, Input, InputNumber, Checkbox, Tag, Tooltip, Alert, message } from 'antd'
+import { Button, Input, InputNumber, Checkbox, Tag, Tooltip, Alert, App } from 'antd'
 import { RotateCw, Plus, Trash2 } from 'lucide-react'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
@@ -15,6 +15,7 @@ interface Props {
 }
 
 export default function IndexesTab({ session, db, collection }: Props) {
+    const { message } = App.useApp()
     const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [indexes, setIndexes] = useState<MongoIndexInfo[]>([])
