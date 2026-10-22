@@ -350,7 +350,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                 width={600}
                 extra={
                     <Space size={6}>
-                        <Button size="small" icon={<Copy size={12} />} onClick={() => copyText(inspectDrawer.member, '成员内容', message)}>
+                        <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.member)) message.success('已复制成员内容') }}>
                             复制
                         </Button>
                         <Button

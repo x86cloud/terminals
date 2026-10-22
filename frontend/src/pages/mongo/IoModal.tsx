@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Modal, Radio, Button, Input, Alert, App } from 'antd'
 import { Download, Copy } from 'lucide-react'
 import { API } from '@/api'
-import { errorMessage, copyTextToClipboard, downloadText } from '@/utils'
+import { errorMessage, copyText, downloadText } from '@/utils'
 
 export type MongoExportFormat = 'json' | 'extended-json' | 'csv'
 export type MongoExportScope = 'current' | 'all'
@@ -115,7 +115,9 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
                 message.success(`已导出 ${rawDocs.length} 条文档`)
                 onClose()
             } else {
-                await copyTextToClipboard(exportText, `已复制 ${rawDocs.length} 条文档到剪贴板`, message)
+                if (await copyText(exportText)) {
+                    message.success(`已复制 ${rawDocs.length} 条文档到剪贴板`)
+                }
                 onClose()
             }
         } catch (e) {

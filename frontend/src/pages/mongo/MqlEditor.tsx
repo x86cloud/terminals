@@ -9,7 +9,7 @@ import {
     Alert,
     Dropdown,
     MenuProps,
-    message,
+    App,
 } from 'antd'
 import {
     Play,
@@ -22,8 +22,7 @@ import {
     ChevronDown,
 } from 'lucide-react'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
-import { copyTextToClipboard } from '@/utils/sqlExport'
+import { errorMessage, copyText } from '@/utils'
 import { MongoSessionInfo } from '@/types'
 import CodeEditor from '@/components/CodeEditor'
 import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
@@ -66,6 +65,7 @@ const TEMPLATES = [
 ]
 
 export default function MqlEditor({ session, databases, currentDb, onChangeDb, collectionsMap = {} }: Props) {
+    const { message } = App.useApp()
     const id = session.id
     const [db, setDb] = useState<string>(currentDb || databases[0] || 'admin')
     const [selectedColl, setSelectedColl] = useState<string>('')
@@ -366,7 +366,9 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                                 size="small"
                                 type="text"
                                 icon={<Copy size={12} />}
-                                onClick={() => copyTextToClipboard(rawResult, '已复制 JSON 响应')}
+                                onClick={async () => {
+                                    if (await copyText(rawResult)) message.success('已复制 JSON 响应')
+                                }}
                             >
                                 复制 JSON
                             </Button>
@@ -376,7 +378,9 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                                 size="small"
                                 type="text"
                                 icon={<Copy size={12} />}
-                                onClick={() => copyTextToClipboard(explainText, '已复制执行计划')}
+                                onClick={async () => {
+                                    if (await copyText(explainText)) message.success('已复制执行计划')
+                                }}
                             >
                                 复制计划
                             </Button>

@@ -29,12 +29,13 @@ import {
     Radio as AntRadio,
     Select as AntSelect,
     Switch as AntSwitch,
-    message,
+    App as AntApp,
     Tooltip as AntTooltip,
     Collapse as AntCollapse,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import CodeEditor from '@/components/CodeEditor'
 import DockerComposeGenerateModal from './DockerComposeGenerateModal'
 import type {
@@ -134,6 +135,7 @@ const DEFAULT_COMPOSE_YAML = `services:
 `
 
 export default function ComposeTab({ serverId }: Props) {
+    const { message } = AntApp.useApp()
     const [items, setItems] = useState<MergedComposeItem[]>([])
     const [loading, setLoading] = useState(false)
     const [filterState, setFilterState] = useState<'all' | 'running' | 'stopped' | 'not_deployed'>('all')
@@ -446,11 +448,12 @@ export default function ComposeTab({ serverId }: Props) {
     }
 
 
-    const copyUUID = (uuid: string) => {
-        navigator.clipboard.writeText(uuid)
-        setCopiedId(uuid)
-        message.success('UUID 已复制到剪贴板')
-        setTimeout(() => setCopiedId(null), 2000)
+    const copyUUID = async (uuid: string) => {
+        if (await copyText(uuid)) {
+            setCopiedId(uuid)
+            message.success('UUID 已复制到剪贴板')
+            setTimeout(() => setCopiedId(null), 2000)
+        }
     }
 
     const filtered = items.filter((item) => {
@@ -1017,13 +1020,14 @@ export default function ComposeTab({ serverId }: Props) {
                                 <AntButton
                                     size="small"
                                     icon={<Copy size={12} />}
-                                    onClick={() => {
+                                    onClick={async () => {
                                         if (!yamlContent) {
                                             message.info('当前没有可复制的编排内容')
                                             return
                                         }
-                                        navigator.clipboard.writeText(yamlContent)
-                                        message.success('编排内容已复制到剪贴板')
+                                        if (await copyText(yamlContent)) {
+                                            message.success('编排内容已复制到剪贴板')
+                                        }
                                     }}
                                 >
                                     复制
@@ -1331,9 +1335,10 @@ export default function ComposeTab({ serverId }: Props) {
                             <AntButton
                                 size="small"
                                 icon={<Copy size={12} />}
-                                onClick={() => {
-                                    navigator.clipboard.writeText(containerLogContent)
-                                    message.success('日志已复制')
+                                onClick={async () => {
+                                    if (await copyText(containerLogContent)) {
+                                        message.success('日志已复制')
+                                    }
                                 }}
                             >
                                 复制

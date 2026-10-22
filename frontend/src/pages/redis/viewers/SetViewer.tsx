@@ -275,7 +275,7 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
                 onClose={() => setInspectDrawer({ open: false, member: '' })}
                 width={600}
                 extra={
-                    <Button size="small" icon={<Copy size={12} />} onClick={() => copyText(inspectDrawer.member, '成员内容', message)}>
+                    <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.member)) message.success('已复制成员内容') }}>
                         复制内容
                     </Button>
                 }

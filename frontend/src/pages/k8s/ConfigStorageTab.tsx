@@ -6,7 +6,7 @@ import {
     Button,
     Input,
     Segmented,
-    message,
+    App,
     Tooltip,
     Popconfirm,
 } from 'antd'
@@ -23,6 +23,7 @@ import {
     Plus,
 } from 'lucide-react'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
 import type { K8sConfigMapInfo, K8sSecretInfo, K8sPVCInfo } from '@/types'
 import s from './K8sClient.module.less'
@@ -75,6 +76,7 @@ spec:
 `
 
 export default function ConfigStorageTab({ serverId, currentNamespace, initialSearchKw, initialSubTab }: Props) {
+    const { message } = App.useApp()
     const [subTab, setSubTab] = useState<'configmap' | 'secret' | 'pvc'>(initialSubTab || 'configmap')
     const [configMaps, setConfigMaps] = useState<K8sConfigMapInfo[]>([])
     const [secrets, setSecrets] = useState<K8sSecretInfo[]>([])
@@ -200,8 +202,10 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(name)
+                            onClick={async () => {
+                                if (await copyText(name)) {
+                                    message.success('已复制配置名称')
+                                }
                             }}
                         />
                     </Tooltip>
@@ -293,8 +297,10 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(name)
+                            onClick={async () => {
+                                if (await copyText(name)) {
+                                    message.success('已复制密钥名称')
+                                }
                             }}
                         />
                     </Tooltip>
@@ -380,8 +386,10 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(name)
+                            onClick={async () => {
+                                if (await copyText(name)) {
+                                    message.success('已复制 PVC 名称')
+                                }
                             }}
                         />
                     </Tooltip>

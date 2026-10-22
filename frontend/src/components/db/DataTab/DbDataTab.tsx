@@ -4,7 +4,7 @@ import {
     Button,
     Pagination,
     Tooltip,
-    message,
+    App,
     Space,
     Tag,
     Dropdown,
@@ -33,13 +33,13 @@ import {
     Slash,
     CopyPlus,
 } from 'lucide-react'
-import { isSameCellValue, coerceCellValue } from '@/utils'
+import { isSameCellValue, coerceCellValue, copyText } from '@/utils'
 import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
 import ColumnFilterPopover, {
     ColumnFilterState,
     OP_LABELS,
 } from '@/components/ColumnFilterPopover'
-import { buildInsertSql, buildUpdateSql, copyTextToClipboard } from '@/utils/sqlExport'
+import { buildInsertSql, buildUpdateSql } from '@/utils/sqlExport'
 import CellEditorInline from '@/components/common/CellEditorInline'
 import { DbAdapter, DbTableStructure, DbColumnMeta, DbConstraintMeta, AlterTablePlan } from '../types'
 import {
@@ -62,6 +62,7 @@ export interface DbDataTabProps {
 }
 
 export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
+    const { message } = App.useApp()
     const { serverId, dbName, schema, tableName } = adapter
 
     const [viewMode, setViewMode] = useState<'data' | 'struct' | 'index' | 'constraints' | 'ddl'>('data')
@@ -757,7 +758,11 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 key: 'copy-cell',
                 icon: <Copy size={13} />,
                 label: `复制单元格值 [${colKey}]`,
-                onClick: () => copyTextToClipboard(valStr, '已复制单元格值'),
+                onClick: async () => {
+                    if (await copyText(valStr)) {
+                        message.success('已复制单元格值')
+                    }
+                },
             })
         }
 
@@ -766,7 +771,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             key: 'copy-insert',
             icon: <Code size={13} />,
             label: '复制整行为 INSERT SQL',
-            onClick: () => {
+            onClick: async () => {
                 const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                 const sql = buildInsertSql({
                     dialect: adapter.dialect,
@@ -774,7 +779,9 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                     columns,
                     rowData: fullRow,
                 })
-                copyTextToClipboard(sql, '已复制 INSERT 语句到剪贴板')
+                if (await copyText(sql)) {
+                    message.success('已复制 INSERT 语句到剪贴板')
+                }
             },
         })
 
@@ -784,7 +791,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 key: 'copy-update',
                 icon: <Code size={13} />,
                 label: '复制整行为 UPDATE SQL',
-                onClick: () => {
+                onClick: async () => {
                     const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                     const sql = buildUpdateSql({
                         dialect: adapter.dialect,
@@ -793,7 +800,9 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         rowData: fullRow,
                         pkList,
                     })
-                    copyTextToClipboard(sql, '已复制 UPDATE 语句到剪贴板')
+                    if (await copyText(sql)) {
+                        message.success('已复制 UPDATE 语句到剪贴板')
+                    }
                 },
             })
         }
@@ -803,10 +812,12 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             key: 'copy-json',
             icon: <Code size={13} />,
             label: '复制整行为 JSON',
-            onClick: () => {
+            onClick: async () => {
                 const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                 const json = JSON.stringify(fullRow, null, 2)
-                copyTextToClipboard(json, '已复制整行 JSON 到剪贴板')
+                if (await copyText(json)) {
+                    message.success('已复制整行 JSON 到剪贴板')
+                }
             },
         })
 
@@ -1700,9 +1711,10 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         <Button
                             size="small"
                             icon={<Copy size={13} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(ddlText)
-                                message.success('已复制 DDL 到剪贴板')
+                            onClick={async () => {
+                                if (await copyText(ddlText)) {
+                                    message.success('已复制 DDL 到剪贴板')
+                                }
                             }}
                         >
                             复制 DDL

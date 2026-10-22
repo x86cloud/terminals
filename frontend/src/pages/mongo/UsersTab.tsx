@@ -9,7 +9,7 @@ import {
     Checkbox,
     Alert,
     Tooltip,
-    message,
+    App,
 } from 'antd'
 import {
     Users,
@@ -22,8 +22,7 @@ import {
     Copy,
 } from 'lucide-react'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
-import { copyTextToClipboard } from '@/utils/sqlExport'
+import { errorMessage, copyText } from '@/utils'
 import { MongoSessionInfo, MongoUserInfo, MongoRoleItem } from '@/types'
 import s from './UsersTab.module.less'
 
@@ -46,6 +45,7 @@ const PRESET_ROLES = [
 ]
 
 export default function UsersTab({ session, databases, currentDb }: Props) {
+    const { message } = App.useApp()
     const id = session.id
     const [selectedDb, setSelectedDb] = useState<string>(currentDb || 'admin')
     const [searchQuery, setSearchQuery] = useState('')
@@ -193,10 +193,12 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
     }
 
     // 复制连接凭据模板
-    const handleCopyUri = (u: MongoUserInfo) => {
+    const handleCopyUri = async (u: MongoUserInfo) => {
         const portPart = session.port ? `:${session.port}` : ''
         const uri = `mongodb://${u.user}:<密码>@${session.host || 'localhost'}${portPart}/${u.db}?authSource=${u.db}`
-        copyTextToClipboard(uri, '已复制连接串模板')
+        if (await copyText(uri)) {
+            message.success('已复制连接串模板')
+        }
     }
 
     // 预设角色选择切换辅助函数

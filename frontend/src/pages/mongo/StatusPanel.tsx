@@ -13,7 +13,7 @@ import {
     InputNumber,
     Modal,
     Alert,
-    message,
+    App,
 } from 'antd'
 import {
     RotateCw,
@@ -30,8 +30,7 @@ import {
     Copy,
 } from 'lucide-react'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
-import { copyTextToClipboard } from '@/utils/sqlExport'
+import { errorMessage, copyText } from '@/utils'
 import { MongoSessionInfo, MongoHealthInfo, MongoServerStatus } from '@/types'
 import s from './StatusPanel.module.less'
 
@@ -69,6 +68,7 @@ function fmtMb(mb?: number): string {
 }
 
 export default function StatusPanel({ session, databases = [] }: Props) {
+    const { message } = App.useApp()
     const id = session.id
     const [subTab, setSubTab] = useState<'overview' | 'currentOps' | 'slowQueries' | 'serverStatus'>('overview')
     const [health, setHealth] = useState<MongoHealthInfo | null>(null)
@@ -747,7 +747,9 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                             size="small"
                                             type="text"
                                             icon={<Copy size={12} />}
-                                            onClick={() => copyTextToClipboard(r.cmdStr || r.raw, '已复制慢查询命令')}
+                                            onClick={async () => {
+                                                if (await copyText(r.cmdStr || r.raw)) message.success('已复制慢查询命令')
+                                            }}
                                         />
                                     </Tooltip>
                                 ),
@@ -811,9 +813,9 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                     <Button
                         key="copy"
                         icon={<Copy size={12} />}
-                        onClick={() => {
-                            if (cmdDetailModal) {
-                                copyTextToClipboard(cmdDetailModal.json, '已复制完整命令')
+                        onClick={async () => {
+                            if (cmdDetailModal && (await copyText(cmdDetailModal.json))) {
+                                message.success('已复制完整命令')
                             }
                         }}
                     >

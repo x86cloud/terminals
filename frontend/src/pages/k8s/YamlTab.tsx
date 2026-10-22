@@ -12,7 +12,7 @@ import {
   Radio,
   Tooltip,
   Dropdown,
-  message,
+  App,
   Empty,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -39,6 +39,7 @@ import {
 import CodeEditor from '@/components/CodeEditor'
 import K8sYamlGenerateModal from './K8sYamlGenerateModal'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import type { K8sOrchestrationRecord } from '@/types'
 import s from './K8sClient.module.less'
 
@@ -86,6 +87,7 @@ spec:
 `
 
 export default function YamlTab({ serverId, currentNamespace, onNavigateToResource }: Props) {
+  const { message } = App.useApp()
   const [records, setRecords] = useState<K8sOrchestrationRecord[]>([])
   const [loading, setLoading] = useState(false)
   const [searchKw, setSearchKw] = useState('')
@@ -338,10 +340,11 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 size="small"
                 icon={<Copy size={11} />}
                 style={{ padding: 0, width: 16, height: 16, color: 'var(--text-faint)' }}
-                onClick={(e) => {
+                onClick={async (e) => {
                   e.stopPropagation()
-                  navigator.clipboard.writeText(name)
-                  message.success('编排名称已复制')
+                  if (await copyText(name)) {
+                    message.success('编排名称已复制')
+                  }
                 }}
               />
             </Tooltip>
@@ -459,9 +462,10 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             key: 'copy_yaml',
             label: '复制 YAML 内容',
             icon: <Copy size={13} />,
-            onClick: () => {
-              navigator.clipboard.writeText(record.yamlContent)
-              message.success('YAML 内容已复制到剪贴板')
+            onClick: async () => {
+              if (await copyText(record.yamlContent)) {
+                message.success('YAML 内容已复制到剪贴板')
+              }
             },
           },
           {
@@ -658,13 +662,14 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             <Button
               size="small"
               icon={<Copy size={12} />}
-              onClick={() => {
+              onClick={async () => {
                 if (!formYaml) {
                   message.info('当前没有可复制的 YAML 内容')
                   return
                 }
-                navigator.clipboard.writeText(formYaml)
-                message.success('YAML 内容已复制到剪贴板')
+                if (await copyText(formYaml)) {
+                  message.success('YAML 内容已复制到剪贴板')
+                }
               }}
             >
               复制

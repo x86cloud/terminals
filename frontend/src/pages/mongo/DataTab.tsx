@@ -7,7 +7,7 @@ import {
     Tag,
     Modal,
     Alert,
-    message,
+    App,
     Segmented,
     Dropdown,
     MenuProps,
@@ -33,8 +33,7 @@ import {
     CopyPlus,
 } from 'lucide-react'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
-import { copyTextToClipboard } from '@/utils/sqlExport'
+import { errorMessage, copyText } from '@/utils'
 import { MongoSessionInfo, MongoQuerySpec, MongoFindResult, MongoCollectionStats } from '@/types'
 import CodeEditor from '@/components/CodeEditor'
 import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
@@ -57,6 +56,7 @@ interface Props {
 const DEFAULT_LIMIT = 50
 
 export default function DataTab({ session, db, collection, initialSubTab = 'documents', onClose }: Props) {
+    const { message } = App.useApp()
     const id = session.id
     const [subTab, setSubTab] = useState<'documents' | 'indexes' | 'schema' | 'stream'>(initialSubTab)
     const [viewMode, setViewMode] = useState<'table' | 'json'>('table')
@@ -640,11 +640,11 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                 key: 'copy-cell',
                 icon: <Copy size={13} />,
                 label: '复制当前单元格值',
-                onClick: () => {
+                onClick: async () => {
                     const col = contextMenu.col
                     if (col && row[col] !== undefined) {
                         const cellText = typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])
-                        copyTextToClipboard(cellText, '已复制单元格内容')
+                        if (await copyText(cellText)) message.success('已复制单元格内容')
                     }
                 },
             },
@@ -652,13 +652,14 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                 key: 'copy-json',
                 icon: <Code size={13} />,
                 label: '复制完整文档 JSON',
-                onClick: () => {
+                onClick: async () => {
+                    let target = raw
                     try {
-                        const pretty = JSON.stringify(JSON.parse(raw), null, 2)
-                        copyTextToClipboard(pretty, '已复制文档 JSON')
+                        target = JSON.stringify(JSON.parse(raw), null, 2)
                     } catch {
-                        copyTextToClipboard(raw, '已复制文档 JSON')
+                        target = raw
                     }
+                    if (await copyText(target)) message.success('已复制文档 JSON')
                 },
             },
             ...(idStr
@@ -667,7 +668,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                         key: 'copy-id',
                         icon: <Copy size={13} />,
                         label: `复制 _id (${idStr})`,
-                        onClick: () => copyTextToClipboard(idStr, '已复制 _id 到剪贴板'),
+                        onClick: async () => { if (await copyText(idStr)) message.success('已复制 _id 到剪贴板') },
                     },
                 ]
                 : []),
@@ -993,7 +994,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                                             size="small"
                                                             type="text"
                                                             icon={<Copy size={12} />}
-                                                            onClick={() => copyTextToClipboard(pretty, '已复制文档 JSON')}
+                                                            onClick={async () => { if (await copyText(pretty)) message.success('已复制文档 JSON') }}
                                                         />
                                                     </Tooltip>
                                                     <Tooltip title="删除文档">
@@ -1165,8 +1166,8 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                         <Button
                             key="copy"
                             icon={<Copy size={13} />}
-                            onClick={() => {
-                                copyTextToClipboard(cellModal.text, '完整字段内容')
+                            onClick={async () => {
+                                if (await copyText(cellModal.text)) message.success('已复制完整字段内容')
                             }}
                         >
                             复制内容

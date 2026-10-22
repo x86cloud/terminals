@@ -6,7 +6,7 @@ import {
     Button,
     Input,
     Segmented,
-    message,
+    App,
     Tooltip,
     Popconfirm,
 } from 'antd'
@@ -22,6 +22,7 @@ import {
     Plus,
 } from 'lucide-react'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
 import type { K8sServiceInfo, K8sIngressInfo } from '@/types'
 import s from './K8sClient.module.less'
@@ -74,6 +75,7 @@ spec:
 `
 
 export default function NetworkTab({ serverId, currentNamespace, initialSearchKw, initialSubTab }: Props) {
+    const { message } = App.useApp()
     const [subTab, setSubTab] = useState<'service' | 'ingress'>(initialSubTab || 'service')
     const [services, setServices] = useState<K8sServiceInfo[]>([])
     const [ingresses, setIngresses] = useState<K8sIngressInfo[]>([])
@@ -189,8 +191,10 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(name)
+                            onClick={async () => {
+                                if (await copyText(name)) {
+                                    message.success('已复制服务名称')
+                                }
                             }}
                         />
                     </Tooltip>
@@ -292,8 +296,10 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(name)
+                            onClick={async () => {
+                                if (await copyText(name)) {
+                                    message.success('已复制 Ingress 名称')
+                                }
                             }}
                         />
                     </Tooltip>

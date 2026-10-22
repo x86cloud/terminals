@@ -7,12 +7,13 @@ import {
     Tag,
     Modal as AntdModal,
     Tooltip,
-    message,
+    App,
     Popconfirm,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Plus, Trash2, RefreshCw, Search, Copy } from 'lucide-react'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import type { DockerVolumeInfo } from '@/types'
 import s from './DockerClient.module.less'
 
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function VolumesTab({ serverId }: Props) {
+    const { message } = App.useApp()
     const [volumes, setVolumes] = useState<DockerVolumeInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [searchKw, setSearchKw] = useState('')
@@ -116,8 +118,10 @@ export default function VolumesTab({ serverId }: Props) {
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(mountpoint)
+                            onClick={async () => {
+                                if (await copyText(mountpoint)) {
+                                    message.success('已复制挂载路径')
+                                }
                             }}
                         />
                     </Tooltip>

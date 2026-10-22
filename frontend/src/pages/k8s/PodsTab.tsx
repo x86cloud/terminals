@@ -7,7 +7,7 @@ import {
     Input,
     Select,
     Drawer,
-    message,
+    App,
     Popconfirm,
     Tooltip,
     Switch,
@@ -29,7 +29,7 @@ import { API } from '@/api'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
 import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
 import type { K8sPodInfo, K8sContainerSummary } from '@/types'
-import { errorMessage, downloadText } from '@/utils'
+import { errorMessage, downloadText, copyText } from '@/utils'
 import s from './K8sClient.module.less'
 
 interface Props {
@@ -39,6 +39,7 @@ interface Props {
 }
 
 export default function PodsTab({ serverId, currentNamespace, initialSearchKw }: Props) {
+    const { message } = App.useApp()
     const [pods, setPods] = useState<K8sPodInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [searchKw, setSearchKw] = useState(initialSearchKw || '')
@@ -199,8 +200,10 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                 type="text"
                                 icon={<Copy size={11} />}
                                 style={{ marginLeft: 4 }}
-                                onClick={() => {
-                                    navigator.clipboard.writeText(name)
+                                onClick={async () => {
+                                    if (await copyText(name)) {
+                                        message.success('已复制 Pod 名称')
+                                    }
                                 }}
                             />
                         </Tooltip>
@@ -455,8 +458,10 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                                             size="small"
                                                             type="text"
                                                             icon={<Copy size={11} />}
-                                                            onClick={() => {
-                                                                navigator.clipboard.writeText(img)
+                                                            onClick={async () => {
+                                                                if (await copyText(img)) {
+                                                                    message.success('已复制镜像名称')
+                                                                }
                                                             }}
                                                         />
                                                     </Tooltip>
@@ -620,8 +625,10 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         <Button
                             size="small"
                             icon={<Copy size={12} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(logsContent)
+                            onClick={async () => {
+                                if (await copyText(logsContent)) {
+                                    message.success('已复制日志')
+                                }
                             }}
                         >
                             复制

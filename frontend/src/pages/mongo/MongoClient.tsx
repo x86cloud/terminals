@@ -29,7 +29,7 @@ import UsersTab from './UsersTab'
 import ObjModal, { MongoObjModalKind } from './ObjModal'
 import IoModal from './IoModal'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
-import { copyTextToClipboard } from '@/utils/sqlExport'
+import { copyText } from '@/utils'
 import m from './MongoClient.module.less'
 
 interface Props {
@@ -368,7 +368,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
             key: 'copy-name',
             icon: <Copy size={13} />,
             label: '复制数据库名',
-            onClick: () => copyTextToClipboard(dbName, '已复制数据库名', message),
+            onClick: async () => { if (await copyText(dbName)) message.success('已复制数据库名') },
         },
         { type: 'divider' },
         {
@@ -454,7 +454,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
             key: 'copy-name',
             icon: <Copy size={13} />,
             label: '复制集合名',
-            onClick: () => copyTextToClipboard(collName, '已复制集合名称', message),
+            onClick: async () => { if (await copyText(collName)) message.success('已复制集合名称') },
         },
         { type: 'divider' },
         {

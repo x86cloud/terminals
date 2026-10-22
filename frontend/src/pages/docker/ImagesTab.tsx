@@ -7,7 +7,7 @@ import {
     Tag,
     Modal as AntdModal,
     Tooltip,
-    message,
+    App,
     Popconfirm,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -23,6 +23,7 @@ import {
     HardDriveDownload,
 } from 'lucide-react'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import type { DockerImageInfo } from '@/types'
 import s from './DockerClient.module.less'
 
@@ -32,6 +33,7 @@ interface Props {
 }
 
 export default function ImagesTab({ serverId, onRunImage }: Props) {
+    const { message } = App.useApp()
     const [images, setImages] = useState<DockerImageInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [searchKw, setSearchKw] = useState('')
@@ -404,8 +406,10 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                     <Button
                         key="copy"
                         icon={<Copy size={13} />}
-                        onClick={() => {
-                            navigator.clipboard.writeText(inspectModal.json)
+                        onClick={async () => {
+                            if (await copyText(inspectModal.json)) {
+                                message.success('已复制 JSON')
+                            }
                         }}
                     >
                         复制 JSON

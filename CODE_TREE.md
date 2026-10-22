@@ -2,7 +2,7 @@
 
 **Languages:** `go`, `typescript` | **Go Version:** `1.27.1` | **Root:** `D:\system\Desktop\Terminal\terminal_v3`
 
-> 📊 **Metrics:** 87 Packages | 338 Files (go: 102, typescript: 236) | 322 Classes/Structs | 389 Interfaces | 1391 Functions | 966 Methods | ~117690 Est. Tokens
+> 📊 **Metrics:** 87 Packages | 338 Files (go: 102, typescript: 236) | 323 Classes/Structs | 390 Interfaces | 1398 Functions | 968 Methods | ~118080 Est. Tokens
 
 ## 📁 File Structure
 
@@ -7915,6 +7915,12 @@ func (s *SftpService) DownloadPaths(sessionID string, remotePaths []string) erro
 // Calls: [GetContainer, c.Sessions.StartDownload, logger.Errorf, logger.Infof]
 func (s *SftpService) DownloadTo(sessionID string, remotePaths []string, localDir string) error { ... }
 
+// Calls: [GetContainer, c.Sessions.EstimateUpload]
+func (s *SftpService) EstimateUpload(sessionID string, remoteDir string, localPaths []string) (ssh.UploadEstimate, error) { ... }
+
+// Calls: [GetContainer, c.Sessions.EstimateUploadBase64]
+func (s *SftpService) EstimateUploadData(sessionID string, remoteDir string, dataSize int64) (ssh.UploadEstimate, error) { ... }
+
 // Calls: [GetContainer, GetContainer().Sessions.Get, logger.Errorf, session.Info]
 func (s *SftpService) HomeDir(sessionID string) (string, error) { ... }
 
@@ -8519,6 +8525,17 @@ func (tm *TransferManager) finish(t *Transfer, err error) { ... }
 // Calls: [tm.emit, tm.mu.Lock, tm.mu.Unlock]
 func (tm *TransferManager) setSize(t *Transfer, size int64) { ... }
 
+// UploadEstimate 描述待上传文件与远端磁盘容量预估结果。
+type UploadEstimate struct {
+	TotalSize int64 `json:"totalSize"`
+	FileCount int `json:"fileCount"`
+	FolderCount int `json:"folderCount"`
+	RemoteFree uint64 `json:"remoteFree"`
+	RemoteTotal uint64 `json:"remoteTotal"`
+	IsInsufficient bool `json:"isInsufficient"`
+	Supported bool `json:"supported"`
+}
+
 // progressReader 在读取过程中上报进度，并响应取消。
 type progressReader struct {
 	r io.Reader
@@ -8536,6 +8553,14 @@ func (p *progressReader) Read(b []byte) (int, error) { ... }
 ```go
 // Calls: [client.Open, errors.New, filepath.Dir, fmt.Errorf, fmt.Sprintf, io.CopyBuffer, localFile.Close, m.Get, os.Create, os.MkdirAll, session.ResolveRemotePath, session.client.NewSession, session.isClosed, session.sftpConn, src.Close, sshSess.Close, sshSess.Start, sshSess.StdoutPipe, sshSess.Wait]
 func (m *SessionManager) DownloadFileDirect(sessionID string, remotePath string, localPath string) error { ... }
+
+// EstimateUpload 预估待上传文件的总大小，并检测远端磁盘空间是否足够。
+// Calls: [NormalizeRemote, calcLocalPathsStats, m.Get, queryRemoteSpace, session.sftpConn, uint64]
+func (m *SessionManager) EstimateUpload(sessionID string, remoteDir string, localPaths []string) (UploadEstimate, error) { ... }
+
+// EstimateUploadBase64 针对 Base64 或拖拽纯数据上传进行空间预估。
+// Calls: [NormalizeRemote, m.Get, queryRemoteSpace, session.sftpConn, uint64]
+func (m *SessionManager) EstimateUploadBase64(sessionID string, remoteDir string, dataSize int64) (UploadEstimate, error) { ... }
 
 // Calls: [NormalizeRemote, client.ReadDir, client.Stat, entry.IsDir, entry.ModTime, entry.ModTime().Unix, entry.Mode, entry.Mode().String, entry.Name, entry.Size, fmt.Errorf, m.Get, path.Dir, path.Join, session.sftpConn, sort.SliceStable, st.IsDir, st.Size, strings.HasPrefix, strings.ToLower, strings.TrimPrefix]
 func (m *SessionManager) ListDir(sessionID string, dir string) (DirListing, error) { ... }
@@ -8585,6 +8610,10 @@ func (m *SessionManager) WriteFileContent(sessionID string, remotePath string, d
 // Calls: [errors.New, fmt.Errorf, golangssh.KeyboardInteractive, golangssh.ParsePrivateKey, golangssh.ParsePrivateKeyWithPassphrase, golangssh.Password, golangssh.PublicKeys, readPrivateKey, strings.TrimSpace]
 func buildAuthMethods(cfg core.ServerConfig) ([]golangssh.AuthMethod, error) { ... }
 
+// calcLocalPathsStats 递归统计传入的本地文件/目录的字节总大小、文件数与目录数。
+// Calls: [d.Info, d.IsDir, filepath.WalkDir, info.IsDir, info.Size, os.Stat, subInfo.Size]
+func calcLocalPathsStats(paths []string) (totalSize int64, fileCount int, folderCount int, err error) { ... }
+
 // Calls: [client.Open, dst.Close, filepath.Dir, fmt.Errorf, io.CopyBuffer, os.Create, os.MkdirAll, src.Close, tm.addProgress]
 func (m *SessionManager) downloadFile(tm *TransferManager, ctx context.Context, client *sftp.Client, remotePath string, localPath string, t *Transfer) error { ... }
 
@@ -8610,6 +8639,10 @@ func mkdirAllRemote(client *sftp.Client, dir string) error { ... }
 
 // Calls: [fmt.Sscanf, strings.Fields]
 func parseProcStatCpu(line string) (total uint64, idle uint64) { ... }
+
+// queryRemoteSpace 查询远端目标目录所在文件系统的剩余可用空间与总空间。
+// Calls: [client.StatVFS, vfs.FreeSpace, vfs.TotalSpace]
+func queryRemoteSpace(client *sftp.Client, remoteDir string) (free uint64, total uint64, ok bool) { ... }
 
 // Calls: [fmt.Errorf, os.ReadFile, strings.Contains, strings.TrimSpace]
 func readPrivateKey(value string) ([]byte, error) { ... }
@@ -10322,6 +10355,12 @@ export function DownloadPaths(sessionID: string, remotePaths: string[] | null): 
 export function DownloadTo(sessionID: string, remotePaths: string[] | null, localDir: string): $CancellablePromise<void> { ... }
 
 // Calls: [Call.ByID]
+export function EstimateUpload(sessionID: string, remoteDir: string, localPaths: string[] | null): $CancellablePromise<ssh$0.UploadEstimate> { ... }
+
+// Calls: [Call.ByID]
+export function EstimateUploadData(sessionID: string, remoteDir: string, dataSize: number): $CancellablePromise<ssh$0.UploadEstimate> { ... }
+
+// Calls: [Call.ByID]
 export function HomeDir(sessionID: string): $CancellablePromise<string> { ... }
 
 // Calls: [Call.ByID]
@@ -10611,6 +10650,11 @@ export interface Transfer {
 	...
 }
 
+// UploadEstimate 描述待上传文件与远端磁盘容量预估结果。
+export interface UploadEstimate {
+	...
+}
+
 ```
 
 ---
@@ -10649,6 +10693,10 @@ export interface DirListing {
 }
 
 export interface Transfer {
+	...
+}
+
+export interface UploadEstimate {
 	...
 }
 
@@ -11106,8 +11154,8 @@ export type ApiMode = 'http' | 'ws';
 
 export type WsStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error';
 
-// Calls: [API.connect, API.deleteGroup, API.deleteServer, API.exportServersConfig, API.hideWindow, API.importServersConfig, API.listGroups, API.listServers, API.moveServerToGroup, API.quitApp, API.saveGroup, API.uploadPaths, Set, addSession, async, catch, closeSession, connectDockerHelper, connectK8sHelper, connectMongoHelper, connectMqttHelper, connectMysqlHelper, connectPostgresHelper, connectRedisHelper, connectSqliteHelper, connectingRef.current.add, connectingRef.current.delete, connectingRef.current.has, emptyServer, errorMessage, groups.find, handleConnect, handleRequestClose, if, message.error, message.info, message.success, message.warning, offAsk, offCloseReq, offClosed, onUpdateSettings, openTool, registerNativeFileDrop, reloadGroups, reloadServers, return, setCloseModalOpen, setConfirm, setConnectingId, setDialog, setGroups, setNativeDrop, setPendingAsk, setServers, setSettingsOpen, subscribe, switch, unregisterNativeFileDrop, useCallback, useEffect, useSession, useStartupUpdateCheck, useState]
-export function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentProps) { ... }
+// Calls: [API.deleteGroup, API.hideWindow, API.listGroups, API.listServers, API.moveServerToGroup, API.quitApp, API.saveGroup, API.uploadPaths, AntdApp.useApp, Set, async, catch, closeSession, errorMessage, groups.find, handleRequestClose, if, message.error, message.warning, offAsk, offCloseReq, offClosed, onUpdateSettings, openTool, registerNativeFileDrop, reloadGroups, reloadServers, return, setCloseModalOpen, setConfirm, setGroups, setPendingAsk, setServers, subscribe, useCallback, useEffect, useSession, useStartupUpdateCheck, useState]
+export function doUpload() { ... }
 
 // Calls: [API.saveAppSettings, applyGlobalFont, applyThemeMode, async, getAntdTheme, getCachedSettings, handleUpdateSettings, return, setCachedSettings, setSettings, useCallback, window.matchMedia]
 export function App() { ... }
@@ -11460,7 +11508,7 @@ export function handleSave(val: string, isN: boolean) { ... }
 // Calls: [if, onCancel]
 export function handleCancel() { ... }
 
-// Calls: [API.dockerExecClose, API.dockerExecResize, API.dockerExecStart, API.dockerExecWrite, API.k8sExecClose, API.k8sExecResize, API.k8sExecStart, API.k8sExecWrite, Error, FitAddon, ResizeObserver, Terminal, WebLinksAddon, async, base64ToBytes, catch, cleanSession, clear, connectTerminal, fit.fit, focus, getTerminalTheme, if, indexOf, navigator.clipboard.readText, navigator.clipboard.writeText, navigator.platform.toUpperCase, resizeObserver.disconnect, resizeObserver.observe, return, setStatus, subscribe, term.attachCustomKeyEventHandler, term.getSelection, term.hasSelection, term.loadAddon, term.onData, term.onResize, term.open, termRef.current.dispose, termRef.current.focus, termRef.current.reset, termRef.current.write, then, u, unsubsRef.current.forEach, useCallback, useEffect, useTheme, writeln]
+// Calls: [API.dockerExecClose, API.dockerExecResize, API.dockerExecStart, API.dockerExecWrite, API.k8sExecClose, API.k8sExecResize, API.k8sExecStart, API.k8sExecWrite, App.useApp, Error, FitAddon, ResizeObserver, Terminal, WebLinksAddon, async, base64ToBytes, catch, cleanSession, clear, connectTerminal, fit.fit, focus, getTerminalTheme, if, indexOf, navigator.clipboard.readText, navigator.clipboard.writeText, navigator.platform.toUpperCase, resizeObserver.disconnect, resizeObserver.observe, return, setStatus, subscribe, term.attachCustomKeyEventHandler, term.getSelection, term.hasSelection, term.loadAddon, term.onData, term.onResize, term.open, termRef.current.dispose, termRef.current.focus, termRef.current.reset, termRef.current.write, then, u, unsubsRef.current.forEach, useCallback, useEffect, useTheme, writeln]
 export function handleClear() { ... }
 
 // Calls: [if, message.info, message.success, navigator.clipboard.writeText, termRef.current.getSelection, termRef.current.hasSelection]
@@ -11565,7 +11613,7 @@ export async function handleOk() { ... }
 // Calls: [adapter.createIndex, catch, if, message.error, message.success, message.warning, name.trim, onSuccess, setLoading]
 export async function handleOk() { ... }
 
-// Calls: [adapter.buildWhereClause, calcColWidthFromName, columns.join, filter, if, map, setColWidths, structure.columns.filter, useEffect, useMemo, useRef, useState]
+// Calls: [App.useApp, adapter.buildWhereClause, calcColWidthFromName, columns.join, filter, if, map, setColWidths, structure.columns.filter, useEffect, useMemo, useRef, useState]
 export function getColW(key: string, isPk = false, isFk = false) { ... }
 
 // Calls: [setColWidths]
@@ -11654,7 +11702,7 @@ export function handleAddNewRow() { ... }
 // Calls: [adapter.exportToFile, catch, if, message.error, message.info, message.success]
 export async function handleExport(mode: 'csv' | 'json') { ... }
 
-// Calls: [Modal.confirm, async, buildInsertSql, buildUpdateSql, copyTextToClipboard, handleCommitCell, handleCommitNewCell, handleDeleteRow, if, items.push, join, message.info, message.success, message.warning, pkList.forEach, pkList.map, prev.filter, setNewRows]
+// Calls: [Modal.confirm, async, buildInsertSql, buildUpdateSql, copyText, handleCommitCell, handleCommitNewCell, handleDeleteRow, if, items.push, join, message.info, message.success, message.warning, pkList.forEach, pkList.map, prev.filter, setNewRows]
 export function getContextMenuItems(): MenuProps['items'] { ... }
 
 ```
@@ -11674,7 +11722,7 @@ export interface DbSqlEditorProps {
 	...
 }
 
-// Calls: [prev.map, setTabs, tabs.find, useState]
+// Calls: [App.useApp, prev.map, setTabs, tabs.find, useState]
 export function updateActiveTab(patch: Partial<QueryTab>) { ... }
 
 // Calls: [Date.now, setActiveTabId, setTabs]
@@ -11928,7 +11976,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 // Calls: [Error, if, useContext]
 export function useSession() { ... }
 
-// Calls: [API.agentSetActiveConnection, activateTab, async, catch, currentList.filter, disconnectHelper, getAllOpenTabs, if, list.filter, list.map, pickAdjacentFallback, return, sessions.docker.find, sessions.k8s.find, sessions.mongo.find, sessions.mysql.find, sessions.postgres.find, sessions.redis.find, sessions.sqlite.find, sessions.ssh.find, setActiveTarget, setAiSidebarOpen, setSessions, setSidebarOpen, setTools, switch, useCallback, useEffect, useRef]
+// Calls: [API.agentSetActiveConnection, Set, activateTab, async, catch, closingSessionsRef.current.add, closingSessionsRef.current.delete, closingSessionsRef.current.has, currentList.filter, currentList.some, disconnectHelper, getAllOpenTabs, if, list.filter, list.map, list.some, pickAdjacentFallback, return, sessions.docker.find, sessions.k8s.find, sessions.mongo.find, sessions.mysql.find, sessions.postgres.find, sessions.redis.find, sessions.sqlite.find, sessions.ssh.find, setActiveTarget, setAiSidebarOpen, setSessions, setSidebarOpen, setTools, switch, useCallback, useEffect, useRef]
 export function SessionProvider({ children }: { children: ReactNode }) { ... }
 
 export function useTheme() { ... }
@@ -12203,7 +12251,7 @@ export function selectTab(key: typeof configTab) { ... }
 // Calls: [Key, doSend, getHeaderDefaultValue, getHeaderValueOptions, headers.map, if, includes, inputValue.toLowerCase, params.map, removeHeader, removeParam, return, setAuth, setBodyType, setFollowRedirects, setInsecureTLS, setTimeoutMs, setWsProtocols, toLowerCase, updateHeader, updateParam]
 export function ConfigBody({ state }: { state: ApiState }) { ... }
 
-// Calls: [Array.from, Set, getFolderOptions, if, message.success, moveTreeNode, rawOptions.filter, setExpandedKeys, setMoveModal, useMemo, useState]
+// Calls: [App.useApp, Array.from, Set, getFolderOptions, if, message.success, moveTreeNode, rawOptions.filter, setExpandedKeys, setMoveModal, useMemo, useState]
 export function handleConfirmMove() { ... }
 
 // 安全加载接口（若未保存则提示）
@@ -12325,7 +12373,7 @@ export function insertAtLevel(list: ApiTreeNode[]): ApiTreeNode[] { ... }
 
 ### TypeScript Module `docker` (`frontend/src/pages/docker`)
 
-- **Imports (18):** `./ComposeTab`, `./ContainersTab`, `./DockerClient.module.less`, `./DockerComposeGenerateModal`, `./ImagesTab`, `./NetworksTab`, `./OverviewTab`, `./VolumesTab`, `@/api`, `@/components/ClientIcon`, `@/components/CodeEditor`, `@/components/common/ContainerTerminalModal`, `@/contexts/SessionContext`, `@/types`, `antd`, `antd/es/table`, `lucide-react`, `react`
+- **Imports (19):** `./ComposeTab`, `./ContainersTab`, `./DockerClient.module.less`, `./DockerComposeGenerateModal`, `./ImagesTab`, `./NetworksTab`, `./OverviewTab`, `./VolumesTab`, `@/api`, `@/components/ClientIcon`, `@/components/CodeEditor`, `@/components/common/ContainerTerminalModal`, `@/contexts/SessionContext`, `@/types`, `@/utils`, `antd`, `antd/es/table`, `lucide-react`, `react`
 
 ```typescript
 export interface ParsedEnvVar {
@@ -12375,7 +12423,7 @@ export type TabKey = 'overview' | 'compose' | 'containers' | 'images' | 'volumes
 export function scanEnvVarsFromYaml(content: string): ParsedEnvVar[] { ... }
 
 // 打开新建抽屉：自动填充默认示例
-// Calls: [API.dockerListComposeRecords, API.dockerListComposeStacks, async, catch, fetchData, for, if, matchedRemoteNames.add, matchedRemoteNames.has, merged.push, message.error, rec.projectName.toLowerCase, remoteStacks.find, s.name.toLowerCase, scanEnvVarsFromYaml, setCurrentRecordId, setEditorOpen, setEnvVars, setForcePull, setItems, setLoading, setProjectName, setRecreate, setYamlContent, useCallback, useEffect, useMemo, useState]
+// Calls: [API.dockerListComposeRecords, API.dockerListComposeStacks, AntApp.useApp, async, catch, fetchData, for, if, matchedRemoteNames.add, matchedRemoteNames.has, merged.push, message.error, rec.projectName.toLowerCase, remoteStacks.find, s.name.toLowerCase, scanEnvVarsFromYaml, setCurrentRecordId, setEditorOpen, setEnvVars, setForcePull, setItems, setLoading, setProjectName, setRecreate, setYamlContent, useCallback, useEffect, useMemo, useState]
 export function openCreateDrawer() { ... }
 
 // 打开编辑抽屉
@@ -12402,10 +12450,10 @@ export async function handleContainerControl(containerId: string, action: string
 // Calls: [fetchContainerLogs, setContainerLogContent, setContainerLogDrawer]
 export function openContainerLogs(svc: DockerComposeServiceInfo) { ... }
 
-// Calls: [message.success, navigator.clipboard.writeText, setCopiedId]
-export function copyUUID(uuid: string) { ... }
+// Calls: [copyText, if, message.success, setCopiedId]
+export async function copyUUID(uuid: string) { ... }
 
-// Calls: [API.dockerListContainers, catch, message.error, setContainers, setLoading, useState]
+// Calls: [API.dockerListContainers, App.useApp, catch, message.error, setContainers, setLoading, useState]
 export async function fetchContainers() { ... }
 
 // Calls: [API.dockerControlContainer, catch, fetchContainers, message.error]
@@ -12423,7 +12471,7 @@ export async function openInspect(c: DockerContainerInfo) { ... }
 // Calls: [API.dockerCreateContainer, catch, createForm.image.trim, createForm.name.trim, e.trim, fetchContainers, filter, if, message.error, message.warning, p.trim, setCreateForm, setCreateModal, setCreating, v.trim]
 export async function handleCreateSubmit() { ... }
 
-// Calls: [API.dockerGetOverview, catch, if, message.error, performance.now, setLoading, setOverview, setPingLatency, useSession, useState]
+// Calls: [API.dockerGetOverview, App.useApp, catch, if, message.error, performance.now, setLoading, setOverview, setPingLatency, useSession, useState]
 export async function fetchOverview(quiet = false) { ... }
 
 // Calls: [setActiveTab]
@@ -12435,7 +12483,7 @@ export function handleAddChip(chip: string) { ... }
 // Calls: [API.dockerGenerateCompose, Error, catch, if, message.error, message.success, onClose, onGenerated, prompt.trim, resultYaml.trim, setLoading]
 export async function handleGenerate() { ... }
 
-// Calls: [API.dockerListImages, catch, message.error, setImages, setLoading, useState]
+// Calls: [API.dockerListImages, App.useApp, catch, message.error, setImages, setLoading, useState]
 export async function fetchImages() { ... }
 
 // Calls: [API.dockerPullImage, catch, fetchImages, if, message.error, message.warning, pullImageName.trim, setPullLogs, setPulling]
@@ -12456,7 +12504,7 @@ export async function openInspect(img: DockerImageInfo) { ... }
 // Calls: [Date, if, toLocaleString]
 export function formatDate(timestamp: number) { ... }
 
-// Calls: [API.dockerListNetworks, catch, message.error, setLoading, setNetworks, useState]
+// Calls: [API.dockerListNetworks, App.useApp, catch, message.error, setLoading, setNetworks, useState]
 export async function fetchNetworks() { ... }
 
 // Calls: [API.dockerCreateNetwork, catch, fetchNetworks, if, message.error, message.warning, netDriver.trim, netName.trim, setCreateModal, setCreating, setNetName]
@@ -12465,13 +12513,13 @@ export async function handleCreate() { ... }
 // Calls: [API.dockerRemoveNetwork, catch, fetchNetworks, message.error]
 export async function handleDelete(id: string) { ... }
 
-// Calls: [API.dockerSystemPrune, catch, message.error, message.success, onRefresh, setPruneReport, setPruning, useState]
+// Calls: [API.dockerSystemPrune, App.useApp, catch, message.error, message.success, onRefresh, setPruneReport, setPruning, useState]
 export async function handlePrune() { ... }
 
 // Calls: [gb.toFixed, if]
 export function formatMem(bytes: number) { ... }
 
-// Calls: [API.dockerListVolumes, catch, message.error, setLoading, setVolumes, useState]
+// Calls: [API.dockerListVolumes, App.useApp, catch, message.error, setLoading, setVolumes, useState]
 export async function fetchVolumes() { ... }
 
 // Calls: [API.dockerCreateVolume, catch, fetchVolumes, if, message.error, message.warning, setCreateModal, setCreating, setVolName, volDriver.trim, volName.trim]
@@ -12531,7 +12579,7 @@ export function DEFAULT_SECRET_TEMPLATE(namespace: string) { ... }
 
 export function DEFAULT_PVC_TEMPLATE(namespace: string) { ... }
 
-// Calls: [API.k8sListConfigMaps, API.k8sListPVCs, API.k8sListSecrets, catch, if, message.error, setConfigMaps, setLoading, setPage, setPvcs, setSearchKw, setSecrets, setSubTab, useEffect, useState]
+// Calls: [API.k8sListConfigMaps, API.k8sListPVCs, API.k8sListSecrets, App.useApp, catch, if, message.error, setConfigMaps, setLoading, setPage, setPvcs, setSearchKw, setSecrets, setSubTab, useEffect, useState]
 export async function fetchData() { ... }
 
 // Calls: [API.k8sDeleteConfigMap, catch, fetchData, message.error]
@@ -12554,7 +12602,7 @@ export function getResourceKindName() { ... }
 
 export function DEFAULT_DEPLOY_TEMPLATE(namespace: string) { ... }
 
-// Calls: [API.k8sListDeployments, catch, if, message.error, setDeployments, setLoading, setPage, setSearchKw, useEffect, useState]
+// Calls: [API.k8sListDeployments, App.useApp, catch, if, message.error, setDeployments, setLoading, setPage, setSearchKw, useEffect, useState]
 export async function fetchDeployments() { ... }
 
 // Calls: [API.k8sScaleDeployment, catch, fetchDeployments, if, message.error, setScaleLoading, setScaleModalOpen]
@@ -12572,7 +12620,7 @@ export function openEditYaml(record: K8sDeploymentInfo) { ... }
 // Calls: [setYamlModalOpen, setYamlMode, setYamlTarget]
 export function openCreateYaml() { ... }
 
-// Calls: [if, includes, setActiveTab, setCurrentNamespace, setTargetFilters, toLowerCase, trim, useState]
+// Calls: [App.useApp, if, includes, setActiveTab, setCurrentNamespace, setTargetFilters, toLowerCase, trim, useState]
 export function handleNavigateToResource(kind: string, name: string, targetNamespace?: string) { ... }
 
 // Calls: [API.k8sGetOverview, API.k8sListNamespaces, catch, message.error, performance.now, setLoading, setNamespaces, setOverview, setPingMs]
@@ -12596,7 +12644,7 @@ export function DEFAULT_SERVICE_TEMPLATE(namespace: string) { ... }
 
 export function DEFAULT_INGRESS_TEMPLATE(namespace: string) { ... }
 
-// Calls: [API.k8sListIngresses, API.k8sListServices, catch, if, message.error, setIngresses, setLoading, setPage, setSearchKw, setServices, setSubTab, useEffect, useState]
+// Calls: [API.k8sListIngresses, API.k8sListServices, App.useApp, catch, if, message.error, setIngresses, setLoading, setPage, setSearchKw, setServices, setSubTab, useEffect, useState]
 export async function fetchData() { ... }
 
 // Calls: [API.k8sDeleteService, catch, fetchData, message.error]
@@ -12611,10 +12659,10 @@ export function openEditYaml(kind: 'Service' | 'Ingress', namespace: string, nam
 // Calls: [setYamlKind, setYamlModalOpen, setYamlMode, setYamlTarget]
 export function openCreateYaml(kind: 'Service' | 'Ingress') { ... }
 
-// Calls: [API.k8sListNodes, catch, message.error, setNodeLoading, setNodes, useState]
+// Calls: [API.k8sListNodes, App.useApp, catch, message.error, setNodeLoading, setNodes, useState]
 export async function fetchNodes() { ... }
 
-// Calls: [if, setPage, setSearchKw, setTermModalOpen, setTermTarget, useEffect, useState]
+// Calls: [App.useApp, if, setPage, setSearchKw, setTermModalOpen, setTermTarget, useEffect, useState]
 export function openTerminalModal(pod: K8sPodInfo, container: K8sContainerSummary) { ... }
 
 // Calls: [API.k8sGetPodLogs, catch, message.error, setLogsContent, setLogsLoading]
@@ -12634,7 +12682,7 @@ export async function handleDeletePod(pod: K8sPodInfo) { ... }
 
 export function DEFAULT_ORCHESTRATION_TEMPLATE(namespace: string) { ... }
 
-// Calls: [API.k8sListOrchestrationRecords, catch, message.error, setLoading, setRecords, useState]
+// Calls: [API.k8sListOrchestrationRecords, App.useApp, catch, message.error, setLoading, setRecords, useState]
 export async function fetchRecords() { ... }
 
 // 打开新建抽屉
@@ -12675,7 +12723,7 @@ export function renderKindIcon(kind: string) { ... }
 
 ### TypeScript Module `mongo` (`frontend/src/pages/mongo`)
 
-- **Imports (30):** `./ChangeStreamTab`, `./DataTab`, `./DataTab.module.less`, `./IndexesTab`, `./IoModal`, `./MongoClient.module.less`, `./MqlEditor`, `./MqlEditor.module.less`, `./ObjModal`, `./SchemaTab`, `./StatusPanel`, `./StatusPanel.module.less`, `./UsersTab`, `./UsersTab.module.less`, `./mongoTypes`, `@/api`, `@/components/ClientIcon`, `@/components/CodeEditor`, `@/components/ColumnFilterPopover`, `@/components/Modal`, `@/components/ResizableTable`, `@/components/common/TabBar`, `@/components/common/Tree`, `@/pages/mongo/mongoShared.module.less`, `@/types`, `@/utils`, `@/utils/sqlExport`, `antd`, `lucide-react`, `react`
+- **Imports (29):** `./ChangeStreamTab`, `./DataTab`, `./DataTab.module.less`, `./IndexesTab`, `./IoModal`, `./MongoClient.module.less`, `./MqlEditor`, `./MqlEditor.module.less`, `./ObjModal`, `./SchemaTab`, `./StatusPanel`, `./StatusPanel.module.less`, `./UsersTab`, `./UsersTab.module.less`, `./mongoTypes`, `@/api`, `@/components/ClientIcon`, `@/components/CodeEditor`, `@/components/ColumnFilterPopover`, `@/components/Modal`, `@/components/ResizableTable`, `@/components/common/TabBar`, `@/components/common/Tree`, `@/pages/mongo/mongoShared.module.less`, `@/types`, `@/utils`, `antd`, `lucide-react`, `react`
 
 ```typescript
 export interface Props {
@@ -12737,11 +12785,11 @@ export type MongoTabType = 'status' | 'query' | 'data' | 'users';
 
 export function pretty(text: string): string { ... }
 
-// Calls: [if, subRef.current, useState]
+// Calls: [App.useApp, if, subRef.current, useState]
 export function clearSub() { ... }
 
 // 单元格格式化与渲染
-// Calls: [API.mongoFind, Array, Array.from, async, buildMongoFilterFromColumnFilters, calcColWidthFromName, catch, docs.map, dynamicColumns.map, e.stopPropagation, errorMessage, filterText.trim, for, forEach, if, isNaN, keySet.add, keys.indexOf, keys.splice, keys.unshift, parsedRows.forEach, preview.slice, projectionText.trim, return, runQuery, setBusy, setCellModal, setCellModalError, setDocs, setDuration, setError, setFilters, setPage, setTotal, sortText.trim, switch, trim, useCallback, useEffect, useMemo, useRef, useState]
+// Calls: [API.mongoFind, App.useApp, Array, Array.from, async, buildMongoFilterFromColumnFilters, calcColWidthFromName, catch, docs.map, dynamicColumns.map, e.stopPropagation, errorMessage, filterText.trim, for, forEach, if, isNaN, keySet.add, keys.indexOf, keys.splice, keys.unshift, parsedRows.forEach, preview.slice, projectionText.trim, return, runQuery, setBusy, setCellModal, setCellModalError, setDocs, setDuration, setError, setFilters, setPage, setTotal, sortText.trim, switch, trim, useCallback, useEffect, useMemo, useRef, useState]
 export function renderCellContent(val: any, row?: any, colKey?: string) { ... }
 
 // 保存单元格字段在线修改 ($set)
@@ -12773,10 +12821,10 @@ export function truncateCollection() { ... }
 export async function openStats() { ... }
 
 // 右键上下文菜单项
-// Calls: [API.mongoInsertOne, _id, async, catch, copyTextToClipboard, deleteDoc, errorMessage, if, message.error, message.success, openReplace, openUpdate, runQuery]
+// Calls: [API.mongoInsertOne, _id, async, catch, copyText, deleteDoc, errorMessage, if, message.error, message.success, openReplace, openUpdate, runQuery]
 export function getContextMenuItems(): MenuProps['items'] { ... }
 
-// Calls: [API.mongoDropIndex, API.mongoIndexStats, API.mongoIndexes, async, catch, errorMessage, if, load, message.error, message.success, setBusy, setConfirm, setError, setIndexes, setStats, useCallback, useEffect, useState]
+// Calls: [API.mongoDropIndex, API.mongoIndexStats, API.mongoIndexes, App.useApp, async, catch, errorMessage, if, load, message.error, message.success, setBusy, setConfirm, setError, setIndexes, setStats, useCallback, useEffect, useState]
 export function drop(idxName: string) { ... }
 
 // Calls: [API.mongoCreateIndex, catch, errorMessage, load, setCreateBusy, setCreateMsg, setKeys, setName, setShowCreate, setSparse, setTtl, setUnique]
@@ -12785,16 +12833,16 @@ export async function create() { ... }
 // Calls: [Array.from, docs.forEach, forEach, headerSet.add, headers.indexOf, headers.splice, headers.unshift, if, s.includes, s.replace]
 export function escapeCsv(val: any): string { ... }
 
-// Calls: [downloadText, useState]
+// Calls: [App.useApp, downloadText, useState]
 export function triggerDownload(content: string, ext: string) { ... }
 
 // Calls: [API.mongoFind, filter.trim, if]
 export async function fetchExportDocs(): Promise<string[]> { ... }
 
-// Calls: [catch, convertDocsToCsv, copyTextToClipboard, errorMessage, fetchExportDocs, if, join, message.success, message.warning, onClose, parsed.map, rawDocs.map, setBusy, setError, triggerDownload]
+// Calls: [catch, convertDocsToCsv, copyText, errorMessage, fetchExportDocs, if, join, message.success, message.warning, onClose, parsed.map, rawDocs.map, setBusy, setError, triggerDownload]
 export async function handleExport(action: 'download' | 'copy') { ... }
 
-// Calls: [API.mongoCollections, API.mongoDatabases, async, catch, if, setCollectionsMap, setDatabases, setLoadingDbs, setLoadingTree, useCallback, useRef, useState]
+// Calls: [API.mongoCollections, API.mongoDatabases, App.useApp, async, catch, if, setCollectionsMap, setDatabases, setLoadingDbs, setLoadingTree, useCallback, useRef, useState]
 export function dbNames(dbs || []).map((d) { ... }
 
 // 打开集合数据 Tab
@@ -12827,7 +12875,7 @@ export function getDbMenuItems(dbName: string): MenuProps['items'] { ... }
 export function getCollMenuItems(dbName: string, collName: string): MenuProps['items'] { ... }
 
 // 格式化当前输入的 JSON
-// Calls: [if, message.success, message.warning, setCode, setDb, setSelectedColl, useEffect, useMemo, useState]
+// Calls: [App.useApp, if, message.success, message.warning, setCode, setDb, setSelectedColl, useEffect, useMemo, useState]
 export function formatCode() { ... }
 
 // 执行 Explain 执行计划
@@ -12837,7 +12885,7 @@ export async function handleExplain() { ... }
 // Calls: [firstColl.trim, if, includes, metaField.trim, onConfirm, timeField.trim, useState]
 export function handleOk() { ... }
 
-// Calls: [API.mongoGetValidator, API.mongoInferSchema, API.mongoSetValidator, async, catch, errorMessage, if, infer, loadValidator, message.success, setAction, setBusy, setError, setFields, setLevel, setValidator, setValidatorBusy, setValidatorMsg, useCallback, useEffect, useState]
+// Calls: [API.mongoGetValidator, API.mongoInferSchema, API.mongoSetValidator, App.useApp, async, catch, errorMessage, if, infer, loadValidator, message.success, setAction, setBusy, setError, setFields, setLevel, setValidator, setValidatorBusy, setValidatorMsg, useCallback, useEffect, useState]
 export async function applyValidator() { ... }
 
 // Calls: [API.mongoValidateDocument, catch, errorMessage, setCheckBusy, setCheckResult]
@@ -12850,7 +12898,7 @@ export function fmtBytes(bytes: number): string { ... }
 export function fmtMb(mb?: number): string { ... }
 
 // 终止指定活动操作
-// Calls: [API.mongoClientStats, API.mongoCurrentOps, API.mongoHealthCheck, API.mongoRunCommand, API.mongoServerStatus, async, catch, errorMessage, if, loadData, message.error, message.success, rawOps.map, setBusy, setClient, setError, setHealth, setKillingOp, setRawOps, setStatus, useCallback, useEffect, useMemo, useState]
+// Calls: [API.mongoClientStats, API.mongoCurrentOps, API.mongoHealthCheck, API.mongoRunCommand, API.mongoServerStatus, App.useApp, async, catch, errorMessage, if, loadData, message.error, message.success, rawOps.map, setBusy, setClient, setError, setHealth, setKillingOp, setRawOps, setStatus, useCallback, useEffect, useMemo, useState]
 export async function handleKillOp(opid: string | number) { ... }
 
 // Calls: [for, if, list.push, walk]
@@ -12861,7 +12909,7 @@ export function walk(obj: any, prefix = '', section = '') { ... }
 export async function handleSaveProfiler() { ... }
 
 // 处理新建用户
-// Calls: [API.mongoCreateUser, API.mongoUsers, async, catch, errorMessage, if, includes, loadUsers, message.success, newPassword.trim, newUsername.trim, r.db.toLowerCase, r.role.toLowerCase, searchQuery.toLowerCase, searchQuery.trim, setCreateBusy, setCreateMsg, setCreateOpen, setError, setLoading, setNewPassword, setNewUsername, setUsers, some, u.db.toLowerCase, u.user.toLowerCase, useCallback, useEffect, useMemo, useState, users.filter]
+// Calls: [API.mongoCreateUser, API.mongoUsers, App.useApp, async, catch, errorMessage, if, includes, loadUsers, message.success, newPassword.trim, newUsername.trim, r.db.toLowerCase, r.role.toLowerCase, searchQuery.toLowerCase, searchQuery.trim, setCreateBusy, setCreateMsg, setCreateOpen, setError, setLoading, setNewPassword, setNewUsername, setUsers, some, u.db.toLowerCase, u.user.toLowerCase, useCallback, useEffect, useMemo, useState, users.filter]
 export async function handleCreateUser() { ... }
 
 // 处理更新密码
@@ -12877,8 +12925,8 @@ export async function handleUpdateRoles() { ... }
 export async function handleDeleteUser(u: MongoUserInfo) { ... }
 
 // 复制连接凭据模板
-// Calls: [copyTextToClipboard]
-export function handleCopyUri(u: MongoUserInfo) { ... }
+// Calls: [copyText, if, message.success]
+export async function handleCopyUri(u: MongoUserInfo) { ... }
 
 // 美化 Extended JSON 字符串（已是 JSON，直接格式化）
 // Calls: [if]
@@ -13065,7 +13113,7 @@ export async function handleOk() { ... }
 export function handleOk() { ... }
 
 // 加载指定数据库下的表与视图
-// Calls: [API.mysqlConnect, API.mysqlDatabases, API.mysqlTableStatus, API.mysqlTables, async, catch, dbs.includes, if, initConnection, loadTables, map, message.error, setCurrentDb, setDatabases, setExpandedKeys, setIsReady, setLoadingDbs, setLoadingTree, setTablesMap, statusList.forEach, useCallback, useEffect, useState]
+// Calls: [API.mysqlConnect, API.mysqlDatabases, API.mysqlTableStatus, API.mysqlTables, App.useApp, async, catch, dbs.includes, if, initConnection, loadTables, map, message.error, setCurrentDb, setDatabases, setExpandedKeys, setIsReady, setLoadingDbs, setLoadingTree, setTablesMap, statusList.forEach, useCallback, useEffect, useState]
 export async function loadTables(dbName: string) { ... }
 
 // 打开数据表 Tab
@@ -13287,7 +13335,7 @@ export async function handleCreate() { ... }
 export async function handleCreate() { ... }
 
 // 加载指定数据库下的 Schemas
-// Calls: [API.postgresConnect, API.postgresDatabases, API.postgresSchemas, async, catch, if, initConnection, loadSchemas, loadTables, message.error, setCurrentDb, setDatabases, setExpandedKeys, setLoadingDbs, setLoadingTree, setSchemasMap, useCallback, useEffect, useState]
+// Calls: [API.postgresConnect, API.postgresDatabases, API.postgresSchemas, App.useApp, async, catch, if, initConnection, loadSchemas, loadTables, message.error, setCurrentDb, setDatabases, setExpandedKeys, setLoadingDbs, setLoadingTree, setSchemasMap, useCallback, useEffect, useState]
 export async function loadSchemas(dbName: string) { ... }
 
 // 加载指定 Schema 下的表
@@ -13494,7 +13542,7 @@ export async function handleExecute(cmdToRun?: string) { ... }
 // Calls: [e.preventDefault, handleExecute, if, setHistIdx, setInputVal]
 export function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) { ... }
 
-// Calls: [Set, buildKeyTree, expanded.add, for, if, includes, next.add, next.delete, next.has, pattern.toLowerCase, pattern.trim, replace, return, setExpandedKeys, toLowerCase, traverse, trim, useCallback, useEffect, useMemo, useRef, useState]
+// Calls: [App.useApp, Set, buildKeyTree, expanded.add, for, if, includes, next.add, next.delete, next.has, pattern.toLowerCase, pattern.trim, replace, return, setExpandedKeys, toLowerCase, traverse, trim, useCallback, useEffect, useMemo, useRef, useState]
 export function traverse(node: KeyTreeNode): boolean { ... }
 
 // Calls: [setPsMessages, slice]
@@ -13617,7 +13665,7 @@ export interface ZSetRow {
 
 export type ViewFormat = 'text' | 'json' | 'base64';
 
-// Calls: [Blob, for, if, includes, list.push, map, r.field.toLowerCase, r.val.toLowerCase, rows.filter, searchText.toLowerCase, searchText.trim, setEditModalOpen, setIsAdding, setModalField, setModalVal, trim, useMemo, useState, value.value.split]
+// Calls: [App.useApp, Blob, for, if, includes, list.push, map, r.field.toLowerCase, r.val.toLowerCase, rows.filter, searchText.toLowerCase, searchText.trim, setEditModalOpen, setIsAdding, setModalField, setModalVal, trim, useMemo, useState, value.value.split]
 export function openAddModal() { ... }
 
 // Calls: [setEditModalOpen, setIsAdding, setModalField, setModalVal]
@@ -13632,7 +13680,7 @@ export async function handleDeleteSingle(field: string) { ... }
 // Calls: [API.redisHashFieldDel, catch, if, message.error, message.success, onReload, selectedRowKeys.map, setSelectedRowKeys]
 export async function handleBatchDelete() { ... }
 
-// Calls: [API.redisListPush, Blob, catch, if, includes, map, message.error, message.success, message.warning, onReload, pushContent.trim, r.val.toLowerCase, rows.filter, searchText.toLowerCase, searchText.trim, setPushContent, setPushModalOpen, setPushing, trim, useMemo, useState, value.rawJson.map, value.value.split]
+// Calls: [API.redisListPush, App.useApp, Blob, catch, if, includes, map, message.error, message.success, message.warning, onReload, pushContent.trim, r.val.toLowerCase, rows.filter, searchText.toLowerCase, searchText.trim, setPushContent, setPushModalOpen, setPushing, trim, useMemo, useState, value.rawJson.map, value.value.split]
 export async function handlePush() { ... }
 
 // Calls: [API.redisListPop, LPOP, Modal.info, RPOP, catch, message.error, onReload, var]
@@ -13644,7 +13692,7 @@ export async function handleSaveEdit() { ... }
 // Calls: [API.redisRaw, catch, message.error, message.success, onReload, row.val.replace]
 export async function handleDeleteItem(row: ListRow) { ... }
 
-// Calls: [API.redisSetAdd, Blob, catch, filter, if, includes, map, message.error, message.success, message.warning, onReload, r.member.toLowerCase, rows.filter, s.trim, searchText.toLowerCase, searchText.trim, setAddModalOpen, setAddText, setAdding, split, trim, useMemo, useState, value.rawJson.map, value.value.split]
+// Calls: [API.redisSetAdd, App.useApp, Blob, catch, filter, if, includes, map, message.error, message.success, message.warning, onReload, r.member.toLowerCase, rows.filter, s.trim, searchText.toLowerCase, searchText.trim, setAddModalOpen, setAddText, setAdding, split, trim, useMemo, useState, value.rawJson.map, value.value.split]
 export async function handleAddMembers() { ... }
 
 // Calls: [API.redisSetRem, catch, message.error, message.success, onReload]
@@ -13653,14 +13701,14 @@ export async function handleDeleteSingle(member: string) { ... }
 // Calls: [API.redisSetRem, catch, if, message.error, message.success, onReload, selectedRowKeys.map, setSelectedRowKeys]
 export async function handleBatchDelete() { ... }
 
-// Calls: [API.redisRaw, Date, Error, b.trim, catch, for, id.split, if, includes, isNaN, k.toLowerCase, list.push, m.id.toLowerCase, message.error, message.success, message.warning, messages.filter, onReload, p.split, parts.join, parts.push, replace, searchText.toLowerCase, searchText.trim, setAddModalOpen, setAdding, split, startsWith, toLocaleString, toLowerCase, trim, useMemo, useState, value.rawJson.map, value.value.split]
+// Calls: [API.redisRaw, App.useApp, Date, Error, b.trim, catch, for, id.split, if, includes, isNaN, k.toLowerCase, list.push, m.id.toLowerCase, message.error, message.success, message.warning, messages.filter, onReload, p.split, parts.join, parts.push, replace, searchText.toLowerCase, searchText.trim, setAddModalOpen, setAdding, split, startsWith, toLocaleString, toLowerCase, trim, useMemo, useState, value.rawJson.map, value.value.split]
 export async function handleAddEntry() { ... }
 
 // Calls: [API.redisRaw, catch, message.error, message.success, onReload]
 export async function handleDeleteEntry(msgId: string) { ... }
 
 // JSON Validation
-// Calls: [catch, content.trim, if, setContent, setFormat, test, useEffect, useState]
+// Calls: [App.useApp, catch, content.trim, if, setContent, setFormat, test, useEffect, useState]
 export function jsonStatus(() { ... }
 
 // Calls: [message.success, message.warning, setContent, setFormat]
@@ -13682,7 +13730,7 @@ export async function handleAppend() { ... }
 // Calls: [stringToBase64]
 export function base64Content(() { ... }
 
-// Calls: [API.redisZSetAdd, Blob, catch, for, if, includes, isNaN, list.push, message.error, message.success, message.warning, modalMember.trim, onReload, r.member.toLowerCase, rows.filter, searchText.toLowerCase, searchText.trim, setModalOpen, setSubmitting, trim, useMemo, useState, value.rawJson.map, value.value.split]
+// Calls: [API.redisZSetAdd, App.useApp, Blob, catch, for, if, includes, isNaN, list.push, message.error, message.success, message.warning, modalMember.trim, onReload, r.member.toLowerCase, rows.filter, searchText.toLowerCase, searchText.trim, setModalOpen, setSubmitting, trim, useMemo, useState, value.rawJson.map, value.value.split]
 export async function handleSave() { ... }
 
 // Calls: [API.redisZSetRem, catch, message.error, message.success, onReload]
@@ -13697,7 +13745,7 @@ export async function handleBatchDelete() { ... }
 
 ### TypeScript Module `setting` (`frontend/src/pages/setting`)
 
-- **Imports (18):** `./AboutTab.module.less`, `./AiAgentTab.module.less`, `./AppearanceTab.module.less`, `./McpServerTab.module.less`, `./components/ModelEditModal`, `@/api`, `@/components/AppLogo`, `@/components/common/MarkdownViewer`, `@/pages/setting/AboutTab`, `@/pages/setting/AiAgentTab`, `@/pages/setting/AppearanceTab`, `@/pages/setting/McpServerTab`, `@/pages/setting/SettingsModal.module.less`, `@/types`, `@/utils/theme`, `antd`, `lucide-react`, `react`
+- **Imports (19):** `./AboutTab.module.less`, `./AiAgentTab.module.less`, `./AppearanceTab.module.less`, `./McpServerTab.module.less`, `./components/ModelEditModal`, `@/api`, `@/components/AppLogo`, `@/components/common/MarkdownViewer`, `@/pages/setting/AboutTab`, `@/pages/setting/AiAgentTab`, `@/pages/setting/AppearanceTab`, `@/pages/setting/McpServerTab`, `@/pages/setting/SettingsModal.module.less`, `@/types`, `@/utils`, `@/utils/theme`, `antd`, `lucide-react`, `react`
 
 ```typescript
 export interface Props {
@@ -13718,7 +13766,7 @@ export interface Props {
 
 export type SettingsTab = 'appearance' | 'aiAgent' | 'mcp' | 'about';
 
-// Calls: [API.checkForUpdates, API.getAppVersion, Date, catch, if, message.info, return, setChecking, setUpdateResult, setVersionInfo, then, toLocaleString, useEffect, useState]
+// Calls: [API.checkForUpdates, API.getAppVersion, App.useApp, Date, catch, if, message.info, return, setChecking, setUpdateResult, setVersionInfo, then, toLocaleString, useEffect, useState]
 export async function handleCheckUpdates() { ... }
 
 // Calls: [API.openBrowser]
@@ -13754,7 +13802,7 @@ export async function handleToggleEnabled(checked: boolean) { ... }
 // Calls: [API.restartMcpServer, catch, fetchStatusAndData, if, message.error, message.success, setRestarting, setStatus]
 export async function handleRestartServer() { ... }
 
-// Calls: [if, message.error, message.success, navigator.clipboard.writeText, setCopiedKey]
+// Calls: [copyText, if, message.success, setCopiedKey]
 export async function handleCopy(text: string, key: string) { ... }
 
 // Calls: [if, onClose, setActiveModelId, setAiApiKey, setAiBaseUrl, setAiBlockHighRiskCommands, setAiCompressionStrategy, setAiContextCompressRatio, setAiEnableMultimodal, setAiEnablePermissionGuard, setAiEnableThinking, setAiEnableVerifier, setAiEnableWebSearch, setAiMaxContextTokens, setAiMaxParallel, setAiModel, setAiModelContextTokens, setAiModels, setAiReasoningEffort, setAiSystemPrompt, setAiTemperature, setAiWorkspaceDir, setCloseAction, setGlobalFontFamily, setMcpServerEnabled, setMcpServerHost, setMcpServerPort, setThemeMode, useEffect, useRef, useState]
@@ -13814,7 +13862,7 @@ export interface SqliteTabItem {
 // Calls: [s.replace]
 export function quoteIdent(s: string): string { ... }
 
-// Calls: [API.sqliteInfo, API.sqliteTables, async, catch, errorMessage, if, loadInfo, loadTables, message.error, message.success, message.warning, navigator.clipboard.writeText, setBusy, setInfo, setTables, useCallback, useEffect, useState]
+// Calls: [API.sqliteInfo, API.sqliteTables, App.useApp, async, catch, errorMessage, if, loadInfo, loadTables, message.error, message.success, message.warning, navigator.clipboard.writeText, setBusy, setInfo, setTables, useCallback, useEffect, useState]
 export function copyPath() { ... }
 
 // 打开数据表 Tab
@@ -13898,7 +13946,7 @@ export function explainCron(expr: string): string { ... }
 // Calls: [command.trim, comment.trim, expression.trim, if, onSave, setCommand, setComment, setExpression, useEffect, useState]
 export function handleConfirm() { ... }
 
-// Calls: [API.sshCronList, API.sshSaveCronList, Date, async, catch, errorMessage, fetchCrons, if, includes, it.command.toLowerCase, it.comment.toLowerCase, it.expression.toLowerCase, items.filter, keyword.trim, message.error, message.success, setBusy, setError, setItems, setLastUpdate, setLoaded, toLocaleTimeString, toLowerCase, useCallback, useEffect, useMemo, useState]
+// Calls: [API.sshCronList, API.sshSaveCronList, App.useApp, Date, async, catch, errorMessage, fetchCrons, if, includes, it.command.toLowerCase, it.comment.toLowerCase, it.expression.toLowerCase, items.filter, keyword.trim, message.error, message.success, setBusy, setError, setItems, setLastUpdate, setLoaded, toLocaleTimeString, toLowerCase, useCallback, useEffect, useMemo, useState]
 export async function handleSaveList(nextList: SSHCronItem[]) { ... }
 
 // Calls: [handleSaveList, items.map]
@@ -13941,7 +13989,7 @@ export function getProgressColor(pct: number): string { ... }
 // Calls: [filter, if, map, part.includes, part.split, s.includes, s.trim, str.includes, str.split, sub.join]
 export function cleanUptime(str: string): string { ... }
 
-// Calls: [API.sshDashboardStats, Avg, Date, async, catch, cleanUptime, data.cpu.loadAvg.map, data.cpu.usagePercent.toFixed, data.disks.filter, data.mem.usagePercent.toFixed, data.nets.filter, errorMessage, fetchStats, fmtBytes, fs.split, getProgressColor, if, join, l.toFixed, message.error, now.toLocaleTimeString, pct.toFixed, pop, return, setBusy, setData, setError, setLastUpdate, setShowVirtual, setShowVirtualNet, useCallback, useEffect, useState]
+// Calls: [API.sshDashboardStats, App.useApp, Avg, Date, async, catch, cleanUptime, data.cpu.loadAvg.map, data.cpu.usagePercent.toFixed, data.disks.filter, data.mem.usagePercent.toFixed, data.nets.filter, errorMessage, fetchStats, fmtBytes, fs.split, getProgressColor, if, join, l.toFixed, message.error, now.toLocaleTimeString, pct.toFixed, pop, return, setBusy, setData, setError, setLastUpdate, setLoaded, setShowVirtual, setShowVirtualNet, useCallback, useEffect, useState]
 export function DashboardPanel({ sessionId, active }: Props) { ... }
 
 ```
@@ -13961,10 +14009,10 @@ export interface Props {
 	...
 }
 
-// Calls: [API.readRemoteFile, API.writeRemoteFile, async, catch, errorMessage, fileName.endsWith, filePath.split, finally, if, message.error, message.success, onClose, pop, return, setContent, setLoading, setOriginalContent, setSaving, then, useCallback, useEffect, useState]
+// Calls: [API.readRemoteFile, API.writeRemoteFile, App.useApp, async, catch, errorMessage, fileName.endsWith, filePath.split, finally, if, message.error, message.success, onClose, pop, return, setContent, setLoading, setOriginalContent, setSaving, then, useCallback, useEffect, useState]
 export function FileEditorModal({ open, sessionId, filePath, onClose }: Props) { ... }
 
-// Calls: [API.listDir, async, catch, errorMessage, if, load, message.error, minmax, onPathChange, prev.findIndex, setItems, setLoading, setPath, setPathInput, setSelected, setTransfers, subscribe, useCallback, useEffect, useMemo, useState]
+// Calls: [API.listDir, App.useApp, async, catch, errorMessage, if, load, message.error, minmax, prev.findIndex, setItems, setLoading, setPath, setPathInput, setSelected, setTransfers, subscribe, useCallback, useEffect, useMemo, useRef, useState]
 export function handleTransfer(t: Transfer) { ... }
 
 // Calls: [if, map, prev.filter, prev.includes, setSelected, sort, visible.slice]
@@ -13979,10 +14027,13 @@ export function open(item: FileItem) { ... }
 // Calls: [API.downloadPaths, catch, errorMessage, if, message.error]
 export async function download(paths: string[]) { ... }
 
-// Calls: [API.chooseLocalFiles, API.uploadPaths, catch, errorMessage, if, message.error]
+// Calls: [API.estimateUpload, API.uploadPaths, async, catch, errorMessage, formatSize, if, message.error, setConfirm]
+export async function safeUploadPaths(remoteDir: string, localPaths: string[]) { ... }
+
+// Calls: [API.chooseLocalFiles, catch, errorMessage, if, message.error, safeUploadPaths]
 export async function uploadViaDialog() { ... }
 
-// Calls: [API.chooseLocalFolder, API.uploadPaths, catch, errorMessage, if, message.error]
+// Calls: [API.chooseLocalFolder, catch, errorMessage, if, message.error, safeUploadPaths]
 export async function uploadFolderViaDialog() { ... }
 
 // Calls: [API.writeRemoteFile, async, catch, errorMessage, load, message.error, path.endsWith, setPrompt]
@@ -14001,8 +14052,8 @@ export function itemMenu(item: FileItem, targets: string[]): MenuItem[] { ... }
 
 export function blankMenu(): MenuItem[] { ... }
 
-// Calls: [API.uploadData, Array.from, bytesToBase64, catch, e.preventDefault, errorMessage, file.arrayBuffer, for, if, message.error, setDragOver]
-export async function onDrop(e: React.DragEvent) { ... }
+// Calls: [API.uploadData, Array.from, bytesToBase64, e.preventDefault, file.arrayBuffer, for, if, setDragOver]
+export async function doUpload() { ... }
 
 ```
 
@@ -14020,7 +14071,7 @@ export interface Props {
 // Calls: [if, val.toFixed, while]
 export function fmtBytes(bytes: number): string { ... }
 
-// Calls: [API.sshKillProcess, API.sshProcessList, Date, SIGKILL, async, catch, errorMessage, fetchProcesses, if, includes, keyword.trim, message.error, message.success, pr.command.toLowerCase, pr.pid.toString, pr.user.toLowerCase, proc.command.split, procs.filter, setBusy, setConfirm, setError, setLastUpdate, setPage, setProcs, toLocaleTimeString, toLowerCase, useCallback, useEffect, useMemo, useState]
+// Calls: [API.sshKillProcess, API.sshProcessList, App.useApp, Date, SIGKILL, async, catch, errorMessage, fetchProcesses, if, includes, keyword.trim, message.error, message.success, pr.command.toLowerCase, pr.pid.toString, pr.user.toLowerCase, proc.command.split, procs.filter, setBusy, setConfirm, setError, setLastUpdate, setLoaded, setPage, setProcs, toLocaleTimeString, toLowerCase, useCallback, useEffect, useMemo, useState]
 export function handleKill(proc: SSHProcessInfo) { ... }
 
 ```
@@ -14038,7 +14089,7 @@ export interface Props {
 
 export type FilterTab = 'all' | 'active' | 'inactive' | 'failed';
 
-// Calls: [API.sshControlService, API.sshServiceList, Date, async, catch, errorMessage, fetchServices, for, if, includes, keyword.trim, list.filter, message.error, message.success, setActionBusy, setBusy, setError, setLastUpdate, setPage, setServices, svc.description.toLowerCase, svc.name.toLowerCase, toLocaleTimeString, toLowerCase, useCallback, useEffect, useMemo, useState]
+// Calls: [API.sshControlService, API.sshServiceList, App.useApp, Date, async, catch, errorMessage, fetchServices, for, if, includes, keyword.trim, list.filter, message.error, message.success, setActionBusy, setBusy, setError, setLastUpdate, setLoaded, setPage, setServices, svc.description.toLowerCase, svc.name.toLowerCase, toLocaleTimeString, toLowerCase, useCallback, useEffect, useMemo, useState]
 export async function handleControl(svc: SSHServiceInfo, action: 'start' | 'stop' | 'restart') { ... }
 
 // Calls: [API.sshServiceLogs, catch, errorMessage, setLogLoading, setLogService, setLogText]
@@ -14099,7 +14150,7 @@ export function getErrorMessage(err: unknown): string { ... }
 // Calls: [Modal.confirm, Promise, resolve]
 export function confirmSwitchDoc(): Promise<boolean> { ... }
 
-// Calls: [API.wikiGetDir, API.wikiListTree, API.wikiReadPage, Array.from, Set, async, catch, confirmSwitchDoc, filter, findFirstDoc, for, getErrorMessage, if, map, message.destroy, message.error, return, setContent, setExpandedKeys, setLoading, setOriginalContent, setSelectedNode, setSelectedPath, setTreeData, setWikiDir, useCallback, useDeferredValue, useEffect, useMemo, useSession]
+// Calls: [API.wikiGetDir, API.wikiListTree, API.wikiReadPage, App.useApp, Array.from, Set, async, catch, confirmSwitchDoc, filter, findFirstDoc, for, getErrorMessage, if, map, message.destroy, message.error, return, setContent, setExpandedKeys, setLoading, setOriginalContent, setSelectedNode, setSelectedPath, setTreeData, setWikiDir, useCallback, useDeferredValue, useEffect, useMemo, useSession]
 export function findFirstDoc(list: WikiNode[]): WikiNode | null { ... }
 
 // 打开系统文件管理器
@@ -14126,20 +14177,16 @@ export function walk(nodes: WikiNode[]) { ... }
 
 ### TypeScript Module `utils` (`frontend/src/utils`)
 
-- **Imports (5):** `@/api`, `@/types`, `@/utils/storage`, `antd`, `react`
+- **Imports (6):** `@/api`, `@/types`, `@/utils/storage`, `antd`, `antd/es/message/interface`, `react`
 
 ```typescript
-export interface CopyOptions {
-	...
-}
-
 export type SqlDialect = 'mysql' | 'postgres' | 'sqlite';
 
-// 复制文本到系统剪贴板并给出交互反馈（支持现代 Clipboard API 与 textarea fallback）
+// 复制文本到系统剪贴板（支持现代 Clipboard API 与 textarea fallback）
 // @param text 要复制的文本
-// @param optionsOrLabel 可传入成功提示文案、label 字符串，或配置对象
-// Calls: [catch, document.body.appendChild, document.body.removeChild, document.createElement, document.execCommand, if, message.error, message.success, navigator.clipboard.writeText, optionsOrLabel.startsWith, textarea.focus, textarea.select]
-export async function copyText(text: string, optionsOrLabel?: string | CopyOptions): Promise<boolean> { ... }
+// @returns 复制成功返回 true，失败返回 false
+// Calls: [catch, document.body.appendChild, document.body.removeChild, document.createElement, document.execCommand, if, navigator.clipboard.writeText, textarea.focus, textarea.select]
+export async function copyText(text: string): Promise<boolean> { ... }
 
 // 比较数据库单元格原始值与编辑输入值是否等价。
 // 解决数字类型（如 100 与 "100"）、布尔类型（如 true 与 "true"）、NULL 等因为类型差异误判为已修改的问题。
@@ -14252,12 +14299,12 @@ export function getCachedSettings(): AppSettings { ... }
 export function setCachedSettings(settings: AppSettings) { ... }
 
 // 静默检查新版本并在发现新版本时弹出消息提醒
-// Calls: [API.checkForUpdates, API.openBrowser, if, message.info]
-export async function checkUpdateSilently(): Promise<void> { ... }
+// Calls: [API.checkForUpdates, API.openBrowser, if, msgApi.info]
+export async function checkUpdateSilently(msgApi?: MessageInstance): Promise<void> { ... }
 
 // 软件启动后静默检查新版本的 Hook
 // @param delayMs 延迟毫秒数，默认 2500ms，避免与冷启动首屏加载争抢资源
-// Calls: [checkUpdateSilently, return, useEffect]
+// Calls: [App.useApp, checkUpdateSilently, return, useEffect]
 export function useStartupUpdateCheck(delayMs: number = 2500) { ... }
 
 ```

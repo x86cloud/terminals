@@ -379,7 +379,9 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                         <Button
                             size="small"
                             icon={<Copy size={12} />}
-                            onClick={() => copyText(inspectDrawer.val, '值内容', message)}
+                            onClick={async () => {
+                                if (await copyText(inspectDrawer.val)) message.success('已复制值内容')
+                            }}
                         >
                             复制
                         </Button>

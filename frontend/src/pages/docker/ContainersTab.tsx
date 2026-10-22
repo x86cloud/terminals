@@ -8,7 +8,7 @@ import {
     Tag,
     Modal as AntdModal,
     Tooltip,
-    message,
+    App,
     Popconfirm,
     Drawer,
     Select,
@@ -30,6 +30,7 @@ import {
     Terminal,
 } from 'lucide-react'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import type { DockerContainerInfo, DockerCreateContainerReq } from '@/types'
 import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
 import s from './DockerClient.module.less'
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export default function ContainersTab({ serverId }: Props) {
+    const { message } = App.useApp()
     const [containers, setContainers] = useState<DockerContainerInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [filterState, setFilterState] = useState<'all' | 'running' | 'stopped'>('all')
@@ -494,8 +496,10 @@ export default function ContainersTab({ serverId }: Props) {
                             <Button
                                 size="small"
                                 icon={<Copy size={12} />}
-                                onClick={() => {
-                                    navigator.clipboard.writeText(logContent)
+                                onClick={async () => {
+                                    if (await copyText(logContent)) {
+                                        message.success('已复制日志')
+                                    }
                                 }}
                             >
                                 复制
@@ -519,8 +523,10 @@ export default function ContainersTab({ serverId }: Props) {
                     <Button
                         key="copy"
                         icon={<Copy size={13} />}
-                        onClick={() => {
-                            navigator.clipboard.writeText(inspectModal.json)
+                        onClick={async () => {
+                            if (await copyText(inspectModal.json)) {
+                                message.success('已复制 JSON')
+                            }
                         }}
                     >
                         复制 JSON

@@ -4,7 +4,7 @@ import {
     Button,
     Tooltip,
     Modal,
-    message,
+    App,
     Segmented,
 } from 'antd'
 import {
@@ -65,6 +65,7 @@ interface Props {
 type ViewMode = 'preview' | 'edit' | 'split'
 
 export default function WikiClient({ onClose }: Props) {
+    const { message } = App.useApp()
     const { activeTarget } = useSession()
 
     // 挂载与单调递增请求 ID 守护，消除竞态与卸载后 setState 内存泄漏

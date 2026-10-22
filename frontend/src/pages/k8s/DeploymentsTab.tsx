@@ -7,7 +7,7 @@ import {
     Input,
     Modal,
     InputNumber,
-    message,
+    App,
     Popconfirm,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -63,6 +63,7 @@ spec:
 `
 
 export default function DeploymentsTab({ serverId, currentNamespace, initialSearchKw }: Props) {
+    const { message } = App.useApp()
     const [deployments, setDeployments] = useState<K8sDeploymentInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [searchKw, setSearchKw] = useState(initialSearchKw || '')

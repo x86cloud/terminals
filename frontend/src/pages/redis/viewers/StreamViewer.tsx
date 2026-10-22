@@ -192,7 +192,9 @@ export default function StreamViewer({ session, selected, value, onReload, flash
                                             size="small"
                                             type="text"
                                             icon={<Copy size={12} />}
-                                            onClick={() => copyText(JSON.stringify(msg.fields, null, 2), '消息内容', message)}
+                                            onClick={async () => {
+                                                if (await copyText(JSON.stringify(msg.fields, null, 2))) message.success('已复制消息内容')
+                                            }}
                                         />
                                     </Tooltip>
                                     <Popconfirm

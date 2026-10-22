@@ -372,7 +372,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                 width={600}
                 extra={
                     <Space size={6}>
-                        <Button size="small" icon={<Copy size={12} />} onClick={() => copyText(inspectDrawer.val, '值内容', message)}>
+                        <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.val)) message.success('已复制值内容') }}>
                             复制
                         </Button>
                         <Button

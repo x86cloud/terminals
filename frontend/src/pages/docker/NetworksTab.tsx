@@ -7,7 +7,7 @@ import {
     Tag,
     Modal as AntdModal,
     Tooltip,
-    message,
+    App,
     Popconfirm,
     Popover,
     Select,
@@ -23,6 +23,7 @@ interface Props {
 }
 
 export default function NetworksTab({ serverId }: Props) {
+    const { message } = App.useApp()
     const [networks, setNetworks] = useState<DockerNetworkInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [searchKw, setSearchKw] = useState('')

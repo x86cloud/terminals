@@ -109,5 +109,3 @@ export function buildUpdateSql({
 
     return `UPDATE ${escapedTable}\nSET ${setClauses}\nWHERE ${whereClauses};`
 }
-
-export { copyTextToClipboard } from './clipboard'

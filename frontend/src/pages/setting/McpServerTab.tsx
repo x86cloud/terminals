@@ -5,7 +5,7 @@ import {
     Select,
     Button,
     Tag,
-    message,
+    App,
     Input,
     Tabs,
     Empty,
@@ -24,6 +24,7 @@ import {
     Activity,
 } from 'lucide-react'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import { McpServerStatus, McpSessionInfo, McpToolItem, AppSettings } from '@/types'
 import s from './McpServerTab.module.less'
 
@@ -50,6 +51,7 @@ export default function McpServerTab({
     mcpServerHost = '127.0.0.1',
     onChange,
 }: McpServerTabProps) {
+    const { message } = App.useApp()
     const [status, setStatus] = useState<McpServerStatus | null>(null)
     const [tools, setTools] = useState<McpToolItem[]>([])
     const [sessions, setSessions] = useState<McpSessionInfo[]>([])
@@ -155,8 +157,7 @@ export default function McpServerTab({
     }
 
     const handleCopy = async (text: string, key: string) => {
-        try {
-            await navigator.clipboard.writeText(text)
+        if (await copyText(text)) {
             if (!mountedRef.current) return
             setCopiedKey(key)
             message.success('已复制到剪贴板')
@@ -169,10 +170,6 @@ export default function McpServerTab({
                     setCopiedKey(null)
                 }
             }, 2000)
-        } catch {
-            if (mountedRef.current) {
-                message.error('复制失败，请手动选择复制')
-            }
         }
     }
 
