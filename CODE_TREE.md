@@ -3055,13 +3055,13 @@ const authTypePassword = "password"
 const authTypeKey = "key"
 var isAppQuitting atomic.Bool
 // Injected via ldflags during build:
-// -ldflags "-X 'terminal/core.Version=v1.1.0' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-20'"
+// -ldflags "-X 'terminal/core.Version=v1.1.1' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-22'"
 var Version
 // Injected via ldflags during build:
-// -ldflags "-X 'terminal/core.Version=v1.1.0' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-20'"
+// -ldflags "-X 'terminal/core.Version=v1.1.1' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-22'"
 var GitCommit
 // Injected via ldflags during build:
-// -ldflags "-X 'terminal/core.Version=v1.1.0' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-20'"
+// -ldflags "-X 'terminal/core.Version=v1.1.1' -X 'terminal/core.GitCommit=dev' -X 'terminal/core.BuildDate=2026-10-22'"
 var BuildDate
 ```
 

@@ -3,6 +3,7 @@ import { ConfigProvider, App as AntdApp } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import { getAntdTheme } from './theme'
 import { ThemeContext } from '@/contexts/ThemeContext'
+import { DragDropProvider } from '@/contexts/DragDropContext'
 import { SessionProvider, useSession } from '@/contexts/SessionContext'
 import {
     connectK8sHelper,
@@ -521,11 +522,13 @@ export default function App() {
             <AntdApp>
                 <ThemeContext.Provider value={{ themeMode: settings.themeMode, isDark, toggleTheme: handleToggleTheme }}>
                     <SessionProvider>
-                        <AppContent
-                            settings={settings}
-                            onUpdateSettings={handleUpdateSettings}
-                            onToggleTheme={handleToggleTheme}
-                        />
+                        <DragDropProvider>
+                            <AppContent
+                                settings={settings}
+                                onUpdateSettings={handleUpdateSettings}
+                                onToggleTheme={handleToggleTheme}
+                            />
+                        </DragDropProvider>
                     </SessionProvider>
                 </ThemeContext.Provider>
             </AntdApp>

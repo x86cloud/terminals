@@ -10,6 +10,7 @@ import { FileItem, Transfer } from '@/types'
 import { bytesToBase64, copyText, errorMessage, formatSize, formatTime, parentRemote } from '@/utils'
 import g from '@/styles/global.module.less'
 import fp from '@/pages/ssh/file/FilePanel.module.less'
+import { useFileDropActive } from '@/contexts/DragDropContext'
 
 interface Props {
     sessionId: string
@@ -37,6 +38,8 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
     const [editFilePath, setEditFilePath] = useState('')
     const [dragOver, setDragOver] = useState(false)
+    const isNativeDropActive = useFileDropActive(sessionId)
+    const isDropActive = nativeDrop ? isNativeDropActive : dragOver
     const lastIndexRef = useRef<number>(-1)
 
     const gridCols = useMemo(() => {
@@ -367,7 +370,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
 
     return (
         <section
-            className={`${fp.filePanel}${dragOver ? ' ' + fp.dragOver : ''}`}
+            className={`${fp.filePanel}${isDropActive ? ' ' + fp.dragOver : ''}`}
             data-file-drop-target="true"
             data-session-id={sessionId}
             data-path={path}
@@ -510,10 +513,12 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                 <span>{visible.length} 项</span>
                 <span className={g.spacer} />
             </div>
-            <div className={fp.dropHint}>
-                <Upload size={28} />
-                <span>释放以上传到 {path}</span>
-            </div>
+            {isDropActive && (
+                <div className={fp.dropHint}>
+                    <Upload size={28} />
+                    <span>释放以上传到 {path}</span>
+                </div>
+            )}
 
             <ContextMenu state={menu} onClose={() => setMenu(closedMenu)} />
             <PromptModal state={prompt} onCancel={() => setPrompt(emptyPrompt)} />
