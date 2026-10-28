@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button, Input } from 'antd'
 import { HelpCircle } from 'lucide-react'
 import { AgentAskRequest } from '@/types'
@@ -13,6 +14,7 @@ export const AskUserDock: React.FC<AskUserDockProps> = ({
     pendingAsk,
     onAnswer,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const [customAskAnswer, setCustomAskAnswer] = useState<string>('')
 
     if (!pendingAsk) return null
@@ -27,7 +29,7 @@ export const AskUserDock: React.FC<AskUserDockProps> = ({
         <div className={s.askDock}>
             <div className={s.askHeader} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px' }}>
                 <HelpCircle size={15} color="#2b90ee" />
-                <span style={{ fontWeight: 600 }}>智能助理提问 / 澄清确认</span>
+                <span style={{ fontWeight: 600 }}>{t('agent:askUser.title', { defaultValue: '智能助理提问 / 澄清确认' })}</span>
             </div>
             <div className={s.askBody} style={{ padding: '8px 12px' }}>
                 <div className={s.askQuestion} style={{ marginBottom: 8, fontSize: 13 }}>{pendingAsk.question}</div>
@@ -48,7 +50,7 @@ export const AskUserDock: React.FC<AskUserDockProps> = ({
                     <Input
                         size="small"
                         style={{ flex: 1 }}
-                        placeholder="输入自定义答复或澄清细节..."
+                        placeholder={t('agent:askUser.inputPlaceholder', { defaultValue: '输入自定义答复或澄清细节...' })}
                         value={customAskAnswer}
                         onChange={(e) => setCustomAskAnswer(e.target.value)}
                         onPressEnter={handleCustomSubmit}
@@ -59,7 +61,7 @@ export const AskUserDock: React.FC<AskUserDockProps> = ({
                         disabled={!customAskAnswer.trim()}
                         onClick={handleCustomSubmit}
                     >
-                        提交答复
+                        {t('agent:askUser.submit', { defaultValue: '提交答复' })}
                     </Button>
                     <Button
                         size="small"
@@ -68,7 +70,7 @@ export const AskUserDock: React.FC<AskUserDockProps> = ({
                             setCustomAskAnswer('')
                         }}
                     >
-                        忽略/取消
+                        {t('agent:askUser.cancel', { defaultValue: '忽略/取消' })}
                     </Button>
                 </div>
             </div>

@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Eye, Copy } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -22,6 +23,7 @@ interface SetRow {
 }
 
 export default function SetViewer({ session, selected, value, onReload, flash }: Props) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -65,18 +67,18 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
             .map((s) => s.trim())
             .filter(Boolean)
         if (members.length === 0) {
-            message.warning('请输入至少一个成员内容')
+            message.warning(t('viewers.set.reqMember'))
             return
         }
         setAdding(true)
         try {
             await API.redisSetAdd(session.id, selected, members)
-            message.success(`已成功向集合添加 ${members.length} 个成员`)
+            message.success(t('viewers.set.membersAdded', { count: members.length }))
             setAddModalOpen(false)
             setAddText('')
             onReload()
         } catch (e: any) {
-            message.error('添加失败: ' + (e?.message || e))
+            message.error(t('viewers.set.addFail', { error: e?.message || e }))
         } finally {
             setAdding(false)
         }
@@ -85,10 +87,10 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
     const handleDeleteSingle = async (member: string) => {
         try {
             await API.redisSetRem(session.id, selected, [member])
-            message.success(`已从集合中移除成员`)
+            message.success(t('viewers.set.memberRemoved'))
             onReload()
         } catch (e: any) {
-            message.error('移除失败: ' + (e?.message || e))
+            message.error(t('viewers.set.removeFail', { error: e?.message || e }))
         }
     }
 
@@ -97,11 +99,11 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
         if (members.length === 0) return
         try {
             await API.redisSetRem(session.id, selected, members)
-            message.success(`已成功批量移除 ${members.length} 个成员`)
+            message.success(t('viewers.set.batchRemoved', { count: members.length }))
             setSelectedRowKeys([])
             onReload()
         } catch (e: any) {
-            message.error('批量移除失败: ' + (e?.message || e))
+            message.error(t('viewers.set.batchRemoveFail', { error: e?.message || e }))
         }
     }
 
@@ -115,7 +117,7 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
             ),
         },
         {
-            title: '成员值 (Member)',
+            title: t('viewers.set.colMember'),
             dataIndex: 'member',
             key: 'member',
             ellipsis: true,
@@ -125,7 +127,7 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span
                             className={s.cellValue}
-                            title="点击查看详情"
+                            title={t('viewers.set.clickInspect')}
                             onClick={() => setInspectDrawer({ open: true, member })}
                         >
                             {member}
@@ -136,7 +138,7 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
             },
         },
         {
-            title: '大小',
+            title: t('viewers.common.colSize'),
             dataIndex: 'size',
             key: 'size',
             width: 90,
@@ -145,13 +147,13 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
             ),
         },
         {
-            title: '操作',
+            title: t('viewers.common.colAction'),
             key: 'actions',
             width: 90,
             align: 'right' as const,
             render: (_: any, row: SetRow) => (
                 <Space size={2}>
-                    <Tooltip title="查看完整详情">
+                    <Tooltip title={t('viewers.set.inspectTooltip')}>
                         <Button
                             size="small"
                             type="text"
@@ -160,13 +162,13 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
                         />
                     </Tooltip>
                     <Popconfirm
-                        title={`确定从集合中移除该成员吗？(SREM)`}
+                        title={t('viewers.set.removeConfirm')}
                         onConfirm={() => handleDeleteSingle(row.member)}
-                        okText="删除"
-                        cancelText="取消"
+                        okText={t('viewers.common.delete')}
+                        cancelText={t('viewers.common.cancel')}
                         okButtonProps={{ danger: true }}
                     >
-                        <Tooltip title="删除成员 (SREM)">
+                        <Tooltip title={t('viewers.set.removeTooltip')}>
                             <Button size="small" type="text" danger icon={<Trash2 size={12} />} />
                         </Tooltip>
                     </Popconfirm>
@@ -182,26 +184,26 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
                     <Input
                         size="small"
                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
-                        placeholder="搜索成员内容..."
+                        placeholder={t('viewers.set.searchPlaceholder')}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         allowClear
                         className={s.searchInput}
                     />
                     <span className={s.countBadge}>
-                        共 {rows.length} 个唯一成员
-                        {searchText && ` (匹配 ${filteredRows.length} 个)`}
+                        {t('viewers.set.totalMembers', { count: rows.length })}
+                        {searchText && t('viewers.set.filteredMembers', { count: filteredRows.length })}
                     </span>
                     {selectedRowKeys.length > 0 && (
                         <Popconfirm
-                            title={`确定批量移除选中的 ${selectedRowKeys.length} 个成员吗？`}
+                            title={t('viewers.set.batchRemoveConfirm', { count: selectedRowKeys.length })}
                             onConfirm={handleBatchDelete}
-                            okText="批量移除"
-                            cancelText="取消"
+                            okText={t('viewers.common.batchRemove')}
+                            cancelText={t('viewers.common.cancel')}
                             okButtonProps={{ danger: true }}
                         >
                             <Button size="small" danger icon={<Trash2 size={12} />}>
-                                批量移除 ({selectedRowKeys.length})
+                                {t('viewers.set.batchRemoveBtn', { count: selectedRowKeys.length })}
                             </Button>
                         </Popconfirm>
                     )}
@@ -209,7 +211,7 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
 
                 <div className={s.toolbarRight}>
                     <Button size="small" type="primary" icon={<Plus size={12} />} onClick={() => setAddModalOpen(true)}>
-                        添加成员 (SADD)
+                        {t('viewers.set.addMemberBtn')}
                     </Button>
                 </div>
             </div>
@@ -224,7 +226,7 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
                         defaultPageSize: 50,
                         pageSizeOptions: ['20', '50', '100', '200'],
                         showSizeChanger: true,
-                        showTotal: (total) => `共 ${total} 条`,
+                        showTotal: (total) => t('viewers.common.totalRecords', { total }),
                         size: 'small',
                     }}
                     rowSelection={{
@@ -234,9 +236,9 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
                     locale={{
                         emptyText: (
                             <div className={s.emptyTip}>
-                                <span>当前 Set 集合为空</span>
+                                <span>{t('viewers.set.emptySet')}</span>
                                 <Button size="small" type="primary" icon={<Plus size={12} />} onClick={() => setAddModalOpen(true)}>
-                                    添加成员
+                                    {t('viewers.set.addFirstMember')}
                                 </Button>
                             </div>
                         ),
@@ -246,43 +248,43 @@ export default function SetViewer({ session, selected, value, onReload, flash }:
 
             {/* Add Member Modal */}
             <Modal
-                title="向集合添加成员 (SADD)"
+                title={t('viewers.set.addModalTitle')}
                 open={addModalOpen}
                 onOk={handleAddMembers}
                 confirmLoading={adding}
                 onCancel={() => setAddModalOpen(false)}
-                okText="添加"
-                cancelText="取消"
+                okText={t('viewers.common.add')}
+                cancelText={t('viewers.common.cancel')}
                 width={540}
             >
                 <div style={{ marginTop: 16 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>
-                        成员内容（支持换行一次性添加多个成员）
+                        {t('viewers.set.membersLabel')}
                     </div>
                     <Input.TextArea
                         rows={6}
                         value={addText}
                         onChange={(e) => setAddText(e.target.value)}
-                        placeholder="每行输入一个成员值，如：&#10;user_1001&#10;user_1002&#10;user_1003"
+                        placeholder={t('viewers.set.membersPlaceholder')}
                     />
                 </div>
             </Modal>
 
             {/* Inspect Drawer */}
             <Drawer
-                title="查看 Set 成员详情"
+                title={t('viewers.set.inspectTitle')}
                 open={inspectDrawer.open}
                 onClose={() => setInspectDrawer({ open: false, member: '' })}
                 width={600}
                 extra={
-                    <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.member)) message.success('已复制成员内容') }}>
-                        复制内容
+                    <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.member)) message.success(t('viewers.common.copiedMember')) }}>
+                        {t('viewers.set.copyContent')}
                     </Button>
                 }
             >
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                        长度: {inspectDrawer.member.length} 字符 | 大小: {formatBytes(new Blob([inspectDrawer.member]).size)}
+                        {t('viewers.common.lengthAndSize', { length: inspectDrawer.member.length, size: formatBytes(new Blob([inspectDrawer.member]).size) })}
                     </div>
                     <div style={{ flex: 1, minHeight: 0 }}>
                         <CodeEditor

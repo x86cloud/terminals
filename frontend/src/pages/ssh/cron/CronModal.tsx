@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Modal, Input, Tag, Space } from 'antd'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
 import { SSHCronItem } from '@/types'
 
 interface Props {
@@ -10,32 +12,33 @@ interface Props {
 }
 
 const PRESETS = [
-    { label: '每5分钟', expr: '*/5 * * * *' },
-    { label: '每15分钟', expr: '*/15 * * * *' },
-    { label: '每小时整点', expr: '0 * * * *' },
-    { label: '每天0点', expr: '0 0 * * *' },
-    { label: '每周一0点', expr: '0 0 * * 1' },
-    { label: '每月1日0点', expr: '0 0 1 * *' },
+    { get label() { return i18n.t('ssh:cron.preset5m', { defaultValue: '每5分钟 (5m)' }) }, expr: '*/5 * * * *' },
+    { get label() { return i18n.t('ssh:cron.preset15m', { defaultValue: '每15分钟 (15m)' }) }, expr: '*/15 * * * *' },
+    { get label() { return i18n.t('ssh:cron.presetHourly', { defaultValue: '每小时整点 (Hourly)' }) }, expr: '0 * * * *' },
+    { get label() { return i18n.t('ssh:cron.presetDaily', { defaultValue: '每天0点 (Daily)' }) }, expr: '0 0 * * *' },
+    { get label() { return i18n.t('ssh:cron.presetWeekly', { defaultValue: '每周一0点 (Weekly)' }) }, expr: '0 0 * * 1' },
+    { get label() { return i18n.t('ssh:cron.presetMonthly', { defaultValue: '每月1日0点 (Monthly)' }) }, expr: '0 0 1 * *' },
 ]
 
 export function explainCron(expr: string): string {
     const trimmed = expr.trim()
-    if (!trimmed) return '请输入 Cron 表达式'
+    if (!trimmed) return 'Enter Cron expression'
     const parts = trimmed.split(/\s+/)
-    if (parts.length !== 5) return '表达式格式需包含 5 个部分（分 时 日 月 周）'
+    if (parts.length !== 5) return 'Expression needs 5 parts: min hour day month weekday'
 
     const [min, hour, day, month, week] = parts
 
-    if (min.startsWith('*/')) return `每隔 ${min.replace('*/', '')} 分钟执行一次`
-    if (min === '0' && hour === '0' && day === '*' && month === '*' && week === '*') return '每天 00:00 执行'
-    if (min === '0' && hour === '*' && day === '*' && month === '*' && week === '*') return '每小时整点执行'
-    if (min === '0' && hour === '0' && day === '*' && month === '*' && week !== '*') return `每周 ${week} 00:00 执行`
-    if (min === '0' && hour === '0' && day !== '*' && month === '*') return `每月 ${day} 日 00:00 执行`
+    if (min.startsWith('*/')) return `Every ${min.replace('*/', '')} minutes`
+    if (min === '0' && hour === '0' && day === '*' && month === '*' && week === '*') return 'Every day at 00:00'
+    if (min === '0' && hour === '*' && day === '*' && month === '*' && week === '*') return 'Every hour on the hour'
+    if (min === '0' && hour === '0' && day === '*' && month === '*' && week !== '*') return `Weekly on day ${week} at 00:00`
+    if (min === '0' && hour === '0' && day !== '*' && month === '*') return `Monthly on day ${day} at 00:00`
 
-    return `运行周期: 分(${min}) 时(${hour}) 日(${day}) 月(${month}) 周(${week})`
+    return `Schedule: min(${min}) hour(${hour}) day(${day}) month(${month}) week(${week})`
 }
 
 export default function CronModal({ open, item, onSave, onClose }: Props) {
+    const { t } = useTranslation(['ssh', 'common'])
     const [expression, setExpression] = useState('*/5 * * * *')
     const [command, setCommand] = useState('')
     const [comment, setComment] = useState('')
@@ -66,23 +69,23 @@ export default function CronModal({ open, item, onSave, onClose }: Props) {
     return (
         <Modal
             open={open}
-            title={item ? '编辑定时任务' : '新建定时任务'}
+            title={item ? t('ssh:cron.edit') : t('ssh:cron.add')}
             onCancel={onClose}
             onOk={handleConfirm}
-            okText="保存"
-            cancelText="取消"
+            okText={t('common:save')}
+            cancelText={t('common:cancel')}
             okButtonProps={{ disabled: !expression.trim() || !command.trim() }}
             width={580}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '12px 0' }}>
                 <div>
                     <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                        常用运行周期快捷选择:
+                        Presets:
                     </label>
                     <Space wrap size={[6, 6]}>
                         {PRESETS.map((p) => (
                             <Tag.CheckableTag
-                                key={p.label}
+                                key={p.expr}
                                 checked={expression === p.expr}
                                 onChange={() => setExpression(p.expr)}
                             >
@@ -94,12 +97,12 @@ export default function CronModal({ open, item, onSave, onClose }: Props) {
 
                 <div>
                     <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                        Cron 表达式 (分 时 日 月 周):
+                        {t('ssh:cron.schedule')} (Cron):
                     </label>
                     <Input
                         style={{ fontFamily: 'monospace' }}
                         value={expression}
-                        placeholder="如: */5 * * * *"
+                        placeholder="*/5 * * * *"
                         onChange={(e) => setExpression(e.target.value)}
                     />
                     <div style={{ marginTop: 4, fontSize: 12, color: '#1677ff' }}>
@@ -109,23 +112,23 @@ export default function CronModal({ open, item, onSave, onClose }: Props) {
 
                 <div>
                     <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                        执行命令 / 脚本路径:
+                        {t('ssh:cron.command')}:
                     </label>
                     <Input
                         style={{ fontFamily: 'monospace' }}
                         value={command}
-                        placeholder="如: /usr/bin/python3 /opt/script.py > /dev/null 2>&1"
+                        placeholder="/usr/bin/python3 /opt/script.py"
                         onChange={(e) => setCommand(e.target.value)}
                     />
                 </div>
 
                 <div>
                     <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                        备注说明 (可选):
+                        {t('ssh:cron.comment')}:
                     </label>
                     <Input
                         value={comment}
-                        placeholder="如: 每日数据库备份任务"
+                        placeholder="e.g. Daily DB Backup"
                         onChange={(e) => setComment(e.target.value)}
                     />
                 </div>

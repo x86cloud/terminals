@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Space, Tooltip, Input, Dropdown, MenuProps, App } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
     Database,
     Plus,
@@ -42,6 +43,7 @@ function quoteIdent(s: string): string {
 }
 
 export default function SqliteClient({ session, onClose }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [tables, setTables] = useState<SqliteTableInfo[]>([])
     const [filterText, setFilterText] = useState('')
@@ -63,7 +65,7 @@ export default function SqliteClient({ session, onClose }: Props) {
     const [tabs, setTabs] = useState<SqliteTabItem[]>([
         {
             key: 'sql_main',
-            label: 'SQL 编辑器',
+            label: t('sqlite.sqlEditor'),
             type: 'sql',
             closable: false,
         },
@@ -78,11 +80,11 @@ export default function SqliteClient({ session, onClose }: Props) {
             const list = await API.sqliteTables(id)
             setTables(list)
         } catch (e) {
-            message.error(`加载表结构失败: ${errorMessage(e)}`)
+            message.error(t('sqlite.loadTableFailed', { error: errorMessage(e) }))
         } finally {
             setBusy(false)
         }
-    }, [id])
+    }, [id, t, message])
 
     const loadInfo = useCallback(async () => {
         try {
@@ -100,17 +102,17 @@ export default function SqliteClient({ session, onClose }: Props) {
 
     const copyPath = () => {
         if (!info.path) {
-            message.warning('暂无文件路径')
+            message.warning(t('sqlite.noFilePath'))
             return
         }
         navigator.clipboard.writeText(info.path)
-        message.success('已复制文件路径')
+        message.success(t('sqlite.filePathCopied'))
     }
 
     // 打开数据表 Tab
     const openTableTab = (tableName: string) => {
         const tabKey = `tbl_${tableName}`
-        const existing = tabs.find((t) => t.key === tabKey)
+        const existing = tabs.find((tItem) => tItem.key === tabKey)
         if (existing) {
             setActiveTabKey(tabKey)
             return
@@ -129,14 +131,14 @@ export default function SqliteClient({ session, onClose }: Props) {
 
     // 打开/激活 SQL 编辑器 Tab
     const openSqlEditor = (initialSql?: string) => {
-        const existing = tabs.find((t) => t.type === 'sql')
+        const existing = tabs.find((tItem) => tItem.type === 'sql')
         if (existing) {
             setActiveTabKey(existing.key)
             return
         }
         const newTab: SqliteTabItem = {
             key: 'sql_main',
-            label: 'SQL 编辑器',
+            label: t('sqlite.sqlEditor'),
             type: 'sql',
             sqlText: initialSql,
             closable: true,
@@ -148,10 +150,10 @@ export default function SqliteClient({ session, onClose }: Props) {
     // 关闭 Tab
     const handleCloseTab = (key: string) => {
         if (tabs.length <= 1) return
-        const nextTabs = tabs.filter((t) => t.key !== key)
+        const nextTabs = tabs.filter((tItem) => tItem.key !== key)
         setTabs(nextTabs)
         if (activeTabKey === key && nextTabs.length > 0) {
-            const closedIdx = tabs.findIndex((t) => t.key === key)
+            const closedIdx = tabs.findIndex((tItem) => tItem.key === key)
             const nextActive = nextTabs[Math.min(closedIdx, nextTabs.length - 1)]
             if (nextActive) setActiveTabKey(nextActive.key)
         }
@@ -165,7 +167,7 @@ export default function SqliteClient({ session, onClose }: Props) {
     }
 
     const handleCloseLeftTabs = (targetKey: string) => {
-        const idx = tabs.findIndex((t) => t.key === targetKey)
+        const idx = tabs.findIndex((tItem) => tItem.key === targetKey)
         if (idx <= 0) return
         const nextTabs = tabs.slice(idx)
         setTabs(nextTabs)
@@ -173,7 +175,7 @@ export default function SqliteClient({ session, onClose }: Props) {
     }
 
     const handleCloseRightTabs = (targetKey: string) => {
-        const idx = tabs.findIndex((t) => t.key === targetKey)
+        const idx = tabs.findIndex((tItem) => tItem.key === targetKey)
         if (idx < 0 || idx >= tabs.length - 1) return
         const nextTabs = tabs.slice(0, idx + 1)
         setTabs(nextTabs)
@@ -182,13 +184,13 @@ export default function SqliteClient({ session, onClose }: Props) {
 
     // TabBar 展示项
     const tabItems: TabItem[] = useMemo(() => {
-        return tabs.map((t) => ({
-            key: t.key,
-            label: t.label,
-            icon: t.type === 'sql' ? <Code size={12} /> : <Table size={12} />,
-            closable: t.closable !== false && tabs.length > 1,
+        return tabs.map((tItem) => ({
+            key: tItem.key,
+            label: tItem.type === 'sql' && (tItem.label === 'SQL 编辑器' || tItem.label === 'SQL Editor') ? t('sqlite.sqlEditor') : tItem.label,
+            icon: tItem.type === 'sql' ? <Code size={12} /> : <Table size={12} />,
+            closable: tItem.closable !== false && tabs.length > 1,
         }))
-    }, [tabs])
+    }, [tabs, t])
 
     // 打开新建表弹窗
     const handleOpenCreateModal = () => {
@@ -202,7 +204,7 @@ export default function SqliteClient({ session, onClose }: Props) {
         const tName = createTableName.trim()
         const cols = createColDefs.trim()
         if (!tName || !cols) {
-            setCreateMsg('失败：表名和列定义不能为空')
+            setCreateMsg(t('sqlite.createReq'))
             return
         }
         setCreateBusy(true)
@@ -210,7 +212,7 @@ export default function SqliteClient({ session, onClose }: Props) {
         try {
             const sql = `CREATE TABLE ${quoteIdent(tName)} (${cols})`
             await API.sqliteRun(id, sql)
-            setCreateMsg(`已成功创建表 ${tName}`)
+            setCreateMsg(t('sqlite.createSuccess', { name: tName }))
             await loadTables()
             openTableTab(tName)
             setTimeout(() => {
@@ -218,18 +220,19 @@ export default function SqliteClient({ session, onClose }: Props) {
                 setCreateBusy(false)
             }, 700)
         } catch (e) {
-            setCreateMsg(`失败：${errorMessage(e)}`)
+            setCreateMsg(t('sqlite.createFail', { error: errorMessage(e) }))
             setCreateBusy(false)
         }
     }
 
     // 删除表
     const handleDropTable = (table: SqliteTableInfo) => {
+        const typeStr = table.type === 'view' ? t('sqlite.view') : t('sqlite.table')
         setConfirmState({
             open: true,
-            title: `删除${table.type === 'view' ? '视图' : '表'}`,
+            title: t('sqlite.dropTitle', { type: typeStr }),
             danger: true,
-            message: `确定要彻底删除 ${table.type === 'view' ? '视图' : '表'}「${table.name}」吗？此操作不可逆。`,
+            message: t('sqlite.dropConfirm', { type: typeStr, name: table.name }),
             onConfirm: async () => {
                 setConfirmState(emptyConfirm)
                 try {
@@ -238,11 +241,11 @@ export default function SqliteClient({ session, onClose }: Props) {
                             ? `DROP VIEW ${quoteIdent(table.name)}`
                             : `DROP TABLE ${quoteIdent(table.name)}`
                     await API.sqliteRun(id, sql)
-                    message.success(`已删除 ${table.name}`)
+                    message.success(t('sqlite.dropSuccess', { name: table.name }))
                     handleCloseTab(`tbl_${table.name}`)
                     await loadTables()
                 } catch (e) {
-                    message.error(`删除失败: ${errorMessage(e)}`)
+                    message.error(t('sqlite.dropFail', { error: errorMessage(e) }))
                 }
             },
         })
@@ -252,17 +255,17 @@ export default function SqliteClient({ session, onClose }: Props) {
     const handleTruncateTable = (table: SqliteTableInfo) => {
         setConfirmState({
             open: true,
-            title: '清空表数据',
+            title: t('sqlite.truncateTitle'),
             danger: true,
-            message: `确定要清空表「${table.name}」的所有数据吗？此操作不可逆。`,
+            message: t('sqlite.truncateConfirm', { name: table.name }),
             onConfirm: async () => {
                 setConfirmState(emptyConfirm)
                 try {
                     await API.sqliteRun(id, `DELETE FROM ${quoteIdent(table.name)}`)
-                    message.success(`已清空表 ${table.name}`)
+                    message.success(t('sqlite.truncateSuccess', { name: table.name }))
                     await loadTables()
                 } catch (e) {
-                    message.error(`清空失败: ${errorMessage(e)}`)
+                    message.error(t('sqlite.truncateFail', { error: errorMessage(e) }))
                 }
             },
         })
@@ -283,12 +286,12 @@ export default function SqliteClient({ session, onClose }: Props) {
     const filteredTables = useMemo(() => {
         if (!filterText.trim()) return tables
         const q = filterText.toLowerCase()
-        return tables.filter((t) => t.name.toLowerCase().includes(q))
+        return tables.filter((tItem) => tItem.name.toLowerCase().includes(q))
     }, [tables, filterText])
 
     // 当前活跃的数据表名
     const activeTableName = useMemo(() => {
-        const active = tabs.find((t) => t.key === activeTabKey)
+        const active = tabs.find((tItem) => tItem.key === activeTabKey)
         if (active && active.type === 'data') return active.table
         return null
     }, [tabs, activeTabKey])
@@ -324,13 +327,13 @@ export default function SqliteClient({ session, onClose }: Props) {
                         </div>
                     </Tooltip>
                     <Space size={2} style={{ marginLeft: 'auto' }}>
-                        <Tooltip title="新建数据表">
+                        <Tooltip title={t('sqlite.newTable')}>
                             <Button size="small" type="text" icon={<Plus size={12} />} onClick={handleOpenCreateModal} />
                         </Tooltip>
-                        <Tooltip title="SQL 编辑器">
+                        <Tooltip title={t('sqlite.sqlEditor')}>
                             <Button size="small" type="text" icon={<Code size={12} />} onClick={() => openSqlEditor()} />
                         </Tooltip>
-                        <Tooltip title="重新加载">
+                        <Tooltip title={t('sqlite.reload')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -343,7 +346,7 @@ export default function SqliteClient({ session, onClose }: Props) {
                             />
                         </Tooltip>
                         {onClose && (
-                            <Tooltip title="关闭会话">
+                            <Tooltip title={t('sqlite.closeSession')}>
                                 <Button size="small" type="text" icon={<X size={12} />} onClick={onClose} />
                             </Tooltip>
                         )}
@@ -351,16 +354,16 @@ export default function SqliteClient({ session, onClose }: Props) {
                 </div>
 
                 <div className={sq.sqliteStatus}>
-                    <span>大小：{fmtSize(info.size)}</span>
+                    <span>{t('sqlite.size', { size: fmtSize(info.size) })}</span>
                     <span style={{ marginLeft: 'auto' }}>
-                        共 {tables.length} {tables.length === 1 ? '张表' : '张表/视图'}
+                        {t('sqlite.tablesCount', { count: tables.length })}
                     </span>
                 </div>
 
                 <div style={{ padding: '6px 8px 4px' }}>
                     <Input
                         size="small"
-                        placeholder="过滤表名..."
+                        placeholder={t('sqlite.filterPlaceholder')}
                         value={filterText}
                         onChange={(e) => setFilterText(e.target.value)}
                         allowClear
@@ -368,58 +371,58 @@ export default function SqliteClient({ session, onClose }: Props) {
                 </div>
 
                 <div className={sq.sqliteTables}>
-                    {filteredTables.map((t) => {
-                        const isActive = activeTableName === t.name
+                    {filteredTables.map((tbl) => {
+                        const isActive = activeTableName === tbl.name
                         const menuItems: MenuProps['items'] = [
                             {
                                 key: 'open',
-                                label: '打开数据表',
+                                label: t('sqlite.openTable'),
                                 icon: <Table size={12} />,
-                                onClick: () => openTableTab(t.name),
+                                onClick: () => openTableTab(tbl.name),
                             },
                             {
                                 key: 'new_query',
-                                label: '打开 SQL 编辑器',
+                                label: t('sqlite.openSqlEditor'),
                                 icon: <Code size={12} />,
                                 onClick: () => {
-                                    openSqlEditor(`SELECT * FROM ${quoteIdent(t.name)} LIMIT 50;`)
+                                    openSqlEditor(`SELECT * FROM ${quoteIdent(tbl.name)} LIMIT 50;`)
                                 },
                             },
                             { type: 'divider' },
                             {
                                 key: 'truncate',
-                                label: '清空表数据',
+                                label: t('sqlite.truncate'),
                                 icon: <Eraser size={12} />,
                                 danger: true,
-                                disabled: t.type === 'view',
-                                onClick: () => handleTruncateTable(t),
+                                disabled: tbl.type === 'view',
+                                onClick: () => handleTruncateTable(tbl),
                             },
                             {
                                 key: 'drop',
-                                label: `删除${t.type === 'view' ? '视图' : '表'}`,
+                                label: t('sqlite.drop', { type: tbl.type === 'view' ? t('sqlite.view') : t('sqlite.table') }),
                                 icon: <Trash2 size={12} />,
                                 danger: true,
-                                onClick: () => handleDropTable(t),
+                                onClick: () => handleDropTable(tbl),
                             },
                         ]
 
                         return (
-                            <Dropdown key={t.name} menu={{ items: menuItems }} trigger={['contextMenu']}>
+                            <Dropdown key={tbl.name} menu={{ items: menuItems }} trigger={['contextMenu']}>
                                 <div
                                     className={`${sq.sqliteTableRow} ${isActive ? sq.active : ''}`}
-                                    onClick={() => openTableTab(t.name)}
-                                    title={`${t.name} (${t.type === 'view' ? '视图' : '表'})`}
+                                    onClick={() => openTableTab(tbl.name)}
+                                    title={`${tbl.name} (${tbl.type === 'view' ? t('sqlite.view') : t('sqlite.table')})`}
                                 >
                                     <Table size={13} className={sq.tableIcon} />
-                                    <span className={sq.tableName}>{t.name}</span>
-                                    {t.type === 'view' && <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>VIEW</span>}
+                                    <span className={sq.tableName}>{tbl.name}</span>
+                                    {tbl.type === 'view' && <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>VIEW</span>}
                                 </div>
                             </Dropdown>
                         )
                     })}
                     {filteredTables.length === 0 && (
                         <div style={{ color: 'var(--text-dim)', fontSize: 12, padding: 12, textAlign: 'center' }}>
-                            {filterText ? '无匹配表' : '暂无数据表'}
+                            {filterText ? t('sqlite.noMatchingTables') : t('sqlite.noTables')}
                         </div>
                     )}
                 </div>
@@ -441,26 +444,26 @@ export default function SqliteClient({ session, onClose }: Props) {
                 </div>
 
                 <div className={sq.tabContent}>
-                    {tabs.map((t) => {
-                        const isVisible = t.key === activeTabKey
+                    {tabs.map((tItem) => {
+                        const isVisible = tItem.key === activeTabKey
                         if (!isVisible) return null
 
-                        if (t.type === 'data' && t.table) {
+                        if (tItem.type === 'data' && tItem.table) {
                             return (
                                 <DbDataTab
-                                    key={t.key}
-                                    adapter={createSqliteAdapter(id, t.table, session.title || 'sqlite')}
-                                    onClose={() => handleCloseTab(t.key)}
+                                    key={tItem.key}
+                                    adapter={createSqliteAdapter(id, tItem.table, session.title || 'sqlite')}
+                                    onClose={() => handleCloseTab(tItem.key)}
                                 />
                             )
                         }
 
-                        if (t.type === 'sql') {
+                        if (tItem.type === 'sql') {
                             return (
                                 <DbSqlEditor
-                                    key={t.key}
+                                    key={tItem.key}
                                     adapter={createSqliteSqlAdapter(id, session.title || 'sqlite')}
-                                    initialSql={t.sqlText}
+                                    initialSql={tItem.sqlText}
                                 />
                             )
                         }

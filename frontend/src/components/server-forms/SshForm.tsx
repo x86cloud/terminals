@@ -1,6 +1,7 @@
 import React from 'react'
 import { Input, InputNumber, Radio, Button, Space, Collapse } from 'antd'
 import { Key, Sliders } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import { BasicFields } from './BasicFields'
@@ -12,6 +13,8 @@ export const SshForm: React.FC<ServerFormProps> = ({
     groups,
     setError,
 }) => {
+    const { t } = useTranslation(['server', 'common'])
+
     const handlePickPrivateKey = async () => {
         try {
             const path = await API.selectPrivateKey()
@@ -31,15 +34,15 @@ export const SshForm: React.FC<ServerFormProps> = ({
             {/* 标准 Host + Port */}
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>主机地址 (Host / IP)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('host')}</div>
                     <Input
-                        placeholder="127.0.0.1 / example.com"
+                        placeholder={t('hostPlaceholder')}
                         value={form.host}
                         onChange={(e) => update({ host: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>端口 (Port)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('port')}</div>
                     <InputNumber
                         min={1}
                         max={65535}
@@ -53,22 +56,22 @@ export const SshForm: React.FC<ServerFormProps> = ({
             {/* 用户名与认证方式 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>用户名</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('username')}</div>
                     <Input
-                        placeholder="root"
+                        placeholder={t('usernamePlaceholder')}
                         value={form.username}
                         onChange={(e) => update({ username: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>认证方式</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('authType')}</div>
                     <Radio.Group
                         value={form.authType || 'password'}
                         onChange={(e) => update({ authType: e.target.value })}
                         buttonStyle="solid"
                     >
-                        <Radio.Button value="password">密码认证</Radio.Button>
-                        <Radio.Button value="key">私钥认证</Radio.Button>
+                        <Radio.Button value="password">{t('authPassword')}</Radio.Button>
+                        <Radio.Button value="key">{t('authKey')}</Radio.Button>
                     </Radio.Group>
                 </div>
             </div>
@@ -76,22 +79,22 @@ export const SshForm: React.FC<ServerFormProps> = ({
             {form.authType === 'key' ? (
                 <>
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>私钥文件 (Private Key)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('privateKey')}</div>
                         <Space.Compact style={{ width: '100%' }}>
                             <Input
-                                placeholder="选择私钥文件或粘贴 PEM 证书"
+                                placeholder={t('privateKeyPlaceholder')}
                                 value={form.privateKey || ''}
                                 onChange={(e) => update({ privateKey: e.target.value })}
                             />
                             <Button icon={<Key size={14} />} onClick={handlePickPrivateKey}>
-                                选择文件
+                                {t('selectKeyFile')}
                             </Button>
                         </Space.Compact>
                     </div>
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>私钥密码 (Passphrase, 可选)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('passphrase')}</div>
                         <Input.Password
-                            placeholder="如有密码请填写"
+                            placeholder={t('passphrasePlaceholder')}
                             value={form.passphrase || ''}
                             onChange={(e) => update({ passphrase: e.target.value })}
                         />
@@ -99,9 +102,9 @@ export const SshForm: React.FC<ServerFormProps> = ({
                 </>
             ) : (
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>密码</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('password')}</div>
                     <Input.Password
-                        placeholder="请输入登录密码"
+                        placeholder={t('passwordPlaceholder')}
                         value={form.password || ''}
                         onChange={(e) => update({ password: e.target.value })}
                     />
@@ -118,15 +121,15 @@ export const SshForm: React.FC<ServerFormProps> = ({
                         label: (
                             <Space size={6}>
                                 <Sliders size={13} />
-                                <span style={{ fontSize: 13 }}>高级选项与扩展配置</span>
+                                <span style={{ fontSize: 13 }}>{t('advanced')}</span>
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4 }}>SFTP 默认初始路径</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4 }}>{t('ssh.sftpHome')}</div>
                                     <Input
-                                        placeholder="/root 或 /home/user"
+                                        placeholder={t('ssh.sftpHomePlaceholder')}
                                         value={form.sftpHome || ''}
                                         onChange={(e) => update({ sftpHome: e.target.value })}
                                     />

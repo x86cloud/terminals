@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Copy, Check } from 'lucide-react'
 import { Button, Tooltip } from 'antd'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
@@ -24,6 +25,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
     onCancelPlan,
     onRetryPlanStep,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const isUser = message.role === 'user'
     const [copied, setCopied] = useState(false)
 
@@ -92,7 +94,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
                 {/* 底部轻量操作栏 */}
                 {!isStreaming && message.content && (
                     <div className={s.assistantActions}>
-                        <Tooltip title={copied ? '已复制到剪贴板' : '复制全文'}>
+                        <Tooltip title={copied ? t('agent:copiedToClipboard', { defaultValue: '已复制到剪贴板' }) : t('agent:copyFull', { defaultValue: '复制全文' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -100,7 +102,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = React.memo(({
                                 icon={copied ? <Check size={11} color="#10b981" /> : <Copy size={11} />}
                                 onClick={handleCopy}
                             >
-                                {copied ? '已复制' : '复制'}
+                                {copied ? t('agent:copied', { defaultValue: '已复制' }) : t('agent:copy', { defaultValue: '复制' })}
                             </Button>
                         </Tooltip>
                     </div>

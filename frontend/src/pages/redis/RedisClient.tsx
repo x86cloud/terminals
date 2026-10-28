@@ -16,6 +16,7 @@ import type {
     RedisQueueItem,
 } from '@/types'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import { useTranslation } from 'react-i18next'
 import {
     KeyTreeNode,
     Tab,
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export default function RedisClient({ session, onClose, onDbChange }: Props) {
+    const { t } = useTranslation(['redis', 'common'])
     const { message } = App.useApp()
     const [tab, setTab] = useState<Tab>('keys')
     const [createKeyOpen, setCreateKeyOpen] = useState(false)
@@ -145,7 +147,8 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
 
     const flash = useCallback((m: string) => {
         if (!m) return
-        if (m.includes('失败') || m.includes('ERROR') || m.includes('错误')) {
+        const lower = m.toLowerCase()
+        if (m.includes('失败') || m.includes('ERROR') || m.includes('错误') || lower.includes('fail') || lower.includes('error')) {
             message.error(m)
         } else if (
             m.includes('成功') ||
@@ -157,10 +160,16 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
             m.includes('已压缩') ||
             m.includes('完成') ||
             m.includes('已出队') ||
-            m.includes('已监听')
+            m.includes('已监听') ||
+            lower.includes('success') ||
+            lower.includes('saved') ||
+            lower.includes('published') ||
+            lower.includes('enqueued') ||
+            lower.includes('subscribed') ||
+            lower.includes('done')
         ) {
             message.success(m)
-        } else if (m.includes('不是合法') || m.includes('冲突') || m.includes('警告') || m.includes('中止')) {
+        } else if (m.includes('不是合法') || m.includes('冲突') || m.includes('警告') || m.includes('中止') || lower.includes('aborted') || lower.includes('warn') || lower.includes('conflict')) {
             message.warning(m)
         } else {
             message.info(m)
@@ -217,10 +226,10 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
                     keys: reset ? keys : [...(Array.isArray(d?.keys) ? (d.keys as any) : []), ...keys],
                 }))
             } catch (e: any) {
-                flash('加载键失败: ' + (e?.message || e))
+                flash(t('client.loadKeysFail', { defaultValue: '加载键失败: {{error}}', error: e?.message || e }))
             }
         },
-        [session.id, pattern, flash]
+        [session.id, pattern, flash, t]
     )
 
     const loadValue = useCallback(
@@ -236,11 +245,11 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
                 setTtl(v.ttl)
             } catch (e: any) {
                 if (reqId !== activeValReqIdRef.current) return
-                flash('读取失败: ' + (e?.message || e))
+                flash(t('client.readFail', { defaultValue: '读取失败: {{error}}', error: e?.message || e }))
                 setValue(null)
             }
         },
-        [session.id, flash]
+        [session.id, flash, t]
     )
 
     useEffect(() => {
@@ -270,7 +279,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
             await loadKeys(true)
             onDbChange(session.id, n, size)
         } catch (e: any) {
-            flash('切换数据库失败: ' + (e?.message || e))
+            flash(t('client.switchDbFail', { defaultValue: '切换数据库失败: {{error}}', error: e?.message || e }))
         }
     }
 
@@ -278,11 +287,11 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         if (!selected || !value) return
         try {
             await API.redisSet(session.id, selected, value.type, editor, ttl)
-            flash('已保存')
+            flash(t('client.saved', '已保存'))
             await loadValue(selected)
             loadKeys(true)
         } catch (e: any) {
-            flash('保存失败: ' + (e?.message || e))
+            flash(t('client.saveFail', { defaultValue: '保存失败: {{error}}', error: e?.message || e }))
         }
     }
 
@@ -293,7 +302,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         keyTtl: number
     ) => {
         await API.redisSet(session.id, newKey, keyType, serializedValue, keyTtl)
-        flash(`已成功创建键 [${newKey}]`)
+        flash(t('client.keyCreated', { defaultValue: '已成功创建键 [{{key}}]', key: newKey }))
         await loadKeys(true)
         await loadValue(newKey)
     }
@@ -303,9 +312,9 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         if (!k) return
         setConfirmState({
             open: true,
-            title: '删除键',
+            title: t('client.deleteKeyTitle', '删除键'),
             danger: true,
-            message: `确认删除键 ${k} ？该操作不可撤销。`,
+            message: t('client.deleteKeyConfirm', { defaultValue: '确认删除键 {{key}} ？该操作不可撤销。', key: k }),
             onConfirm: async () => {
                 setConfirmState(emptyConfirm)
                 try {
@@ -316,7 +325,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
                     }
                     loadKeys(true)
                 } catch (e: any) {
-                    flash('删除失败: ' + (e?.message || e))
+                    flash(t('client.deleteFail', { defaultValue: '删除失败: {{error}}', error: e?.message || e }))
                 }
             },
         })
@@ -327,9 +336,9 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         if (leafKeys.length === 0) return
         setConfirmState({
             open: true,
-            title: '批量删除文件夹',
+            title: t('client.deleteFolderTitle', '批量删除文件夹'),
             danger: true,
-            message: `确认删除文件夹“${node.name}”下的所有 ${leafKeys.length} 个 Key？该操作不可撤销！`,
+            message: t('client.deleteFolderConfirm', { defaultValue: '确认删除文件夹“{{name}}”下的所有 {{count}} 个 Key？该操作不可撤销！', name: node.name, count: leafKeys.length }),
             onConfirm: async () => {
                 setConfirmState(emptyConfirm)
                 try {
@@ -342,14 +351,14 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
                         setSelected('')
                         setValue(null)
                     }
-                    flash(`已成功批量删除 ${deletedCount} 个 Key`)
+                    flash(t('client.batchDeleteSuccess', { defaultValue: '已成功批量删除 {{count}} 个 Key', count: deletedCount }))
                     loadKeys(true)
                 } catch (e: any) {
-                    flash('批量删除失败: ' + (e?.message || e))
+                    flash(t('client.batchDeleteFail', { defaultValue: '批量删除失败: {{error}}', error: e?.message || e }))
                 }
             },
         })
-    }, [session.id, selected, flash, loadKeys])
+    }, [session.id, selected, flash, loadKeys, t])
 
     const runRaw = async (cmd: string) => {
         if (!cmd.trim()) return
@@ -368,9 +377,9 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         try {
             const res = await API.redisPipeline(session.id, cmds)
             setBatchResult(res)
-            flash('Pipeline 执行完成')
+            flash(t('client.pipelineDone', 'Pipeline 执行完成'))
         } catch (e: any) {
-            flash('Pipeline 失败: ' + (e?.message || e))
+            flash(t('client.pipelineFail', { defaultValue: 'Pipeline 失败: {{error}}', error: e?.message || e }))
         }
     }
 
@@ -382,9 +391,9 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         try {
             const res = await API.redisTransaction(session.id, watch, cmds)
             setBatchResult(res)
-            flash(res.aborted ? '事务因 WATCH 冲突被中止' : '事务执行完成')
+            flash(res.aborted ? t('client.txAborted', '事务因 WATCH 冲突被中止') : t('client.txDone', '事务执行完成'))
         } catch (e: any) {
-            flash('事务失败: ' + (e?.message || e))
+            flash(t('client.txFail', { defaultValue: '事务失败: {{error}}', error: e?.message || e }))
         }
     }
 
@@ -394,9 +403,9 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         try {
             await API.redisSubscribe(session.id, psChannel.trim())
             setPsSubs((p) => (p.includes(psChannel.trim()) ? p : [...p, psChannel.trim()]))
-            flash('已订阅 ' + psChannel)
+            flash(t('client.subscribed', { defaultValue: '已订阅 {{channel}}', channel: psChannel }))
         } catch (e: any) {
-            flash('订阅失败: ' + (e?.message || e))
+            flash(t('client.subFail', { defaultValue: '订阅失败: {{error}}', error: e?.message || e }))
         }
     }
     const doPSubscribe = async () => {
@@ -404,18 +413,18 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         try {
             await API.redisPSubscribe(session.id, psPattern.trim())
             setPsSubs((p) => (p.includes(psPattern.trim()) ? p : [...p, psPattern.trim()]))
-            flash('已模式订阅 ' + psPattern)
+            flash(t('client.psubscribed', { defaultValue: '已模式订阅 {{pattern}}', pattern: psPattern }))
         } catch (e: any) {
-            flash('订阅失败: ' + (e?.message || e))
+            flash(t('client.subFail', { defaultValue: '订阅失败: {{error}}', error: e?.message || e }))
         }
     }
     const doPublish = async () => {
         if (!psChannel.trim()) return
         try {
             await API.redisPublish(session.id, psChannel.trim(), psPattern)
-            flash('已发布')
+            flash(t('client.published', '已发布'))
         } catch (e: any) {
-            flash('发布失败: ' + (e?.message || e))
+            flash(t('client.pubFail', { defaultValue: '发布失败: {{error}}', error: e?.message || e }))
         }
     }
     const doUnsub = async (ch: string) => {
@@ -423,7 +432,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
             await API.redisUnsubscribe(session.id, ch)
             setPsSubs((p) => p.filter((x) => x !== ch))
         } catch (e: any) {
-            flash('取消订阅失败: ' + (e?.message || e))
+            flash(t('client.unsubFail', { defaultValue: '取消订阅失败: {{error}}', error: e?.message || e }))
         }
     }
 
@@ -431,9 +440,9 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
     const startKeyspace = async () => {
         try {
             await API.redisKeyspaceNotify(session.id, Number(ksDb) || 0, ksEvent.trim() || 'expired')
-            flash(`已监听键事件 ${ksEvent} @db${ksDb}`)
+            flash(t('client.watching', { defaultValue: '已监听键事件 {{event}} @db{{db}}', event: ksEvent, db: ksDb }))
         } catch (e: any) {
-            flash('监听失败: ' + (e?.message || e))
+            flash(t('client.watchFail', { defaultValue: '监听失败: {{error}}', error: e?.message || e }))
         }
     }
 
@@ -443,9 +452,9 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
         try {
             await API.redisQueueEnqueue(session.id, qName.trim(), qPayload, qMode)
             setQLen(await API.redisQueueLength(session.id, qName.trim(), qMode).catch(() => 0))
-            flash('已入队')
+            flash(t('client.enqueued', '已入队'))
         } catch (e: any) {
-            flash('入队失败: ' + (e?.message || e))
+            flash(t('client.enqueueFail', { defaultValue: '入队失败: {{error}}', error: e?.message || e }))
         }
     }
     const dequeue = async () => {
@@ -455,7 +464,7 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
             setQOut(item)
             setQLen(await API.redisQueueLength(session.id, qName.trim(), qMode).catch(() => 0))
         } catch (e: any) {
-            flash('出队失败: ' + (e?.message || e))
+            flash(t('client.dequeueFail', { defaultValue: '出队失败: {{error}}', error: e?.message || e }))
         }
     }
 
@@ -465,35 +474,48 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
             const m = await API.redisMonitor(session.id)
             setMonitor(m)
         } catch (e: any) {
-            flash('监控读取失败: ' + (e?.message || e))
+            flash(t('client.monitorReadFail', { defaultValue: '监控读取失败: {{error}}', error: e?.message || e }))
         }
-    }, [session.id, flash])
+    }, [session.id, flash, t])
 
     const refreshSlowLog = useCallback(async () => {
         try {
             setSlowLogs(await API.redisSlowLog(session.id, 20))
         } catch (e: any) {
-            flash('慢日志读取失败: ' + (e?.message || e))
+            flash(t('client.slowLogReadFail', { defaultValue: '慢日志读取失败: {{error}}', error: e?.message || e }))
         }
-    }, [session.id, flash])
+    }, [session.id, flash, t])
 
     useEffect(() => {
         if (tab === 'monitor') refreshMonitor()
         if (tab === 'keyspace') refreshSlowLog()
     }, [tab, refreshMonitor, refreshSlowLog])
 
+    const getTabLabel = (item: Tab): string => {
+        switch (item) {
+            case 'keys': return t('tabs.keys', '键值')
+            case 'pipeline': return t('tabs.pipeline', 'Pipeline')
+            case 'tx': return t('tabs.tx', '事务')
+            case 'pubsub': return t('tabs.pubsub', '发布订阅')
+            case 'keyspace': return t('tabs.keyspace', '键事件')
+            case 'queue': return t('tabs.queue', '队列')
+            case 'monitor': return t('tabs.monitor', '实时监控')
+            default: return TAB_LABEL[item] || item
+        }
+    }
+
     return (
         <div className={r.redisPane}>
             <div className={r.tabBar}>
                 <div className={r.tabList}>
-                    {TABS.map((t) => (
+                    {TABS.map((item) => (
                         <div
-                            key={t}
-                            className={`${r.tabItem} ${tab === t ? r.active : ''}`}
-                            onClick={() => setTab(t)}
+                            key={item}
+                            className={`${r.tabItem} ${tab === item ? r.active : ''}`}
+                            onClick={() => setTab(item)}
                         >
-                            {TAB_ICONS[t]}
-                            <span>{TAB_LABEL[t]}</span>
+                            {TAB_ICONS[item]}
+                            <span>{getTabLabel(item)}</span>
                         </div>
                     ))}
                 </div>
@@ -566,26 +588,26 @@ export default function RedisClient({ session, onClose, onDbChange }: Props) {
 
             {tab === 'pipeline' && (
                 <BatchPanel
-                    title="Pipeline 批量执行（非事务，依次发送）"
+                    title={t('batch.pipelineTitle', 'Pipeline 批量执行（非事务，依次发送）')}
                     cmds={batchCmds}
                     setCmds={setBatchCmds}
                     watch={batchWatch}
                     setWatch={setBatchWatch}
                     onRun={runPipeline}
-                    runLabel="执行 Pipeline"
+                    runLabel={t('batch.pipelineRun', '执行 Pipeline')}
                     result={batchResult}
                 />
             )}
 
             {tab === 'tx' && (
                 <BatchPanel
-                    title="事务 MULTI / EXEC / WATCH（乐观锁）"
+                    title={t('batch.txTitle', '事务 MULTI / EXEC / WATCH（乐观锁）')}
                     cmds={batchCmds}
                     setCmds={setBatchCmds}
                     watch={batchWatch}
                     setWatch={setBatchWatch}
                     onRun={runTx}
-                    runLabel="执行事务"
+                    runLabel={t('batch.txRun', '执行事务')}
                     result={batchResult}
                     showWatch
                 />

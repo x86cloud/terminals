@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Modal, Form, Input, Space, Button, Alert, Tag } from 'antd'
 import { KeyRound, Dices } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 
@@ -21,6 +22,7 @@ export const ChangePasswordModal: React.FC<Props> = ({
     onClose,
     onSuccess,
 }) => {
+    const { t } = useTranslation(['db', 'common'])
     const [form] = Form.useForm()
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
@@ -38,7 +40,7 @@ export const ChangePasswordModal: React.FC<Props> = ({
         try {
             const values = await form.validateFields()
             if (values.password !== values.confirmPassword) {
-                setError('两次输入的密码不一致')
+                setError(t('db:mysql.changePassword.mismatch'))
                 return
             }
             setBusy(true)
@@ -63,7 +65,7 @@ export const ChangePasswordModal: React.FC<Props> = ({
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <KeyRound size={18} color="var(--accent)" />
-                    <span style={{ fontWeight: 600 }}>修改用户登录密码</span>
+                    <span style={{ fontWeight: 600 }}>{t('db:mysql.changePassword.title')}</span>
                     <Tag color="processing" style={{ margin: 0, fontFamily: 'var(--font-mono)' }}>
                         {user}@{host}
                     </Tag>
@@ -73,15 +75,15 @@ export const ChangePasswordModal: React.FC<Props> = ({
             onCancel={onClose}
             onOk={handleOk}
             confirmLoading={busy}
-            okText="确认修改密码"
-            cancelText="取消"
+            okText={t('db:mysql.changePassword.ok')}
+            cancelText={t('common:cancel')}
             width={480}
             destroyOnHidden
         >
             {error && (
                 <Alert
                     type="error"
-                    title="修改密码失败"
+                    title={t('db:mysql.changePassword.fail')}
                     description={error}
                     showIcon
                     style={{ marginBottom: 16 }}
@@ -91,40 +93,40 @@ export const ChangePasswordModal: React.FC<Props> = ({
             <Form form={form} layout="vertical">
                 <Form.Item
                     name="password"
-                    label="新密码"
-                    rules={[{ required: true, message: '请输入新密码' }]}
+                    label={t('db:mysql.changePassword.newPassword')}
+                    rules={[{ required: true, message: t('db:mysql.changePassword.newPasswordRequired') }]}
                 >
                     <Space.Compact style={{ width: '100%' }}>
                         <Input.Password
                             prefix={<KeyRound size={14} color="var(--text-dim)" />}
-                            placeholder="输入新密码"
+                            placeholder={t('db:mysql.changePassword.newPasswordPlaceholder')}
                             autoFocus
                         />
-                        <Button icon={<Dices size={14} />} onClick={generateRandomPassword} title="生成随机强密码">
-                            随机生成
+                        <Button icon={<Dices size={14} />} onClick={generateRandomPassword} title={t('db:mysql.changePassword.randomGenTitle')}>
+                            {t('db:mysql.changePassword.randomGen')}
                         </Button>
                     </Space.Compact>
                 </Form.Item>
 
                 <Form.Item
                     name="confirmPassword"
-                    label="确认新密码"
+                    label={t('db:mysql.changePassword.confirmPassword')}
                     dependencies={['password']}
                     rules={[
-                        { required: true, message: '请再次输入新密码' },
+                        { required: true, message: t('db:mysql.changePassword.confirmPasswordRequired') },
                         ({ getFieldValue }) => ({
                             validator(_, value) {
                                 if (!value || getFieldValue('password') === value) {
                                     return Promise.resolve()
                                 }
-                                return Promise.reject(new Error('两次输入的密码不一致'))
+                                return Promise.reject(new Error(t('db:mysql.changePassword.mismatch')))
                             },
                         }),
                     ]}
                 >
                     <Input.Password
                         prefix={<KeyRound size={14} color="var(--text-dim)" />}
-                        placeholder="请再次输入新密码"
+                        placeholder={t('db:mysql.changePassword.confirmPasswordPlaceholder')}
                     />
                 </Form.Item>
             </Form>

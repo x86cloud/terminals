@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Input, Button, Tooltip } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { ArrowUp, ArrowDown, X as CloseIcon } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export default function TerminalView({ sessionId, active }: Props) {
+    const { t: tr } = useTranslation(['ssh', 'common'])
     const { isDark } = useTheme()
     const hostRef = useRef<HTMLDivElement>(null)
     const termRef = useRef<Terminal | null>(null)
@@ -291,7 +293,7 @@ export default function TerminalView({ sessionId, active }: Props) {
 
         const offClosed = subscribe(`terminal:closed:${sessionId}`, (reason: string) => {
             flushOutput()
-            term.writeln(`\r\n\x1b[33m[${reason || '连接已断开'}]\x1b[0m`)
+            term.writeln(`\r\n\x1b[33m[${reason || tr('ssh:terminal.disconnected')}]\x1b[0m`)
         })
 
         // 通知后端终端视图已挂载就绪，立即同步实际视口尺寸并回放缓冲的早期 Prompt 与 MOTD
@@ -424,13 +426,13 @@ export default function TerminalView({ sessionId, active }: Props) {
                     <Input
                         ref={searchInputRef as any}
                         size="small"
-                        placeholder="查找终端内容..."
+                        placeholder={tr('ssh:terminal.searchPlaceholder')}
                         value={searchQuery}
                         onChange={handleSearchChange}
                         onKeyDown={handleSearchKeyDown}
                         style={{ width: 180 }}
                     />
-                    <Tooltip title="区分大小写">
+                    <Tooltip title={tr('ssh:terminal.caseSensitive')}>
                         <Button
                             size="small"
                             type={caseSensitive ? 'primary' : 'text'}
@@ -445,7 +447,7 @@ export default function TerminalView({ sessionId, active }: Props) {
                             Aa
                         </Button>
                     </Tooltip>
-                    <Tooltip title="查找上一个 (Shift+Enter)">
+                    <Tooltip title={tr('ssh:terminal.prevMatch')}>
                         <Button
                             size="small"
                             type="text"
@@ -453,7 +455,7 @@ export default function TerminalView({ sessionId, active }: Props) {
                             onClick={handleSearchPrev}
                         />
                     </Tooltip>
-                    <Tooltip title="查找下一个 (Enter)">
+                    <Tooltip title={tr('ssh:terminal.nextMatch')}>
                         <Button
                             size="small"
                             type="text"
@@ -461,7 +463,7 @@ export default function TerminalView({ sessionId, active }: Props) {
                             onClick={handleSearchNext}
                         />
                     </Tooltip>
-                    <Tooltip title="关闭 (Esc)">
+                    <Tooltip title={tr('ssh:terminal.close')}>
                         <Button
                             size="small"
                             type="text"
@@ -487,34 +489,34 @@ export default function TerminalView({ sessionId, active }: Props) {
                         items: [
                             {
                                 key: 'copy',
-                                label: '复制',
+                                label: tr('ssh:terminal.copy'),
                                 icon: 'copy',
                                 disabled: !hasSelection,
                                 onClick: copySelection,
                             },
-                            { key: 'paste', label: '粘贴', icon: 'file', onClick: paste },
+                            { key: 'paste', label: tr('ssh:terminal.paste'), icon: 'file', onClick: paste },
                             {
                                 key: 'askAi',
-                                label: '问AI',
+                                label: tr('ssh:terminal.askAi'),
                                 icon: 'bot',
                                 disabled: !hasSelection,
                                 onClick: () => {
                                     if (selectionText) {
-                                        const prompt = `请分析并解答以下远程服务器上终端选中的内容：\n\`\`\`\n${selectionText}\n\`\`\``
+                                        const prompt = tr('ssh:terminal.askAiPrompt', { text: selectionText })
                                         emitEvent('agent:ask', prompt)
                                     }
                                 },
                             },
                             {
                                 key: 'search',
-                                label: '查找 (Ctrl+F)',
+                                label: `${tr('ssh:terminal.search')} (Ctrl+F)`,
                                 icon: 'search',
                                 onClick: () => setSearchOpen(true),
                             },
                             { key: 'd', label: '', divider: true },
                             {
                                 key: 'clear',
-                                label: '清屏',
+                                label: tr('ssh:terminal.clear'),
                                 icon: 'refresh',
                                 onClick: () => {
                                     termRef.current?.clear()

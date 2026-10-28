@@ -1,6 +1,7 @@
 import React from 'react'
 import { Input, InputNumber, Space, Switch, Collapse, Select, Button } from 'antd'
 import { Key, ShieldCheck, Workflow, Zap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import { BasicFields } from './BasicFields'
@@ -12,6 +13,8 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
     groups,
     setError,
 }) => {
+    const { t } = useTranslation(['server', 'common'])
+
     return (
         <Space orientation="vertical" size={14} style={{ width: '100%' }}>
             <BasicFields form={form} update={update} groups={groups} />
@@ -19,15 +22,15 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
             {/* Host + Port */}
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>主机地址 (Host / IP)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:host')}</div>
                     <Input
-                        placeholder="127.0.0.1 / example.com"
+                        placeholder={t('server:hostPlaceholder')}
                         value={form.host}
                         onChange={(e) => update({ host: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>端口 (Port)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:port')}</div>
                     <InputNumber
                         min={1}
                         max={65535}
@@ -41,17 +44,17 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
             {/* 用户名与密码 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>用户名</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:username')}</div>
                     <Input
-                        placeholder="root"
+                        placeholder={t('server:usernamePlaceholder')}
                         value={form.username}
                         onChange={(e) => update({ username: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>密码</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:password')}</div>
                     <Input.Password
-                        placeholder="请输入数据库密码"
+                        placeholder={t('server:passwordPlaceholder')}
                         value={form.password || ''}
                         onChange={(e) => update({ password: e.target.value })}
                     />
@@ -61,15 +64,15 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
             {/* 默认数据库与字符集 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认数据库 (Database, 可选)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:database')}</div>
                     <Input
-                        placeholder="如: mysql / app_db"
+                        placeholder={t('server:databasePlaceholder')}
                         value={form.database || ''}
                         onChange={(e) => update({ database: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>字符集编码 (Charset)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:charset')}</div>
                     <Input
                         placeholder="utf8mb4"
                         value={form.charset || 'utf8mb4'}
@@ -89,17 +92,17 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <Workflow size={13} color={form.mysqlSSHEnabled ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.mysqlSSHEnabled ? 600 : 400 }}>
-                                    SSH 跳板机隧道穿透 (SSH Bastion Tunnel)
+                                    {t('server:mysql.tunnel')}
                                 </span>
-                                {form.mysqlSSHEnabled && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[已启用]</span>}
+                                {form.mysqlSSHEnabled && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{t('server:enabled')}]</span>}
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
-                                        <div style={{ fontSize: 13, fontWeight: 500 }}>启用 SSH 隧道转发</div>
-                                        <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>通过 Bastion / 跳板机穿透内网访问 MySQL</div>
+                                        <div style={{ fontSize: 13, fontWeight: 500 }}>{t('server:mysql.tunnel')}</div>
+                                        <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{t('server:mysql.tunnelDesc')}</div>
                                     </div>
                                     <Switch
                                         checked={!!form.mysqlSSHEnabled}
@@ -111,7 +114,7 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                                     <>
                                         <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 10 }}>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>跳板机地址 (SSH Host)</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mysql.bastionHost')}</div>
                                                 <Input
                                                     placeholder="jump.example.com / 192.168.1.10"
                                                     value={form.mysqlSSHHost || ''}
@@ -119,7 +122,7 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                                                 />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>SSH 端口</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mysql.bastionPort')}</div>
                                                 <InputNumber
                                                     min={1}
                                                     max={65535}
@@ -132,7 +135,7 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
 
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>跳板机用户名</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mysql.bastionUser')}</div>
                                                 <Input
                                                     placeholder="root / ubuntu"
                                                     value={form.mysqlSSHUser || ''}
@@ -140,9 +143,9 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                                                 />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>私钥口令 (Passphrase, 可选)</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:passphrase')}</div>
                                                 <Input.Password
-                                                    placeholder="如有私钥密码请填写"
+                                                    placeholder={t('server:passphrasePlaceholder')}
                                                     value={form.mysqlSSHPassphrase || ''}
                                                     onChange={(e) => update({ mysqlSSHPassphrase: e.target.value })}
                                                 />
@@ -150,10 +153,10 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                                         </div>
 
                                         <div>
-                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>跳板机私钥文件 (SSH Private Key)</div>
+                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:privateKey')}</div>
                                             <Space.Compact style={{ width: '100%' }}>
                                                 <Input
-                                                    placeholder="私钥文件路径 (.pem / id_rsa) 或留空使用密码认证"
+                                                    placeholder={t('server:privateKeyPlaceholder')}
                                                     value={form.mysqlSSHKeyPath || ''}
                                                     onChange={(e) => update({ mysqlSSHKeyPath: e.target.value })}
                                                 />
@@ -165,7 +168,7 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                                                         setError(errorMessage(err))
                                                     }
                                                 }}>
-                                                    浏览
+                                                    {t('server:browse')}
                                                 </Button>
                                             </Space.Compact>
                                         </div>
@@ -180,23 +183,23 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <ShieldCheck size={13} color={form.mysqlTLS ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.mysqlTLS ? 600 : 400 }}>
-                                    SSL / TLS 加密安全 (SSL/TLS Modes)
+                                    {t('server:mysql.security')}
                                 </span>
                                 {form.mysqlTLS && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{form.mysqlTLS}]</span>}
                             </Space>
                         ),
                         children: (
                             <div>
-                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>SSL 传输加密模式</div>
+                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mysql.sslMode')}</div>
                                 <Select
                                     style={{ width: '100%' }}
                                     value={form.mysqlTLS || ''}
                                     onChange={(val) => update({ mysqlTLS: val, mysqlSSLEnabled: !!val })}
                                     options={[
-                                        { label: '禁用 (Disabled / 默认明文)', value: '' },
-                                        { label: '首选 (Preferred / 服务端支持时加密)', value: 'preferred' },
-                                        { label: '强制加密校验 (Required / true)', value: 'true' },
-                                        { label: '跳过证书校验 (Skip-Verify / 自签名证书测试)', value: 'skip-verify' },
+                                        { label: t('server:mysql.sslDisable'), value: '' },
+                                        { label: 'Preferred (TLS)', value: 'preferred' },
+                                        { label: t('server:mysql.sslRequire'), value: 'true' },
+                                        { label: 'Skip-Verify (TLS)', value: 'skip-verify' },
                                     ]}
                                 />
                             </div>
@@ -207,13 +210,13 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                         label: (
                             <Space size={6}>
                                 <Zap size={13} />
-                                <span style={{ fontSize: 13 }}>连接池与生命周期 (Connection Pool)</span>
+                                <span style={{ fontSize: 13 }}>{t('server:mysql.connectionPool')}</span>
                             </Space>
                         ),
                         children: (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4 }}>最大打开连接数</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.maxOpenConns')}</div>
                                     <InputNumber
                                         min={1}
                                         max={500}
@@ -223,7 +226,7 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4 }}>最大空闲连接数</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.maxIdleConns')}</div>
                                     <InputNumber
                                         min={0}
                                         max={100}
@@ -233,13 +236,13 @@ export const MysqlForm: React.FC<ServerFormProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4 }}>最大存活时间</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.connMaxLifetime')}</div>
                                     <InputNumber
                                         min={0}
                                         max={86400}
                                         style={{ width: '100%' }}
                                         value={form.mysqlConnMaxLifetime ?? 3600}
-                                        addonAfter="秒"
+                                        addonAfter={t('server:second')}
                                         onChange={(v) => update({ mysqlConnMaxLifetime: v ?? 3600 })}
                                     />
                                 </div>

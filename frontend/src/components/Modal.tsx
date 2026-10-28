@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Modal as AntdModal, Input, Button } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 interface BaseProps {
     open: boolean
@@ -43,6 +44,7 @@ export function PromptModal({
     state: PromptState
     onCancel: () => void
 }) {
+    const { t } = useTranslation('common')
     const [value, setValue] = useState(state.value)
     const inputRef = useRef<any>(null)
 
@@ -68,15 +70,15 @@ export function PromptModal({
             onClose={onCancel}
             footer={
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                    <Button onClick={onCancel}>取消</Button>
+                    <Button onClick={onCancel}>{t('cancel')}</Button>
                     <Button type="primary" danger={state.danger} onClick={submit}>
-                        {state.confirmText || '确定'}
+                        {state.confirmText || t('ok')}
                     </Button>
                 </div>
             }
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: 13, opacity: 0.85 }}>{state.label || '名称'}</span>
+                <span style={{ fontSize: 13, opacity: 0.85 }}>{state.label || t('name')}</span>
                 <Input
                     ref={inputRef}
                     value={value}
@@ -99,6 +101,8 @@ export interface ConfirmState {
 }
 
 export function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCancel: () => void }) {
+    const { t } = useTranslation('common')
+
     return (
         <Modal
             open={state.open}
@@ -106,13 +110,13 @@ export function ConfirmModal({ state, onCancel }: { state: ConfirmState; onCance
             onClose={onCancel}
             footer={
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
-                    <Button onClick={onCancel}>{state.cancelText || '取消'}</Button>
+                    <Button onClick={onCancel}>{state.cancelText || t('cancel')}</Button>
                     <Button
                         type="primary"
                         danger={state.danger}
                         onClick={() => state.onConfirm?.()}
                     >
-                        {state.confirmText || '确定'}
+                        {state.confirmText || t('ok')}
                     </Button>
                 </div>
             }

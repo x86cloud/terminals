@@ -1,4 +1,5 @@
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {useTranslation} from 'react-i18next'
 import {API, subscribe} from '@/api'
 import {errorMessage} from '@/utils'
 import {
@@ -36,6 +37,7 @@ export interface ApiExecState {
 }
 
 export function useApi() {
+    const { t } = useTranslation(['api', 'common'])
     const [method, setMethod] = useState<ApiMethod>('GET')
     const [url, setUrl] = useState('')
     const [params, setParams] = useState<ApiHeader[]>([])
@@ -150,7 +152,7 @@ export function useApi() {
     const doSend = useCallback(async () => {
         const raw = url.trim()
         if (!raw) {
-            setError('请输入请求地址')
+            setError(t('api:useApi.urlRequired', { defaultValue: '请输入请求地址' }))
             return
         }
         const target = /^https?:\/\//i.test(raw) ? raw : 'http://' + raw
@@ -225,7 +227,7 @@ export function useApi() {
     const wsConnect = useCallback(async () => {
         const raw = url.trim()
         if (!raw) {
-            setError('请输入 WebSocket 地址')
+            setError(t('api:useApi.wsUrlRequired', { defaultValue: '请输入 WebSocket 地址' }))
             return
         }
         const target = /^wss?:\/\//i.test(raw) ? raw : 'ws://' + raw
@@ -296,7 +298,7 @@ export function useApi() {
             setBody(JSON.stringify(JSON.parse(body), null, 2))
             setError('')
         } catch {
-            setError('请求体不是合法的 JSON')
+            setError(t('api:useApi.invalidJsonBody', { defaultValue: '请求体不是合法的 JSON' }))
         }
     }, [body, bodyType])
 
@@ -410,7 +412,7 @@ export function useApi() {
 
     const saveAsNewApi = useCallback((name: string, targetFolderId?: string | null) => {
         const id = 'api_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
-        const apiName = name.trim() || (mode === 'ws' ? 'WebSocket 连接' : `${method} ${url || '新接口'}`)
+        const apiName = name.trim() || (mode === 'ws' ? t('api:saveModal.defaultWs', { defaultValue: 'WebSocket 连接' }) : `${method} ${url || t('api:saveModal.newApiFallback', { defaultValue: '新接口' })}`)
         const newItem: SavedApiItem = {
             id,
             name: apiName,
@@ -448,7 +450,7 @@ export function useApi() {
 
     const createFolder = useCallback((name: string, parentFolderId?: string | null) => {
         const id = 'folder_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)
-        const folderName = name.trim() || '新建分组'
+        const folderName = name.trim() || t('api:useApi.newFolderDefault', { defaultValue: '新建分组' })
         const newFolder: ApiFolderNode = {
             id,
             name: folderName,
@@ -493,7 +495,7 @@ export function useApi() {
         const cloneItem: SavedApiItem = {
             ...(target as SavedApiItem),
             id: cloneId,
-            name: `${target.name} - 副本`,
+            name: t('api:useApi.duplicateSuffix', { defaultValue: `${target.name} - 副本`, name: target.name }),
             createdAt: Date.now(),
             updatedAt: Date.now(),
         }
@@ -606,10 +608,10 @@ export function useApi() {
         try {
             parsed = JSON.parse(raw)
         } catch {
-            throw new Error('导入文件不是合法的 JSON 格式')
+            throw new Error(t('api:useApi.importInvalidJson', { defaultValue: '导入文件不是合法的 JSON 格式' }))
         }
         if (!Array.isArray(parsed)) {
-            throw new Error('导入文件格式不合法，根节点需为 JSON 数组')
+            throw new Error(t('api:useApi.importMustBeArray', { defaultValue: '导入文件格式不合法，根节点需为 JSON 数组' }))
         }
         setApiTree(parsed as ApiTreeNode[])
         await API.saveApiTree(JSON.stringify(parsed, null, 2))

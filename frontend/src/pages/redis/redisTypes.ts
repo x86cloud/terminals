@@ -1,4 +1,5 @@
 import { RedisKeyItem, RedisValue, RedisValueType } from '@/types'
+import i18n from '@/i18n'
 
 export interface KeyTreeNode {
     key: string
@@ -103,7 +104,7 @@ export function buildKeyTree(
                 if (node.hasSelfKey && node.fullKey) {
                     children.unshift({
                         key: `${node.key}::__self__`,
-                        name: `${node.name} (当前键)`,
+                        name: `${node.name}${i18n.t('redis:keys.currentKey', ' (当前键)')}`,
                         fullKey: node.fullKey,
                         isLeaf: true,
                         count: 1,
@@ -175,22 +176,40 @@ export const TYPE_COLOR: Record<RedisValueType, { bg: string; text: string; bord
 
 export function formatTtl(ttlSec: number | undefined | null): { text: string; isPermanent: boolean; isExpired: boolean } {
     if (ttlSec === undefined || ttlSec === null) return { text: '--', isPermanent: false, isExpired: false }
-    if (ttlSec === -1) return { text: '永久有效', isPermanent: true, isExpired: false }
-    if (ttlSec === -2) return { text: '已过期', isPermanent: false, isExpired: true }
-    if (ttlSec < 60) return { text: `${ttlSec}秒`, isPermanent: false, isExpired: false }
+    if (ttlSec === -1) return { text: i18n.t('redis:types.permanent', '永久有效'), isPermanent: true, isExpired: false }
+    if (ttlSec === -2) return { text: i18n.t('redis:types.expired', '已过期'), isPermanent: false, isExpired: true }
+    if (ttlSec < 60) return { text: i18n.t('redis:types.seconds', { s: ttlSec, defaultValue: `${ttlSec}秒` }), isPermanent: false, isExpired: false }
     if (ttlSec < 3600) {
         const m = Math.floor(ttlSec / 60)
         const s = ttlSec % 60
-        return { text: s > 0 ? `${m}分 ${s}秒` : `${m}分钟`, isPermanent: false, isExpired: false }
+        return {
+            text: s > 0
+                ? i18n.t('redis:types.minutesSeconds', { m, s, defaultValue: `${m}分 ${s}秒` })
+                : i18n.t('redis:types.minutes', { m, defaultValue: `${m}分钟` }),
+            isPermanent: false,
+            isExpired: false,
+        }
     }
     if (ttlSec < 86400) {
         const h = Math.floor(ttlSec / 3600)
         const m = Math.floor((ttlSec % 3600) / 60)
-        return { text: m > 0 ? `${h}小时 ${m}分` : `${h}小时`, isPermanent: false, isExpired: false }
+        return {
+            text: m > 0
+                ? i18n.t('redis:types.hoursMinutes', { h, m, defaultValue: `${h}小时 ${m}分` })
+                : i18n.t('redis:types.hours', { h, defaultValue: `${h}小时` }),
+            isPermanent: false,
+            isExpired: false,
+        }
     }
     const d = Math.floor(ttlSec / 86400)
     const h = Math.floor((ttlSec % 86400) / 3600)
-    return { text: h > 0 ? `${d}天 ${h}小时` : `${d}天`, isPermanent: false, isExpired: false }
+    return {
+        text: h > 0
+            ? i18n.t('redis:types.daysHours', { d, h, defaultValue: `${d}天 ${h}小时` })
+            : i18n.t('redis:types.days', { d, defaultValue: `${d}天` }),
+        isPermanent: false,
+        isExpired: false,
+    }
 }
 
 export { formatBytes } from '@/utils'
@@ -236,11 +255,12 @@ export const TABS = ['keys', 'pipeline', 'tx', 'pubsub', 'keyspace', 'queue', 'm
 export type Tab = typeof TABS[number]
 
 export const TAB_LABEL: Record<Tab, string> = {
-    keys: '键值',
-    pipeline: 'Pipeline',
-    tx: '事务',
-    pubsub: '发布订阅',
-    keyspace: '键事件',
-    queue: '队列',
-    monitor: '监控',
+    get keys() { return i18n.t('redis:tabs.keys', { defaultValue: '键值' }) },
+    get pipeline() { return i18n.t('redis:tabs.pipeline', { defaultValue: 'Pipeline' }) },
+    get tx() { return i18n.t('redis:tabs.tx', { defaultValue: '事务' }) },
+    get pubsub() { return i18n.t('redis:tabs.pubsub', { defaultValue: '发布订阅' }) },
+    get keyspace() { return i18n.t('redis:tabs.keyspace', { defaultValue: '键事件' }) },
+    get queue() { return i18n.t('redis:tabs.queue', { defaultValue: '队列' }) },
+    get monitor() { return i18n.t('redis:tabs.monitor', { defaultValue: '监控' }) },
 }
+

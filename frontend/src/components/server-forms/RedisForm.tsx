@@ -1,6 +1,7 @@
 import React from 'react'
 import { Input, InputNumber, Radio, Space, Switch, Collapse, Select } from 'antd'
 import { Network, ShieldCheck, Zap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BasicFields } from './BasicFields'
 import { ServerFormProps } from './types'
 
@@ -9,6 +10,8 @@ export const RedisForm: React.FC<ServerFormProps> = ({
     update,
     groups,
 }) => {
+    const { t } = useTranslation(['server', 'common'])
+
     return (
         <Space orientation="vertical" size={14} style={{ width: '100%' }}>
             <BasicFields form={form} update={update} groups={groups} />
@@ -16,15 +19,15 @@ export const RedisForm: React.FC<ServerFormProps> = ({
             {/* Host + Port */}
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>主机地址 (Host / IP)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:host')}</div>
                     <Input
-                        placeholder="127.0.0.1 / example.com"
+                        placeholder={t('server:hostPlaceholder')}
                         value={form.host}
                         onChange={(e) => update({ host: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>端口 (Port)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:port')}</div>
                     <InputNumber
                         min={1}
                         max={65535}
@@ -38,17 +41,17 @@ export const RedisForm: React.FC<ServerFormProps> = ({
             {/* ACL 用户名与密码 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>用户名 (ACL Username, 可选)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.aclUsername')}</div>
                     <Input
-                        placeholder="Redis 6+ ACL 用户名，默认留空"
+                        placeholder={t('server:redis.aclUsernamePlaceholder')}
                         value={form.redisUsername || ''}
                         onChange={(e) => update({ redisUsername: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>访问密码 (AUTH)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.authPassword')}</div>
                     <Input.Password
-                        placeholder="无密码可留空"
+                        placeholder={t('server:redis.authPasswordPlaceholder')}
                         value={form.password || ''}
                         onChange={(e) => update({ password: e.target.value })}
                     />
@@ -56,7 +59,7 @@ export const RedisForm: React.FC<ServerFormProps> = ({
             </div>
 
             <div>
-                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认数据库 (DB Index)</div>
+                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.dbIndex')}</div>
                 <InputNumber
                     min={0}
                     max={15}
@@ -77,11 +80,11 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <Network size={13} color={form.redisMode && form.redisMode !== 'single' ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.redisMode && form.redisMode !== 'single' ? 600 : 400 }}>
-                                    拓扑与部署模式 (Deployment Mode)
+                                    {t('server:redis.deploymentMode')}
                                 </span>
                                 {form.redisMode && form.redisMode !== 'single' && (
                                     <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>
-                                        [{form.redisMode === 'sentinel' ? '哨兵模式' : '集群模式'}]
+                                        [{form.redisMode === 'sentinel' ? t('server:redis.modeSentinel') : t('server:redis.modeCluster')}]
                                     </span>
                                 )}
                             </Space>
@@ -89,31 +92,31 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>部署架构模式</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.archMode')}</div>
                                     <Radio.Group
                                         size="small"
                                         value={form.redisMode || 'single'}
                                         onChange={(e) => update({ redisMode: e.target.value })}
                                         buttonStyle="solid"
                                     >
-                                        <Radio.Button value="single">单机模式 (Single)</Radio.Button>
-                                        <Radio.Button value="sentinel">哨兵模式 (Sentinel)</Radio.Button>
-                                        <Radio.Button value="cluster">集群模式 (Cluster)</Radio.Button>
+                                        <Radio.Button value="single">{t('server:redis.modeSingle')}</Radio.Button>
+                                        <Radio.Button value="sentinel">{t('server:redis.modeSentinel')}</Radio.Button>
+                                        <Radio.Button value="cluster">{t('server:redis.modeCluster')}</Radio.Button>
                                     </Radio.Group>
                                 </div>
 
                                 {form.redisMode === 'sentinel' && (
                                     <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
                                         <div>
-                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>哨兵节点地址 (逗号分隔)</div>
+                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.sentinelNodes')}</div>
                                             <Input
-                                                placeholder="127.0.0.1:26379,127.0.0.1:26380"
+                                                placeholder={t('server:redis.sentinelNodesPlaceholder')}
                                                 value={form.redisSentinels || ''}
                                                 onChange={(e) => update({ redisSentinels: e.target.value })}
                                             />
                                         </div>
                                         <div>
-                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>Master 名称</div>
+                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.masterName')}</div>
                                             <Input
                                                 placeholder="mymaster"
                                                 value={form.redisMasterName || 'mymaster'}
@@ -125,9 +128,9 @@ export const RedisForm: React.FC<ServerFormProps> = ({
 
                                 {form.redisMode === 'cluster' && (
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>集群节点地址 (逗号分隔)</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.clusterNodes')}</div>
                                         <Input
-                                            placeholder="127.0.0.1:7000,127.0.0.1:7001,127.0.0.1:7002"
+                                            placeholder={t('server:redis.clusterNodesPlaceholder')}
                                             value={form.redisClusterNodes || ''}
                                             onChange={(e) => update({ redisClusterNodes: e.target.value })}
                                         />
@@ -142,32 +145,32 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <ShieldCheck size={13} color={form.tls ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.tls ? 600 : 400 }}>
-                                    安全与数据序列化 (TLS & Serialization)
+                                    {t('server:redis.security')}
                                 </span>
-                                {form.tls && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[已启用 TLS]</span>}
+                                {form.tls && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{t('server:redis.tlsActive')}]</span>}
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <div style={{ fontSize: 13, fontWeight: 500 }}>启用 TLS / SSL 加密传输</div>
-                                    <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>支持加密通道连接云端或私有 Redis</div>
+                                    <div>
+                                        <div style={{ fontSize: 13, fontWeight: 500 }}>{t('server:redis.tlsEnable')}</div>
+                                        <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{t('server:redis.tlsDesc')}</div>
+                                    </div>
+                                    <Switch
+                                        checked={!!form.tls}
+                                        onChange={(checked) => update({ tls: checked })}
+                                    />
                                 </div>
-                                <Switch
-                                    checked={!!form.tls}
-                                    onChange={(checked) => update({ tls: checked })}
-                                />
-                                </div>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>数据展示与自动序列化</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:redis.serialization')}</div>
                                     <Select
                                         style={{ width: '100%' }}
                                         value={form.redisSerialization || 'none'}
                                         onChange={(val) => update({ redisSerialization: val })}
                                         options={[
-                                            { label: '无 (原生字符串/二进制)', value: 'none' },
-                                            { label: 'JSON 自动格式化', value: 'json' },
+                                            { label: t('server:redis.rawFormat'), value: 'none' },
+                                            { label: t('server:redis.jsonFormat'), value: 'json' },
                                         ]}
                                     />
                                 </div>
@@ -179,14 +182,14 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                         label: (
                             <Space size={6}>
                                 <Zap size={13} />
-                                <span style={{ fontSize: 13 }}>连接池、超时与熔断控制 (Pool & Resilience)</span>
+                                <span style={{ fontSize: 13 }}>{t('server:redis.poolResilience')}</span>
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>连接池大小</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.poolSize')}</div>
                                         <InputNumber
                                             min={1}
                                             max={500}
@@ -196,7 +199,7 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>最小空闲连接</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.minIdle')}</div>
                                         <InputNumber
                                             min={0}
                                             max={100}
@@ -206,7 +209,7 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>最大空闲连接</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.maxIdle')}</div>
                                         <InputNumber
                                             min={0}
                                             max={200}
@@ -219,35 +222,35 @@ export const RedisForm: React.FC<ServerFormProps> = ({
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>拨号超时</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.dialTimeout')}</div>
                                         <InputNumber
                                             min={1}
                                             max={60}
                                             style={{ width: '100%' }}
                                             value={form.redisDialTimeout ?? 5}
-                                            addonAfter="秒"
+                                            addonAfter={t('server:second')}
                                             onChange={(v) => update({ redisDialTimeout: v ?? 5 })}
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>读超时</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.readTimeout')}</div>
                                         <InputNumber
                                             min={1}
                                             max={60}
                                             style={{ width: '100%' }}
                                             value={form.redisReadTimeout ?? 3}
-                                            addonAfter="秒"
+                                            addonAfter={t('server:second')}
                                             onChange={(v) => update({ redisReadTimeout: v ?? 3 })}
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>写超时</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.writeTimeout')}</div>
                                         <InputNumber
                                             min={1}
                                             max={60}
                                             style={{ width: '100%' }}
                                             value={form.redisWriteTimeout ?? 3}
-                                            addonAfter="秒"
+                                            addonAfter={t('server:second')}
                                             onChange={(v) => update({ redisWriteTimeout: v ?? 3 })}
                                         />
                                     </div>
@@ -255,7 +258,7 @@ export const RedisForm: React.FC<ServerFormProps> = ({
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>最大重试次数</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.maxRetries')}</div>
                                         <InputNumber
                                             min={0}
                                             max={10}
@@ -265,7 +268,7 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>熔断失败阈值</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.breakerThreshold')}</div>
                                         <InputNumber
                                             min={1}
                                             max={50}
@@ -275,13 +278,13 @@ export const RedisForm: React.FC<ServerFormProps> = ({
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>熔断冷却时间</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:redis.breakerCooldown')}</div>
                                         <InputNumber
                                             min={1}
                                             max={300}
                                             style={{ width: '100%' }}
                                             value={form.redisBreakerCooldown ?? 10}
-                                            addonAfter="秒"
+                                            addonAfter={t('server:second')}
                                             onChange={(v) => update({ redisBreakerCooldown: v ?? 10 })}
                                         />
                                     </div>

@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import i18n from 'i18next'
 import { API, subscribe } from '@/api'
 import { AiMessage, AgentSessionItem } from '@/types'
 import { appStorage, StorageKey } from '@/utils/storage'
@@ -103,7 +104,7 @@ export function useAgentSessions() {
         try {
             const list = await API.agentListSessions()
             if (!list || list.length === 0) {
-                const created = await API.agentCreateSession('新会话')
+                const created = await API.agentCreateSession(i18n.t('agent:newSessionDefault', { defaultValue: '新会话' }))
                 setSessions([created])
                 setActiveSessionId(created.id)
                 activeSessionIdRef.current = created.id
@@ -128,7 +129,7 @@ export function useAgentSessions() {
 
     const createSession = useCallback(async (title?: string) => {
         try {
-            const sessionTitle = title?.trim() || '新会话'
+            const sessionTitle = title?.trim() || i18n.t('agent:newSessionDefault', { defaultValue: '新会话' })
             const created = await API.agentCreateSession(sessionTitle)
             setSessions((prev) => [created, ...prev.filter((s) => s.id !== created.id)])
             setActiveSessionId(created.id)
@@ -185,7 +186,7 @@ export function useAgentSessions() {
                         appStorage.set(StorageKey.ActiveAgentSessionId, nextId)
                         await loadSessionMessages(nextId)
                     } else {
-                        const created = await API.agentCreateSession('新会话')
+                        const created = await API.agentCreateSession(i18n.t('agent:newSessionDefault', { defaultValue: '新会话' }))
                         setSessions([created])
                         setActiveSessionId(created.id)
                         activeSessionIdRef.current = created.id

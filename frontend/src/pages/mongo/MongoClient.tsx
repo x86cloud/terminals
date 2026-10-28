@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button, Dropdown, MenuProps, Tooltip, Space, Tag, App } from 'antd'
 import Tree from '@/components/common/Tree'
 import {
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export default function MongoClient({ session, onClose, onChange }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const id = session.id
     const onChangeRef = useRef(onChange)
@@ -58,21 +60,21 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
     const [tabs, setTabs] = useState<MongoTabItem[]>([
         {
             key: 'status',
-            label: '性能监控',
+            label: t('mongo.client.statusTab', '性能监控'),
             type: 'status',
             dbName: currentDb,
             closable: false,
         },
         {
             key: 'users',
-            label: '用户与权限',
+            label: t('mongo.client.usersTab', '用户与权限'),
             type: 'users',
             dbName: currentDb,
             closable: false,
         },
         {
             key: 'mql_1',
-            label: 'MQL 编辑器',
+            label: t('mongo.client.mqlTab', 'MQL 编辑器'),
             type: 'query',
             dbName: currentDb,
             closable: false,
@@ -103,12 +105,12 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 const list = await API.mongoCollections(id, dbName)
                 setCollectionsMap((prev) => ({ ...prev, [dbName]: list || [] }))
             } catch (e: any) {
-                console.error(`加载集合失败 [${dbName}]:`, e)
+                console.error(t('mongo.client.loadCollFail', { db: dbName, error: e?.message || e, defaultValue: `加载集合失败 [${dbName}]:` }), e)
             } finally {
                 setLoadingDbs((prev) => ({ ...prev, [dbName]: false }))
             }
         },
-        [id]
+        [id, t]
     )
 
     // 连接初始化与获取数据库列表
@@ -131,11 +133,11 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 setExpandedKeys([`db_${targetDb}`])
             }
         } catch (e: any) {
-            message.error(`连接 MongoDB 失败: ${e.message || e}`)
+            message.error(t('mongo.client.connectFail', { error: e.message || e, defaultValue: `连接 MongoDB 失败: ${e.message || e}` }))
         } finally {
             setLoadingTree(false)
         }
-    }, [id, loadCollections])
+    }, [id, loadCollections, t])
 
     useEffect(() => {
         void initConnection()
@@ -243,7 +245,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 case 'createdb': {
                     const firstColl = extra?.firstColl || 'default'
                     await API.mongoCreateDatabase(id, objName, firstColl)
-                    message.success(`数据库 ${objName} 创建成功`)
+                    message.success(t('mongo.client.dbCreated', { name: objName, defaultValue: `数据库 ${objName} 创建成功` }))
                     await initConnection()
                     break
                 }
@@ -262,7 +264,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                     } else {
                         await API.mongoCreateCollection(id, objDb, objName)
                     }
-                    message.success(`集合 ${objName} 创建成功`)
+                    message.success(t('mongo.client.collCreated', { name: objName, defaultValue: `集合 ${objName} 创建成功` }))
                     await loadCollections(objDb)
                     openCollectionTab(objDb, objName)
                     break
@@ -277,14 +279,15 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                         targetColl: objName,
                         copyData,
                     })
-                    message.success(`集合已成功克隆至 ${targetDb}.${objName}${copyData ? ` (已拷贝 ${count} 条文档)` : ''}`)
+                    const copiedInfo = copyData ? t('mongo.client.copiedDocs', { count, defaultValue: ` (已拷贝 ${count} 条文档)` }) : ''
+                    message.success(t('mongo.client.collCloned', { targetDb, name: objName, copiedInfo, defaultValue: `集合已成功克隆至 ${targetDb}.${objName}${copiedInfo}` }))
                     await loadCollections(targetDb)
                     openCollectionTab(targetDb, objName)
                     break
                 }
                 case 'renamecoll': {
                     await API.mongoRenameCollection(id, objDb, objColl, objName)
-                    message.success(`集合已重命名为 ${objName}`)
+                    message.success(t('mongo.client.collRenamed', { name: objName, defaultValue: `集合已重命名为 ${objName}` }))
                     await loadCollections(objDb)
                     // 如果旧集合 Tab 打开则关闭并打开新 Tab
                     handleCloseTab(`data:${objDb}.${objColl}`)
@@ -293,7 +296,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 }
                 case 'truncatecoll': {
                     const count = await API.mongoDeleteMany(id, objDb, objColl, '{}')
-                    message.success(`已清空集合 ${objColl} (${count} 条文档)`)
+                    message.success(t('mongo.client.collTruncated', { coll: objColl, count, defaultValue: `已清空集合 ${objColl} (${count} 条文档)` }))
                     const tabKey = `data:${objDb}.${objColl}`
                     if (tabs.some((t) => t.key === tabKey)) {
                         handleCloseTab(tabKey)
@@ -303,14 +306,14 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                 }
                 case 'dropcoll': {
                     await API.mongoDropCollection(id, objDb, objColl)
-                    message.success(`已删除集合 ${objColl}`)
+                    message.success(t('mongo.client.collDropped', { coll: objColl, defaultValue: `已删除集合 ${objColl}` }))
                     handleCloseTab(`data:${objDb}.${objColl}`)
                     await loadCollections(objDb)
                     break
                 }
                 case 'dropdb': {
                     await API.mongoDropDatabase(id, objDb)
-                    message.success(`已删除数据库 ${objDb}`)
+                    message.success(t('mongo.client.dbDropped', { db: objDb, defaultValue: `已删除数据库 ${objDb}` }))
                     await initConnection()
                     break
                 }
@@ -351,7 +354,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         {
             key: 'new-coll',
             icon: <Plus size={13} />,
-            label: '新建集合',
+            label: t('mongo.client.newColl', '新建集合'),
             onClick: () => {
                 setObjDb(dbName)
                 setObjName('')
@@ -361,21 +364,21 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         {
             key: 'refresh',
             icon: <RotateCw size={13} />,
-            label: '刷新集合',
+            label: t('mongo.client.refreshColls', '刷新集合'),
             onClick: () => loadCollections(dbName),
         },
         {
             key: 'copy-name',
             icon: <Copy size={13} />,
-            label: '复制数据库名',
-            onClick: async () => { if (await copyText(dbName)) message.success('已复制数据库名') },
+            label: t('mongo.client.copyDbName', '复制数据库名'),
+            onClick: async () => { if (await copyText(dbName)) message.success(t('mongo.client.copiedDbName', '已复制数据库名')) },
         },
         { type: 'divider' },
         {
             key: 'drop-db',
             icon: <Trash2 size={13} />,
             danger: true,
-            label: '删除数据库',
+            label: t('mongo.client.dropDb', '删除数据库'),
             onClick: () => {
                 setObjDb(dbName)
                 setObjName(dbName)
@@ -389,38 +392,38 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         {
             key: 'open-data',
             icon: <TableIcon size={13} />,
-            label: '浏览数据 (Table / JSON)',
+            label: t('mongo.client.browseData', '浏览数据 (Table / JSON)'),
             onClick: () => openCollectionTab(dbName, collName, 'documents'),
         },
         {
             key: 'open-indexes',
             icon: <Layers size={13} />,
-            label: '管理索引',
+            label: t('mongo.client.manageIndexes', '管理索引'),
             onClick: () => openCollectionTab(dbName, collName, 'indexes'),
         },
         {
             key: 'open-schema',
             icon: <SlidersHorizontal size={13} />,
-            label: '模型结构校验',
+            label: t('mongo.client.schemaValidation', '模型结构校验'),
             onClick: () => openCollectionTab(dbName, collName, 'schema'),
         },
         {
             key: 'open-stream',
             icon: <Activity size={13} />,
-            label: '变更流监听',
+            label: t('mongo.client.changeStream', '变更流监听'),
             onClick: () => openCollectionTab(dbName, collName, 'stream'),
         },
         { type: 'divider' },
         {
             key: 'export',
             icon: <Download size={13} />,
-            label: '导出数据 (JSON / CSV)',
+            label: t('mongo.client.exportData', '导出数据 (JSON / CSV)'),
             onClick: () => setExportModal({ db: dbName, coll: collName }),
         },
         {
             key: 'clone-coll',
             icon: <CopyPlus size={13} />,
-            label: '克隆集合 (结构/数据)',
+            label: t('mongo.client.cloneColl', '克隆集合 (结构/数据)'),
             onClick: () => {
                 setObjDb(dbName)
                 setObjColl(collName)
@@ -431,7 +434,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         {
             key: 'truncate',
             icon: <Trash2 size={13} />,
-            label: '清空集合数据',
+            label: t('mongo.client.truncateColl', '清空集合数据'),
             onClick: () => {
                 setObjDb(dbName)
                 setObjColl(collName)
@@ -442,7 +445,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         {
             key: 'rename',
             icon: <Edit size={13} />,
-            label: '重命名集合',
+            label: t('mongo.client.renameColl', '重命名集合'),
             onClick: () => {
                 setObjDb(dbName)
                 setObjColl(collName)
@@ -453,15 +456,15 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
         {
             key: 'copy-name',
             icon: <Copy size={13} />,
-            label: '复制集合名',
-            onClick: async () => { if (await copyText(collName)) message.success('已复制集合名称') },
+            label: t('mongo.client.copyCollName', '复制集合名'),
+            onClick: async () => { if (await copyText(collName)) message.success(t('mongo.client.copiedCollName', '已复制集合名称')) },
         },
         { type: 'divider' },
         {
             key: 'drop-coll',
             icon: <Trash2 size={13} />,
             danger: true,
-            label: '删除集合',
+            label: t('mongo.client.dropColl', '删除集合'),
             onClick: () => {
                 setObjDb(dbName)
                 setObjColl(collName)
@@ -520,7 +523,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                         </span>
                     </div>
                     <Space size={2}>
-                        <Tooltip title="新建数据库">
+                        <Tooltip title={t('mongo.client.newDb', '新建数据库')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -531,7 +534,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                                 }}
                             />
                         </Tooltip>
-                        <Tooltip title="新建 MQL 查询">
+                        <Tooltip title={t('mongo.client.newMql', '新建 MQL 查询')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -539,7 +542,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                                 onClick={handleNewMqlTab}
                             />
                         </Tooltip>
-                        <Tooltip title="刷新数据库列表">
+                        <Tooltip title={t('mongo.client.refreshTree', '刷新数据库列表')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -648,7 +651,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                                             </span>
                                             {coll.hasValidator && (
                                                 <Tag color="blue" style={{ fontSize: 10, padding: '0 3px', lineHeight: '14px', height: 14, margin: 0 }}>
-                                                    校验
+                                                    {t('mongo.client.validate', '校验')}
                                                 </Tag>
                                             )}
                                         </div>

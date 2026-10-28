@@ -34,6 +34,7 @@ import {
     Collapse as AntCollapse,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { copyText } from '@/utils'
 import CodeEditor from '@/components/CodeEditor'
@@ -135,6 +136,7 @@ const DEFAULT_COMPOSE_YAML = `services:
 `
 
 export default function ComposeTab({ serverId }: Props) {
+    const { t } = useTranslation(['docker', 'common'])
     const { message } = AntApp.useApp()
     const [items, setItems] = useState<MergedComposeItem[]>([])
     const [loading, setLoading] = useState(false)
@@ -212,7 +214,7 @@ export default function ComposeTab({ serverId }: Props) {
                         runningServices: matchedStack.runningServices || 0,
                         totalServices: matchedStack.totalServices || 0,
                         services: matchedStack.services || [],
-                        configFiles: matchedStack.configFiles || '本地记录',
+                        configFiles: matchedStack.configFiles || t('compose.tagLocalRecord', { defaultValue: '本地记录' }),
                         createdAt: rec.createdAt || matchedStack.createdAt,
                         updatedAt: rec.updatedAt || rec.createdAt,
                     })
@@ -227,7 +229,7 @@ export default function ComposeTab({ serverId }: Props) {
                         runningServices: 0,
                         totalServices: 0,
                         services: [],
-                        configFiles: '本地记录 (docker-compose.yml)',
+                        configFiles: t('compose.tagLocalYaml', { defaultValue: '本地记录 (docker-compose.yml)' }),
                         createdAt: rec.createdAt,
                         updatedAt: rec.updatedAt || rec.createdAt,
                     })
@@ -245,7 +247,7 @@ export default function ComposeTab({ serverId }: Props) {
                         runningServices: s.runningServices || 0,
                         totalServices: s.totalServices || 0,
                         services: s.services || [],
-                        configFiles: s.configFiles || '外部项目',
+                        configFiles: s.configFiles || t('compose.tagExternalProject', { defaultValue: '外部项目' }),
                         createdAt: s.createdAt,
                         updatedAt: s.createdAt,
                     })
@@ -254,11 +256,11 @@ export default function ComposeTab({ serverId }: Props) {
 
             setItems(merged)
         } catch (err: any) {
-            message.error(`获取 Compose 列表失败: ${err.message || String(err)}`)
+            message.error(t('compose.fetchFail', { defaultValue: '获取 Compose 列表失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
-    }, [serverId])
+    }, [serverId, t])
 
     useEffect(() => {
         fetchData()
@@ -283,7 +285,7 @@ export default function ComposeTab({ serverId }: Props) {
             setYamlContent(item.localRecord.yamlContent)
         } else {
             // 外部项目尝试构造基础 YAML 模版
-            setYamlContent(`# 外部项目: ${item.name}\nservices:\n` +
+            setYamlContent(`# External Project: ${item.name}\nservices:\n` +
                 (item.services && item.services.length > 0
                     ? item.services.map(svc => `  ${svc.serviceName}:\n    image: ${svc.image}\n`).join('')
                     : `  app:\n    image: alpine\n`))
@@ -306,16 +308,16 @@ export default function ComposeTab({ serverId }: Props) {
     const handleUpAndUpdate = async () => {
         const cleanName = projectName.trim().toLowerCase().replace(/[^a-z0-9-_]/g, '')
         if (!cleanName) {
-            message.warning('请输入有效的项目名称 (Project Name)')
+            message.warning(t('compose.reqProjectName', { defaultValue: '请输入有效的项目名称 (Project Name)' }))
             return
         }
         if (!yamlContent.trim()) {
-            message.warning('请输入 docker-compose.yml 编排内容')
+            message.warning(t('compose.reqYaml', { defaultValue: '请输入 docker-compose.yml 编排内容' }))
             return
         }
 
         setUpdating(true)
-        const hideLoading = message.loading('正在执行 Compose 智能更新部署 (docker compose up)...', 0)
+        const hideLoading = message.loading(t('compose.upLoading', { defaultValue: '正在执行 Compose 智能更新部署 (docker compose up)...' }), 0)
         try {
             // 仅提取有用户自定义赋值的有效环境变量字典
             const finalEnvVars: Record<string, string> = {}
@@ -336,18 +338,18 @@ export default function ComposeTab({ serverId }: Props) {
             }
             await API.dockerUpComposeStack(serverId, record, forcePull, recreate)
             hideLoading()
-            message.success(`Compose 项目 [${cleanName}] 实例已成功启动`)
+            message.success(t('compose.upSuccess', { defaultValue: 'Compose 项目 [{{name}}] 实例已成功启动', name: cleanName }))
             setEditorOpen(false)
             fetchData()
         } catch (err: any) {
             hideLoading()
             AntModal.error({
-                title: 'Compose 部署失败 (配置未落盘)',
+                title: t('compose.deployFailTitle', { defaultValue: 'Compose 部署失败 (配置未落盘)' }),
                 width: 600,
                 content: (
                     <div style={{ marginTop: 8 }}>
                         <div style={{ marginBottom: 8, color: 'var(--text-dim)', fontSize: 13 }}>
-                            容器未能成功启动，已自动清理本次创建的中间资源。本地 YAML 未保存或覆盖，请排查以下错误后重试：
+                            {t('compose.deployFailDesc', { defaultValue: '容器未能成功启动，已自动清理本次创建的中间资源。本地 YAML 未保存或覆盖，请排查以下错误后重试：' })}
                         </div>
                         <div
                             style={{
@@ -375,17 +377,17 @@ export default function ComposeTab({ serverId }: Props) {
 
     // 强力联动删除：清理远程容器与网络，并移除本地记录
     const handleDelete = async (item: MergedComposeItem) => {
-        const hide = message.loading(`正在清理并销毁项目 [${item.name}]...`, 0)
+        const hide = message.loading(t('compose.cleaningProject', { defaultValue: '正在清理并销毁项目 [{{name}}]...', name: item.name }), 0)
         try {
             if (item.isLocal && item.id) {
                 await API.dockerDeleteComposeRecord(serverId, item.id)
             } else {
                 await API.dockerControlComposeStack(serverId, item.name, 'down')
             }
-            message.success(`项目 [${item.name}] 已彻底清理并移除`)
+            message.success(t('compose.deleteSuccess', { defaultValue: '项目 [{{name}}] 已彻底清理并移除', name: item.name }))
             fetchData()
         } catch (err: any) {
-            message.error(`删除清理失败: ${err.message || String(err)}`)
+            message.error(t('compose.deleteFail', { defaultValue: '删除清理失败: {{error}}', error: err.message || String(err) }))
         } finally {
             hide()
         }
@@ -393,13 +395,13 @@ export default function ComposeTab({ serverId }: Props) {
 
     // 控制操作（start, stop, restart, down）
     const handleControl = async (name: string, action: string) => {
-        const hide = message.loading(`正在执行 ${action.toUpperCase()} 操作...`, 0)
+        const hide = message.loading(t('compose.executingOp', { defaultValue: '正在执行 {{action}} 操作...', action: action.toUpperCase() }), 0)
         try {
             await API.dockerControlComposeStack(serverId, name, action)
-            message.success(`操作 ${action} 成功`)
+            message.success(t('compose.opSuccess', { defaultValue: '操作 {{action}} 成功', action }))
             fetchData()
         } catch (err: any) {
-            message.error(`操作失败: ${err.message || String(err)}`)
+            message.error(t('compose.opFail', { defaultValue: '操作失败: {{error}}', error: err.message || String(err) }))
         } finally {
             hide()
         }
@@ -407,13 +409,13 @@ export default function ComposeTab({ serverId }: Props) {
 
     // 单个服务容器控制（启动、停止、重启）
     const handleContainerControl = async (containerId: string, action: string) => {
-        const hide = message.loading(`正在对容器执行 ${action.toUpperCase()}...`, 0)
+        const hide = message.loading(t('compose.containerExecuting', { defaultValue: '正在对容器执行 {{action}}...', action: action.toUpperCase() }), 0)
         try {
             await API.dockerControlContainer(serverId, containerId, action)
-            message.success(`容器 ${action} 操作成功`)
+            message.success(t('compose.containerOpSuccess', { defaultValue: '容器 {{action}} 操作成功', action }))
             fetchData()
         } catch (err: any) {
-            message.error(`容器操作失败: ${err.message || String(err)}`)
+            message.error(t('compose.containerOpFail', { defaultValue: '容器操作失败: {{error}}', error: err.message || String(err) }))
         } finally {
             hide()
         }
@@ -428,9 +430,9 @@ export default function ComposeTab({ serverId }: Props) {
         setContainerLogLoading(true)
         try {
             const content = await API.dockerGetContainerLogs(serverId, containerId, tail, timestamps)
-            setContainerLogContent(content || '(无日志输出)')
+            setContainerLogContent(content || t('compose.noLogOutput', { defaultValue: '(无日志输出)' }))
         } catch (err: any) {
-            message.error(`获取容器日志失败: ${err.message || String(err)}`)
+            message.error(t('compose.fetchContainerLogFail', { defaultValue: '获取容器日志失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setContainerLogLoading(false)
         }
@@ -451,7 +453,7 @@ export default function ComposeTab({ serverId }: Props) {
     const copyUUID = async (uuid: string) => {
         if (await copyText(uuid)) {
             setCopiedId(uuid)
-            message.success('UUID 已复制到剪贴板')
+            message.success(t('compose.copiedUuid', { defaultValue: 'UUID 已复制到剪贴板' }))
             setTimeout(() => setCopiedId(null), 2000)
         }
     }
@@ -472,7 +474,7 @@ export default function ComposeTab({ serverId }: Props) {
 
     const columns: ColumnsType<MergedComposeItem> = [
         {
-            title: 'Compose 项目',
+            title: t('compose.colProject', { defaultValue: 'Compose 项目' }),
             key: 'name',
             width: 280,
             render: (_, record) => (
@@ -500,11 +502,11 @@ export default function ComposeTab({ serverId }: Props) {
                             </span>
                             {record.isLocal ? (
                                 <AntTag color="blue" style={{ margin: 0, fontSize: 10, lineHeight: '18px', padding: '0 6px' }}>
-                                    本地受管
+                                    {t('compose.tagLocal', { defaultValue: '本地受管' })}
                                 </AntTag>
                             ) : (
                                 <AntTag color="purple" style={{ margin: 0, fontSize: 10, lineHeight: '18px', padding: '0 6px' }}>
-                                    外部容器
+                                    {t('compose.tagExternal', { defaultValue: '外部容器' })}
                                 </AntTag>
                             )}
                         </div>
@@ -529,30 +531,30 @@ export default function ComposeTab({ serverId }: Props) {
                                 />
                             </div>
                         ) : (
-                            <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>暂未生成本地 UUID</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{t('compose.noLocalUuid', { defaultValue: '暂未生成本地 UUID' })}</span>
                         )}
                     </div>
                 </AntSpace>
             ),
         },
         {
-            title: '运行状态',
+            title: t('compose.colRunStatus', { defaultValue: '运行状态' }),
             dataIndex: 'status',
             key: 'status',
             width: 140,
             render: (status: string) => {
                 let badgeClass = s.statusStopped
-                let label = '已停止'
+                let label = t('compose.statusStopped', { defaultValue: '已停止' })
                 if (status === 'running') {
                     badgeClass = s.statusRunning
-                    label = '全部运行中'
+                    label = t('compose.statusRunning', { defaultValue: '全部运行中' })
                 } else if (status === 'partially_running') {
                     badgeClass = s.statusPaused
-                    label = '部分运行'
+                    label = t('compose.statusPartiallyRunning', { defaultValue: '部分运行' })
                 } else if (status === 'not_deployed') {
                     return (
                         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                            <AntTag style={{ margin: 0 }}>未部署</AntTag>
+                            <AntTag style={{ margin: 0 }}>{t('compose.statusNotDeployed', { defaultValue: '未部署' })}</AntTag>
                         </span>
                     )
                 }
@@ -565,7 +567,7 @@ export default function ComposeTab({ serverId }: Props) {
             },
         },
         {
-            title: '服务与容器',
+            title: t('compose.colServicesAndContainers', { defaultValue: '服务与容器' }),
             key: 'services',
             width: 170,
             render: (_, record) => {
@@ -575,13 +577,13 @@ export default function ComposeTab({ serverId }: Props) {
                 const isAll = record.runningServices === record.totalServices && record.totalServices > 0
                 return (
                     <AntTag color={isAll ? 'success' : record.runningServices > 0 ? 'warning' : 'default'}>
-                        {record.runningServices} / {record.totalServices} 服务运行中
+                        {t('compose.servicesRunning', { defaultValue: '{{running}} / {{total}} 服务运行中', running: record.runningServices, total: record.totalServices })}
                     </AntTag>
                 )
             },
         },
         {
-            title: '配置与更新时间',
+            title: t('compose.colConfigAndTime', { defaultValue: '配置与更新时间' }),
             key: 'time',
             render: (_, record) => (
                 <div>
@@ -603,26 +605,26 @@ export default function ComposeTab({ serverId }: Props) {
             ),
         },
         {
-            title: '操作',
+            title: t('compose.colActions', { defaultValue: '操作' }),
             key: 'actions',
             width: 250,
             fixed: 'right',
             render: (_, record) => (
                 <AntSpace size={4}>
-                    <AntTooltip title={record.isLocal ? '编辑 YAML 配置并更新' : '认领/导入为本地受管 Compose'}>
+                    <AntTooltip title={record.isLocal ? t('compose.editTooltip', { defaultValue: '编辑 YAML 配置并更新' }) : t('compose.claimTooltip', { defaultValue: '认领/导入为本地受管 Compose' })}>
                         <AntButton
                             size="small"
                             type={record.isLocal ? 'text' : 'link'}
                             icon={<Edit3 size={13} color={record.isLocal ? 'var(--accent)' : undefined} />}
                             onClick={() => openEditDrawer(record)}
                         >
-                            {!record.isLocal ? '认领受管' : undefined}
+                            {!record.isLocal ? t('compose.claimManage', { defaultValue: '认领受管' }) : undefined}
                         </AntButton>
                     </AntTooltip>
 
                     {record.status !== 'not_deployed' && (
                         <>
-                            <AntTooltip title="启动全部服务">
+                            <AntTooltip title={t('compose.startAllTooltip', { defaultValue: '启动全部服务' })}>
                                 <AntButton
                                     size="small"
                                     type="text"
@@ -631,7 +633,7 @@ export default function ComposeTab({ serverId }: Props) {
                                 />
                             </AntTooltip>
 
-                            <AntTooltip title="停止全部服务">
+                            <AntTooltip title={t('compose.stopAllTooltip', { defaultValue: '停止全部服务' })}>
                                 <AntButton
                                     size="small"
                                     type="text"
@@ -640,7 +642,7 @@ export default function ComposeTab({ serverId }: Props) {
                                 />
                             </AntTooltip>
 
-                            <AntTooltip title="重启所有服务">
+                            <AntTooltip title={t('compose.restartAllTooltip', { defaultValue: '重启所有服务' })}>
                                 <AntButton
                                     size="small"
                                     type="text"
@@ -653,14 +655,14 @@ export default function ComposeTab({ serverId }: Props) {
                     )}
 
                     <AntPopconfirm
-                        title="确定清理删除此项目？"
-                        description="将联动停止并删除关联的远程容器。"
+                        title={t('compose.deleteConfirm', { defaultValue: '确定清理删除此项目？' })}
+                        description={t('compose.deleteConfirmDesc', { defaultValue: '将联动停止并删除关联的远程容器。' })}
                         onConfirm={() => handleDelete(record)}
-                        okText="确认"
-                        cancelText="取消"
+                        okText={t('common.confirm', { defaultValue: '确认' })}
+                        cancelText={t('common.cancel', { defaultValue: '取消' })}
                         okButtonProps={{ danger: true }}
                     >
-                        <AntTooltip title="强力联动删除 (Down & Clean)">
+                        <AntTooltip title={t('compose.deleteTooltip', { defaultValue: '强力联动删除 (Down & Clean)' })}>
                             <AntButton size="small" type="text" danger icon={<Trash2 size={13} />} />
                         </AntTooltip>
                     </AntPopconfirm>
@@ -671,7 +673,7 @@ export default function ComposeTab({ serverId }: Props) {
 
     const serviceSubColumns: ColumnsType<DockerComposeServiceInfo> = [
         {
-            title: '服务名',
+            title: t('compose.colService', { defaultValue: '服务名' }),
             dataIndex: 'serviceName',
             width: 140,
             render: (name: string) => (
@@ -681,7 +683,7 @@ export default function ComposeTab({ serverId }: Props) {
             ),
         },
         {
-            title: '容器名称',
+            title: t('compose.colContainerName', { defaultValue: '容器名称' }),
             dataIndex: 'containerName',
             width: 180,
             render: (name: string, record) => (
@@ -691,7 +693,7 @@ export default function ComposeTab({ serverId }: Props) {
             ),
         },
         {
-            title: '镜像',
+            title: t('compose.colImage', { defaultValue: '镜像' }),
             dataIndex: 'image',
             render: (img: string) => (
                 <span className={s.monoText} style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>
@@ -700,7 +702,7 @@ export default function ComposeTab({ serverId }: Props) {
             ),
         },
         {
-            title: '端口映射',
+            title: t('compose.colPorts', { defaultValue: '端口映射' }),
             dataIndex: 'ports',
             render: (ports: string) => (
                 <span className={s.monoText} style={{ fontSize: 11.5, color: 'var(--text)' }}>
@@ -709,7 +711,7 @@ export default function ComposeTab({ serverId }: Props) {
             ),
         },
         {
-            title: '状态',
+            title: t('compose.colStatus', { defaultValue: '状态' }),
             dataIndex: 'state',
             width: 100,
             render: (state: string) => {
@@ -722,7 +724,7 @@ export default function ComposeTab({ serverId }: Props) {
             },
         },
         {
-            title: '操作',
+            title: t('compose.colActions', { defaultValue: '操作' }),
             key: 'actions',
             width: 160,
             render: (_, record) => {
@@ -731,7 +733,7 @@ export default function ComposeTab({ serverId }: Props) {
                     <AntSpace size={4}>
                         {isRunning ? (
                             <>
-                                <AntTooltip title="停止容器">
+                                <AntTooltip title={t('containers.stopTooltip', { defaultValue: '停止容器' })}>
                                     <AntButton
                                         size="small"
                                         type="text"
@@ -739,7 +741,7 @@ export default function ComposeTab({ serverId }: Props) {
                                         onClick={() => handleContainerControl(record.containerId, 'stop')}
                                     />
                                 </AntTooltip>
-                                <AntTooltip title="重启容器">
+                                <AntTooltip title={t('containers.restartTooltip', { defaultValue: '重启容器' })}>
                                     <AntButton
                                         size="small"
                                         type="text"
@@ -749,7 +751,7 @@ export default function ComposeTab({ serverId }: Props) {
                                 </AntTooltip>
                             </>
                         ) : (
-                            <AntTooltip title="启动容器">
+                            <AntTooltip title={t('containers.startTooltip', { defaultValue: '启动容器' })}>
                                 <AntButton
                                     size="small"
                                     type="text"
@@ -758,7 +760,7 @@ export default function ComposeTab({ serverId }: Props) {
                                 />
                             </AntTooltip>
                         )}
-                        <AntTooltip title="查看实时日志">
+                        <AntTooltip title={t('containers.logsTooltip', { defaultValue: '查看实时日志' })}>
                             <AntButton
                                 size="small"
                                 type="text"
@@ -766,7 +768,7 @@ export default function ComposeTab({ serverId }: Props) {
                                 onClick={() => openContainerLogs(record)}
                             />
                         </AntTooltip>
-                        <AntTooltip title="终端 (Exec)">
+                        <AntTooltip title={t('containers.execTooltip', { defaultValue: '终端 (Exec)' })}>
                             <AntButton
                                 size="small"
                                 type="text"
@@ -803,20 +805,20 @@ export default function ComposeTab({ serverId }: Props) {
                         buttonStyle="solid"
                         size="small"
                     >
-                        <AntRadio.Button value="all">全部 ({items.length})</AntRadio.Button>
+                        <AntRadio.Button value="all">{t('compose.filterAll', { defaultValue: '全部 ({{count}})', count: items.length })}</AntRadio.Button>
                         <AntRadio.Button value="running">
-                            运行中 ({items.filter((s) => s.status === 'running').length})
+                            {t('compose.filterRunning', { defaultValue: '运行中 ({{count}})', count: items.filter((s) => s.status === 'running').length })}
                         </AntRadio.Button>
                         <AntRadio.Button value="stopped">
-                            已停止 ({items.filter((s) => s.status === 'stopped').length})
+                            {t('compose.filterStopped', { defaultValue: '已停止 ({{count}})', count: items.filter((s) => s.status === 'stopped').length })}
                         </AntRadio.Button>
                         <AntRadio.Button value="not_deployed">
-                            未部署 ({items.filter((s) => s.status === 'not_deployed').length})
+                            {t('compose.filterNotDeployed', { defaultValue: '未部署 ({{count}})', count: items.filter((s) => s.status === 'not_deployed').length })}
                         </AntRadio.Button>
                     </AntRadio.Group>
 
                     <AntInput
-                        placeholder="搜索项目名称 / UUID / 服务 / 镜像..."
+                        placeholder={t('compose.searchPlaceholder', { defaultValue: '搜索项目名称 / UUID / 服务 / 镜像...' })}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -836,14 +838,14 @@ export default function ComposeTab({ serverId }: Props) {
                         size="small"
                         onClick={openCreateDrawer}
                     >
-                        新建
+                        {t('compose.newBtn', { defaultValue: '新建' })}
                     </AntButton>
                     <AntButton
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchData}
                     >
-                        刷新
+                        {t('common.refresh', { defaultValue: '刷新' })}
                     </AntButton>
                 </div>
             </div>
@@ -859,7 +861,7 @@ export default function ComposeTab({ serverId }: Props) {
                     expandedRowRender: (record) => (
                         <div style={{ margin: '8px 0', padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 6 }}>
                             <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: 'var(--text-dim)' }}>
-                                项目内服务列表 ({record.services?.length || 0} 个服务)
+                                {t('compose.serviceListTitle', { defaultValue: '项目内服务列表 ({{count}} 个服务)', count: record.services?.length || 0 })}
                             </div>
                             <AntTable
                                 columns={serviceSubColumns}
@@ -878,7 +880,7 @@ export default function ComposeTab({ serverId }: Props) {
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -892,7 +894,7 @@ export default function ComposeTab({ serverId }: Props) {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
                         <Layers size={17} color="var(--accent)" style={{ flexShrink: 0 }} />
                         <span style={{ fontWeight: 600, fontSize: 14.5, color: 'var(--text)' }}>
-                            {currentRecordId ? '编辑 Compose 配置' : '新建 Docker Compose 项目'}
+                            {currentRecordId ? t('compose.editTitle', { defaultValue: '编辑 Compose 配置' }) : t('compose.newTitle', { defaultValue: '新建 Docker Compose 项目' })}
                         </span>
                         {currentRecordId && projectName && (
                             <AntTag
@@ -923,7 +925,7 @@ export default function ComposeTab({ serverId }: Props) {
                             onClick={() => setEditorOpen(false)}
                             disabled={updating}
                         >
-                            取消
+                            {t('common.cancel', { defaultValue: '取消' })}
                         </AntButton>
                         <AntButton
                             type="primary"
@@ -931,7 +933,7 @@ export default function ComposeTab({ serverId }: Props) {
                             loading={updating}
                             onClick={handleUpAndUpdate}
                         >
-                            保存
+                            {t('compose.saveBtn', { defaultValue: '保存' })}
                         </AntButton>
                     </AntSpace>
                 }
@@ -947,10 +949,10 @@ export default function ComposeTab({ serverId }: Props) {
                             }}
                         >
                             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>
-                                项目名称<span style={{ color: 'var(--danger)' }}>*</span>
+                                {t('compose.projectNameLabel', { defaultValue: '项目名称' })}<span style={{ color: 'var(--danger)' }}>*</span>
                             </span>
                             {currentRecordId && (
-                                <AntTooltip title={`完整 UUID: ${currentRecordId}（点击复制）`}>
+                                <AntTooltip title={t('compose.uuidTooltip', { defaultValue: '完整 UUID: {{id}}（点击复制）', id: currentRecordId })}>
                                     <span
                                         onClick={() => copyUUID(currentRecordId)}
                                         style={{
@@ -983,7 +985,7 @@ export default function ComposeTab({ serverId }: Props) {
                             )}
                         </div>
                         <AntInput
-                            placeholder="例如: my-web-app (仅限小写英文、数字与横杠)"
+                            placeholder={t('compose.projectNamePlaceholder', { defaultValue: '例如: my-web-app (仅限小写英文、数字与横杠)' })}
                             value={projectName}
                             onChange={(e) => setProjectName(e.target.value.toLowerCase().replace(/[^a-z0-9-_]/g, ''))}
                         />
@@ -999,7 +1001,7 @@ export default function ComposeTab({ serverId }: Props) {
                             }}
                         >
                             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>
-                                编排内容 <span style={{ color: 'var(--danger)' }}>*</span>
+                                {t('compose.composeContentLabel', { defaultValue: '编排内容' })} <span style={{ color: 'var(--danger)' }}>*</span>
                             </span>
                             <AntSpace size={8}>
                                 <AntButton
@@ -1008,29 +1010,29 @@ export default function ComposeTab({ serverId }: Props) {
                                     icon={<Sparkles size={13} />}
                                     onClick={() => setAiModalOpen(true)}
                                 >
-                                    AI 生成 Compose
+                                    {t('compose.aiGenerateBtn', { defaultValue: 'AI 生成 Compose' })}
                                 </AntButton>
                                 <AntButton
                                     size="small"
                                     icon={<RotateCcw size={12} />}
                                     onClick={() => setYamlContent('')}
                                 >
-                                    清空
+                                    {t('compose.clearBtn', { defaultValue: '清空' })}
                                 </AntButton>
                                 <AntButton
                                     size="small"
                                     icon={<Copy size={12} />}
                                     onClick={async () => {
                                         if (!yamlContent) {
-                                            message.info('当前没有可复制的编排内容')
+                                            message.info(t('compose.noYamlToCopy', { defaultValue: '当前没有可复制的编排内容' }))
                                             return
                                         }
                                         if (await copyText(yamlContent)) {
-                                            message.success('编排内容已复制到剪贴板')
+                                            message.success(t('compose.copiedYaml', { defaultValue: '编排内容已复制到剪贴板' }))
                                         }
                                     }}
                                 >
-                                    复制
+                                    {t('compose.copyBtn', { defaultValue: '复制' })}
                                 </AntButton>
                             </AntSpace>
                         </div>
@@ -1040,7 +1042,7 @@ export default function ComposeTab({ serverId }: Props) {
                             lang="yaml"
                             height="420px"
                             bordered
-                            placeholder="在此输入或编辑 docker-compose.yml 内容..."
+                            placeholder={t('compose.editorPlaceholder', { defaultValue: '在此输入或编辑 docker-compose.yml 内容...' })}
                         />
                     </div>
 
@@ -1069,37 +1071,35 @@ export default function ComposeTab({ serverId }: Props) {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                             <Sliders size={14} color="var(--accent)" />
                                             <span style={{ fontWeight: 500, fontSize: 13, color: 'var(--text)' }}>
-                                                环境变量
+                                                {t('compose.envPanelTitle', { defaultValue: '环境变量' })}
                                             </span>
                                             {scannedEnvVars.length > 0 ? (
                                                 <AntTag color="blue" style={{ fontSize: 11, margin: 0 }}>
-                                                    检测到 {scannedEnvVars.length} 个变量
+                                                    {t('compose.envDetectedCount', { defaultValue: '检测到 {{count}} 个变量', count: scannedEnvVars.length })}
                                                 </AntTag>
                                             ) : (
                                                 <AntTag style={{ fontSize: 11, margin: 0, color: 'var(--text-faint)' }}>
-                                                    未检测到变量占位符
+                                                    {t('compose.envNoneDetected', { defaultValue: '未检测到变量占位符' })}
                                                 </AntTag>
                                             )}
                                             {scannedEnvVars.filter(
                                                 (v) => (envVars[v.name] === undefined || envVars[v.name] === '') && !v.hasDefault
                                             ).length > 0 && (
                                                     <AntTag color="warning" style={{ fontSize: 11, margin: 0 }}>
-                                                        {scannedEnvVars.filter(
-                                                            (v) => (envVars[v.name] === undefined || envVars[v.name] === '') && !v.hasDefault
-                                                        ).length} 个必填项未设值
+                                                        {t('compose.envMissingRequired', {
+                                                            defaultValue: '{{count}} 个必填项未设值',
+                                                            count: scannedEnvVars.filter((v) => (envVars[v.name] === undefined || envVars[v.name] === '') && !v.hasDefault).length,
+                                                        })}
                                                     </AntTag>
                                                 )}
                                         </div>
                                         {scannedEnvVars.length > 0 && (
                                             <span style={{ fontSize: 11, color: 'var(--text-dim)', flexShrink: 0 }}>
-                                                已自定义:{' '}
-                                                {scannedEnvVars.filter(
-                                                    (v) => envVars[v.name] !== undefined && envVars[v.name] !== ''
-                                                ).length}{' '}
-                                                / 默认值:{' '}
-                                                {scannedEnvVars.filter(
-                                                    (v) => (envVars[v.name] === undefined || envVars[v.name] === '') && v.hasDefault
-                                                ).length}
+                                                {t('compose.envCustomized', {
+                                                    defaultValue: '已自定义: {{configured}} / 默认值: {{defaults}}',
+                                                    configured: scannedEnvVars.filter((v) => envVars[v.name] !== undefined && envVars[v.name] !== '').length,
+                                                    defaults: scannedEnvVars.filter((v) => (envVars[v.name] === undefined || envVars[v.name] === '') && v.hasDefault).length,
+                                                })}
                                             </span>
                                         )}
                                     </div>
@@ -1119,9 +1119,9 @@ export default function ComposeTab({ serverId }: Props) {
                                                     lineHeight: 1.6,
                                                 }}
                                             >
-                                                当前 Compose YAML 中未引用 <code>${'{VAR}'}</code> 占位符。
-                                                <br />
-                                                可在 YAML 中直接键入或粘贴如 <code>${'{APP_PORT:-8080}'}</code> 或 <code>${'{DB_PASSWORD}'}</code>，系统将实时自动扫描并在此提供变量赋值。
+                                                {t('compose.envEmptyTip', {
+                                                    defaultValue: '当前 Compose YAML 中未引用 ${VAR} 占位符。可在 YAML 中直接键入或粘贴如 ${APP_PORT:-8080} 或 ${DB_PASSWORD}，系统将实时自动扫描并在此提供变量赋值。'
+                                                })}
                                             </div>
                                         ) : (
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1139,10 +1139,10 @@ export default function ComposeTab({ serverId }: Props) {
                                                         alignItems: 'center',
                                                     }}
                                                 >
-                                                    <span>变量名称</span>
-                                                    <span>默认值 (Default)</span>
-                                                    <span>实际配置值 (.env Value)</span>
-                                                    <span style={{ textAlign: 'center' }}>生效状态</span>
+                                                    <span>{t('compose.colEnvName', { defaultValue: '变量名称' })}</span>
+                                                    <span>{t('compose.colEnvDefault', { defaultValue: '默认值 (Default)' })}</span>
+                                                    <span>{t('compose.colEnvValue', { defaultValue: '实际配置值 (.env Value)' })}</span>
+                                                    <span style={{ textAlign: 'center' }}>{t('compose.colEnvStatus', { defaultValue: '生效状态' })}</span>
                                                 </div>
 
                                                 {scannedEnvVars.map((v) => {
@@ -1189,7 +1189,7 @@ export default function ComposeTab({ serverId }: Props) {
                                                                             borderRadius: 3,
                                                                             flexShrink: 0,
                                                                         }}
-                                                                        title={`在 YAML 中引用了 ${v.occurrences} 次`}
+                                                                        title={t('compose.envReferencedTimes', { defaultValue: '在 YAML 中引用了 {{count}} 次', count: v.occurrences })}
                                                                     >
                                                                         x{v.occurrences}
                                                                     </span>
@@ -1209,17 +1209,17 @@ export default function ComposeTab({ serverId }: Props) {
                                                                         }}
                                                                         title={v.defaultValue}
                                                                     >
-                                                                        {v.defaultValue === '' ? '<空>' : v.defaultValue}
+                                                                        {v.defaultValue === '' ? t('compose.emptyValue', { defaultValue: '<空>' }) : v.defaultValue}
                                                                     </code>
                                                                 ) : (
-                                                                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>无默认值</span>
+                                                                    <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{t('compose.envNoDefault', { defaultValue: '无默认值' })}</span>
                                                                 )}
                                                             </div>
 
                                                             <div>
                                                                 <AntInput
                                                                     size="small"
-                                                                    placeholder={v.hasDefault ? `默认: ${v.defaultValue}` : '请输入环境变量值（必填）'}
+                                                                    placeholder={v.hasDefault ? t('compose.envPlaceholderWithDefault', { defaultValue: '默认: {{default}}', default: v.defaultValue }) : t('compose.envPlaceholderRequired', { defaultValue: '请输入环境变量值（必填）' })}
                                                                     value={userVal ?? ''}
                                                                     onChange={(e) => {
                                                                         const val = e.target.value
@@ -1242,15 +1242,15 @@ export default function ComposeTab({ serverId }: Props) {
                                                             <div style={{ textAlign: 'center' }}>
                                                                 {isConfigured ? (
                                                                     <AntTag color="green" style={{ fontSize: 11, margin: 0 }}>
-                                                                        已自定义
+                                                                        {t('compose.envStatusConfigured', { defaultValue: '已自定义' })}
                                                                     </AntTag>
                                                                 ) : isUsingDefault ? (
                                                                     <AntTag color="default" style={{ fontSize: 11, margin: 0, color: 'var(--text-dim)' }}>
-                                                                        使用默认
+                                                                        {t('compose.envStatusDefault', { defaultValue: '使用默认' })}
                                                                     </AntTag>
                                                                 ) : (
                                                                     <AntTag color="warning" style={{ fontSize: 11, margin: 0 }}>
-                                                                        未配置
+                                                                        {t('compose.envStatusMissing', { defaultValue: '未配置' })}
                                                                     </AntTag>
                                                                 )}
                                                             </div>
@@ -1277,11 +1277,11 @@ export default function ComposeTab({ serverId }: Props) {
                     >
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <AntSwitch checked={forcePull} onChange={setForcePull} size="small" />
-                            <span style={{ fontSize: 12 }}>强制拉取最新镜像 (Force Pull)</span>
+                            <span style={{ fontSize: 12 }}>{t('compose.forcePull', { defaultValue: '强制拉取最新镜像 (Force Pull)' })}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <AntSwitch checked={recreate} onChange={setRecreate} size="small" />
-                            <span style={{ fontSize: 12 }}>强制全量重建容器 (Force Recreate)</span>
+                            <span style={{ fontSize: 12 }}>{t('compose.forceRecreate', { defaultValue: '强制全量重建容器 (Force Recreate)' })}</span>
                         </div>
                     </div>
                 </AntSpace>
@@ -1291,7 +1291,7 @@ export default function ComposeTab({ serverId }: Props) {
             <AntDrawer
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>容器日志: {containerLogDrawer.containerName}</span>
+                        <span>{t('compose.logDrawerTitle', { defaultValue: '容器日志: {{name}}', name: containerLogDrawer.containerName })}</span>
                         <AntSpace size={8}>
                             <AntSelect
                                 size="small"
@@ -1301,15 +1301,15 @@ export default function ComposeTab({ serverId }: Props) {
                                     fetchContainerLogs(containerLogDrawer.containerId, val, containerLogTimestamps)
                                 }}
                                 options={[
-                                    { value: 100, label: '最新 100 行' },
-                                    { value: 200, label: '最新 200 行' },
-                                    { value: 500, label: '最新 500 行' },
-                                    { value: 1000, label: '最新 1000 行' },
+                                    { value: 100, label: t('containers.logLines100', { defaultValue: '最近 100 行' }) },
+                                    { value: 200, label: t('containers.logLines200', { defaultValue: '最近 200 行' }) },
+                                    { value: 500, label: t('containers.logLines500', { defaultValue: '最近 500 行' }) },
+                                    { value: 1000, label: t('containers.logLines1000', { defaultValue: '最近 1000 行' }) },
                                 ]}
                                 style={{ width: 120 }}
                             />
                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                                <span>时间戳</span>
+                                <span>{t('containers.timestamps', { defaultValue: '时间戳' })}</span>
                                 <AntSwitch
                                     size="small"
                                     checked={containerLogTimestamps}
@@ -1330,18 +1330,18 @@ export default function ComposeTab({ serverId }: Props) {
                                     )
                                 }
                             >
-                                刷新
+                                {t('common.refresh', { defaultValue: '刷新' })}
                             </AntButton>
                             <AntButton
                                 size="small"
                                 icon={<Copy size={12} />}
                                 onClick={async () => {
                                     if (await copyText(containerLogContent)) {
-                                        message.success('日志已复制')
+                                        message.success(t('compose.copiedContainerLog', { defaultValue: '日志已复制' }))
                                     }
                                 }}
                             >
-                                复制
+                                {t('containers.copyLogs', { defaultValue: '复制' })}
                             </AntButton>
                         </AntSpace>
                     </div>

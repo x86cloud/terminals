@@ -1,4 +1,5 @@
 import { Card, Select, Typography, Space } from 'antd'
+import { useTranslation } from 'react-i18next'
 import a from './AppearanceTab.module.less'
 
 const { Text } = Typography
@@ -7,33 +8,60 @@ interface AppearanceTabProps {
     themeMode: 'light' | 'dark' | 'system'
     globalFontFamily: string
     closeAction?: 'ask' | 'minimize' | 'quit'
+    language?: 'system' | 'zh-CN' | 'en-US'
     onThemeChange: (mode: 'light' | 'dark' | 'system') => void
     onGlobalFontChange: (fontKey: string) => void
     onCloseActionChange: (action: 'ask' | 'minimize' | 'quit') => void
+    onLanguageChange?: (lang: 'system' | 'zh-CN' | 'en-US') => void
 }
 
 export default function AppearanceTab({
     themeMode,
     globalFontFamily,
     closeAction = 'ask',
+    language = 'system',
     onThemeChange,
     onGlobalFontChange,
     onCloseActionChange,
+    onLanguageChange,
 }: AppearanceTabProps) {
+    const { t } = useTranslation('settings')
+
     return (
         <Space orientation="vertical" size={16} style={{ width: '100%' }}>
             <div>
-                <div className={a.sectionTitle}>外观与主题</div>
-                <div className={a.sectionDesc}>切换应用视觉风格与整体界面色彩方案。</div>
+                <div className={a.sectionTitle}>{t('appearance.sectionTitle')}</div>
+                <div className={a.sectionDesc}>{t('appearance.sectionDesc')}</div>
             </div>
 
             <Card size="small" style={{ borderRadius: 8 }}>
                 <Space orientation="vertical" size={20} style={{ width: '100%' }}>
+                    {onLanguageChange && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <div style={{ fontWeight: 600, fontSize: 14 }}>{t('appearance.languageTitle')}</div>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                    {t('appearance.languageDesc')}
+                                </Text>
+                            </div>
+                            <Select
+                                value={language}
+                                onChange={onLanguageChange}
+                                style={{ width: 220 }}
+                                options={[
+                                    { label: t('options.lang.system'), value: 'system' },
+                                    { label: t('options.lang.zhCN'), value: 'zh-CN' },
+                                    { label: t('options.lang.enUS'), value: 'en-US' },
+                                ]}
+                            />
+                        </div>
+                    )}
+
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 600, fontSize: 14 }}>界面主题模式</div>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{t('appearance.themeTitle')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                选择符合偏好的应用浅色或暗色视觉主题（实时生效）
+                                {t('appearance.themeDesc')}
                             </Text>
                         </div>
                         <Select
@@ -41,18 +69,18 @@ export default function AppearanceTab({
                             onChange={onThemeChange}
                             style={{ width: 220 }}
                             options={[
-                                { label: '浅色模式 (Light Default)', value: 'light' },
-                                { label: '暗色模式 (Dark)', value: 'dark' },
-                                { label: '跟随系统 (System)', value: 'system' },
+                                { label: t('options.theme.light'), value: 'light' },
+                                { label: t('options.theme.dark'), value: 'dark' },
+                                { label: t('options.theme.system'), value: 'system' },
                             ]}
                         />
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 600, fontSize: 14 }}>全局界面字体 (Global Font)</div>
+                            <div style={{ fontWeight: 600, fontSize: 14 }}>{t('appearance.fontTitle')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                应用整个界面（侧栏、表格、对话框）全局字体风格
+                                {t('appearance.fontDesc')}
                             </Text>
                         </div>
                         <Select
@@ -60,12 +88,12 @@ export default function AppearanceTab({
                             onChange={onGlobalFontChange}
                             style={{ width: 220 }}
                             options={[
-                                { label: '系统默认 (System Default)', value: 'system' },
-                                { label: '微软雅黑 (Microsoft YaHei)', value: 'msyh' },
-                                { label: 'Segoe UI (Windows)', value: 'segoe' },
-                                { label: 'Inter / San Francisco', value: 'inter' },
-                                { label: 'HarmonyOS Sans (鸿蒙)', value: 'harmony' },
-                                { label: '程序员极简风格 (Monospace)', value: 'mono' },
+                                { label: t('options.fonts.system'), value: 'system' },
+                                { label: t('options.fonts.msyh'), value: 'msyh' },
+                                { label: t('options.fonts.segoe'), value: 'segoe' },
+                                { label: t('options.fonts.inter'), value: 'inter' },
+                                { label: t('options.fonts.harmony'), value: 'harmony' },
+                                { label: t('options.fonts.mono'), value: 'mono' },
                             ]}
                         />
                     </div>
@@ -73,16 +101,16 @@ export default function AppearanceTab({
             </Card>
 
             <div>
-                <div className={a.sectionTitle}>系统与窗口行为</div>
-                <div className={a.sectionDesc}>控制窗口关闭、最小化与后台驻留行为。</div>
+                <div className={a.sectionTitle}>{t('appearance.windowSectionTitle')}</div>
+                <div className={a.sectionDesc}>{t('appearance.windowSectionDesc')}</div>
             </div>
 
             <Card size="small" style={{ borderRadius: 8 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                        <div style={{ fontWeight: 600, fontSize: 14 }}>关闭主窗口时</div>
+                        <div style={{ fontWeight: 600, fontSize: 14 }}>{t('appearance.closeActionTitle')}</div>
                         <Text type="secondary" style={{ fontSize: 12 }}>
-                            设置点击标题栏右上角关闭按钮或快捷键时的默认响应行为
+                            {t('appearance.closeActionDesc')}
                         </Text>
                     </div>
                     <Select
@@ -90,9 +118,9 @@ export default function AppearanceTab({
                         onChange={onCloseActionChange}
                         style={{ width: 220 }}
                         options={[
-                            { label: '每次询问 (Ask Every Time)', value: 'ask' },
-                            { label: '最小化到系统托盘，后台运行', value: 'minimize' },
-                            { label: '直接退出程序 (Exit App)', value: 'quit' },
+                            { label: t('options.closeAction.ask'), value: 'ask' },
+                            { label: t('options.closeAction.minimize'), value: 'minimize' },
+                            { label: t('options.closeAction.quit'), value: 'quit' },
                         ]}
                     />
                 </div>

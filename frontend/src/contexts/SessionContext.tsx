@@ -75,7 +75,7 @@ const initialToolsState: ToolsState = {
     api: { open: false, active: false },
     devtools: { open: false, active: false },
     wiki: { open: false, active: false },
-    aiAgent: { open: false, active: false },
+    aiAgent: { open: true, active: true },
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null)
@@ -91,7 +91,7 @@ export function useSession() {
 export function SessionProvider({ children }: { children: ReactNode }) {
     const [sessions, setSessions] = useState<SessionsState>(initialSessionsState)
     const [tools, setTools] = useState<ToolsState>(initialToolsState)
-    const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>(null)
+    const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>({ kind: 'aiAgent', id: null })
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
     const [aiSidebarOpen, setAiSidebarOpen] = useState<boolean>(false)
 
@@ -112,9 +112,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const prevConnRef = useRef<string>('')
+    const lastConnTargetRef = useRef<{ kind: ConnType; id: string } | null>(null)
 
     useEffect(() => {
-        if (!activeTarget || !activeTarget.id) {
+        if (activeTarget?.id) {
+            lastConnTargetRef.current = { kind: activeTarget.kind as ConnType, id: activeTarget.id }
+        }
+
+        const targetConn = activeTarget?.id
+            ? { kind: activeTarget.kind as ConnType, id: activeTarget.id }
+            : lastConnTargetRef.current
+
+        if (!targetConn) {
             if (prevConnRef.current !== '') {
                 prevConnRef.current = ''
                 API.agentSetActiveConnection(null).catch(() => {})
@@ -122,8 +131,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             return
         }
 
-        const kind = activeTarget.kind
-        const id = activeTarget.id
+        const kind = targetConn.kind
+        const id = targetConn.id
         let info: ActiveConnectionInfo | null = null
 
         switch (kind) {
@@ -238,6 +247,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 break
         }
 
+        if (!info) {
+            lastConnTargetRef.current = null
+        }
+
         const connKey = info ? `${info.protocol}:${info.id}:${info.database || ''}` : ''
         if (connKey !== prevConnRef.current) {
             prevConnRef.current = connKey
@@ -246,19 +259,14 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }, [activeTarget, sessions])
 
     const activateTab = useCallback((kind: TabKind | null, id: string | null = null) => {
-        if (!kind) {
-            setActiveTarget(null)
+        if (!kind || kind === 'aiAgent') {
+            setActiveTarget({ kind: 'aiAgent', id: null })
             setTools((prev) => ({
                 api: { ...prev.api, active: false },
                 devtools: { ...prev.devtools, active: false },
                 wiki: { ...prev.wiki, active: false },
-                aiAgent: prev.aiAgent,
+                aiAgent: { open: true, active: true },
             }))
-            return
-        }
-
-        if (kind === 'aiAgent') {
-            setAiSidebarOpen(true)
             return
         }
 
@@ -268,7 +276,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 api: { open: kind === 'api' ? true : prev.api.open, active: kind === 'api' },
                 devtools: { open: kind === 'devtools' ? true : prev.devtools.open, active: kind === 'devtools' },
                 wiki: { open: kind === 'wiki' ? true : prev.wiki.open, active: kind === 'wiki' },
-                aiAgent: prev.aiAgent,
+                aiAgent: { open: true, active: false },
             }))
         } else {
             setActiveTarget({ kind, id })
@@ -276,32 +284,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
                 api: { ...prev.api, active: false },
                 devtools: { ...prev.devtools, active: false },
                 wiki: { ...prev.wiki, active: false },
-                aiAgent: prev.aiAgent,
+                aiAgent: { open: true, active: false },
             }))
         }
     }, [])
 
     const openTool = useCallback((tool: ToolKind) => {
-        if (tool === 'aiAgent') {
-            setAiSidebarOpen(true)
-            return
-        }
         activateTab(tool)
     }, [activateTab])
 
     const closeTool = useCallback((tool: ToolKind) => {
         if (tool === 'aiAgent') {
-            setAiSidebarOpen(false)
+            // AI 智能体会话常驻开启，不可关闭
             return
         }
         const closedTarget: ActiveTarget = { kind: tool, id: null }
         const allTabs = getAllOpenTabs(sessionsRef.current, toolsRef.current)
-        const fallback = pickAdjacentFallback(closedTarget, allTabs)
+        const fallback = pickAdjacentFallback(closedTarget, allTabs) ?? { kind: 'aiAgent', id: null }
 
         setTools((prev) => ({
             ...prev,
             [tool]: { open: false, active: false },
-            ...(fallback?.kind === 'api' || fallback?.kind === 'devtools' || fallback?.kind === 'wiki'
+            aiAgent: { open: true, active: fallback.kind === 'aiAgent' },
+            ...(fallback.kind === 'api' || fallback.kind === 'devtools' || fallback.kind === 'wiki'
                 ? { [fallback.kind]: { ...prev[fallback.kind], active: true } }
                 : {}),
         }))
@@ -360,7 +365,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         const closedTarget: ActiveTarget = { kind, id }
         const allTabs = getAllOpenTabs(sessionsRef.current, toolsRef.current)
-        const fallback = pickAdjacentFallback(closedTarget, allTabs)
+        const fallback = pickAdjacentFallback(closedTarget, allTabs) ?? { kind: 'aiAgent', id: null }
 
         setSessions((prev) => {
             const currentList = prev[kind] as Array<{ id: string }>
@@ -381,13 +386,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             return curr
         })
 
-        if (fallback?.kind === 'api' || fallback?.kind === 'devtools' || fallback?.kind === 'wiki') {
+        if (
+            fallback.kind === 'aiAgent' ||
+            fallback.kind === 'api' ||
+            fallback.kind === 'devtools' ||
+            fallback.kind === 'wiki'
+        ) {
             setTools((prev) => ({
                 ...prev,
                 api: { ...prev.api, active: fallback.kind === 'api' },
                 devtools: { ...prev.devtools, active: fallback.kind === 'devtools' },
                 wiki: { ...prev.wiki, active: fallback.kind === 'wiki' },
-                aiAgent: prev.aiAgent,
+                aiAgent: { open: true, active: fallback.kind === 'aiAgent' },
             }))
         }
     }, [])

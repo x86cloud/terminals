@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { Button, Tooltip, Tag, Space, App } from 'antd'
 import { ZoomIn, ZoomOut, RotateCcw, RotateCw, Key } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { PgColumn, PgConstraint } from './postgresTypes'
 import pg from './ErDiagram.module.less'
@@ -20,6 +21,7 @@ export default function ErDiagram({
     dbName: string
     schema: string
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [tablesMeta, setTablesMeta] = useState<TableMeta[]>([])
     const [loading, setLoading] = useState(false)
@@ -33,12 +35,12 @@ export default function ErDiagram({
         try {
             const tableList = await API.postgresTables(serverId, dbName, schema)
             const metaPromises = (tableList || [])
-                .filter((t) => t.type === 'BASE TABLE')
+                .filter((tbl) => tbl.type === 'BASE TABLE')
                 .slice(0, 30)
-                .map(async (t) => {
-                    const desc = await API.postgresDescribe(serverId, dbName, schema, t.name)
+                .map(async (tbl) => {
+                    const desc = await API.postgresDescribe(serverId, dbName, schema, tbl.name)
                     return {
-                        name: t.name,
+                        name: tbl.name,
                         columns: (desc.columns || []) as PgColumn[],
                         constraints: (desc.constraints || []) as PgConstraint[],
                     }
@@ -46,7 +48,7 @@ export default function ErDiagram({
             const metas = await Promise.all(metaPromises)
             setTablesMeta(metas)
         } catch (e: any) {
-            message.error(`加载 ER 图数据失败: ${e.message || e}`)
+            message.error(t('postgres.loadErFailed', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -63,25 +65,25 @@ export default function ErDiagram({
 
         const positions: Record<string, { x: number; y: number; w: number; h: number }> = {}
 
-        tablesMeta.forEach((t, i) => {
+        tablesMeta.forEach((tbl, i) => {
             const colIdx = i % COLS
             const rowIdx = Math.floor(i / COLS)
-            const h = 32 + t.columns.length * 20 + 8
+            const h = 32 + tbl.columns.length * 20 + 8
             const x = colIdx * (CARD_W + GAP_X)
             const y = rowIdx * 300
-            positions[t.name] = { x, y, w: CARD_W, h }
+            positions[tbl.name] = { x, y, w: CARD_W, h }
         })
 
         // 计算外键连线
         const links: Array<{ from: string; to: string; fromPos: { x: number; y: number }; toPos: { x: number; y: number } }> = []
-        tablesMeta.forEach((t) => {
-            const fromPos = positions[t.name]
+        tablesMeta.forEach((tbl) => {
+            const fromPos = positions[tbl.name]
             if (!fromPos) return
-            t.constraints.forEach((c) => {
+            tbl.constraints.forEach((c) => {
                 if (c.type === 'FOREIGN KEY' && c.foreignTable && positions[c.foreignTable]) {
                     const toPos = positions[c.foreignTable]
                     links.push({
-                        from: t.name,
+                        from: tbl.name,
                         to: c.foreignTable,
                         fromPos: { x: fromPos.x + fromPos.w, y: fromPos.y + 20 },
                         toPos: { x: toPos.x, y: toPos.y + 20 },
@@ -114,13 +116,13 @@ export default function ErDiagram({
         <div className={pg.erWrap}>
             <div className={pg.erToolbar}>
                 <Space size={4}>
-                    <Tooltip title="放大">
+                    <Tooltip title={t('postgres.er.zoomIn')}>
                         <Button size="small" icon={<ZoomIn size={14} />} onClick={() => setScale((s) => Math.min(2, s + 0.1))} />
                     </Tooltip>
-                    <Tooltip title="缩小">
+                    <Tooltip title={t('postgres.er.zoomOut')}>
                         <Button size="small" icon={<ZoomOut size={14} />} onClick={() => setScale((s) => Math.max(0.4, s - 0.1))} />
                     </Tooltip>
-                    <Tooltip title="重置视角">
+                    <Tooltip title={t('postgres.er.resetView')}>
                         <Button
                             size="small"
                             icon={<RotateCcw size={14} />}
@@ -130,7 +132,7 @@ export default function ErDiagram({
                             }}
                         />
                     </Tooltip>
-                    <Tooltip title="刷新元数据">
+                    <Tooltip title={t('postgres.er.refreshMeta')}>
                         <Button size="small" icon={<RotateCw size={14} />} loading={loading} onClick={loadSchemaMeta} />
                     </Tooltip>
                 </Space>
@@ -180,12 +182,12 @@ export default function ErDiagram({
                     </svg>
 
                     {/* 表卡片 */}
-                    {tablesMeta.map((t) => {
-                        const pos = layout.positions[t.name]
+                    {tablesMeta.map((tbl) => {
+                        const pos = layout.positions[tbl.name]
                         if (!pos) return null
                         return (
                             <div
-                                key={t.name}
+                                key={tbl.name}
                                 className={pg.tableCard}
                                 style={{
                                     position: 'absolute',
@@ -196,13 +198,13 @@ export default function ErDiagram({
                                 }}
                             >
                                 <div className={pg.cardHead}>
-                                    <span>{t.name}</span>
+                                    <span>{tbl.name}</span>
                                     <Tag color="geekblue" style={{ fontSize: 10, marginInlineEnd: 0 }}>
-                                        {t.columns.length} 字段
+                                        {t('postgres.er.fieldsCount', { count: tbl.columns.length })}
                                     </Tag>
                                 </div>
                                 <div style={{ padding: '4px 0' }}>
-                                    {t.columns.map((c) => (
+                                    {tbl.columns.map((c) => (
                                         <div key={c.name} className={pg.colRow}>
                                             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                                                 {c.isPrimaryKey && <Key size={11} style={{ color: '#ff4d4f' }} />}

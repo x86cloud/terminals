@@ -1,4 +1,5 @@
 import { Input, Select, Button, InputNumber } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { RedisQueueItem } from '@/types'
 import { fmtFields } from '@/pages/redis/redisTypes'
 import q from '@/pages/redis/QueueTab.module.less'
@@ -30,12 +31,14 @@ export default function QueueTab({
     enqueue: () => Promise<void>
     dequeue: () => Promise<void>
 }) {
+    const { t } = useTranslation('redis')
+
     return (
         <div className={q.panel}>
             <div className={q.row} style={{ gap: 8, alignItems: 'center' }}>
                 <Input
                     style={{ flex: 1 }}
-                    placeholder="队列名"
+                    placeholder={t('queue.queueName')}
                     value={qName}
                     onChange={(e) => setQName(e.target.value)}
                 />
@@ -48,24 +51,28 @@ export default function QueueTab({
                         { value: 'stream', label: 'Stream (XADD/XREAD)' },
                     ]}
                 />
-                <span style={{ fontSize: 12, opacity: 0.85, whiteSpace: 'nowrap' }}>长度: {qLen}</span>
+                <span style={{ fontSize: 12, opacity: 0.85, whiteSpace: 'nowrap' }}>
+                    {t('queue.length', { len: qLen })}
+                </span>
             </div>
             <div className={q.row} style={{ gap: 8, alignItems: 'center', marginTop: 8 }}>
                 <Input
                     style={{ flex: 1 }}
-                    placeholder="消息内容"
+                    placeholder={t('queue.msgContent')}
                     value={qPayload}
                     onChange={(e) => setQPayload(e.target.value)}
                 />
-                <Button type="primary" onClick={enqueue}>入队</Button>
-                <span style={{ fontSize: 12, opacity: 0.85 }}>超时(s)</span>
+                <Button type="primary" onClick={enqueue}>
+                    {t('queue.enqueue')}
+                </Button>
+                <span style={{ fontSize: 12, opacity: 0.85 }}>{t('queue.timeoutSec')}</span>
                 <InputNumber
                     min={0}
                     style={{ width: 80 }}
                     value={qTimeout}
                     onChange={(v) => setQTimeout(v || 0)}
                 />
-                <Button onClick={dequeue}>出队</Button>
+                <Button onClick={dequeue}>{t('queue.dequeue')}</Button>
             </div>
             {qOut && (
                 <div className={q.msgItem} style={{ marginTop: 12 }}>

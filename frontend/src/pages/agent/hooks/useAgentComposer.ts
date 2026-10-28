@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import i18n from 'i18next'
 import { API, consumePendingAsk } from '@/api'
 import { AiMessage, AgentPlan } from '@/types'
 
@@ -63,7 +64,7 @@ export function useAgentComposer({
         const watchdog = setTimeout(() => {
             setIsGenerating(false)
             setActiveReasoning('')
-            setNoticeText('智能体响应超时或已停止')
+            setNoticeText(i18n.t('agent:composer.timeoutOrStopped', { defaultValue: '智能体响应超时或已停止' }))
         }, 120000)
         return () => clearTimeout(watchdog)
     }, [isGenerating, setNoticeText])
@@ -141,7 +142,7 @@ export function useAgentComposer({
             // 4. 自动向智能体发送执行指令，启动自主执行循环
             const userMsg: AiMessage = {
                 role: 'user',
-                content: '已批准实施方案，请按步骤开始执行并进行验证。',
+                content: i18n.t('agent:composer.approvedPlan', { defaultValue: '已批准实施方案，请按步骤开始执行并进行验证。' }),
                 timestamp: Date.now(),
             }
 
@@ -170,7 +171,7 @@ export function useAgentComposer({
                     const lastIdx = copy.length - 1
                     const last = copy[lastIdx]
                     if (last && last.role === 'assistant') {
-                        const newContent = last.content || resp || (last.reasoning_content ? '已完成实施方案执行。' : '方案执行完毕。')
+                        const newContent = last.content || resp || (last.reasoning_content ? i18n.t('agent:composer.planCompletedReasoning', { defaultValue: '已完成实施方案执行。' }) : i18n.t('agent:composer.planCompletedDefault', { defaultValue: '方案执行完毕。' }))
                         const newSteps = (last.process_steps || []).map((st) => ({
                             ...st,
                             status: 'completed' as const,
@@ -189,13 +190,13 @@ export function useAgentComposer({
                 }
             }).catch((err: any) => {
                 const errMsg = err?.message || String(err)
-                setNoticeText(`方案执行失败: ${errMsg}`)
+                setNoticeText(i18n.t('agent:composer.planFailed', { error: errMsg, defaultValue: `方案执行失败: ${errMsg}` }))
                 setMessages((finalCurr) => {
                     const copy = [...finalCurr]
                     const lastIdx = copy.length - 1
                     const last = copy[lastIdx]
                     if (last && last.role === 'assistant') {
-                        const newContent = last.content || `执行中断: ${errMsg}`
+                        const newContent = last.content || i18n.t('agent:composer.execInterrupted', { error: errMsg, defaultValue: `执行中断: ${errMsg}` })
                         const newSteps = (last.process_steps || []).map((st) =>
                             st.status === 'running' ? { ...st, status: 'failed' as const } : st
                         )
@@ -219,7 +220,7 @@ export function useAgentComposer({
         async (planId: string) => {
             try {
                 await API.agentCancelPlan(planId)
-                setNoticeText('已发送规划停止信号')
+                setNoticeText(i18n.t('agent:composer.stopSignalSent', { defaultValue: '已发送规划停止信号' }))
                 setMessages((current) => {
                     const copy = current.map((msg) => {
                         if (msg.plan && msg.plan.id === planId) {
@@ -246,7 +247,7 @@ export function useAgentComposer({
     const handleRetryPlanStep = useCallback(
         async (planId: string, stepId: string) => {
             try {
-                setNoticeText(`正在重新执行步骤 [${stepId}]...`)
+                setNoticeText(i18n.t('agent:composer.reExecutingStep', { stepId, defaultValue: `正在重新执行步骤 [${stepId}]...` }))
                 const updatedStep = await API.agentRetryPlanStep(planId, stepId)
                 setMessages((current) => {
                     const copy = current.map((msg) => {
@@ -267,9 +268,9 @@ export function useAgentComposer({
                     API.agentSaveSessionMessages(activeSessionId, copy).catch(() => { })
                     return copy
                 })
-                setNoticeText(`步骤 [${stepId}] 重试执行完成`)
+                setNoticeText(i18n.t('agent:composer.stepRetryCompleted', { stepId, defaultValue: `步骤 [${stepId}] 重试执行完成` }))
             } catch (err: any) {
-                setNoticeText(`步骤重试失败: ${err?.message || err}`)
+                setNoticeText(i18n.t('agent:composer.stepRetryFailed', { error: err?.message || err, defaultValue: `步骤重试失败: ${err?.message || err}` }))
             }
         },
         [activeSessionId, setMessages, setNoticeText]
@@ -334,8 +335,8 @@ export function useAgentComposer({
                     const last = copy[copy.length - 1]
                     if (last && last.role === 'assistant') {
                         last.content = plan?.is_update
-                            ? '已根据您的修改意见更新技术实施方案，请审阅确认后点击批准执行：'
-                            : '已为您制定技术实施方案，请审阅确认后点击批准执行：'
+                            ? i18n.t('agent:composer.planUpdateConfirm', { defaultValue: '已根据您的修改意见更新技术实施方案，请审阅确认后点击批准执行：' })
+                            : i18n.t('agent:composer.planCreateConfirm', { defaultValue: '已为您制定技术实施方案，请审阅确认后点击批准执行：' })
                         last.plan = {
                             ...plan,
                             status: 'proposed' as const,
@@ -353,11 +354,11 @@ export function useAgentComposer({
                                     st.type === 'think'
                                         ? reasoning ||
                                         st.content ||
-                                        '已完成现场调研与实施方案推演。'
+                                        i18n.t('agent:composer.researchCompleted', { defaultValue: '已完成现场调研与实施方案推演。' })
                                         : st.content,
                                 summary: plan?.is_update
-                                    ? '已更新技术实施方案 (implementation_plan.md)'
-                                    : '已生成技术实施方案 (implementation_plan.md)',
+                                    ? i18n.t('agent:composer.planUpdatedTitle', { defaultValue: '已更新技术实施方案 (implementation_plan.md)' })
+                                    : i18n.t('agent:composer.planCreatedTitle', { defaultValue: '已生成技术实施方案 (implementation_plan.md)' }),
                             }))
                         }
                     }
@@ -370,7 +371,7 @@ export function useAgentComposer({
                     const copy = [...current]
                     const last = copy[copy.length - 1]
                     if (last && last.role === 'assistant') {
-                        last.content = `生成规划失败: ${errMsg}`
+                        last.content = i18n.t('agent:composer.planGenFailed', { error: errMsg, defaultValue: `生成规划失败: ${errMsg}` })
                         if (last.process_steps) {
                             last.process_steps = last.process_steps.map((st) => ({
                                 ...st,
@@ -380,7 +381,7 @@ export function useAgentComposer({
                     }
                     return copy
                 })
-                setNoticeText(`生成规划失败: ${errMsg}`)
+                setNoticeText(i18n.t('agent:composer.planGenFailed', { error: errMsg, defaultValue: `生成规划失败: ${errMsg}` }))
             } finally {
                 setIsGenerating(false)
                 setActiveReasoning('')
@@ -424,7 +425,7 @@ export function useAgentComposer({
                     const last = copy[copy.length - 1]
                     if (last && last.role === 'assistant') {
                         if (!last.content) {
-                            last.content = resp || (last.reasoning_content ? '已完成访谈与推演。' : '请根据提问继续确认。')
+                            last.content = resp || (last.reasoning_content ? i18n.t('agent:composer.interviewDoneReasoning', { defaultValue: '已完成访谈与推演。' }) : i18n.t('agent:composer.interviewContinueConfirm', { defaultValue: '请根据提问继续确认。' }))
                         }
                         if (last.process_steps) {
                             last.process_steps = last.process_steps.map((st) => ({
@@ -438,13 +439,13 @@ export function useAgentComposer({
                 })
             } catch (err: any) {
                 const errMsg = err?.message || String(err)
-                setNoticeText(`发送失败: ${errMsg}`)
+                setNoticeText(i18n.t('agent:composer.sendFailed', { error: errMsg, defaultValue: `发送失败: ${errMsg}` }))
                 setMessages((current) => {
                     const copy = [...current]
                     const last = copy[copy.length - 1]
                     if (last && last.role === 'assistant') {
                         if (!last.content) {
-                            last.content = `执行中断: ${errMsg}`
+                            last.content = i18n.t('agent:composer.execInterrupted', { error: errMsg, defaultValue: `执行中断: ${errMsg}` })
                         }
                         if (last.process_steps) {
                             last.process_steps = last.process_steps.map((st) =>
@@ -496,8 +497,8 @@ export function useAgentComposer({
                         last.content =
                             resp ||
                             (last.reasoning_content
-                                ? '已完成深度推演与相关操作。'
-                                : '任务已完成。')
+                                ? i18n.t('agent:composer.deepCompleted', { defaultValue: '已完成深度推演与相关操作。' })
+                                : i18n.t('agent:composer.taskCompleted', { defaultValue: '任务已完成。' }))
                     }
                     if (last.process_steps) {
                         last.process_steps = last.process_steps.map((st) => ({
@@ -511,13 +512,13 @@ export function useAgentComposer({
             })
         } catch (err: any) {
             const errMsg = err?.message || String(err)
-            setNoticeText(`发送失败: ${errMsg}`)
+            setNoticeText(i18n.t('agent:composer.sendFailed', { error: errMsg, defaultValue: `发送失败: ${errMsg}` }))
             setMessages((current) => {
                 const copy = [...current]
                 const last = copy[copy.length - 1]
                 if (last && last.role === 'assistant') {
                     if (!last.content) {
-                        last.content = `执行中断: ${errMsg}`
+                        last.content = i18n.t('agent:composer.execInterrupted', { error: errMsg, defaultValue: `执行中断: ${errMsg}` })
                     }
                     if (last.process_steps) {
                         last.process_steps = last.process_steps.map((st) =>

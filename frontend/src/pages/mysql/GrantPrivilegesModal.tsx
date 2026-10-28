@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import { Modal, Form, Select, Segmented, Checkbox, Switch, Button, Tag, Space, Alert, Divider } from 'antd'
 import { Shield, Eye, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 
@@ -46,6 +47,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
     onClose,
     onSuccess,
 }) => {
+    const { t } = useTranslation(['db', 'common'])
     const [form] = Form.useForm()
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
@@ -104,10 +106,6 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                 'INDEX',
                 'CREATE VIEW',
                 'SHOW VIEW',
-                'CREATE ROUTINE',
-                'ALTER ROUTINE',
-                'TRIGGER',
-                'EXECUTE',
             ])
         } else if (type === 'all') {
             setCheckedPrivs(['ALL PRIVILEGES'])
@@ -115,62 +113,71 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
     }
 
     const togglePriv = (priv: string) => {
-        setCheckedPrivs((prev) => {
-            if (priv === 'ALL PRIVILEGES') {
-                return prev.includes('ALL PRIVILEGES') ? [] : ['ALL PRIVILEGES']
-            }
-            const withoutAll = prev.filter((p) => p !== 'ALL PRIVILEGES')
-            if (withoutAll.includes(priv)) {
-                return withoutAll.filter((p) => p !== priv)
+        if (priv === 'ALL PRIVILEGES') {
+            if (checkedPrivs.includes('ALL PRIVILEGES')) {
+                setCheckedPrivs([])
             } else {
-                return [...withoutAll, priv]
+                setCheckedPrivs(['ALL PRIVILEGES'])
             }
-        })
+            return
+        }
+
+        // if currently has ALL PRIVILEGES, clear it and replace
+        let next = checkedPrivs.filter((p) => p !== 'ALL PRIVILEGES')
+        if (next.includes(priv)) {
+            next = next.filter((p) => p !== priv)
+        } else {
+            next.push(priv)
+        }
+        setCheckedPrivs(next)
     }
 
-    const selectCategory = (category: string[], select: boolean) => {
-        setCheckedPrivs((prev) => {
-            const set = new Set(prev.filter((p) => p !== 'ALL PRIVILEGES'))
-            category.forEach((p) => {
-                if (select) set.add(p)
-                else set.delete(p)
+    const selectCategory = (categoryPrivs: string[], select: boolean) => {
+        let next = checkedPrivs.filter((p) => p !== 'ALL PRIVILEGES')
+        if (select) {
+            categoryPrivs.forEach((p) => {
+                if (!next.includes(p)) next.push(p)
             })
-            return Array.from(set)
-        })
+        } else {
+            next = next.filter((p) => !categoryPrivs.includes(p))
+        }
+        setCheckedPrivs(next)
     }
 
-    // SQL Preview
     const targetScopeStr = useMemo(() => {
         if (scope === 'global') return '*.*'
-        const dbPart = selectedDb ? `\`${selectedDb.replace(/`/g, '``')}\`` : '*'
-        if (scope === 'database') return `${dbPart}.*`
-        const tblPart = selectedTable ? `\`${selectedTable.replace(/`/g, '``')}\`` : '*'
-        return `${dbPart}.${tblPart}`
+        if (scope === 'database') {
+            const db = selectedDb || 'db_name'
+            return `\`${db}\`.*`
+        }
+        const db = selectedDb || 'db_name'
+        const tbl = selectedTable || 'table_name'
+        return `\`${db}\`.\`${tbl}\``
     }, [scope, selectedDb, selectedTable])
 
     const sqlPreview = useMemo(() => {
         const u = user.replace(/'/g, "''")
         const h = (host || '%').replace(/'/g, "''")
-        const privStr = checkedPrivs.length > 0 ? checkedPrivs.join(', ') : '/* 请选择权限 */'
+        const privStr = checkedPrivs.length > 0 ? checkedPrivs.join(', ') : `/* ${t('db:mysql.grantModal.atLeastOne')} */`
         let sql = `GRANT ${privStr} ON ${targetScopeStr} TO '${u}'@'${h}'`
         if (withGrantOption) {
             sql += ' WITH GRANT OPTION'
         }
         sql += ';\nFLUSH PRIVILEGES;'
         return sql
-    }, [user, host, checkedPrivs, targetScopeStr, withGrantOption])
+    }, [user, host, checkedPrivs, targetScopeStr, withGrantOption, t])
 
     const handleOk = async () => {
         if (checkedPrivs.length === 0) {
-            setError('请至少勾选一项要授予的权限')
+            setError(t('db:mysql.grantModal.atLeastOne'))
             return
         }
         if (scope === 'database' && !selectedDb) {
-            setError('请选择要授权的目标数据库')
+            setError(t('db:mysql.grantModal.selectDb'))
             return
         }
         if (scope === 'table' && (!selectedDb || !selectedTable)) {
-            setError('请选择要授权的目标数据库和数据表')
+            setError(t('db:mysql.grantModal.selectDbTable'))
             return
         }
 
@@ -206,7 +213,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                     <Shield size={18} color="var(--accent)" />
-                    <span style={{ fontWeight: 600 }}>关联/分配用户权限 (GRANT)</span>
+                    <span style={{ fontWeight: 600 }}>{t('db:mysql.grantModal.title')}</span>
                     <Tag color="processing" style={{ margin: 0, fontFamily: 'var(--font-mono)' }}>
                         {user}@{host}
                     </Tag>
@@ -216,15 +223,15 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
             onCancel={onClose}
             onOk={handleOk}
             confirmLoading={busy}
-            okText="执行授权 (GRANT)"
-            cancelText="取消"
+            okText={t('db:mysql.grantModal.ok')}
+            cancelText={t('common:cancel')}
             width={680}
             destroyOnHidden
         >
             {error && (
                 <Alert
                     type="error"
-                    message="授权失败"
+                    message={t('db:mysql.grantModal.fail')}
                     description={error}
                     showIcon
                     style={{ marginBottom: 16 }}
@@ -235,16 +242,16 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                 {/* 1. 作用域配置 */}
                 <div style={{ padding: '12px 14px', background: 'var(--bg-2)', borderRadius: 8, marginBottom: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span>1. 选择授权作用域 (Scope)</span>
+                        <span>{t('db:mysql.grantModal.scopeTitle')}</span>
                     </div>
                     <Segmented
                         block
                         value={scope}
                         onChange={(v) => setScope(v as any)}
                         options={[
-                            { label: '🌐 全局 (*.*)', value: 'global' },
-                            { label: '🗄️ 指定数据库 (db.*)', value: 'database' },
-                            { label: '📋 指定数据表 (db.table)', value: 'table' },
+                            { label: t('db:mysql.grantModal.scopeGlobal'), value: 'global' },
+                            { label: t('db:mysql.grantModal.scopeDb'), value: 'database' },
+                            { label: t('db:mysql.grantModal.scopeTable'), value: 'table' },
                         ]}
                         style={{ marginBottom: 12 }}
                     />
@@ -252,7 +259,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                     {scope !== 'global' && (
                         <div style={{ display: 'grid', gridTemplateColumns: scope === 'table' ? '1fr 1fr' : '1fr', gap: 12 }}>
                             <div>
-                                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>目标数据库:</div>
+                                <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('db:mysql.grantModal.targetDb')}</div>
                                 <Select
                                     style={{ width: '100%' }}
                                     value={selectedDb}
@@ -261,19 +268,19 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                                         setSelectedTable('')
                                     }}
                                     options={databases.map((d) => ({ label: d, value: d }))}
-                                    placeholder="选择数据库"
+                                    placeholder={t('db:mysql.grantModal.selectDbPlaceholder')}
                                     showSearch
                                 />
                             </div>
                             {scope === 'table' && (
                                 <div>
-                                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>目标数据表:</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('db:mysql.grantModal.targetTable')}</div>
                                     <Select
                                         style={{ width: '100%' }}
                                         value={selectedTable}
                                         onChange={(v) => setSelectedTable(v)}
                                         options={tables.map((t) => ({ label: t, value: t }))}
-                                        placeholder="选择数据表"
+                                        placeholder={t('db:mysql.grantModal.selectTablePlaceholder')}
                                         loading={loadingTables}
                                         showSearch
                                     />
@@ -287,7 +294,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                 <div style={{ marginBottom: 16 }}>
                     <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Sparkles size={14} color="var(--accent)" />
-                        <span>2. 常用权限模板快捷应用</span>
+                        <span>{t('db:mysql.grantModal.presetsTitle')}</span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
                         <Button
@@ -295,21 +302,21 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                             onClick={() => applyPreset('readonly')}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, height: 34, fontSize: 12.5 }}
                         >
-                            🔍 只读数据
+                            {t('db:mysql.grantModal.presetReadonly')}
                         </Button>
                         <Button
                             size="middle"
                             onClick={() => applyPreset('readwrite')}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, height: 34, fontSize: 12.5 }}
                         >
-                            ✏️ 读写数据
+                            {t('db:mysql.grantModal.presetReadwrite')}
                         </Button>
                         <Button
                             size="middle"
                             onClick={() => applyPreset('structure')}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, height: 34, fontSize: 12.5 }}
                         >
-                            🛠️ 结构管理
+                            {t('db:mysql.grantModal.presetStructure')}
                         </Button>
                         <Button
                             size="middle"
@@ -317,7 +324,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                             onClick={() => applyPreset('all')}
                             style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, height: 34, fontSize: 12.5 }}
                         >
-                            👑 全部权限
+                            {t('db:mysql.grantModal.presetAll')}
                         </Button>
                     </div>
                 </div>
@@ -328,11 +335,11 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                     <div style={{ marginBottom: 12 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                             <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>
-                                📊 数据操作权限 (DML)
+                                {t('db:mysql.grantModal.categoryDml')}
                             </span>
                             <Space size={4}>
-                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11 }} onClick={() => selectCategory(DML_PRIVS, true)}>全选</Button>
-                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11, color: 'var(--text-dim)' }} onClick={() => selectCategory(DML_PRIVS, false)}>取消</Button>
+                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11 }} onClick={() => selectCategory(DML_PRIVS, true)}>{t('db:mysql.grantModal.selectAll')}</Button>
+                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11, color: 'var(--text-dim)' }} onClick={() => selectCategory(DML_PRIVS, false)}>{t('db:mysql.grantModal.deselect')}</Button>
                             </Space>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 12px' }}>
@@ -356,11 +363,11 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                     <div style={{ marginBottom: 12 }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                             <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>
-                                🏗️ 结构定义权限 (DDL)
+                                {t('db:mysql.grantModal.categoryDdl')}
                             </span>
                             <Space size={4}>
-                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11 }} onClick={() => selectCategory(DDL_PRIVS, true)}>全选</Button>
-                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11, color: 'var(--text-dim)' }} onClick={() => selectCategory(DDL_PRIVS, false)}>取消</Button>
+                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11 }} onClick={() => selectCategory(DDL_PRIVS, true)}>{t('db:mysql.grantModal.selectAll')}</Button>
+                                <Button size="small" type="link" style={{ padding: 0, fontSize: 11, color: 'var(--text-dim)' }} onClick={() => selectCategory(DDL_PRIVS, false)}>{t('db:mysql.grantModal.deselect')}</Button>
                             </Space>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 12px' }}>
@@ -384,7 +391,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                                     <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--text)' }}>
-                                        🛡️ 管理权限 (Admin)
+                                        {t('db:mysql.grantModal.categoryAdmin')}
                                     </span>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px 12px' }}>
@@ -407,8 +414,8 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                 {/* 4. 选项与高级设置 */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 6 }}>
                     <div>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>允许转授权 (WITH GRANT OPTION)</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>允许该用户将自己拥有的权限进一步授予其他用户</div>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{t('db:mysql.grantModal.withGrantOption')}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('db:mysql.grantModal.withGrantOptionDesc')}</div>
                     </div>
                     <Switch size="small" checked={withGrantOption} onChange={setWithGrantOption} />
                 </div>
@@ -417,7 +424,7 @@ export const GrantPrivilegesModal: React.FC<Props> = ({
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>
                         <Eye size={12} />
-                        <span>实时 SQL 预览</span>
+                        <span>{t('db:mysql.grantModal.sqlPreview')}</span>
                     </div>
                     <pre
                         style={{

@@ -1,4 +1,5 @@
 import { API } from '@/api'
+import i18n from '@/i18n'
 import {
     ServerConfig,
     RedisSessionInfo,
@@ -15,7 +16,7 @@ import type { ActiveTarget, SessionsState, ToolsState } from './SessionContext'
 
 export async function connectK8sHelper(cfg: ServerConfig): Promise<K8sSessionInfo> {
     const ok = await API.k8sConnect(cfg.id)
-    if (!ok) throw new Error('Kubernetes 集群连接失败')
+    if (!ok) throw new Error(i18n.t('server:connectFailK8s', 'Kubernetes 集群连接失败'))
     const target = cfg.k8sContext ? `Context: ${cfg.k8sContext}` : (cfg.k8sApiServer || cfg.host || 'Kubeconfig')
     return {
         id: cfg.id,
@@ -29,7 +30,7 @@ export async function connectK8sHelper(cfg: ServerConfig): Promise<K8sSessionInf
 
 export async function connectDockerHelper(cfg: ServerConfig): Promise<DockerSessionInfo> {
     const ok = await API.dockerConnect(cfg.id)
-    if (!ok) throw new Error('Docker 守护进程连接失败')
+    if (!ok) throw new Error(i18n.t('server:connectFailDocker', 'Docker 守护进程连接失败'))
     const epType = cfg.dockerEndpointType || 'unix'
     let target = cfg.dockerSocketPath || '/var/run/docker.sock'
     if (epType === 'tcp') {
@@ -49,7 +50,7 @@ export async function connectDockerHelper(cfg: ServerConfig): Promise<DockerSess
 
 export async function connectRedisHelper(cfg: ServerConfig): Promise<RedisSessionInfo> {
     const ok = await API.redisConnect(cfg.id)
-    if (!ok) throw new Error('Redis 连接失败')
+    if (!ok) throw new Error(i18n.t('server:connectFailRedis', 'Redis 连接失败'))
     const dbSize = await API.redisDBSize(cfg.id).catch(() => 0)
     const modeInfo = await API.redisModeInfo(cfg.id).catch(() => ({} as any))
     return {
@@ -69,7 +70,7 @@ export async function connectRedisHelper(cfg: ServerConfig): Promise<RedisSessio
 
 export async function connectMysqlHelper(cfg: ServerConfig): Promise<MysqlSessionInfo> {
     const ok = await API.mysqlConnectEx(cfg.id)
-    if (!ok) throw new Error('MySQL 连接失败')
+    if (!ok) throw new Error(i18n.t('server:connectFailMysql', 'MySQL 连接失败'))
     return {
         id: cfg.id,
         serverId: cfg.id,
@@ -83,7 +84,7 @@ export async function connectMysqlHelper(cfg: ServerConfig): Promise<MysqlSessio
 
 export async function connectPostgresHelper(cfg: ServerConfig): Promise<PostgresSessionInfo> {
     const ok = await API.postgresConnect(cfg.id)
-    if (!ok) throw new Error('PostgreSQL 连接失败')
+    if (!ok) throw new Error(i18n.t('server:connectFailPostgres', 'PostgreSQL 连接失败'))
     return {
         id: cfg.id,
         serverId: cfg.id,
@@ -98,7 +99,7 @@ export async function connectPostgresHelper(cfg: ServerConfig): Promise<Postgres
 
 export async function connectMqttHelper(cfg: ServerConfig): Promise<MqttSessionInfo> {
     const ok = await API.mqttConnect(cfg.id)
-    if (!ok) throw new Error('MQTT 连接失败')
+    if (!ok) throw new Error(i18n.t('server:connectFailMqtt', 'MQTT 连接失败'))
     return {
         id: cfg.id,
         serverId: cfg.id,
@@ -113,7 +114,7 @@ export async function connectMqttHelper(cfg: ServerConfig): Promise<MqttSessionI
 
 export async function connectMongoHelper(cfg: ServerConfig): Promise<MongoSessionInfo> {
     const ok = await API.mongoConnect(cfg.id)
-    if (!ok) throw new Error('MongoDB 连接失败')
+    if (!ok) throw new Error(i18n.t('server:connectFailMongo', 'MongoDB 连接失败'))
     return {
         id: cfg.id,
         serverId: cfg.id,
@@ -134,7 +135,7 @@ export async function connectSqliteHelper(cfg: ServerConfig): Promise<SqliteSess
         if (!path) return null
     }
     const ok = await API.sqliteConnect(cfg.id, path)
-    if (!ok) throw new Error('无法打开该 SQLite 文件')
+    if (!ok) throw new Error(i18n.t('server:sqlite.cannotOpenFile', '无法打开该 SQLite 文件'))
     const stat = await API.sqliteInfo(cfg.id).catch(() => ({ path, size: 0 }))
     const finalPath = stat?.path || path
     const dbName = finalPath.split(/[\\/]/).pop() || finalPath
@@ -191,20 +192,20 @@ export function getAllOpenTabs(
     sessions: SessionsState,
     tools: ToolsState
 ): ActiveTarget[] {
-    const list: ActiveTarget[] = []
+    const openTabs: ActiveTarget[] = [{ kind: 'aiAgent', id: null }]
     const kinds: ConnType[] = ['ssh', 'docker', 'k8s', 'redis', 'mysql', 'postgres', 'mqtt', 'mongo', 'sqlite']
     for (const k of kinds) {
         const sList = sessions[k]
         if (sList && sList.length) {
             for (const s of sList) {
-                list.push({ kind: k, id: s.id })
+                openTabs.push({ kind: k, id: s.id })
             }
         }
     }
-    if (tools.devtools.open) list.push({ kind: 'devtools', id: null })
-    if (tools.api.open) list.push({ kind: 'api', id: null })
-    if (tools.wiki.open) list.push({ kind: 'wiki', id: null })
-    return list
+    if (tools.devtools.open) openTabs.push({ kind: 'devtools', id: null })
+    if (tools.api.open) openTabs.push({ kind: 'api', id: null })
+    if (tools.wiki.open) openTabs.push({ kind: 'wiki', id: null })
+    return openTabs
 }
 
 export function pickAdjacentFallback(

@@ -16,6 +16,7 @@ import {
     X,
     Plus,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import CreateUserModal from './CreateUserModal'
@@ -45,6 +46,7 @@ export default function UsersPanel({
     onRefreshUsers,
     onRefreshGrants,
 }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [copied, setCopied] = useState(false)
     const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
@@ -70,7 +72,7 @@ export default function UsersPanel({
             await navigator.clipboard.writeText(grants)
             setCopied(true)
             setTimeout(() => setCopied(false), 1500)
-            notify('已复制全部授权语句')
+            notify(t('db:mysql.users.copiedAllNotify'))
         } catch {
             /* ignore */
         }
@@ -81,7 +83,7 @@ export default function UsersPanel({
             await navigator.clipboard.writeText(text)
             setCopiedIdx(idx)
             setTimeout(() => setCopiedIdx(null), 1500)
-            notify('已复制授权语句')
+            notify(t('db:mysql.users.copiedSingleNotify'))
         } catch {
             /* ignore */
         }
@@ -101,19 +103,19 @@ export default function UsersPanel({
 
     // Toggle user lock
     const handleToggleLock = (targetUser: string, targetHost: string, currentLocked: boolean) => {
-        const actionText = currentLocked ? '解锁' : '锁定'
+        const actionText = currentLocked ? t('db:mysql.users.unlockAction') : t('db:mysql.users.lockAction')
         Modal.confirm({
-            title: `确认${actionText}用户`,
-            content: `确定要${actionText}用户 "${targetUser}@${targetHost}" 吗？`,
-            okText: `确认${actionText}`,
-            cancelText: '取消',
+            title: t('db:mysql.users.lockConfirmTitle', { action: actionText }),
+            content: t('db:mysql.users.lockConfirmContent', { action: actionText, user: targetUser, host: targetHost }),
+            okText: t('db:mysql.users.lockOk', { action: actionText }),
+            cancelText: t('common:cancel'),
             onOk: async () => {
                 try {
                     await API.mysqlToggleUserLock(sessionId, targetUser, targetHost, !currentLocked)
-                    notify(`用户 ${targetUser}@${targetHost} 已${actionText}`)
+                    notify(t('db:mysql.users.lockSuccess', { user: targetUser, host: targetHost, action: actionText }))
                     await onRefreshUsers()
                 } catch (e) {
-                    notifyError(`${actionText}失败: ` + errorMessage(e))
+                    notifyError(t('db:mysql.users.lockFailed', { action: actionText, error: errorMessage(e) }))
                 }
             },
         })
@@ -122,22 +124,22 @@ export default function UsersPanel({
     // Drop user
     const handleDropUser = (targetUser: string, targetHost: string) => {
         Modal.confirm({
-            title: '确认删除用户 (DROP USER)',
-            content: `确定要永久删除用户 "${targetUser}@${targetHost}" 吗？此操作不可逆！`,
-            okText: '确认删除',
+            title: t('db:mysql.users.dropConfirmTitle'),
+            content: t('db:mysql.users.dropConfirmContent', { user: targetUser, host: targetHost }),
+            okText: t('db:mysql.users.dropOk'),
             okType: 'danger',
-            cancelText: '取消',
+            cancelText: t('common:cancel'),
             onOk: async () => {
                 try {
                     await API.mysqlDropUser(sessionId, targetUser, targetHost)
-                    notify(`已成功删除用户 ${targetUser}@${targetHost}`)
+                    notify(t('db:mysql.users.dropSuccess', { user: targetUser, host: targetHost }))
                     if (selUser?.user === targetUser && selUser?.host === targetHost) {
                         // reset selection if active
                         onSelect('', '')
                     }
                     await onRefreshUsers()
                 } catch (e) {
-                    notifyError('删除用户失败: ' + errorMessage(e))
+                    notifyError(t('db:mysql.users.dropFailed', { error: errorMessage(e) }))
                 }
             },
         })
@@ -146,18 +148,18 @@ export default function UsersPanel({
     // Revoke all privileges
     const handleRevokeAll = (targetUser: string, targetHost: string) => {
         Modal.confirm({
-            title: '确认撤销该用户的全部权限 (REVOKE ALL)',
-            content: `确定要撤销用户 "${targetUser}@${targetHost}" 的所有全局与库表权限及 GRANT OPTION 吗？`,
-            okText: '确认撤销全部',
+            title: t('db:mysql.users.revokeAllConfirmTitle'),
+            content: t('db:mysql.users.revokeAllConfirmContent', { user: targetUser, host: targetHost }),
+            okText: t('db:mysql.users.revokeAllOk'),
             okType: 'danger',
-            cancelText: '取消',
+            cancelText: t('common:cancel'),
             onOk: async () => {
                 try {
                     await API.mysqlRevokeAllPrivileges(sessionId, targetUser, targetHost)
-                    notify(`已撤销 ${targetUser}@${targetHost} 的全部权限`)
+                    notify(t('db:mysql.users.revokeAllSuccess', { user: targetUser, host: targetHost }))
                     if (onRefreshGrants) await onRefreshGrants()
                 } catch (e) {
-                    notifyError('撤销全部权限失败: ' + errorMessage(e))
+                    notifyError(t('db:mysql.users.revokeAllFailed', { error: errorMessage(e) }))
                 }
             },
         })
@@ -165,11 +167,9 @@ export default function UsersPanel({
 
     // Revoke a single grant rule
     const handleRevokeSingleGrant = (stmt: string, targetUser: string, targetHost: string) => {
-        // e.g. "GRANT SELECT, INSERT ON `test_db`.* TO 'u'@'%'" -> REVOKE SELECT, INSERT ON `test_db`.* FROM 'u'@'%'
         let revokeSql = stmt
         if (stmt.startsWith('GRANT ')) {
             revokeSql = stmt.replace(/^GRANT\s+/i, 'REVOKE ')
-            // replace " TO " with " FROM "
             const lastToIndex = revokeSql.lastIndexOf(' TO ')
             if (lastToIndex !== -1) {
                 revokeSql = revokeSql.substring(0, lastToIndex) + ' FROM ' + revokeSql.substring(lastToIndex + 4)
@@ -177,10 +177,10 @@ export default function UsersPanel({
         }
 
         Modal.confirm({
-            title: '确认撤销此条授权规则 (REVOKE)',
+            title: t('db:mysql.users.revokeSingleConfirmTitle'),
             content: (
                 <div>
-                    <p>将执行以下撤销语句：</p>
+                    <p>{t('db:mysql.users.revokeSingleDesc')}</p>
                     <pre
                         style={{
                             padding: '8px 12px',
@@ -196,17 +196,17 @@ export default function UsersPanel({
                     </pre>
                 </div>
             ),
-            okText: '确认撤销',
+            okText: t('db:mysql.users.revokeSingleOk'),
             okType: 'danger',
-            cancelText: '取消',
+            cancelText: t('common:cancel'),
             onOk: async () => {
                 try {
                     await API.mysqlRun(sessionId, 'mysql', revokeSql)
                     await API.mysqlRun(sessionId, 'mysql', 'FLUSH PRIVILEGES')
-                    notify('已成功撤销该项授权')
+                    notify(t('db:mysql.users.revokeSingleSuccess'))
                     if (onRefreshGrants) await onRefreshGrants()
                 } catch (e) {
-                    notifyError('撤销授权失败: ' + errorMessage(e))
+                    notifyError(t('db:mysql.users.revokeSingleFailed', { error: errorMessage(e) }))
                 }
             },
         })
@@ -240,9 +240,9 @@ export default function UsersPanel({
             <div className={my.mgmtHead}>
                 <div className={my.headTitle}>
                     <ShieldCheck size={16} color="var(--accent)" />
-                    <span>MySQL 用户与权限管理</span>
+                    <span>{t('db:mysql.users.title')}</span>
                     <Tag style={{ marginLeft: 4, borderRadius: 10, fontSize: 11 }}>
-                        共 {users.length} 个用户
+                        {t('db:mysql.users.userCount', { count: users.length })}
                     </Tag>
                 </div>
                 <Space size={8}>
@@ -251,9 +251,9 @@ export default function UsersPanel({
                         icon={<RotateCw size={13} className={refreshing ? 'spin-icon' : ''} />}
                         onClick={handleRefresh}
                         loading={refreshing}
-                        title="刷新用户列表与权限"
+                        title={t('db:mysql.users.refreshTooltip')}
                     >
-                        刷新
+                        {t('db:mysql.users.refresh')}
                     </Button>
                     <Button
                         size="small"
@@ -261,7 +261,7 @@ export default function UsersPanel({
                         icon={<UserPlus size={13} />}
                         onClick={() => setCreateUserOpen(true)}
                     >
-                        新建用户
+                        {t('db:mysql.users.newUser')}
                     </Button>
                 </Space>
             </div>
@@ -273,7 +273,7 @@ export default function UsersPanel({
                         <Input
                             size="small"
                             prefix={<Search size={12} color="var(--text-dim)" />}
-                            placeholder="搜索用户或 Host"
+                            placeholder={t('db:mysql.users.searchPlaceholder')}
                             value={searchKeyword}
                             onChange={(e) => setSearchKeyword(e.target.value)}
                             allowClear
@@ -282,7 +282,7 @@ export default function UsersPanel({
 
                     {filteredUsers.length === 0 && (
                         <div className={`${sh.mysqlEmpty} ${my.small}`}>
-                            {users.length === 0 ? '暂无用户（需 mysql 库权限）' : '未匹配到用户'}
+                            {users.length === 0 ? t('db:mysql.users.noUsersNeedPriv') : t('db:mysql.users.noMatchingUsers')}
                         </div>
                     )}
 
@@ -300,19 +300,19 @@ export default function UsersPanel({
                                 <User size={14} className={my.userIcon} />
                                 <div className={my.userMeta}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                        <span className={my.userName}>{u.User || '(匿名)'}</span>
+                                        <span className={my.userName}>{u.User || t('db:mysql.users.anonymous')}</span>
                                         {isRoot && (
                                             <Tag color="gold" style={{ fontSize: 10, lineHeight: '14px', padding: '0 3px', margin: 0 }}>
-                                                👑 Root
+                                                {t('db:mysql.users.rootTag')}
                                             </Tag>
                                         )}
-                                        {isLocked && <span className={my.lockBadge}>已锁定</span>}
+                                        {isLocked && <span className={my.lockBadge}>{t('db:mysql.users.lockedBadge')}</span>}
                                     </div>
                                     <span className={my.userHost}>@{u.Host}</span>
                                 </div>
 
                                 <div className={my.userQuickActions} onClick={(e) => e.stopPropagation()}>
-                                    <Tooltip title="修改密码">
+                                    <Tooltip title={t('db:mysql.users.changePassword')}>
                                         <Button
                                             size="small"
                                             type="text"
@@ -322,7 +322,7 @@ export default function UsersPanel({
                                     </Tooltip>
                                     {!isRoot && (
                                         <>
-                                            <Tooltip title={isLocked ? '解锁账户' : '锁定账户'}>
+                                            <Tooltip title={isLocked ? t('db:mysql.users.unlockAccount') : t('db:mysql.users.lockAccount')}>
                                                 <Button
                                                     size="small"
                                                     type="text"
@@ -330,7 +330,7 @@ export default function UsersPanel({
                                                     onClick={() => handleToggleLock(u.User, u.Host, isLocked)}
                                                 />
                                             </Tooltip>
-                                            <Tooltip title="删除用户">
+                                            <Tooltip title={t('db:mysql.users.deleteUser')}>
                                                 <Button
                                                     size="small"
                                                     type="text"
@@ -361,11 +361,11 @@ export default function UsersPanel({
                                                 <span>{selUser.user}@{selUser.host}</span>
                                                 {isSelUserRoot && (
                                                     <Tag color="gold" style={{ margin: 0, fontWeight: 500 }}>
-                                                        👑 超级管理员 (受安全保护)
+                                                        {t('db:mysql.users.superAdminProtected')}
                                                     </Tag>
                                                 )}
                                                 {currentSelectedObj?.locked === 'Y' && (
-                                                    <Tag color="error">账户已锁定</Tag>
+                                                    <Tag color="error">{t('db:mysql.users.accountLocked')}</Tag>
                                                 )}
                                             </div>
 
@@ -377,7 +377,7 @@ export default function UsersPanel({
                                                         icon={<Plus size={13} />}
                                                         onClick={() => setGrantModalOpen(true)}
                                                     >
-                                                        关联/分配权限 (GRANT)
+                                                        {t('db:mysql.users.grantPrivileges')}
                                                     </Button>
                                                 )}
 
@@ -386,7 +386,7 @@ export default function UsersPanel({
                                                     icon={<KeyRound size={13} />}
                                                     onClick={() => setChangePwdUser({ user: selUser.user, host: selUser.host })}
                                                 >
-                                                    修改密码
+                                                    {t('db:mysql.users.changePassword')}
                                                 </Button>
 
                                                 {grants && (
@@ -395,7 +395,7 @@ export default function UsersPanel({
                                                         icon={copied ? <Check size={12} /> : <Copy size={12} />}
                                                         onClick={handleCopyAll}
                                                     >
-                                                        {copied ? '已复制' : '复制全部'}
+                                                        {copied ? t('db:mysql.users.copied') : t('db:mysql.users.copyAll')}
                                                     </Button>
                                                 )}
 
@@ -405,9 +405,9 @@ export default function UsersPanel({
                                                         danger
                                                         icon={<Trash2 size={12} />}
                                                         onClick={() => handleRevokeAll(selUser.user, selUser.host)}
-                                                        title="撤销该用户的全部授权与转授权"
+                                                        title={t('db:mysql.users.revokeAllTooltip')}
                                                     >
-                                                        撤销全部权限
+                                                        {t('db:mysql.users.revokeAll')}
                                                     </Button>
                                                 )}
                                             </Space>
@@ -422,7 +422,7 @@ export default function UsersPanel({
                                                             <div className={my.grantCardHead}>
                                                                 <div className={my.grantIdx}>
                                                                     <Tag color="cyan" style={{ margin: 0, fontSize: 10, lineHeight: '16px' }}>
-                                                                        规则 #{idx + 1}
+                                                                        {t('db:mysql.users.ruleNumber', { idx: idx + 1 })}
                                                                     </Tag>
                                                                 </div>
 
@@ -432,10 +432,10 @@ export default function UsersPanel({
                                                                         type="text"
                                                                         icon={copiedIdx === idx ? <Check size={12} /> : <Copy size={12} />}
                                                                         onClick={() => handleCopyCard(stmt, idx)}
-                                                                        title="复制该条授权 SQL"
+                                                                        title={t('db:mysql.users.copyRuleTooltip')}
                                                                     />
                                                                     {!isSelUserRoot && isGrant && (
-                                                                        <Tooltip title="撤销此项授权 (REVOKE)">
+                                                                        <Tooltip title={t('db:mysql.users.revokeRuleTooltip')}>
                                                                             <Button
                                                                                 size="small"
                                                                                 type="text"
@@ -453,7 +453,7 @@ export default function UsersPanel({
                                                     )
                                                 })
                                             ) : (
-                                                <div className={my.grantsPre}>{grants || '加载中…'}</div>
+                                                <div className={my.grantsPre}>{grants || t('common:loading')}</div>
                                             )}
                                         </div>
                                     </>
@@ -463,7 +463,7 @@ export default function UsersPanel({
                     ) : (
                         <div className={my.emptyPlaceholder}>
                             <User size={36} />
-                            <span>选择左侧用户查看该用户的详细授权信息，或点击上方“新建用户”添加新账户</span>
+                            <span>{t('db:mysql.users.emptySelectHint')}</span>
                         </div>
                     )}
                 </div>
@@ -475,7 +475,7 @@ export default function UsersPanel({
                 sessionId={sessionId}
                 onClose={() => setCreateUserOpen(false)}
                 onSuccess={async (newUser, host) => {
-                    notify(`用户 ${newUser}@${host} 创建成功`)
+                    notify(t('db:mysql.users.createdSuccess', { user: newUser, host }))
                     await onRefreshUsers()
                     onSelect(newUser, host)
                 }}
@@ -491,7 +491,7 @@ export default function UsersPanel({
                     databases={databases}
                     onClose={() => setGrantModalOpen(false)}
                     onSuccess={async () => {
-                        notify(`已成功为 ${selUser.user}@${selUser.host} 授予权限`)
+                        notify(t('db:mysql.users.grantSuccess', { user: selUser.user, host: selUser.host }))
                         if (onRefreshGrants) await onRefreshGrants()
                     }}
                 />
@@ -506,7 +506,7 @@ export default function UsersPanel({
                     host={changePwdUser.host}
                     onClose={() => setChangePwdUser(null)}
                     onSuccess={() => {
-                        notify(`用户 ${changePwdUser.user}@${changePwdUser.host} 密码修改成功`)
+                        notify(t('db:mysql.users.pwdSuccess', { user: changePwdUser.user, host: changePwdUser.host }))
                     }}
                 />
             )}

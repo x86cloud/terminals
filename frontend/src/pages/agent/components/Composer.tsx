@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef } from 'react'
 import { Button, Tooltip, Input, Dropdown, Image as AntdImage, App } from 'antd'
 import type { MenuProps } from 'antd'
 import { Folder, Square, X, FileText, MessageSquare, ChevronUp, Check, Image as ImageIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { SlashCommandMenu, SlashCommandType, SLASH_COMMANDS } from './SlashCommandMenu'
 import { AiModelItem } from '@/types'
 import s from './Composer.module.less'
@@ -84,6 +85,7 @@ export const Composer: React.FC<ComposerProps> = ({
     onSend,
     onKeyDown,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const { message } = App.useApp()
     const [isComposing, setIsComposing] = useState(false)
     const [selectedMenuIndex, setSelectedMenuIndex] = useState(0)
@@ -95,7 +97,7 @@ export const Composer: React.FC<ComposerProps> = ({
         if (imageFiles.length === 0) return
 
         if (!enableMultimodal) {
-            message.warning('当前模型未开启多模态视觉能力，请先在模型设置中启用')
+            message.warning(t('multimodalNotEnabled', '当前模型未开启多模态视觉能力，请先在模型设置中启用'))
             return
         }
 
@@ -104,7 +106,7 @@ export const Composer: React.FC<ComposerProps> = ({
             setImages?.((prev) => [...prev, ...base64List])
         } catch (err) {
             console.error('Failed to read image files', err)
-            message.error('读取图片文件失败')
+            message.error(t('readImageFailed', '读取图片文件失败'))
         }
     }
 
@@ -175,10 +177,20 @@ export const Composer: React.FC<ComposerProps> = ({
         return aiModels.find((m) => m.id === activeModelId) || aiModels[0]
     }, [aiModels, activeModelId])
 
-    const displayModelName = activeModel?.name || aiModel || '未配置模型'
+    const displayModelName = activeModel?.name || aiModel || t('noModel', '未配置模型')
     const tooltipText = activeModel
-        ? `当前推理模型: ${activeModel.name} (${activeModel.model})${aiModels && aiModels.length > 1 ? ' - 点击切换' : ''}`
-        : `当前推理模型: ${aiModel || '未配置模型'}`
+        ? t('currentModelTip', {
+            name: activeModel.name,
+            model: activeModel.model,
+            more: aiModels && aiModels.length > 1 ? t('clickToSwitch', ' - 点击切换') : '',
+            defaultValue: `当前推理模型: ${activeModel.name} (${activeModel.model})${aiModels && aiModels.length > 1 ? ' - 点击切换' : ''}`
+          })
+        : t('currentModelTip', {
+            name: aiModel || t('noModel', '未配置模型'),
+            model: '',
+            more: '',
+            defaultValue: `当前推理模型: ${aiModel || '未配置模型'}`
+          })
 
     const modelMenuItems: MenuProps['items'] = useMemo(() => {
         if (!aiModels || aiModels.length === 0) {
@@ -186,7 +198,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 {
                     key: 'empty',
                     disabled: true,
-                    label: <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>暂无可选模型</span>,
+                    label: <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{t('noModelsAvailable', '暂无可选模型')}</span>,
                 },
             ]
         }
@@ -304,18 +316,23 @@ export const Composer: React.FC<ComposerProps> = ({
 
     const placeholderText = useMemo(() => {
         if (activeCommand === 'plan') {
-            return '输入规划目标与需求，Enter 提交技术方案推演...'
+            return t('planPlaceholder', '输入规划目标与需求，Enter 提交技术方案推演...')
         }
         if (activeCommand === 'grill-me') {
-            return '描述待访谈任务或设计目标，Enter 开启交互式深度访谈...'
+            return t('grillMePlaceholder', '描述待访谈任务或设计目标，Enter 开启交互式深度访谈...')
         }
-        return '输入消息，或键入 / 选择快捷指令（Enter 发送，Shift+Enter 换行）...'
-    }, [activeCommand])
+        return t('inputPlaceholder', '输入消息，或键入 / 选择快捷指令（Enter 发送，Shift+Enter 换行）...')
+    }, [activeCommand, t])
 
     const tokenTooltipContent = (
         <div>
             <div>
-                {percent.toFixed(1)}% · {formatTokenK(usedTokens)} / {formatTokenK(maxTokens)} 输入上下文已使用
+                {t('tokenUsage', {
+                    percent: percent.toFixed(1),
+                    used: formatTokenK(usedTokens),
+                    max: formatTokenK(maxTokens),
+                    defaultValue: `${percent.toFixed(1)}% · ${formatTokenK(usedTokens)} / ${formatTokenK(maxTokens)} 输入上下文已使用`
+                })}
             </div>
             {noticeText && (
                 <div style={{ marginTop: 4, color: '#faad14', fontSize: 11, fontWeight: 500 }}>
@@ -338,7 +355,7 @@ export const Composer: React.FC<ComposerProps> = ({
             {isDragging && (
                 <div className={s.dropOverlay}>
                     <ImageIcon size={22} className={s.dropIcon} />
-                    <span>释放以添加图片</span>
+                    <span>{t('dropImage', '释放以添加图片')}</span>
                 </div>
             )}
 
@@ -368,7 +385,7 @@ export const Composer: React.FC<ComposerProps> = ({
                                     e.stopPropagation()
                                     handleRemoveImage(idx)
                                 }}
-                                title="移除图片"
+                                title={t('removeImage', '移除图片')}
                             >
                                 <X size={11} />
                             </button>
@@ -400,7 +417,7 @@ export const Composer: React.FC<ComposerProps> = ({
                                 setActiveCommand(null)
                                 if (textareaRef?.current) textareaRef.current.focus()
                             }}
-                            title="移除指令 (恢复普通对话)"
+                            title={t('removeCommand', '移除指令 (恢复普通对话)')}
                         >
                             <X size={11} />
                         </span>
@@ -431,8 +448,8 @@ export const Composer: React.FC<ComposerProps> = ({
                             onClick={onSelectWorkspace}
                             title={
                                 workspaceDir
-                                    ? `工作目录: ${workspaceDir} (点击切换)`
-                                    : '未绑定工作目录，点击选择'
+                                    ? t('workspaceTip', { dir: workspaceDir, defaultValue: `工作目录: ${workspaceDir} (点击切换)` })
+                                    : t('workspaceUnbound', '未绑定工作目录，点击选择')
                             }
                         >
                             <Folder
@@ -440,7 +457,7 @@ export const Composer: React.FC<ComposerProps> = ({
                                 color={workspaceDir ? 'var(--accent)' : 'var(--text-dim)'}
                                 style={{ flexShrink: 0 }}
                             />
-                            <span>{workspaceDir ? workspaceDir.split(/[\\/]/).pop() : '选择目录'}</span>
+                            <span>{workspaceDir ? workspaceDir.split(/[\\/]/).pop() : t('chooseWorkspace', '选择目录')}</span>
                         </div>
                         {workspaceDir && (
                             <span
@@ -449,7 +466,7 @@ export const Composer: React.FC<ComposerProps> = ({
                                     e.stopPropagation()
                                     onClearWorkspace()
                                 }}
-                                title="清除绑定的工作目录"
+                                title={t('clearWorkspace', '清除绑定的工作目录')}
                             >
                                 <X size={11} />
                             </span>
@@ -526,7 +543,7 @@ export const Composer: React.FC<ComposerProps> = ({
                             icon={<Square size={12} />}
                             onClick={onStop}
                         >
-                            停止
+                            {t('stop', '停止')}
                         </Button>
                     ) : (
                         <Button
@@ -535,7 +552,7 @@ export const Composer: React.FC<ComposerProps> = ({
                             disabled={!input.trim() && images.length === 0}
                             onClick={onSend}
                         >
-                            发送
+                            {t('send', '发送')}
                         </Button>
                     )}
                 </div>

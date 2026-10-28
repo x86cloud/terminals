@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Input, Radio, Button, Space, Select, Segmented, Switch } from 'antd'
 import { FolderOpen } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import { ServerConfig } from '@/types'
@@ -13,6 +14,7 @@ export const K8sForm: React.FC<ServerFormProps> = ({
     groups,
     setError,
 }) => {
+    const { t } = useTranslation(['server', 'common'])
     const [kubeconfigContexts, setKubeconfigContexts] = useState<string[]>([])
     const [kubeconfigInfo, setKubeconfigInfo] = useState<{ currentContext?: string; clusterHost?: string } | null>(null)
 
@@ -78,14 +80,14 @@ export const K8sForm: React.FC<ServerFormProps> = ({
             <BasicFields form={form} update={update} groups={groups} />
 
             <div>
-                <div style={{ fontSize: 13, marginBottom: 6, fontWeight: 500 }}>认证方式 (Authentication Mode)</div>
+                <div style={{ fontSize: 13, marginBottom: 6, fontWeight: 500 }}>{t('server:k8s.authMode')}</div>
                 <Segmented
                     block
                     value={form.k8sAuthMode || 'kubeconfig'}
                     onChange={(v) => update({ k8sAuthMode: v as string })}
                     options={[
-                        { label: 'Kubeconfig 配置文件 (推荐)', value: 'kubeconfig' },
-                        { label: '直连 API Server', value: 'direct' },
+                        { label: t('server:k8s.kubeconfig'), value: 'kubeconfig' },
+                        { label: t('server:k8s.direct'), value: 'direct' },
                     ]}
                 />
             </div>
@@ -95,7 +97,7 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                     <div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                             <div style={{ fontSize: 13, fontWeight: 500 }}>
-                                Kubeconfig 内容 (YAML 文本) <span style={{ color: 'var(--danger)' }}>*</span>
+                                {t('server:k8s.kubeconfigData')} <span style={{ color: 'var(--danger)' }}>*</span>
                             </div>
                             <Button
                                 size="small"
@@ -103,12 +105,12 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                                 onClick={handlePickKubeconfigFile}
                                 style={{ fontSize: 12 }}
                             >
-                                选择本地文件
+                                {t('server:k8s.selectLocalFile')}
                             </Button>
                         </div>
                         <Input.TextArea
                             rows={7}
-                            placeholder={`# 请粘贴 ~/.kube/config 或云厂商集群导出的 YAML 配置\napiVersion: v1\nclusters:\n- cluster:\n    server: https://192.168.1.100:6443\n  name: kubernetes\ncontexts:\n- context:\n    cluster: kubernetes\n    user: admin\n  name: default\ncurrent-context: default`}
+                            placeholder={t('server:k8s.kubeconfigPlaceholder')}
                             value={form.k8sKubeconfigData || ''}
                             onChange={(e) => {
                                 const text = e.target.value
@@ -121,29 +123,29 @@ export const K8sForm: React.FC<ServerFormProps> = ({
 
                     {form.k8sKubeconfigPath && (
                         <div style={{ background: 'var(--bg-2)', padding: '6px 10px', borderRadius: 6, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span>已选本地文件: <code style={{ color: 'var(--accent)' }}>{form.k8sKubeconfigPath}</code></span>
-                            <Button size="small" type="link" onClick={() => update({ k8sKubeconfigPath: '' })}>清除</Button>
+                            <span>{t('server:k8s.selectedFile')}: <code style={{ color: 'var(--accent)' }}>{form.k8sKubeconfigPath}</code></span>
+                            <Button size="small" type="link" onClick={() => update({ k8sKubeconfigPath: '' })}>{t('server:clear')}</Button>
                         </div>
                     )}
 
                     {kubeconfigInfo?.clusterHost && (
                         <div style={{ background: 'rgba(82, 196, 26, 0.08)', border: '1px solid rgba(82, 196, 26, 0.25)', padding: '6px 10px', borderRadius: 6, fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span>集群地址: <strong>{kubeconfigInfo.clusterHost}</strong></span>
-                            {kubeconfigInfo.currentContext && <span>默认 Context: <code>{kubeconfigInfo.currentContext}</code></span>}
+                            <span>{t('server:k8s.clusterAddress')} <strong>{kubeconfigInfo.clusterHost}</strong></span>
+                            {kubeconfigInfo.currentContext && <span>{t('server:k8s.defaultContext')} <code>{kubeconfigInfo.currentContext}</code></span>}
                         </div>
                     )}
 
                     {kubeconfigContexts.length > 0 && (
                         <div>
                             <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
-                                选择 Context 上下文
+                                {t('server:k8s.selectContext')}
                             </div>
                             <Select
                                 style={{ width: '100%' }}
                                 value={form.k8sContext || kubeconfigInfo?.currentContext || (kubeconfigContexts.length > 0 ? kubeconfigContexts[0] : '')}
                                 onChange={(v) => update({ k8sContext: v })}
                                 options={kubeconfigContexts.map((c) => ({
-                                    label: c === kubeconfigInfo?.currentContext ? `${c} (当前默认)` : c,
+                                    label: c === kubeconfigInfo?.currentContext ? `${c} (${t('server:k8s.currentDefault')})` : c,
                                     value: c,
                                 }))}
                             />
@@ -151,9 +153,9 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                     )}
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认命名空间 (Namespace, 可选)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:k8s.namespace')}</div>
                         <Input
-                            placeholder="默认从 Kubeconfig 上下文读取或 default"
+                            placeholder={t('server:k8s.namespacePlaceholder')}
                             value={form.k8sNamespace || ''}
                             onChange={(e) => update({ k8sNamespace: e.target.value })}
                         />
@@ -163,7 +165,7 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                 <Space orientation="vertical" size={12} style={{ width: '100%' }}>
                     <div>
                         <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
-                            Kubernetes API Server 地址 <span style={{ color: 'var(--danger)' }}>*</span>
+                            Kubernetes API Server <span style={{ color: 'var(--danger)' }}>*</span>
                         </div>
                         <Input
                             placeholder="https://192.168.1.100:6443"
@@ -173,15 +175,15 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>凭证类型 (Credentials)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:authType')}</div>
                         <Radio.Group
                             value={form.k8sAuthType || 'token'}
                             onChange={(e) => update({ k8sAuthType: e.target.value })}
                             buttonStyle="solid"
                         >
                             <Radio.Button value="token">Bearer Token</Radio.Button>
-                            <Radio.Button value="cert">X.509 客户端证书</Radio.Button>
-                            <Radio.Button value="none">匿名 / 无认证</Radio.Button>
+                            <Radio.Button value="cert">X.509 Client Cert</Radio.Button>
+                            <Radio.Button value="none">Anonymous</Radio.Button>
                         </Radio.Group>
                     </div>
 
@@ -189,7 +191,7 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                         <div>
                             <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>Bearer Token</div>
                             <Input.Password
-                                placeholder="请输入 ServiceAccount Token 或 Bearer Token"
+                                placeholder={t('server:k8s.bearerTokenPlaceholder')}
                                 value={form.k8sBearerToken || form.password || ''}
                                 onChange={(e) => update({ k8sBearerToken: e.target.value, password: e.target.value })}
                             />
@@ -199,39 +201,39 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                     {form.k8sAuthType === 'cert' && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                             <div>
-                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端公钥证书 (client.crt)</div>
+                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>client.crt</div>
                                 <Space.Compact style={{ width: '100%' }}>
                                     <Input
-                                        placeholder="选择 client.crt 或粘贴"
+                                        placeholder="client.crt"
                                         value={form.k8sCertData || ''}
                                         onChange={(e) => update({ k8sCertData: e.target.value })}
                                     />
-                                    <Button onClick={() => handlePickCert('k8sCertData')}>选择</Button>
+                                    <Button onClick={() => handlePickCert('k8sCertData')}>{t('server:browse')}</Button>
                                 </Space.Compact>
                             </div>
                             <div>
-                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端私钥 (client.key)</div>
+                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>client.key</div>
                                 <Space.Compact style={{ width: '100%' }}>
                                     <Input
-                                        placeholder="选择 client.key 或粘贴"
+                                        placeholder="client.key"
                                         value={form.k8sKeyData || ''}
                                         onChange={(e) => update({ k8sKeyData: e.target.value })}
                                     />
-                                    <Button onClick={() => handlePickCert('k8sKeyData')}>选择</Button>
+                                    <Button onClick={() => handlePickCert('k8sKeyData')}>{t('server:browse')}</Button>
                                 </Space.Compact>
                             </div>
                         </div>
                     )}
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>CA 证书 (ca.crt, 可选)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>CA (ca.crt)</div>
                         <Space.Compact style={{ width: '100%' }}>
                             <Input
-                                placeholder="选择 ca.crt 文件或粘贴 PEM 内容"
+                                placeholder="ca.crt"
                                 value={form.k8sCaData || ''}
                                 onChange={(e) => update({ k8sCaData: e.target.value })}
                             />
-                            <Button onClick={() => handlePickCert('k8sCaData')}>选择证书</Button>
+                            <Button onClick={() => handlePickCert('k8sCaData')}>{t('server:browse')}</Button>
                         </Space.Compact>
                     </div>
 
@@ -241,13 +243,13 @@ export const K8sForm: React.FC<ServerFormProps> = ({
                             checked={!!form.k8sInsecureSkipTLS}
                             onChange={(checked) => update({ k8sInsecureSkipTLS: checked })}
                         />
-                        <span style={{ fontSize: 12 }}>跳过 TLS 服务端证书校验 (Insecure Skip Verify)</span>
+                        <span style={{ fontSize: 12 }}>{t('server:k8s.insecure')}</span>
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认命名空间 (Namespace, 可选)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:k8s.namespace')}</div>
                         <Input
-                            placeholder="默认 default"
+                            placeholder="default"
                             value={form.k8sNamespace || ''}
                             onChange={(e) => update({ k8sNamespace: e.target.value })}
                         />

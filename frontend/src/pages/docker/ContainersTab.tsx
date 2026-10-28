@@ -33,6 +33,7 @@ import { API } from '@/api'
 import { copyText } from '@/utils'
 import type { DockerContainerInfo, DockerCreateContainerReq } from '@/types'
 import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
+import { useTranslation } from 'react-i18next'
 import s from './DockerClient.module.less'
 
 interface Props {
@@ -40,6 +41,7 @@ interface Props {
 }
 
 export default function ContainersTab({ serverId }: Props) {
+    const { t } = useTranslation(['docker', 'common'])
     const { message } = App.useApp()
     const [containers, setContainers] = useState<DockerContainerInfo[]>([])
     const [loading, setLoading] = useState(false)
@@ -87,7 +89,7 @@ export default function ContainersTab({ serverId }: Props) {
             const list = await API.dockerListContainers(serverId, true)
             setContainers(list)
         } catch (err: any) {
-            message.error(`获取容器列表失败: ${err.message || String(err)}`)
+            message.error(t('containers.fetchFail', { defaultValue: '获取容器列表失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
@@ -102,7 +104,7 @@ export default function ContainersTab({ serverId }: Props) {
             await API.dockerControlContainer(serverId, containerId, action)
             fetchContainers()
         } catch (err: any) {
-            message.error(`操作失败: ${err.message || String(err)}`)
+            message.error(t('containers.opFail', { defaultValue: '操作失败: {{error}}', error: err.message || String(err) }))
         }
     }
 
@@ -115,9 +117,9 @@ export default function ContainersTab({ serverId }: Props) {
         setLogLoading(true)
         try {
             const text = await API.dockerGetContainerLogs(serverId, id, tail, timestamps)
-            setLogContent(text || '(暂无日志输出)')
+            setLogContent(text || t('containers.noLogs', '(暂无日志输出)'))
         } catch (err: any) {
-            setLogContent(`获取日志失败: ${err.message || String(err)}`)
+            setLogContent(t('containers.fetchLogsFail', { defaultValue: '获取日志失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setLogLoading(false)
         }
@@ -126,15 +128,15 @@ export default function ContainersTab({ serverId }: Props) {
     const openInspect = async (c: DockerContainerInfo) => {
         try {
             const json = await API.dockerInspectContainer(serverId, c.id)
-            setInspectModal({ open: true, title: `容器详情 (Inspect): ${c.name}`, json })
+            setInspectModal({ open: true, title: t('containers.inspectTitle', { defaultValue: '容器详情 (Inspect): {{name}}', name: c.name }), json })
         } catch (err: any) {
-            message.error(`查看详情失败: ${err.message || String(err)}`)
+            message.error(t('containers.inspectFail', { defaultValue: '查看详情失败: {{error}}', error: err.message || String(err) }))
         }
     }
 
     const handleCreateSubmit = async () => {
         if (!createForm.image.trim()) {
-            message.warning('请输入镜像名称')
+            message.warning(t('containers.reqImage', '请输入镜像名称'))
             return
         }
         setCreating(true)
@@ -161,7 +163,7 @@ export default function ContainersTab({ serverId }: Props) {
             })
             fetchContainers()
         } catch (err: any) {
-            message.error(`创建容器失败: ${err.message || String(err)}`)
+            message.error(t('containers.createFail', { defaultValue: '创建容器失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setCreating(false)
         }
@@ -183,7 +185,7 @@ export default function ContainersTab({ serverId }: Props) {
 
     const columns: ColumnsType<DockerContainerInfo> = [
         {
-            title: '状态',
+            title: t('containers.colState', { defaultValue: '状态' }),
             dataIndex: 'state',
             width: 130,
             render: (state: string, record) => {
@@ -209,7 +211,7 @@ export default function ContainersTab({ serverId }: Props) {
             },
         },
         {
-            title: '容器名称',
+            title: t('containers.colName', { defaultValue: '容器名称' }),
             dataIndex: 'name',
             width: 180,
             render: (name: string, record) => (
@@ -222,7 +224,7 @@ export default function ContainersTab({ serverId }: Props) {
             ),
         },
         {
-            title: '镜像',
+            title: t('containers.colImage', { defaultValue: '镜像' }),
             dataIndex: 'image',
             ellipsis: true,
             render: (img: string) => (
@@ -232,7 +234,7 @@ export default function ContainersTab({ serverId }: Props) {
             ),
         },
         {
-            title: '端口映射 (Ports)',
+            title: t('containers.colPorts', { defaultValue: '端口映射 (Ports)' }),
             dataIndex: 'portStr',
             width: 200,
             render: (portStr: string) =>
@@ -245,7 +247,7 @@ export default function ContainersTab({ serverId }: Props) {
                 ),
         },
         {
-            title: '容器 IP',
+            title: t('containers.colIp', { defaultValue: '容器 IP' }),
             dataIndex: 'ipAddress',
             width: 120,
             render: (ip: string) => (
@@ -255,13 +257,13 @@ export default function ContainersTab({ serverId }: Props) {
             ),
         },
         {
-            title: '运行状态 / 创建时间',
+            title: t('containers.colStatus', { defaultValue: '运行状态 / 创建时间' }),
             dataIndex: 'status',
             width: 160,
             render: (status: string) => <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{status}</span>,
         },
         {
-            title: '快捷操作',
+            title: t('containers.colActions', { defaultValue: '快捷操作' }),
             key: 'actions',
             width: 250,
             fixed: 'right',
@@ -272,7 +274,7 @@ export default function ContainersTab({ serverId }: Props) {
                     <Space size={4}>
                         {isRunning ? (
                             <>
-                                <Tooltip title="停止容器">
+                                <Tooltip title={t('containers.stopTooltip', { defaultValue: '停止容器' })}>
                                     <Button
                                         size="small"
                                         type="text"
@@ -281,7 +283,7 @@ export default function ContainersTab({ serverId }: Props) {
                                         onClick={() => handleControl(record.id, 'stop')}
                                     />
                                 </Tooltip>
-                                <Tooltip title="重启容器">
+                                <Tooltip title={t('containers.restartTooltip', { defaultValue: '重启容器' })}>
                                     <Button
                                         size="small"
                                         type="text"
@@ -289,7 +291,7 @@ export default function ContainersTab({ serverId }: Props) {
                                         onClick={() => handleControl(record.id, 'restart')}
                                     />
                                 </Tooltip>
-                                <Tooltip title="暂停容器">
+                                <Tooltip title={t('containers.pauseTooltip', { defaultValue: '暂停容器' })}>
                                     <Button
                                         size="small"
                                         type="text"
@@ -299,7 +301,7 @@ export default function ContainersTab({ serverId }: Props) {
                                 </Tooltip>
                             </>
                         ) : isPaused ? (
-                            <Tooltip title="恢复运行">
+                            <Tooltip title={t('containers.resumeTooltip', { defaultValue: '恢复运行' })}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -309,7 +311,7 @@ export default function ContainersTab({ serverId }: Props) {
                                 />
                             </Tooltip>
                         ) : (
-                            <Tooltip title="启动容器">
+                            <Tooltip title={t('containers.startTooltip', { defaultValue: '启动容器' })}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -320,7 +322,7 @@ export default function ContainersTab({ serverId }: Props) {
                             </Tooltip>
                         )}
 
-                        <Tooltip title="实时日志">
+                        <Tooltip title={t('containers.logsTooltip', { defaultValue: '实时日志' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -329,7 +331,7 @@ export default function ContainersTab({ serverId }: Props) {
                             />
                         </Tooltip>
 
-                        <Tooltip title="JSON 详情 (Inspect)">
+                        <Tooltip title={t('containers.inspectTooltip', { defaultValue: 'JSON 详情 (Inspect)' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -338,7 +340,7 @@ export default function ContainersTab({ serverId }: Props) {
                             />
                         </Tooltip>
 
-                        <Tooltip title="终端 (Exec)">
+                        <Tooltip title={t('containers.execTooltip', { defaultValue: '终端 (Exec)' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -357,14 +359,14 @@ export default function ContainersTab({ serverId }: Props) {
                         </Tooltip>
 
                         <Popconfirm
-                            title="确定要删除此容器吗？"
-                            description={isRunning ? '该容器当前正在运行，将执行强制删除 (-f)' : '此操作不可逆'}
+                            title={t('containers.deleteConfirm', { defaultValue: '确定要删除此容器吗？' })}
+                            description={isRunning ? t('containers.deleteRunningDesc', { defaultValue: '该容器当前正在运行，将执行强制删除 (-f)' }) : t('containers.deleteDesc', { defaultValue: '此操作不可逆' })}
                             onConfirm={() => handleControl(record.id, isRunning ? 'forceremove' : 'remove')}
-                            okText="删除"
-                            cancelText="取消"
+                            okText={t('containers.deleteBtn', { defaultValue: '删除' })}
+                            cancelText={t('containers.cancelBtn', { defaultValue: '取消' })}
                             okButtonProps={{ danger: true }}
                         >
-                            <Tooltip title="删除容器">
+                            <Tooltip title={t('containers.deleteTooltip', { defaultValue: '删除容器' })}>
                                 <Button size="small" type="text" danger icon={<Trash2 size={13} />} />
                             </Tooltip>
                         </Popconfirm>
@@ -388,17 +390,17 @@ export default function ContainersTab({ serverId }: Props) {
                         buttonStyle="solid"
                         size="small"
                     >
-                        <Radio.Button value="all">全部 ({containers.length})</Radio.Button>
+                        <Radio.Button value="all">{t('containers.filterAll', { defaultValue: '全部 ({{count}})', count: containers.length })}</Radio.Button>
                         <Radio.Button value="running">
-                            运行中 ({containers.filter((c) => c.state === 'running').length})
+                            {t('containers.filterRunning', { defaultValue: '运行中 ({{count}})', count: containers.filter((c) => c.state === 'running').length })}
                         </Radio.Button>
                         <Radio.Button value="stopped">
-                            已停止 ({containers.filter((c) => c.state !== 'running').length})
+                            {t('containers.filterStopped', { defaultValue: '已停止 ({{count}})', count: containers.filter((c) => c.state !== 'running').length })}
                         </Radio.Button>
                     </Radio.Group>
 
                     <Input
-                        placeholder="搜索容器名称 / 镜像 / 端口 / ID..."
+                        placeholder={t('containers.searchPlaceholder', { defaultValue: '搜索容器名称 / 镜像 / 端口 / ID...' })}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -418,14 +420,14 @@ export default function ContainersTab({ serverId }: Props) {
                         size="small"
                         onClick={() => setCreateModal(true)}
                     >
-                        创建容器
+                        {t('containers.createBtn', { defaultValue: '创建容器' })}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchContainers}
                     >
-                        刷新
+                        {t('common.refresh', { defaultValue: '刷新' })}
                     </Button>
                 </div>
             </div>
@@ -443,7 +445,7 @@ export default function ContainersTab({ serverId }: Props) {
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -456,7 +458,7 @@ export default function ContainersTab({ serverId }: Props) {
             <Drawer
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>容器日志: {logDrawer.container?.name}</span>
+                        <span>{t('containers.logDrawerTitle', { defaultValue: '容器日志: {{name}}', name: logDrawer.container?.name || '' })}</span>
                         <Space size={8}>
                             <Select
                                 size="small"
@@ -466,15 +468,15 @@ export default function ContainersTab({ serverId }: Props) {
                                     if (logDrawer.container) fetchLogs(logDrawer.container.id, val, logTimestamps)
                                 }}
                                 options={[
-                                    { label: '最近 100 行', value: 100 },
-                                    { label: '最近 200 行', value: 200 },
-                                    { label: '最近 500 行', value: 500 },
-                                    { label: '最近 1000 行', value: 1000 },
-                                    { label: '全部日志', value: 0 },
+                                    { label: t('containers.logLines100', { defaultValue: '最近 100 行' }), value: 100 },
+                                    { label: t('containers.logLines200', { defaultValue: '最近 200 行' }), value: 200 },
+                                    { label: t('containers.logLines500', { defaultValue: '最近 500 行' }), value: 500 },
+                                    { label: t('containers.logLines1000', { defaultValue: '最近 1000 行' }), value: 1000 },
+                                    { label: t('containers.logLinesAll', { defaultValue: '全部日志' }), value: 0 },
                                 ]}
                             />
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
-                                <span>时间戳</span>
+                                <span>{t('containers.timestamps', { defaultValue: '时间戳' })}</span>
                                 <Switch
                                     size="small"
                                     checked={logTimestamps}
@@ -491,18 +493,18 @@ export default function ContainersTab({ serverId }: Props) {
                                     if (logDrawer.container) fetchLogs(logDrawer.container.id, logTail, logTimestamps)
                                 }}
                             >
-                                刷新
+                                {t('common.refresh', { defaultValue: '刷新' })}
                             </Button>
                             <Button
                                 size="small"
                                 icon={<Copy size={12} />}
                                 onClick={async () => {
                                     if (await copyText(logContent)) {
-                                        message.success('已复制日志')
+                                        message.success(t('containers.copiedLogs', { defaultValue: '已复制日志' }))
                                     }
                                 }}
                             >
-                                复制
+                                {t('containers.copyLogs', { defaultValue: '复制' })}
                             </Button>
                         </Space>
                     </div>
@@ -525,14 +527,14 @@ export default function ContainersTab({ serverId }: Props) {
                         icon={<Copy size={13} />}
                         onClick={async () => {
                             if (await copyText(inspectModal.json)) {
-                                message.success('已复制 JSON')
+                                message.success(t('images.copiedJson', { defaultValue: '已复制 JSON' }))
                             }
                         }}
                     >
-                        复制 JSON
+                        {t('images.copyJson', { defaultValue: '复制 JSON' })}
                     </Button>,
                     <Button key="close" type="primary" onClick={() => setInspectModal({ open: false, title: '', json: '' })}>
-                        关闭
+                        {t('images.close', { defaultValue: '关闭' })}
                     </Button>,
                 ]}
                 width={800}
@@ -543,41 +545,41 @@ export default function ContainersTab({ serverId }: Props) {
 
             {/* 新建容器模态框 */}
             <AntdModal
-                title="创建并配置新容器"
+                title={t('containers.createModalTitle', { defaultValue: '创建并配置新容器' })}
                 open={createModal}
                 onCancel={() => !creating && setCreateModal(false)}
                 onOk={handleCreateSubmit}
                 confirmLoading={creating}
-                okText="创建容器"
-                cancelText="取消"
+                okText={t('containers.createBtn', { defaultValue: '创建容器' })}
+                cancelText={t('containers.cancelBtn', { defaultValue: '取消' })}
                 width={560}
                 centered
             >
                 <Space orientation="vertical" size={12} style={{ width: '100%', padding: '8px 0' }}>
                     <div>
                         <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
-                            镜像名称 (Image) <span style={{ color: 'var(--danger)' }}>*</span>
+                            {t('containers.imageLabel', { defaultValue: '镜像名称 (Image)' })} <span style={{ color: 'var(--danger)' }}>*</span>
                         </div>
                         <Input
-                            placeholder="如: nginx:alpine / redis:latest / mysql:8.0"
+                            placeholder={t('containers.imagePlaceholder', { defaultValue: '如: nginx:alpine / redis:latest / mysql:8.0' })}
                             value={createForm.image}
                             onChange={(e) => setCreateForm({ ...createForm, image: e.target.value })}
                         />
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>容器名称 (Name, 可选)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('containers.nameLabel', { defaultValue: '容器名称 (Name, 可选)' })}</div>
                         <Input
-                            placeholder="如: my-nginx-web"
+                            placeholder={t('containers.namePlaceholder', { defaultValue: '如: my-nginx-web' })}
                             value={createForm.name}
                             onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                         />
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>端口映射 (宿主端口:容器端口)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('containers.portsLabel', { defaultValue: '端口映射 (宿主端口:容器端口)' })}</div>
                         <Input
-                            placeholder="如: 8080:80, 8443:443"
+                            placeholder={t('containers.portsPlaceholder', { defaultValue: '如: 8080:80, 8443:443' })}
                             value={(createForm.ports || []).join(', ')}
                             onChange={(e) =>
                                 setCreateForm({
@@ -589,9 +591,9 @@ export default function ContainersTab({ serverId }: Props) {
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>数据卷映射 (宿主路径:容器路径)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('containers.volumesLabel', { defaultValue: '数据卷映射 (宿主路径:容器路径)' })}</div>
                         <Input
-                            placeholder="如: /home/data:/var/lib/data, vol_name:/app"
+                            placeholder={t('containers.volumesPlaceholder', { defaultValue: '如: /home/data:/var/lib/data, vol_name:/app' })}
                             value={(createForm.volumes || []).join(', ')}
                             onChange={(e) =>
                                 setCreateForm({
@@ -603,9 +605,9 @@ export default function ContainersTab({ serverId }: Props) {
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>环境变量 (KEY=VALUE, 逗号分隔)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('containers.envLabel', { defaultValue: '环境变量 (KEY=VALUE, 逗号分隔)' })}</div>
                         <Input
-                            placeholder="如: ENV=production, PORT=8080"
+                            placeholder={t('containers.envPlaceholder', { defaultValue: '如: ENV=production, PORT=8080' })}
                             value={(createForm.env || []).join(', ')}
                             onChange={(e) =>
                                 setCreateForm({
@@ -618,21 +620,21 @@ export default function ContainersTab({ serverId }: Props) {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div>
-                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>重启策略 (Restart Policy)</div>
+                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('containers.restartPolicyLabel', { defaultValue: '重启策略 (Restart Policy)' })}</div>
                             <Select
                                 style={{ width: '100%' }}
                                 value={createForm.restartPolicy || 'unless-stopped'}
                                 onChange={(val) => setCreateForm({ ...createForm, restartPolicy: val })}
                                 options={[
-                                    { label: '除非手动停止 (unless-stopped)', value: 'unless-stopped' },
-                                    { label: '总是重启 (always)', value: 'always' },
-                                    { label: '失败时重启 (on-failure)', value: 'on-failure' },
-                                    { label: '不重启 (no)', value: 'no' },
+                                    { label: t('containers.policyUnlessStopped', { defaultValue: '除非手动停止 (unless-stopped)' }), value: 'unless-stopped' },
+                                    { label: t('containers.policyAlways', { defaultValue: '总是重启 (always)' }), value: 'always' },
+                                    { label: t('containers.policyOnFailure', { defaultValue: '失败时重启 (on-failure)' }), value: 'on-failure' },
+                                    { label: t('containers.policyNo', { defaultValue: '不重启 (no)' }), value: 'no' },
                                 ]}
                             />
                         </div>
                         <div>
-                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>退出自动清理 (--rm)</div>
+                            <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('containers.autoRemoveLabel', { defaultValue: '退出自动清理 (--rm)' })}</div>
                             <Switch
                                 checked={!!createForm.autoRemove}
                                 onChange={(checked) => setCreateForm({ ...createForm, autoRemove: checked })}

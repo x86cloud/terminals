@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { Modal, Form, Input, Select } from 'antd'
 import { FileCode } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { getFolderOptions } from './apiTypes'
 import type { ApiState } from './useApi'
 
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export default function SaveApiModal({ state }: Props) {
+    const { t } = useTranslation(['api', 'common'])
     const {
         saveModalOpen,
         setSaveModalOpen,
@@ -28,13 +30,13 @@ export default function SaveApiModal({ state }: Props) {
 
     useEffect(() => {
         if (saveModalOpen) {
-            const defaultName = currentApiName || (mode === 'ws' ? 'WebSocket 连接' : `${method} ${url || '新接口'}`)
+            const defaultName = currentApiName || (mode === 'ws' ? t('api:saveModal.defaultWs', { defaultValue: 'WebSocket 连接' }) : `${method} ${url || t('api:saveModal.newApiFallback', { defaultValue: '新接口' })}`)
             form.setFieldsValue({
                 name: defaultName,
                 folderId: folderOptions.length > 0 ? folderOptions[0].value : undefined,
             })
         }
-    }, [saveModalOpen, currentApiName, method, url, mode, form, folderOptions])
+    }, [saveModalOpen, currentApiName, method, url, mode, form, folderOptions, t])
 
     const handleOk = async () => {
         try {
@@ -58,33 +60,33 @@ export default function SaveApiModal({ state }: Props) {
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <FileCode size={16} />
-                    <span>{saveModalMode === 'saveAs' ? '另存为新接口' : '保存接口'}</span>
+                    <span>{saveModalMode === 'saveAs' ? t('api:saveModal.titleSaveAs', { defaultValue: '另存为新接口' }) : t('api:saveModal.titleSave', { defaultValue: '保存接口' })}</span>
                 </div>
             }
             open={saveModalOpen}
             onOk={handleOk}
             onCancel={() => setSaveModalOpen(false)}
-            okText="保存"
-            cancelText="取消"
+            okText={t('common:save', { defaultValue: '保存' })}
+            cancelText={t('common:cancel', { defaultValue: '取消' })}
             destroyOnHidden
             width={480}
         >
             <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
                 <Form.Item
-                    label="接口名称"
+                    label={t('api:saveModal.apiName', { defaultValue: '接口名称' })}
                     name="name"
-                    rules={[{ required: true, message: '请输入接口名称' }]}
+                    rules={[{ required: true, message: t('api:saveModal.apiNameRequired', { defaultValue: '请输入接口名称' }) }]}
                 >
-                    <Input style={{ height: 34 }} placeholder="例如: 获取用户信息" autoFocus spellCheck={false} />
+                    <Input style={{ height: 34 }} placeholder={t('api:saveModal.apiNamePlaceholder', { defaultValue: '例如: 获取用户信息' })} autoFocus spellCheck={false} />
                 </Form.Item>
 
-                <Form.Item label="归属分组" name="folderId">
+                <Form.Item label={t('api:saveModal.belongFolder', { defaultValue: '归属分组' })} name="folderId">
                     <Select
                         style={{ height: 34 }}
-                        placeholder="选择分组 (可选，默认根目录)"
+                        placeholder={t('api:saveModal.selectFolderPlaceholder', { defaultValue: '选择分组 (可选，默认根目录)' })}
                         allowClear
                         options={[
-                            { label: '（根目录 / 无分组）', value: '' },
+                            { label: t('api:saveModal.rootFolderOption', { defaultValue: '（根目录 / 无分组）' }), value: '' },
                             ...folderOptions,
                         ]}
                     />

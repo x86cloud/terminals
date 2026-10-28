@@ -1,3 +1,4 @@
+import i18n from '@/i18n'
 import {
     ApiHeader,
     ApiMethod,
@@ -29,10 +30,10 @@ export type {
 export const METHODS: ApiMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS']
 
 export const BODY_TYPES: Array<{ value: string; label: string; ct: string }> = [
-    {value: 'none', label: '无', ct: ''},
-    {value: 'json', label: 'JSON', ct: 'application/json'},
-    {value: 'text', label: '文本', ct: 'text/plain'},
-    {value: 'xml', label: 'XML', ct: 'application/xml'},
+    { value: 'none', get label() { return i18n.t('api:types.bodyNone', { defaultValue: '无' }) }, ct: '' },
+    { value: 'json', label: 'JSON', ct: 'application/json' },
+    { value: 'text', get label() { return i18n.t('api:types.bodyText', { defaultValue: '文本' }) }, ct: 'text/plain' },
+    { value: 'xml', label: 'XML', ct: 'application/xml' },
 ]
 
 export const SAVED_APIS_KEY = 'api_client_saved_apis'
@@ -251,11 +252,13 @@ export function insertTreeNode(nodes: ApiTreeNode[], targetFolderId: string | nu
 
 export function getFolderOptions(nodes: ApiTreeNode[], prefix = ''): Array<{ label: string; value: string }> {
     if (!Array.isArray(nodes)) return []
+    const defaultFolderLabel = i18n.t('api:types.defaultFolder', { defaultValue: '分组' })
     const options: Array<{ label: string; value: string }> = []
     for (const node of nodes) {
         if (!node) continue
         if (node.isFolder) {
-            const label = prefix ? `${prefix} / ${node.name || '分组'}` : (node.name || '分组')
+            const folderName = node.name || defaultFolderLabel
+            const label = prefix ? `${prefix} / ${folderName}` : folderName
             options.push({ label, value: node.id })
             if (Array.isArray(node.children)) {
                 options.push(...getFolderOptions(node.children, label))

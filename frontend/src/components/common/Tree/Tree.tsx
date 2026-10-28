@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ChevronRight, Loader2 } from 'lucide-react'
 import { TreeNodeData, TreeProps } from './types'
 import s from './Tree.module.less'
@@ -251,12 +252,14 @@ export default function Tree({
     indent = 16,
     className = '',
     style,
-    emptyText = '暂无数据',
+    emptyText,
     draggable = false,
     onDrop,
     onDragStart,
     onDragEnd,
 }: TreeProps) {
+    const { t } = useTranslation('common')
+    const displayEmptyText = emptyText ?? t('noData', '暂无数据')
     // 展开状态支持受控与非受控
     const [internalExpandedKeys, setInternalExpandedKeys] = useState<string[]>(defaultExpandedKeys)
     const expandedKeys = propExpandedKeys !== undefined ? propExpandedKeys : internalExpandedKeys
@@ -492,7 +495,7 @@ export default function Tree({
     if (!treeData || treeData.length === 0) {
         return (
             <div className={`${s.tree} ${className}`} style={style}>
-                <div className={s.empty}>{emptyText}</div>
+                <div className={s.empty}>{displayEmptyText}</div>
             </div>
         )
     }

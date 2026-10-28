@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import s from './ResizableTable.module.less'
 
 export interface ColDef {
@@ -204,6 +205,7 @@ export default function ResizableTable({
     wrapperClassName,
     style,
 }: Props) {
+    const { t } = useTranslation('common')
     const wrapperRef = useRef<HTMLDivElement>(null)
     const [wrapperWidth, setWrapperWidth] = useState<number>(0)
     const [resizingCol, setResizingCol] = useState<{ key: string; width: number } | null>(null)
@@ -408,7 +410,7 @@ export default function ResizableTable({
                                             className={`${s.resizeHandle}${isResizingThis ? ' ' + s.activeHandle : ''}`}
                                             onMouseDown={(e) => startResize(e, col)}
                                             onDoubleClick={() => handleDoubleClick(col)}
-                                            title="拖动调整列宽，双击自适应最佳宽度"
+                                            title={t('resizeColTooltip', '拖动调整列宽，双击自适应最佳宽度')}
                                         >
                                             {isResizingThis && (
                                                 <div className={s.widthTooltip}>{Math.round(currentW)}px</div>

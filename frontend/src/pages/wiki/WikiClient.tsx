@@ -24,6 +24,8 @@ import {
     Sparkles,
     Search,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import Tree, { TreeNodeData } from '@/components/common/Tree'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
 import CodeEditor from '@/components/CodeEditor'
@@ -43,14 +45,14 @@ function getErrorMessage(err: unknown): string {
     return String(err)
 }
 
-function confirmSwitchDoc(): Promise<boolean> {
+function confirmSwitchDoc(t: TFunction): Promise<boolean> {
     return new Promise((resolve) => {
         Modal.confirm({
-            title: '未保存的修改',
-            content: '当前文档有未保存的修改，切换将丢失改动。是否继续？',
-            okText: '放弃修改并切换',
+            title: t('wiki:unsavedTitle', { defaultValue: '未保存的修改' }),
+            content: t('wiki:unsavedContent', { defaultValue: '当前文档有未保存的修改，切换将丢失改动。是否继续？' }),
+            okText: t('wiki:abandonAndSwitch', { defaultValue: '放弃修改并切换' }),
             okButtonProps: { danger: true },
-            cancelText: '取消',
+            cancelText: t('common:cancel', { defaultValue: '取消' }),
             centered: true,
             onOk: () => resolve(true),
             onCancel: () => resolve(false),
@@ -65,6 +67,7 @@ interface Props {
 type ViewMode = 'preview' | 'edit' | 'split'
 
 export default function WikiClient({ onClose }: Props) {
+    const { t } = useTranslation(['wiki', 'common'])
     const { message } = App.useApp()
     const { activeTarget } = useSession()
 
@@ -154,7 +157,7 @@ export default function WikiClient({ onClose }: Props) {
     const selectDoc = useCallback(async (node: WikiNode) => {
         if (node.is_folder) return
         if (isDirty) {
-            const proceed = await confirmSwitchDoc()
+            const proceed = await confirmSwitchDoc(t)
             if (!proceed) return
         }
 
@@ -170,9 +173,9 @@ export default function WikiClient({ onClose }: Props) {
             setOriginalContent(text)
         } catch (err: unknown) {
             if (!isMountedRef.current || currentReqId !== activeDocReqIdRef.current) return
-            message.error(`读取文档失败: ${getErrorMessage(err)}`)
+            message.error(t('wiki:readDocFail', { defaultValue: '读取文档失败: {{error}}', error: getErrorMessage(err) }))
         }
-    }, [isDirty])
+    }, [isDirty, t])
 
     // 加载 Wiki 目录与目录树
     const loadTree = useCallback(async (autoSelectFirst = false) => {
@@ -215,13 +218,13 @@ export default function WikiClient({ onClose }: Props) {
             }
         } catch (err: unknown) {
             if (!isMountedRef.current) return
-            message.error(`加载知识库失败: ${getErrorMessage(err)}`)
+            message.error(t('wiki:loadWikiFail', { defaultValue: '加载知识库失败: {{error}}', error: getErrorMessage(err) }))
         } finally {
             if (isMountedRef.current) {
                 setLoading(false)
             }
         }
-    }, [selectDoc])
+    }, [selectDoc, t])
 
     useEffect(() => {
         void loadTree(true)
@@ -235,18 +238,18 @@ export default function WikiClient({ onClose }: Props) {
             await API.wikiSavePage(selectedPath, content)
             if (!isMountedRef.current) return
             setOriginalContent(content)
-            message.success('已保存到本地')
+            message.success(t('wiki:savedToLocal', { defaultValue: '已保存到本地' }))
             // 静默更新树信息
             void loadTree(false)
         } catch (err: unknown) {
             if (!isMountedRef.current) return
-            message.error(`保存失败: ${getErrorMessage(err)}`)
+            message.error(t('wiki:saveFail', { defaultValue: '保存失败: {{error}}', error: getErrorMessage(err) }))
         } finally {
             if (isMountedRef.current) {
                 setSaving(false)
             }
         }
-    }, [selectedPath, isDirty, content, loadTree])
+    }, [selectedPath, isDirty, content, loadTree, t])
 
     const saveRef = useRef(handleSave)
     useEffect(() => {
@@ -273,7 +276,7 @@ export default function WikiClient({ onClose }: Props) {
         try {
             await API.wikiOpenDir()
         } catch (err: unknown) {
-            message.error(`打开本地目录失败: ${getErrorMessage(err)}`)
+            message.error(t('wiki:openDirFail', { defaultValue: '打开本地目录失败: {{error}}', error: getErrorMessage(err) }))
         }
     }
 
@@ -281,7 +284,7 @@ export default function WikiClient({ onClose }: Props) {
     const handleConfirmNameModal = async () => {
         const val = nameInput.trim()
         if (!val) {
-            message.warning('名称不能为空')
+            message.warning(t('wiki:nameEmpty', { defaultValue: '名称不能为空' }))
             return
         }
 
@@ -291,7 +294,7 @@ export default function WikiClient({ onClose }: Props) {
                 const finalName = val.endsWith('.md') ? val : `${val}.md`
                 const createdPath = await API.wikiCreateNode(nameModal.parentPath, finalName, false)
                 if (!isMountedRef.current) return
-                message.success('文档创建成功')
+                message.success(t('wiki:docCreated', { defaultValue: '文档创建成功' }))
                 setNameModal((prev) => ({ ...prev, open: false }))
                 await loadTree(false)
                 // 自动打开新文档
@@ -306,7 +309,7 @@ export default function WikiClient({ onClose }: Props) {
             } else if (nameModal.type === 'createFolder') {
                 await API.wikiCreateNode(nameModal.parentPath, val, true)
                 if (!isMountedRef.current) return
-                message.success('分组创建成功')
+                message.success(t('wiki:folderCreated', { defaultValue: '分组创建成功' }))
                 setNameModal((prev) => ({ ...prev, open: false }))
                 await loadTree(false)
             } else if (nameModal.type === 'rename') {
@@ -316,7 +319,7 @@ export default function WikiClient({ onClose }: Props) {
                 const newRelPath = parts.join('/')
                 await API.wikiRenameNode(nameModal.targetPath, newRelPath)
                 if (!isMountedRef.current) return
-                message.success('重命名成功')
+                message.success(t('wiki:renameSuccess', { defaultValue: '重命名成功' }))
                 setNameModal((prev) => ({ ...prev, open: false }))
 
                 // 同步修正当前选中路径（包含文档本身及父级/祖先分组被重命名的子路径场景）
@@ -335,7 +338,7 @@ export default function WikiClient({ onClose }: Props) {
             }
         } catch (err: unknown) {
             if (!isMountedRef.current) return
-            message.error(`操作失败: ${getErrorMessage(err)}`)
+            message.error(t('wiki:actionFail', { defaultValue: '操作失败: {{error}}', error: getErrorMessage(err) }))
         } finally {
             if (isMountedRef.current) {
                 setSubmittingName(false)
@@ -356,7 +359,7 @@ export default function WikiClient({ onClose }: Props) {
         try {
             await API.wikiDeleteNode(relPath)
             if (!isMountedRef.current) return
-            message.success('删除成功')
+            message.success(t('wiki:deleteSuccess', { defaultValue: '删除成功' }))
             if (selectedPath === relPath || (isFolder && selectedPath?.startsWith(relPath + '/'))) {
                 setSelectedPath(null)
                 setSelectedNode(null)
@@ -367,13 +370,13 @@ export default function WikiClient({ onClose }: Props) {
             setDeleteTarget(null)
         } catch (err: unknown) {
             if (!isMountedRef.current) return
-            message.error(`删除失败: ${getErrorMessage(err)}`)
+            message.error(t('wiki:deleteFail', { defaultValue: '删除失败: {{error}}', error: getErrorMessage(err) }))
         } finally {
             if (isMountedRef.current) {
                 setDeleting(false)
             }
         }
-    }, [deleteTarget, selectedPath, loadTree])
+    }, [deleteTarget, selectedPath, loadTree, t])
 
     // 执行会话编译提炼
     const handleCompileSession = async () => {
@@ -388,7 +391,7 @@ export default function WikiClient({ onClose }: Props) {
             }
 
             if (!msgs || msgs.length === 0) {
-                message.warning('当前选中的会话没有任何消息记录')
+                message.warning(t('wiki:sessionNoMessages', { defaultValue: '当前选中的会话没有任何消息记录' }))
                 setCompiling(false)
                 return
             }
@@ -400,15 +403,15 @@ export default function WikiClient({ onClose }: Props) {
                 reasoningContent: m.reasoningContent || m.reasoning_content,
             }))
 
-            message.loading({ content: 'AI 正在分析并提炼会话中的关键知识...', key: 'compile_wiki', duration: 0 })
+            message.loading({ content: t('wiki:compilingWiki', { defaultValue: 'AI 正在分析并提炼会话中的关键知识...' }), key: 'compile_wiki', duration: 0 })
             const resultMsg = await API.wikiCompileSession(selectedSessionId, formattedMsgs)
             if (!isMountedRef.current) return
-            message.success({ content: resultMsg || '会话已提炼编译并写入知识库', key: 'compile_wiki', duration: 3 })
+            message.success({ content: resultMsg || t('wiki:compileSuccess', { defaultValue: '会话已提炼编译并写入知识库' }), key: 'compile_wiki', duration: 3 })
             setCompileModalOpen(false)
             await loadTree(false)
         } catch (err: unknown) {
             if (!isMountedRef.current) return
-            message.error({ content: `编译提炼失败: ${getErrorMessage(err)}`, key: 'compile_wiki' })
+            message.error({ content: t('wiki:compileFail', { defaultValue: '编译提炼失败: {{error}}', error: getErrorMessage(err) }), key: 'compile_wiki' })
         } finally {
             if (isMountedRef.current) {
                 setCompiling(false)
@@ -459,14 +462,14 @@ export default function WikiClient({ onClose }: Props) {
             items.push(
                 {
                     key: 'create_child_file',
-                    label: '新建子文档',
+                    label: t('wiki:newSubDoc', { defaultValue: '新建子文档' }),
                     icon: <FilePlus size={13} />,
                     onClick: () => {
                         setNameInput('')
                         setNameModal({
                             open: true,
                             type: 'createFile',
-                            title: `在 "${node.name}" 下新建文档`,
+                            title: t('wiki:newDocUnder', { defaultValue: '在 "{{name}}" 下新建文档', name: node.name }),
                             parentPath: node.rel_path,
                             targetPath: '',
                             initialValue: '',
@@ -475,14 +478,14 @@ export default function WikiClient({ onClose }: Props) {
                 },
                 {
                     key: 'create_child_folder',
-                    label: '新建子分组',
+                    label: t('wiki:newSubFolder', { defaultValue: '新建子分组' }),
                     icon: <FolderPlus size={13} />,
                     onClick: () => {
                         setNameInput('')
                         setNameModal({
                             open: true,
                             type: 'createFolder',
-                            title: `在 "${node.name}" 下新建分组`,
+                            title: t('wiki:newFolderUnder', { defaultValue: '在 "{{name}}" 下新建分组', name: node.name }),
                             parentPath: node.rel_path,
                             targetPath: '',
                             initialValue: '',
@@ -496,14 +499,17 @@ export default function WikiClient({ onClose }: Props) {
         items.push(
             {
                 key: 'rename',
-                label: '重命名',
+                label: t('wiki:rename', { defaultValue: '重命名' }),
                 icon: <Edit2 size={13} />,
                 onClick: () => {
                     setNameInput(node.name)
                     setNameModal({
                         open: true,
                         type: 'rename',
-                        title: `重命名 ${node.is_folder ? '分组' : '文档'}`,
+                        title: t('wiki:renameTarget', {
+                            defaultValue: '重命名 {{type}}',
+                            type: node.is_folder ? t('wiki:typeFolder', { defaultValue: '分组' }) : t('wiki:typeDoc', { defaultValue: '文档' }),
+                        }),
                         parentPath: '',
                         targetPath: node.rel_path,
                         initialValue: node.name,
@@ -512,7 +518,7 @@ export default function WikiClient({ onClose }: Props) {
             },
             {
                 key: 'delete',
-                label: '删除',
+                label: t('wiki:delete', { defaultValue: '删除' }),
                 icon: <Trash2 size={13} />,
                 danger: true,
                 onClick: () => handleDeleteNode(node.rel_path, node.is_folder),
@@ -525,7 +531,7 @@ export default function WikiClient({ onClose }: Props) {
             y: e.clientY,
             items,
         })
-    }, [handleDeleteNode])
+    }, [handleDeleteNode, t])
 
     // 统计数据（轻量遍历，去除无用的 folders 计算）
     const stats = useMemo(() => {
@@ -581,10 +587,10 @@ export default function WikiClient({ onClose }: Props) {
                 <div className={s.sidebarHeader}>
                     <div className={s.headerTitle}>
                         <BookOpen size={16} className={s.icon} />
-                        <span>知识库 (Wiki)</span>
+                        <span>{t('wiki:title', { defaultValue: '知识库 (Wiki)' })}</span>
                     </div>
                     <div className={s.headerActions}>
-                        <Tooltip title="新建文档">
+                        <Tooltip title={t('wiki:newDoc', { defaultValue: '新建文档' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -594,7 +600,7 @@ export default function WikiClient({ onClose }: Props) {
                                     setNameModal({
                                         open: true,
                                         type: 'createFile',
-                                        title: '新建根目录文档',
+                                        title: t('wiki:newRootDoc', { defaultValue: '新建根目录文档' }),
                                         parentPath: '',
                                         targetPath: '',
                                         initialValue: '',
@@ -602,7 +608,7 @@ export default function WikiClient({ onClose }: Props) {
                                 }}
                             />
                         </Tooltip>
-                        <Tooltip title="新建分组">
+                        <Tooltip title={t('wiki:newFolder', { defaultValue: '新建分组' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -612,7 +618,7 @@ export default function WikiClient({ onClose }: Props) {
                                     setNameModal({
                                         open: true,
                                         type: 'createFolder',
-                                        title: '新建根目录分组',
+                                        title: t('wiki:newRootFolder', { defaultValue: '新建根目录分组' }),
                                         parentPath: '',
                                         targetPath: '',
                                         initialValue: '',
@@ -620,7 +626,7 @@ export default function WikiClient({ onClose }: Props) {
                                 }}
                             />
                         </Tooltip>
-                        <Tooltip title="刷新列表">
+                        <Tooltip title={t('wiki:refreshList', { defaultValue: '刷新列表' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -628,7 +634,7 @@ export default function WikiClient({ onClose }: Props) {
                                 onClick={() => void loadTree(false)}
                             />
                         </Tooltip>
-                        <Tooltip title="在系统资源管理器打开">
+                        <Tooltip title={t('wiki:openInExplorer', { defaultValue: '在系统资源管理器打开' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -641,7 +647,7 @@ export default function WikiClient({ onClose }: Props) {
 
                 <div className={s.searchWrap}>
                     <Input
-                        placeholder="搜索知识文档..."
+                        placeholder={t('wiki:searchPlaceholder', { defaultValue: '搜索知识文档...' })}
                         prefix={<Search size={13} style={{ color: '#98a2b3' }} />}
                         value={searchKeyword}
                         onChange={(e) => setSearchKeyword(e.target.value)}
@@ -658,17 +664,17 @@ export default function WikiClient({ onClose }: Props) {
                         onExpand={handleExpand}
                         onSelect={handleSelect}
                         titleRender={renderTreeTitle}
-                        emptyText="暂无知识库文档"
+                        emptyText={t('wiki:emptyWiki', { defaultValue: '暂无知识库文档' })}
                     />
                 </div>
 
                 <div className={s.sidebarFooter}>
-                    <Tooltip title={`本地路径: ${wikiDir}`}>
+                    <Tooltip title={t('wiki:localPath', { defaultValue: '本地路径: {{path}}', path: wikiDir })}>
                         <span className={s.footerPath} onClick={handleOpenDir}>
-                            {wikiDir || '本地存储'}
+                            {wikiDir || t('wiki:localStorage', { defaultValue: '本地存储' })}
                         </span>
                     </Tooltip>
-                    <span>{stats.docs} 篇文档</span>
+                    <span>{t('wiki:docCount', { defaultValue: '{{count}} 篇文档', count: stats.docs })}</span>
                 </div>
             </div>
 
@@ -680,13 +686,13 @@ export default function WikiClient({ onClose }: Props) {
                             <div className={s.docMeta}>
                                 <FileText size={16} style={{ color: '#3370ff' }} />
                                 <span className={s.docTitle}>{selectedNode.name}</span>
-                                {isDirty && <span className={s.dirtyDot} title="存在未保存更改" />}
+                                {isDirty && <span className={s.dirtyDot} title={t('wiki:unsavedChanges', { defaultValue: '存在未保存更改' })} />}
                                 <span className={s.docPath}>{selectedNode.rel_path}</span>
                             </div>
 
                             <div className={s.topActions}>
                                 <span className={s.metaInfo}>
-                                    {content.length} 字
+                                    {t('wiki:wordCount', { defaultValue: '{{count}} 字', count: content.length })}
                                 </span>
 
                                 <Segmented
@@ -694,19 +700,19 @@ export default function WikiClient({ onClose }: Props) {
                                     value={viewMode}
                                     onChange={(v) => setViewMode(v as ViewMode)}
                                     options={[
-                                        { value: 'preview', icon: <Eye size={13} />, label: '预览' },
-                                        { value: 'edit', icon: <Edit3 size={13} />, label: '编辑' },
-                                        { value: 'split', icon: <Columns size={13} />, label: '分屏' },
+                                        { value: 'preview', icon: <Eye size={13} />, label: t('wiki:viewPreview', { defaultValue: '预览' }) },
+                                        { value: 'edit', icon: <Edit3 size={13} />, label: t('wiki:viewEdit', { defaultValue: '编辑' }) },
+                                        { value: 'split', icon: <Columns size={13} />, label: t('wiki:viewSplit', { defaultValue: '分屏' }) },
                                     ]}
                                 />
 
-                                <Tooltip title="从对话提炼知识到 Wiki (Compilation over Retrieval)">
+                                <Tooltip title={t('wiki:compileTooltip', { defaultValue: '从对话提炼知识到 Wiki (Compilation over Retrieval)' })}>
                                     <Button
                                         size="small"
                                         icon={<Sparkles size={13} />}
                                         onClick={() => setCompileModalOpen(true)}
                                     >
-                                        会话提炼
+                                        {t('wiki:compileSession', { defaultValue: '会话提炼' })}
                                     </Button>
                                 </Tooltip>
 
@@ -718,7 +724,7 @@ export default function WikiClient({ onClose }: Props) {
                                     onClick={handleSave}
                                     disabled={!isDirty}
                                 >
-                                    {isDirty ? '保存' : '已保存'}
+                                    {isDirty ? t('wiki:save', { defaultValue: '保存' }) : t('wiki:saved', { defaultValue: '已保存' })}
                                 </Button>
                             </div>
                         </div>
@@ -763,11 +769,11 @@ export default function WikiClient({ onClose }: Props) {
                 ) : (
                     <div className={s.emptyState}>
                         <BookOpen size={48} className={s.emptyIcon} />
-                        <div className={s.emptyTitle}>LLM 知识库与记忆系统</div>
+                        <div className={s.emptyTitle}>{t('wiki:welcomeTitle', { defaultValue: 'LLM 知识库与记忆系统' })}</div>
                         <div className={s.emptyDesc}>
-                            采用 <strong>Compilation over Retrieval</strong>（编译演进而非盲目检索）思想，
-                            本地 Markdown 纯文件存储，人类与 AI 共同演进。
-                            System Prompt 自动感知全局目录概要，AI 可自主调取详细记忆。
+                            {t('wiki:welcomeDesc1', { defaultValue: '采用 Compilation over Retrieval（编译演进而非盲目检索）思想，' })}
+                            {t('wiki:welcomeDesc2', { defaultValue: '本地 Markdown 纯文件存储，人类与 AI 共同演进。' })}
+                            {t('wiki:welcomeDesc3', { defaultValue: 'System Prompt 自动感知全局目录概要，AI 可自主调取详细记忆。' })}
                         </div>
                         <div className={s.emptyActions}>
                             <Button
@@ -778,20 +784,20 @@ export default function WikiClient({ onClose }: Props) {
                                     setNameModal({
                                         open: true,
                                         type: 'createFile',
-                                        title: '新建文档',
+                                        title: t('wiki:newDoc', { defaultValue: '新建文档' }),
                                         parentPath: '',
                                         targetPath: '',
                                         initialValue: '',
                                     })
                                 }}
                             >
-                                新建文档
+                                {t('wiki:newDoc', { defaultValue: '新建文档' })}
                             </Button>
                             <Button
                                 icon={<FolderOpen size={14} />}
                                 onClick={handleOpenDir}
                             >
-                                打开存储目录
+                                {t('wiki:openStorageDir', { defaultValue: '打开存储目录' })}
                             </Button>
                         </div>
                     </div>
@@ -809,8 +815,8 @@ export default function WikiClient({ onClose }: Props) {
                 onCancel={() => {
                     if (!submittingName) setNameModal((prev) => ({ ...prev, open: false }))
                 }}
-                okText="确定"
-                cancelText="取消"
+                okText={t('common:ok', { defaultValue: '确定' })}
+                cancelText={t('common:cancel', { defaultValue: '取消' })}
                 confirmLoading={submittingName}
                 destroyOnHidden
             >
@@ -818,8 +824,8 @@ export default function WikiClient({ onClose }: Props) {
                     <Input
                         placeholder={
                             nameModal.type === 'createFile'
-                                ? '请输入文档名称 (如: architecture.md)'
-                                : '请输入名称'
+                                ? t('wiki:inputDocPlaceholder', { defaultValue: '请输入文档名称 (如: architecture.md)' })
+                                : t('wiki:inputNamePlaceholder', { defaultValue: '请输入名称' })
                         }
                         value={nameInput}
                         onChange={(e) => setNameInput(e.target.value)}
@@ -836,11 +842,17 @@ export default function WikiClient({ onClose }: Props) {
             <ConfirmModal
                 state={{
                     open: !!deleteTarget,
-                    title: deleteTarget?.isFolder ? '删除知识库分组' : '删除知识库文档',
+                    title: deleteTarget?.isFolder
+                        ? t('wiki:deleteFolderTitle', { defaultValue: '删除知识库分组' })
+                        : t('wiki:deleteDocTitle', { defaultValue: '删除知识库文档' }),
                     danger: true,
-                    confirmText: deleting ? '删除中...' : '确认删除',
+                    confirmText: deleting ? t('common:deleting', { defaultValue: '删除中...' }) : t('common:confirmDelete', { defaultValue: '确认删除' }),
                     message: deleteTarget
-                        ? `确定要删除 ${deleteTarget.isFolder ? '分组' : '文档'} "${deleteTarget.relPath}" 吗？此操作无法撤销。`
+                        ? t('wiki:deleteConfirm', {
+                            defaultValue: `确定要删除 ${deleteTarget.isFolder ? '分组' : '文档'} "${deleteTarget.relPath}" 吗？此操作无法撤销。`,
+                            type: deleteTarget.isFolder ? t('wiki:typeFolder', { defaultValue: '分组' }) : t('wiki:typeDoc', { defaultValue: '文档' }),
+                            path: deleteTarget.relPath,
+                        })
                         : '',
                     onConfirm: handleExecuteDelete,
                 }}
@@ -851,29 +863,29 @@ export default function WikiClient({ onClose }: Props) {
 
             {/* 会话提炼编译弹窗 */}
             <Modal
-                title="提炼会话到知识库 (LLM Wiki Compile)"
+                title={t('wiki:compileModalTitle', { defaultValue: '提炼会话到知识库 (LLM Wiki Compile)' })}
                 open={compileModalOpen}
                 onOk={handleCompileSession}
                 onCancel={() => setCompileModalOpen(false)}
-                okText="开始提炼编译"
-                cancelText="取消"
+                okText={t('wiki:startCompile', { defaultValue: '开始提炼编译' })}
+                cancelText={t('common:cancel', { defaultValue: '取消' })}
                 confirmLoading={compiling}
             >
                 <div style={{ padding: '8px 0', display: 'flex', flexDirection: 'column', gap: 12 }}>
                     <p style={{ color: '#667085', fontSize: 13, lineHeight: 1.6, margin: 0 }}>
-                        大模型将全面阅读该会话的上下文，提取并提炼关键架构设计、运维踩坑、环境凭据或配置规则，智能合并或新增到 Wiki 知识库中。
+                        {t('wiki:compileModalDesc', { defaultValue: '大模型将全面阅读该会话的上下文，提取并提炼关键架构设计、运维踩坑、环境凭据或配置规则，智能合并或新增到 Wiki 知识库中。' })}
                     </p>
                     <div>
                         <span style={{ fontSize: 13, fontWeight: 500, display: 'block', marginBottom: 6 }}>
-                            选择待提炼的会话来源:
+                            {t('wiki:selectSessionSource', { defaultValue: '选择待提炼的会话来源:' })}
                         </span>
                         <Segmented
                             block
                             value={selectedSessionId}
                             onChange={(val) => setSelectedSessionId(String(val))}
                             options={[
-                                { label: 'AI Agent 历史会话', value: 'agent_history' },
-                                ...(activeTarget?.id ? [{ label: `当前会话 (${activeTarget.kind})`, value: activeTarget.id }] : []),
+                                { label: t('wiki:sessionAgentHistory', { defaultValue: 'AI Agent 历史会话' }), value: 'agent_history' },
+                                ...(activeTarget?.id ? [{ label: `${t('common:currentSession', { defaultValue: '当前会话' })} (${activeTarget.kind})`, value: activeTarget.id }] : []),
                             ]}
                         />
                     </div>

@@ -761,13 +761,13 @@ export const API = {
     agentListSessions: (): Promise<AgentSessionItem[]> =>
         (AgentService as any).AgentListSessions ? (AgentService as any).AgentListSessions().then((r: any) => (r || []) as AgentSessionItem[]) : Promise.resolve([]),
     agentCreateSession: (title?: string): Promise<AgentSessionItem> =>
-        (AgentService as any).AgentCreateSession ? (AgentService as any).AgentCreateSession(title || '') : Promise.resolve({ id: `sess_${Date.now()}`, title: title || '新会话', created_at: Date.now(), updated_at: Date.now() }),
+        (AgentService as any).AgentCreateSession ? (AgentService as any).AgentCreateSession(title || '') : Promise.resolve({ id: `sess_${Date.now()}`, title: title || '', created_at: Date.now(), updated_at: Date.now() }),
     agentUpdateSessionTitle: (sessionId: string, title: string): Promise<void> =>
         (AgentService as any).AgentUpdateSessionTitle ? (AgentService as any).AgentUpdateSessionTitle(sessionId, title) : Promise.resolve(),
     agentDeleteSession: (sessionId: string): Promise<void> =>
         (AgentService as any).AgentDeleteSession ? (AgentService as any).AgentDeleteSession(sessionId) : Promise.resolve(),
     agentGenerateSessionTitle: (sessionId: string): Promise<string> =>
-        (AgentService as any).AgentGenerateSessionTitle ? (AgentService as any).AgentGenerateSessionTitle(sessionId) : Promise.resolve('新会话'),
+        (AgentService as any).AgentGenerateSessionTitle ? (AgentService as any).AgentGenerateSessionTitle(sessionId) : Promise.resolve(''),
     agentListSkills: (): Promise<AgentSkillItem[]> =>
         Promise.resolve(AgentService.AgentListSkills() || []) as any,
     agentGetSkillsDir: (): Promise<string> => Promise.resolve(AgentService.AgentGetSkillsDir()),

@@ -12,7 +12,9 @@ import {
     CheckCircle,
     Sliders,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import type { K8sOverview, K8sNodeInfo } from '@/types'
 import s from './K8sClient.module.less'
 
@@ -24,6 +26,7 @@ interface Props {
 }
 
 export default function OverviewTab({ serverId, overview, loading, onRefresh }: Props) {
+    const { t } = useTranslation(['k8s', 'common'])
     const { message } = App.useApp()
     const [nodes, setNodes] = useState<K8sNodeInfo[]>([])
     const [nodeLoading, setNodeLoading] = useState(false)
@@ -37,7 +40,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
             const list = await API.k8sListNodes(serverId)
             setNodes(list)
         } catch (err: any) {
-            message.error(`获取节点列表失败: ${err.message || String(err)}`)
+            message.error(t('overview.fetchNodesFail', { defaultValue: '获取节点列表失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setNodeLoading(false)
         }
@@ -60,21 +63,23 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
 
     const columns: ColumnsType<K8sNodeInfo> = [
         {
-            title: '节点名称 (Node Name)',
+            title: t('overview.colNodeName', { defaultValue: '节点名称 (Node Name)' }),
             dataIndex: 'name',
             key: 'name',
             width: 220,
-            render: (name: string, record) => (
+            render: (name: string) => (
                 <Space size={8}>
                     <Server size={14} color="var(--accent)" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{name}</span>
-                    <Tooltip title="复制节点名称">
+                    <Tooltip title={t('overview.copyNodeName', { defaultValue: '复制节点名称' })}>
                         <Button
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
-                            onClick={() => {
-                                navigator.clipboard.writeText(name)
+                            onClick={async () => {
+                                if (await copyText(name)) {
+                                    message.success(t('overview.copiedNodeName', { defaultValue: '已复制节点名称' }))
+                                }
                             }}
                         />
                     </Tooltip>
@@ -82,7 +87,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
             ),
         },
         {
-            title: '状态',
+            title: t('overview.colStatus', { defaultValue: '状态' }),
             dataIndex: 'status',
             key: 'status',
             width: 120,
@@ -97,7 +102,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
             },
         },
         {
-            title: '角色 (Roles)',
+            title: t('overview.colRoles', { defaultValue: '角色 (Roles)' }),
             dataIndex: 'roles',
             key: 'roles',
             width: 140,
@@ -115,34 +120,38 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
             },
         },
         {
-            title: 'IP 地址',
+            title: t('overview.colIp', { defaultValue: 'IP 地址' }),
             key: 'ip',
             width: 160,
             render: (_, record) => (
                 <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)' }}>
-                    <div>内网: {record.internalIp || '-'}</div>
-                    {record.externalIp && <div style={{ color: 'var(--text-dim)' }}>外网: {record.externalIp}</div>}
+                    <div>{t('overview.internalIp', { defaultValue: '内网: {{ip}}', ip: record.internalIp || '-' })}</div>
+                    {record.externalIp && (
+                        <div style={{ color: 'var(--text-dim)' }}>
+                            {t('overview.externalIp', { defaultValue: '外网: {{ip}}', ip: record.externalIp })}
+                        </div>
+                    )}
                 </div>
             ),
         },
         {
-            title: '计算规格 (CPU / 内存 / Pods)',
+            title: t('overview.colCompute', { defaultValue: '计算规格 (CPU / 内存 / Pods)' }),
             key: 'capacity',
             width: 200,
             render: (_, record) => (
                 <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)' }}>
                     <Space size={8}>
-                        <span>CPU: {record.cpuCapacity} 核</span>
-                        <span>内存: {record.memCapacity}</span>
+                        <span>{t('overview.cpuCores', { defaultValue: 'CPU: {{cores}} 核', cores: record.cpuCapacity })}</span>
+                        <span>{t('overview.memCapacity', { defaultValue: '内存: {{mem}}', mem: record.memCapacity })}</span>
                     </Space>
                     <div style={{ color: 'var(--text-dim)', fontSize: 11, marginTop: 2 }}>
-                        Pods 容量: {record.podsCapacity}
+                        {t('overview.podsCapacity', { defaultValue: 'Pods 容量: {{pods}}', pods: record.podsCapacity })}
                     </div>
                 </div>
             ),
         },
         {
-            title: 'Kubelet / 系统版本',
+            title: t('overview.colVersion', { defaultValue: 'Kubelet / 系统版本' }),
             key: 'version',
             render: (_, record) => (
                 <div style={{ fontSize: 11.5 }}>
@@ -154,12 +163,12 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
             ),
         },
         {
-            title: '创建时间',
+            title: t('overview.colCreatedAt', { defaultValue: '创建时间' }),
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 160,
-            render: (t: string) => (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t || '-'}</span>
+            render: (timeStr: string) => (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{timeStr || '-'}</span>
             ),
         },
     ]
@@ -170,67 +179,67 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
             <div className={s.overviewGrid}>
                 <div className={s.statCard}>
                     <div className={s.statCardHeader}>
-                        <span>集群节点 (Nodes)</span>
+                        <span>{t('overview.cardNodes', { defaultValue: '集群节点 (Nodes)' })}</span>
                         <Server size={16} color="var(--accent)" />
                     </div>
                     <div className={s.statCardValue}>
                         {overview?.nodesReady ?? 0}
                         <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 400, marginLeft: 6 }}>
-                            / {overview?.nodesTotal ?? 0} 就绪
+                            / {overview?.nodesTotal ?? 0} {t('common.ready', { defaultValue: '就绪' })}
                         </span>
                     </div>
                     <div className={s.statCardFooter}>
                         <CheckCircle size={12} color="var(--ok)" />
-                        <span>K8s 核心算力池</span>
+                        <span>K8s Compute Pool</span>
                     </div>
                 </div>
 
                 <div className={s.statCard}>
                     <div className={s.statCardHeader}>
-                        <span>命名空间 (Namespaces)</span>
+                        <span>Namespaces</span>
                         <Layers size={16} color="#8b5cf6" />
                     </div>
                     <div className={s.statCardValue}>{overview?.namespacesTotal ?? 0}</div>
                     <div className={s.statCardFooter}>
-                        <span>租户与业务逻辑隔离</span>
+                        <span>Tenant & Scope Isolation</span>
                     </div>
                 </div>
 
                 <div className={s.statCard}>
                     <div className={s.statCardHeader}>
-                        <span>Pods 容器组</span>
+                        <span>{t('overview.cardPods', { defaultValue: 'Pods 容器组' })}</span>
                         <Box size={16} color="var(--ok)" />
                     </div>
                     <div className={s.statCardValue}>
                         {overview?.podsRunning ?? 0}
                         <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 400, marginLeft: 6 }}>
-                            / {overview?.podsTotal ?? 0} 运行中
+                            / {overview?.podsTotal ?? 0} {t('common.running', { defaultValue: '运行中' })}
                         </span>
                     </div>
                     <div className={s.statCardFooter}>
-                        <span>原子调度工作负载</span>
+                        <span>Atomic Scheduled Units</span>
                     </div>
                 </div>
 
                 <div className={s.statCard}>
                     <div className={s.statCardHeader}>
-                        <span>Deployments 负载</span>
+                        <span>{t('overview.cardDeployments', { defaultValue: 'Deployments 负载' })}</span>
                         <Sliders size={16} color="var(--warn)" />
                     </div>
                     <div className={s.statCardValue}>{overview?.deploymentsTotal ?? 0}</div>
                     <div className={s.statCardFooter}>
-                        <span>无状态自动伸缩应用</span>
+                        <span>Stateless Scalable Apps</span>
                     </div>
                 </div>
 
                 <div className={s.statCard}>
                     <div className={s.statCardHeader}>
-                        <span>Services 服务</span>
+                        <span>{t('overview.cardServices', { defaultValue: 'Services 服务' })}</span>
                         <Network size={16} color="#06b6d4" />
                     </div>
                     <div className={s.statCardValue}>{overview?.servicesTotal ?? 0}</div>
                     <div className={s.statCardFooter}>
-                        <span>服务发现与负载均衡</span>
+                        <span>Discovery & Load Balancing</span>
                     </div>
                 </div>
             </div>
@@ -239,10 +248,10 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
             <div className={s.toolbar}>
                 <div className={s.toolbarLeft}>
                     <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>
-                        集群节点列表 ({nodes.length})
+                        {t('overview.nodesCardTitle', { defaultValue: '集群节点 (Nodes)' })} ({nodes.length})
                     </span>
                     <Input
-                        placeholder="搜索节点名称 / IP / 角色 / 版本..."
+                        placeholder={t('overview.searchNodePlaceholder', { defaultValue: '搜索节点名称 / IP / 角色 / 版本...' })}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -264,7 +273,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                             fetchNodes()
                         }}
                     >
-                        刷新
+                        {t('common.refresh', { defaultValue: '刷新' })}
                     </Button>
                 </div>
             </div>
@@ -282,7 +291,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)

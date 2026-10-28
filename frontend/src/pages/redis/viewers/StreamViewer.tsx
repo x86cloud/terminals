@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Input, Button, Space, Tooltip, Modal, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Copy, Clock } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -22,6 +23,7 @@ interface StreamMessage {
 }
 
 export default function StreamViewer({ session, selected, value, onReload, flash }: Props) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
 
@@ -101,10 +103,10 @@ export default function StreamViewer({ session, selected, value, onReload, flash
         try {
             parsed = JSON.parse(fieldsText)
             if (typeof parsed !== 'object' || Array.isArray(parsed) || parsed === null) {
-                throw new Error('必须是 JSON 对象格式')
+                throw new Error(t('viewers.stream.mustBeJsonObject'))
             }
         } catch {
-            message.warning('字段必须是合法的 JSON 对象格式，如 {"field": "val"}')
+            message.warning(t('viewers.stream.jsonObjectWarn'))
             return
         }
 
@@ -120,11 +122,11 @@ export default function StreamViewer({ session, selected, value, onReload, flash
             if (res && res.result && String(res.result).startsWith('ERR')) {
                 throw new Error(String(res.result))
             }
-            message.success(`已添加 Stream 消息 ID: ${res.result || entryId}`)
+            message.success(t('viewers.stream.msgAdded', { id: res.result || entryId }))
             setAddModalOpen(false)
             onReload()
         } catch (e: any) {
-            message.error('追加消息失败: ' + (e?.message || e))
+            message.error(t('viewers.stream.addFail', { error: e?.message || e }))
         } finally {
             setAdding(false)
         }
@@ -133,10 +135,10 @@ export default function StreamViewer({ session, selected, value, onReload, flash
     const handleDeleteEntry = async (msgId: string) => {
         try {
             await API.redisRaw(session.id, `XDEL "${selected}" ${msgId}`)
-            message.success(`已删除 Stream 消息: ${msgId}`)
+            message.success(t('viewers.stream.msgDeleted', { id: msgId }))
             onReload()
         } catch (e: any) {
-            message.error('删除失败: ' + (e?.message || e))
+            message.error(t('viewers.stream.deleteFail', { error: e?.message || e }))
         }
     }
 
@@ -147,21 +149,21 @@ export default function StreamViewer({ session, selected, value, onReload, flash
                     <Input
                         size="small"
                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
-                        placeholder="搜索消息 ID 或字段内容..."
+                        placeholder={t('viewers.stream.searchPlaceholder')}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         allowClear
                         className={s.searchInput}
                     />
                     <span className={s.countBadge}>
-                        最新 {messages.length} 条消息
-                        {searchText && ` (匹配 ${filteredMessages.length} 条)`}
+                        {t('viewers.stream.latestMsgs', { count: messages.length })}
+                        {searchText && t('viewers.stream.filteredMsgs', { count: filteredMessages.length })}
                     </span>
                 </div>
 
                 <div className={s.toolbarRight}>
                     <Button size="small" type="primary" icon={<Plus size={12} />} onClick={() => setAddModalOpen(true)}>
-                        追加消息 (XADD)
+                        {t('viewers.stream.addMsgBtn')}
                     </Button>
                 </div>
             </div>
@@ -169,9 +171,9 @@ export default function StreamViewer({ session, selected, value, onReload, flash
             <div className={s.tableArea} style={{ padding: '8px 12px' }}>
                 {filteredMessages.length === 0 ? (
                     <div className={s.emptyTip}>
-                        <span>当前 Stream 无消息</span>
+                        <span>{t('viewers.stream.emptyStream')}</span>
                         <Button size="small" type="primary" icon={<Plus size={12} />} onClick={() => setAddModalOpen(true)}>
-                            追加第一条消息 (XADD)
+                            {t('viewers.stream.addFirstMsg')}
                         </Button>
                     </div>
                 ) : (
@@ -187,24 +189,24 @@ export default function StreamViewer({ session, selected, value, onReload, flash
                                     )}
                                 </div>
                                 <Space size={4}>
-                                    <Tooltip title="复制消息完整 JSON">
+                                    <Tooltip title={t('viewers.stream.copyJsonTooltip')}>
                                         <Button
                                             size="small"
                                             type="text"
                                             icon={<Copy size={12} />}
                                             onClick={async () => {
-                                                if (await copyText(JSON.stringify(msg.fields, null, 2))) message.success('已复制消息内容')
+                                                if (await copyText(JSON.stringify(msg.fields, null, 2))) message.success(t('viewers.stream.copiedJson'))
                                             }}
                                         />
                                     </Tooltip>
                                     <Popconfirm
-                                        title={`确定从 Stream 中删除该消息吗？(XDEL)`}
+                                        title={t('viewers.stream.deleteConfirm')}
                                         onConfirm={() => handleDeleteEntry(msg.id)}
-                                        okText="删除"
-                                        cancelText="取消"
+                                        okText={t('viewers.common.delete')}
+                                        cancelText={t('viewers.common.cancel')}
                                         okButtonProps={{ danger: true }}
                                     >
-                                        <Tooltip title="删除该条消息 (XDEL)">
+                                        <Tooltip title={t('viewers.stream.deleteTooltip')}>
                                             <Button size="small" type="text" danger icon={<Trash2 size={12} />} />
                                         </Tooltip>
                                     </Popconfirm>
@@ -226,22 +228,22 @@ export default function StreamViewer({ session, selected, value, onReload, flash
 
             {/* Add Entry Modal */}
             <Modal
-                title="追加 Stream 消息 (XADD)"
+                title={t('viewers.stream.addModalTitle')}
                 open={addModalOpen}
                 onOk={handleAddEntry}
                 confirmLoading={adding}
                 onCancel={() => setAddModalOpen(false)}
-                okText="追加发送"
-                cancelText="取消"
+                okText={t('viewers.stream.addSendBtn')}
+                cancelText={t('viewers.common.cancel')}
                 width={540}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>消息 ID (留 * 为自动生成)</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('viewers.stream.msgIdLabel')}</div>
                         <Input value={entryId} onChange={(e) => setEntryId(e.target.value)} placeholder="*" />
                     </div>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>消息键值对 (JSON 格式)</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('viewers.stream.msgFieldsLabel')}</div>
                         <CodeEditor
                             value={fieldsText}
                             onChange={setFieldsText}

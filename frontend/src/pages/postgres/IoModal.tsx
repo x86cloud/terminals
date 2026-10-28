@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal, Segmented, InputNumber, App } from 'antd'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 
@@ -18,6 +19,7 @@ export function ExportModal({
     tableName: string
     onClose: () => void
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [mode, setMode] = useState<'csv' | 'json'>('csv')
     const [exportSource, setExportSource] = useState<'table' | 'sql'>('table')
@@ -39,11 +41,11 @@ export function ExportModal({
                 limit
             )
             if (savedPath) {
-                message.success(`导出成功: ${savedPath}`)
+                message.success(t('postgres.io.exportSuccess', { path: savedPath }))
                 onClose()
             }
         } catch (e: any) {
-            message.error(`导出失败: ${e.message || e}`)
+            message.error(t('postgres.io.exportFail', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -51,42 +53,42 @@ export function ExportModal({
 
     return (
         <Modal
-            title={`导出数据: ${tableName || dbName}`}
+            title={t('postgres.io.exportTitle', { target: tableName || dbName })}
             open={open}
             onOk={handleExport}
             onCancel={onClose}
             confirmLoading={loading}
-            okText="选择路径并导出"
-            cancelText="取消"
+            okText={t('postgres.io.exportBtn')}
+            cancelText={t('postgres.obj.cancel')}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 12 }}>
                 <div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>导出格式</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.io.exportFormat')}</div>
                     <Segmented
                         value={mode}
                         onChange={(v) => setMode(v as any)}
                         options={[
-                            { label: 'CSV 格式 (*.csv)', value: 'csv' },
-                            { label: 'JSON 格式 (*.json)', value: 'json' },
+                            { label: t('postgres.io.csvFormat'), value: 'csv' },
+                            { label: t('postgres.io.jsonFormat'), value: 'json' },
                         ]}
                     />
                 </div>
 
                 <div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>导出范围</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.io.exportScope')}</div>
                     <Segmented
                         value={exportSource}
                         onChange={(v) => setExportSource(v as any)}
                         options={[
-                            { label: '整表数据', value: 'table' },
-                            { label: '自定义 SQL 导出', value: 'sql' },
+                            { label: t('postgres.io.fullTable'), value: 'table' },
+                            { label: t('postgres.io.customSql'), value: 'sql' },
                         ]}
                     />
                 </div>
 
                 {exportSource === 'sql' && (
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>SQL 语句</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.io.sqlStmt')}</div>
                         <div style={{ border: '1px solid var(--border-color)', borderRadius: 6, overflow: 'hidden' }}>
                             <CodeEditor value={customSql} lang="sql" height="120px" onChange={setCustomSql} />
                         </div>
@@ -94,7 +96,7 @@ export function ExportModal({
                 )}
 
                 <div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>限制行数（0 表示不限制）</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.io.limitRows')}</div>
                     <InputNumber min={0} value={limit} onChange={(v) => setLimit(v ?? 0)} style={{ width: '100%' }} />
                 </div>
             </div>
@@ -119,6 +121,7 @@ export function ImportModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [mode, setMode] = useState<'csv' | 'sql'>('csv')
     const [loading, setLoading] = useState(false)
@@ -133,7 +136,7 @@ export function ImportModal({
                 onClose()
             }
         } catch (e: any) {
-            message.error(`导入失败: ${e.message || e}`)
+            message.error(t('postgres.io.importFail', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -141,28 +144,28 @@ export function ImportModal({
 
     return (
         <Modal
-            title={`导入数据至「${schema}.${tableName}」`}
+            title={t('postgres.io.importTitle', { schema, table: tableName })}
             open={open}
             onOk={handleImportFile}
             onCancel={onClose}
             confirmLoading={loading}
-            okText="选择文件并导入"
-            cancelText="取消"
+            okText={t('postgres.io.importBtn')}
+            cancelText={t('postgres.obj.cancel')}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 12 }}>
                 <div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>导入文件类型</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.io.importFileType')}</div>
                     <Segmented
                         value={mode}
                         onChange={(v) => setMode(v as any)}
                         options={[
-                            { label: 'CSV 数据文件 (*.csv)', value: 'csv' },
-                            { label: 'SQL 脚本文件 (*.sql)', value: 'sql' },
+                            { label: t('postgres.io.csvFile'), value: 'csv' },
+                            { label: t('postgres.io.sqlFile'), value: 'sql' },
                         ]}
                     />
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                    点击「选择文件并导入」将打开系统文件选择对话框。导入 CSV 时首行需包含对应列名。
+                    {t('postgres.io.importHint')}
                 </div>
             </div>
         </Modal>

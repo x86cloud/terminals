@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Button, Tooltip, Popover, Input, InputNumber, Popconfirm, Modal, App } from 'antd'
 import { Copy, Check, Clock, RefreshCw, Trash2, Edit2, Database } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
 import { TYPE_COLOR, TYPE_LABEL, TYPE_SHORT_LABEL, formatTtl, formatBytes } from './redisTypes'
@@ -15,15 +16,6 @@ interface Props {
     onKeyDeleted?: () => void
 }
 
-const TTL_PRESETS = [
-    { label: '永久 (-1)', value: -1 },
-    { label: '1 分钟', value: 60 },
-    { label: '1 小时', value: 3600 },
-    { label: '1 天', value: 86400 },
-    { label: '7 天', value: 604800 },
-    { label: '30 天', value: 2592000 },
-]
-
 export default function KeyHeader({
     session,
     selected,
@@ -32,6 +24,7 @@ export default function KeyHeader({
     onKeyRenamed,
     onKeyDeleted,
 }: Props) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     const [copied, setCopied] = useState(false)
     const [ttlPopoverOpen, setTtlPopoverOpen] = useState(false)
@@ -46,14 +39,23 @@ export default function KeyHeader({
     const typeColor = TYPE_COLOR[value.type] || TYPE_COLOR.string
     const ttlInfo = formatTtl(value.ttl)
 
+    const ttlPresets = useMemo(() => [
+        { label: t('header.ttlForever'), value: -1 },
+        { label: t('header.preset1m'), value: 60 },
+        { label: t('header.preset1h'), value: 3600 },
+        { label: t('header.preset1d'), value: 86400 },
+        { label: t('header.preset7d'), value: 604800 },
+        { label: t('header.preset30d'), value: 2592000 },
+    ], [t])
+
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(selected)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
-            message.success('已复制键名')
+            message.success(t('header.copiedKey'))
         } catch {
-            message.error('复制失败')
+            message.error(t('viewers.string.copyFail'))
         }
     }
 
@@ -61,11 +63,11 @@ export default function KeyHeader({
         setUpdatingTtl(true)
         try {
             await API.redisExpire(session.id, selected, newTtl)
-            message.success(`已更新 TTL 为: ${newTtl === -1 ? '永久有效' : newTtl + '秒'}`)
+            message.success(newTtl === -1 ? t('header.ttlPermanentSuccess') : t('header.ttlSuccess', { ttl: newTtl }))
             setTtlPopoverOpen(false)
             onReload()
         } catch (e: any) {
-            message.error('更新 TTL 失败: ' + (e?.message || e))
+            message.error(t('header.ttlFail', { error: e?.message || e }))
         } finally {
             setUpdatingTtl(false)
         }
@@ -74,7 +76,7 @@ export default function KeyHeader({
     const handleRename = async () => {
         const trimmed = renameVal.trim()
         if (!trimmed) {
-            message.warning('键名不能为空')
+            message.warning(t('header.reqKeyName'))
             return
         }
         if (trimmed === selected) {
@@ -84,11 +86,11 @@ export default function KeyHeader({
         setRenaming(true)
         try {
             await API.redisRenameKey(session.id, selected, trimmed)
-            message.success(`键已重命名为: [${trimmed}]`)
+            message.success(t('header.renameSuccess', { key: trimmed }))
             setRenameOpen(false)
             if (onKeyRenamed) onKeyRenamed(trimmed)
         } catch (e: any) {
-            message.error('重命名失败: ' + (e?.message || e))
+            message.error(t('header.renameFail', { error: e?.message || e }))
         } finally {
             setRenaming(false)
         }
@@ -97,10 +99,10 @@ export default function KeyHeader({
     const handleDeleteKey = async () => {
         try {
             await API.redisDelete(session.id, selected)
-            message.success(`已删除键 [${selected}]`)
+            message.success(t('client.deleteKeyConfirm', { key: selected }))
             if (onKeyDeleted) onKeyDeleted()
         } catch (e: any) {
-            message.error('删除失败: ' + (e?.message || e))
+            message.error(t('client.deleteFail', { error: e?.message || e }))
         }
     }
 
@@ -111,16 +113,16 @@ export default function KeyHeader({
             return formatBytes(bytes)
         }
         if (value.size !== undefined && value.size !== null) {
-            return `${value.size} 项`
+            return t('header.itemCount', { count: value.size })
         }
         return null
     })()
 
     const ttlPopoverContent = (
         <div style={{ width: 220, display: 'flex', flexDirection: 'column', gap: 10, padding: 4 }}>
-            <div style={{ fontWeight: 600, fontSize: 13 }}>修改过期时间 (EXPIRE)</div>
+            <div style={{ fontWeight: 600, fontSize: 13 }}>{t('header.changeTtlTitle')}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6 }}>
-                {TTL_PRESETS.map((p) => (
+                {ttlPresets.map((p) => (
                     <Button
                         key={p.value}
                         size="small"
@@ -132,7 +134,7 @@ export default function KeyHeader({
                 ))}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>自定义(秒):</span>
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('header.customSeconds')}</span>
                 <InputNumber
                     size="small"
                     style={{ flex: 1 }}
@@ -142,10 +144,10 @@ export default function KeyHeader({
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 4 }}>
                 <Button size="small" onClick={() => setTtlPopoverOpen(false)}>
-                    取消
+                    {t('viewers.common.cancel')}
                 </Button>
                 <Button size="small" type="primary" loading={updatingTtl} onClick={handleUpdateTtl}>
-                    应用修改
+                    {t('header.apply')}
                 </Button>
             </div>
         </div>
@@ -154,7 +156,7 @@ export default function KeyHeader({
     return (
         <div className={h.header}>
             <div className={h.leftSection}>
-                <Tooltip title={`数据类型: ${TYPE_LABEL[value.type] || value.type}`}>
+                <Tooltip title={t('header.dataType', { type: TYPE_LABEL[value.type] || value.type })}>
                     <span
                         className={h.typeBadge}
                         style={{
@@ -171,7 +173,7 @@ export default function KeyHeader({
                     {selected}
                 </span>
 
-                <Tooltip title={copied ? '已复制' : '复制键名'}>
+                <Tooltip title={copied ? t('viewers.common.copied') : t('header.copyKey')}>
                     <Button
                         size="small"
                         type="text"
@@ -180,7 +182,7 @@ export default function KeyHeader({
                     />
                 </Tooltip>
 
-                <Tooltip title="重命名键 (RENAME)">
+                <Tooltip title={t('header.renameKey')}>
                     <Button
                         size="small"
                         type="text"
@@ -195,7 +197,7 @@ export default function KeyHeader({
 
             <div className={h.rightSection}>
                 {sizeSummary && (
-                    <Tooltip title="数据大小或元素条目数">
+                    <Tooltip title={t('header.dataSizeTooltip')}>
                         <span className={h.sizeTag}>
                             <Database size={11} />
                             {sizeSummary}
@@ -212,7 +214,7 @@ export default function KeyHeader({
                         if (open) setNewTtl(value.ttl)
                     }}
                 >
-                    <Tooltip title="点击快速修改 TTL (EXPIRE)">
+                    <Tooltip title={t('header.ttlTooltip')}>
                         <span className={h.ttlTag}>
                             <Clock size={11} style={{ color: ttlInfo.isPermanent ? 'var(--ok)' : 'var(--warn)' }} />
                             TTL: {ttlInfo.text}
@@ -220,40 +222,40 @@ export default function KeyHeader({
                     </Tooltip>
                 </Popover>
 
-                <Tooltip title="重新加载数据">
+                <Tooltip title={t('header.reloadTooltip')}>
                     <Button size="small" icon={<RefreshCw size={13} />} onClick={onReload} />
                 </Tooltip>
 
                 <Popconfirm
-                    title={`确认删除键 [${selected}]？该操作不可撤销！`}
+                    title={t('header.deleteConfirmDesc', { key: selected })}
                     onConfirm={handleDeleteKey}
-                    okText="删除"
-                    cancelText="取消"
+                    okText={t('viewers.common.delete')}
+                    cancelText={t('viewers.common.cancel')}
                     okButtonProps={{ danger: true }}
                 >
                     <Button size="small" danger icon={<Trash2 size={13} />}>
-                        删除
+                        {t('viewers.common.delete')}
                     </Button>
                 </Popconfirm>
             </div>
 
             {/* Rename Modal */}
             <Modal
-                title="重命名键 (RENAME)"
+                title={t('header.renameModalTitle')}
                 open={renameOpen}
                 onOk={handleRename}
                 confirmLoading={renaming}
                 onCancel={() => setRenameOpen(false)}
-                okText="确认重命名"
-                cancelText="取消"
+                okText={t('header.confirmRename')}
+                cancelText={t('viewers.common.cancel')}
             >
                 <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>新键名:</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>{t('header.newKeyName')}</div>
                     <Input
                         value={renameVal}
                         onChange={(e) => setRenameVal(e.target.value)}
                         onPressEnter={handleRename}
-                        placeholder="输入新的键名称..."
+                        placeholder={t('header.newKeyPlaceholder')}
                     />
                 </div>
             </Modal>

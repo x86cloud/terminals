@@ -9,6 +9,7 @@ import ServicePanel from '@/pages/ssh/service/ServicePanel'
 import CronPanel from '@/pages/ssh/cron/CronPanel'
 import { SessionInfo } from '@/types'
 import { appStorage, StorageKey } from '@/utils/storage'
+import { useTranslation } from 'react-i18next'
 import w from '@/pages/ssh/SessionWorkspace.module.less'
 
 export interface SessionWorkspaceProps {
@@ -24,6 +25,7 @@ export default function SessionWorkspace({
     nativeDrop,
     onPathChange,
 }: SessionWorkspaceProps) {
+    const { t } = useTranslation('ssh')
     const rootRef = useRef<HTMLDivElement | null>(null)
     const [panelWidth, setPanelWidth] = useState<number>(() => {
         const num = appStorage.getNumber(StorageKey.SshFilePanelWidth, 540)
@@ -174,16 +176,16 @@ export default function SessionWorkspace({
                             value={activeTab}
                             onChange={(val) => setActiveTab(val as any)}
                             options={[
-                                { label: <span className={w.tabLabel}><Folder size={13} /> 文件</span>, value: 'files' },
-                                { label: <span className={w.tabLabel}><BarChart2 size={13} /> 仪表盘</span>, value: 'dashboard' },
-                                { label: <span className={w.tabLabel}><Play size={13} /> 进程</span>, value: 'process' },
-                                { label: <span className={w.tabLabel}><Plug size={13} /> 服务</span>, value: 'service' },
-                                { label: <span className={w.tabLabel}><Clock size={13} /> 定时任务</span>, value: 'cron' },
+                                { label: <span className={w.tabLabel}><Folder size={13} /> {t('tabs.files')}</span>, value: 'files' },
+                                { label: <span className={w.tabLabel}><BarChart2 size={13} /> {t('tabs.dashboard')}</span>, value: 'dashboard' },
+                                { label: <span className={w.tabLabel}><Play size={13} /> {t('tabs.process')}</span>, value: 'process' },
+                                { label: <span className={w.tabLabel}><Plug size={13} /> {t('tabs.service')}</span>, value: 'service' },
+                                { label: <span className={w.tabLabel}><Clock size={13} /> {t('tabs.cron')}</span>, value: 'cron' },
                             ]}
                         />
                     </div>
                     <div className={w.panelHeaderActions}>
-                        <Tooltip title={isMaximized ? '还原侧栏面板' : '侧栏面板占满'}>
+                        <Tooltip title={isMaximized ? t('workspace.restorePanel') : t('workspace.maximizePanel')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -191,7 +193,7 @@ export default function SessionWorkspace({
                                 onClick={toggleMaximized}
                             />
                         </Tooltip>
-                        <Tooltip title="收起侧栏面板">
+                        <Tooltip title={t('workspace.collapsePanel')}>
                             <Button
                                 size="small"
                                 type="text"

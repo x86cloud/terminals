@@ -22,6 +22,7 @@ import {
     Trash2,
     Plus,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { copyText } from '@/utils'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
@@ -76,6 +77,7 @@ spec:
 `
 
 export default function ConfigStorageTab({ serverId, currentNamespace, initialSearchKw, initialSubTab }: Props) {
+    const { t } = useTranslation(['k8s', 'common'])
     const { message } = App.useApp()
     const [subTab, setSubTab] = useState<'configmap' | 'secret' | 'pvc'>(initialSubTab || 'configmap')
     const [configMaps, setConfigMaps] = useState<K8sConfigMapInfo[]>([])
@@ -119,7 +121,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                 setPvcs(list)
             }
         } catch (err: any) {
-            message.error(`获取数据失败: ${err.message || String(err)}`)
+            message.error(t('k8s:storage.fetchFail', { error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
@@ -134,7 +136,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             await API.k8sDeleteConfigMap(serverId, record.namespace, record.name)
             fetchData()
         } catch (err: any) {
-            message.error(`删除 ConfigMap 失败: ${err.message || String(err)}`)
+            message.error(t('k8s:storage.deleteConfigMapFail', { error: err.message || String(err) }))
         }
     }
 
@@ -143,7 +145,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             await API.k8sDeleteSecret(serverId, record.namespace, record.name)
             fetchData()
         } catch (err: any) {
-            message.error(`删除 Secret 失败: ${err.message || String(err)}`)
+            message.error(t('k8s:storage.deleteSecretFail', { error: err.message || String(err) }))
         }
     }
 
@@ -152,7 +154,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             await API.k8sDeletePVC(serverId, record.namespace, record.name)
             fetchData()
         } catch (err: any) {
-            message.error(`删除 PVC 失败: ${err.message || String(err)}`)
+            message.error(t('k8s:storage.deletePvcFail', { error: err.message || String(err) }))
         }
     }
 
@@ -190,21 +192,21 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
 
     const cmColumns: ColumnsType<K8sConfigMapInfo> = [
         {
-            title: '配置名称',
+            title: t('k8s:storage.colConfigName'),
             dataIndex: 'name',
             key: 'name',
             render: (name: string, record) => (
                 <Space size={8}>
                     <FileCode size={14} color="var(--accent)" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{name}</span>
-                    <Tooltip title="复制名称">
+                    <Tooltip title={t('k8s:storage.copyConfigName')}>
                         <Button
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
                             onClick={async () => {
                                 if (await copyText(name)) {
-                                    message.success('已复制配置名称')
+                                    message.success(t('k8s:storage.copiedConfigName'))
                                 }
                             }}
                         />
@@ -213,21 +215,21 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             ),
         },
         {
-            title: '命名空间',
+            title: t('k8s:storage.colNamespace'),
             dataIndex: 'namespace',
             key: 'namespace',
             width: 140,
             render: (ns: string) => <Tag color="blue">{ns}</Tag>,
         },
         {
-            title: '键值项数',
+            title: t('k8s:storage.colKeyCount'),
             dataIndex: 'dataCount',
             key: 'dataCount',
             width: 150,
-            render: (count: number) => <Tag color="geekblue">{count} 项</Tag>,
+            render: (count: number) => <Tag color="geekblue">{t('k8s:storage.keyCount', { count })}</Tag>,
         },
         {
-            title: '包含的键',
+            title: t('k8s:storage.colKeys'),
             key: 'keys',
             render: (_, record) => {
                 const keys = Object.keys(record.data || {})
@@ -244,16 +246,16 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             },
         },
         {
-            title: '创建时间',
+            title: t('k8s:storage.colCreatedAt'),
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 160,
-            render: (t: string) => (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t || '-'}</span>
+            render: (tVal: string) => (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{tVal || '-'}</span>
             ),
         },
         {
-            title: '操作',
+            title: t('k8s:storage.colActions'),
             key: 'actions',
             width: 170,
             align: 'right',
@@ -264,18 +266,18 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('ConfigMap', record.namespace, record.name)}
                     >
-                        编辑
+                        {t('common.edit')}
                     </Button>
                     <Popconfirm
-                        title={`确定删除 ConfigMap [${record.name}] 吗？`}
-                        description={`所属命名空间: ${record.namespace}。引用该 ConfigMap 的容器可能发生配置缺失报错，此操作不可逆。`}
-                        okText="确认删除"
-                        cancelText="取消"
+                        title={t('k8s:storage.deleteConfigConfirm', { name: record.name })}
+                        description={t('k8s:storage.deleteConfigDesc', { namespace: record.namespace })}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteConfigMap(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            删除
+                            {t('common.delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -285,21 +287,21 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
 
     const secretColumns: ColumnsType<K8sSecretInfo> = [
         {
-            title: '密钥名称 (Secret Name)',
+            title: t('k8s:storage.colSecretName'),
             dataIndex: 'name',
             key: 'name',
             render: (name: string, record) => (
                 <Space size={8}>
                     <Lock size={14} color="#eab308" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{name}</span>
-                    <Tooltip title="复制密钥名称">
+                    <Tooltip title={t('k8s:storage.copySecretName')}>
                         <Button
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
                             onClick={async () => {
                                 if (await copyText(name)) {
-                                    message.success('已复制密钥名称')
+                                    message.success(t('k8s:storage.copiedSecretName'))
                                 }
                             }}
                         />
@@ -308,14 +310,14 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             ),
         },
         {
-            title: '命名空间',
+            title: t('k8s:storage.colNamespace'),
             dataIndex: 'namespace',
             key: 'namespace',
             width: 140,
             render: (ns: string) => <Tag color="blue">{ns}</Tag>,
         },
         {
-            title: '密钥类型 (Type)',
+            title: t('k8s:storage.colSecretType'),
             dataIndex: 'type',
             key: 'type',
             width: 200,
@@ -326,23 +328,23 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             ),
         },
         {
-            title: '键值项数',
+            title: t('k8s:storage.colKeyCount'),
             dataIndex: 'dataCount',
             key: 'dataCount',
             width: 120,
-            render: (count: number) => <Tag color="gold">{count} 项</Tag>,
+            render: (count: number) => <Tag color="gold">{t('k8s:storage.keyCount', { count })}</Tag>,
         },
         {
-            title: '创建时间',
+            title: t('k8s:storage.colCreatedAt'),
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 160,
-            render: (t: string) => (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t || '-'}</span>
+            render: (tVal: string) => (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{tVal || '-'}</span>
             ),
         },
         {
-            title: '操作',
+            title: t('k8s:storage.colActions'),
             key: 'actions',
             width: 170,
             align: 'right',
@@ -353,18 +355,18 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('Secret', record.namespace, record.name)}
                     >
-                        编辑
+                        {t('common.edit')}
                     </Button>
                     <Popconfirm
-                        title={`确定删除 Secret [${record.name}] 吗？`}
-                        description={`所属命名空间: ${record.namespace}。引用该 Secret 的容器可能发生凭据丢失认证失败，此操作不可逆。`}
-                        okText="确认删除"
-                        cancelText="取消"
+                        title={t('k8s:storage.deleteSecretConfirm', { name: record.name })}
+                        description={t('k8s:storage.deleteSecretDesc', { namespace: record.namespace })}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteSecret(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            删除
+                            {t('common.delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -374,21 +376,21 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
 
     const pvcColumns: ColumnsType<K8sPVCInfo> = [
         {
-            title: 'PVC 声明名称',
+            title: t('k8s:storage.colPvcName'),
             dataIndex: 'name',
             key: 'name',
             render: (name: string, record) => (
                 <Space size={8}>
                     <HardDrive size={14} color="var(--accent)" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{name}</span>
-                    <Tooltip title="复制 PVC 名称">
+                    <Tooltip title={t('k8s:storage.copyPvcName')}>
                         <Button
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
                             onClick={async () => {
                                 if (await copyText(name)) {
-                                    message.success('已复制 PVC 名称')
+                                    message.success(t('k8s:storage.copiedPvcName'))
                                 }
                             }}
                         />
@@ -397,14 +399,14 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             ),
         },
         {
-            title: '命名空间',
+            title: t('k8s:storage.colNamespace'),
             dataIndex: 'namespace',
             key: 'namespace',
             width: 140,
             render: (ns: string) => <Tag color="blue">{ns}</Tag>,
         },
         {
-            title: '状态 (Status)',
+            title: t('k8s:storage.colStatus'),
             dataIndex: 'status',
             key: 'status',
             width: 120,
@@ -419,7 +421,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             },
         },
         {
-            title: '存储容量 (Capacity)',
+            title: t('k8s:storage.colCapacity'),
             dataIndex: 'capacity',
             key: 'capacity',
             width: 130,
@@ -430,26 +432,26 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
             ),
         },
         {
-            title: '绑定 PV 卷 / StorageClass',
+            title: t('k8s:storage.colVolume'),
             key: 'pv',
             render: (_, record) => (
                 <div style={{ fontSize: 11.5, fontFamily: 'var(--font-mono)' }}>
-                    <div>PV: {record.volumeName || '未绑定'}</div>
+                    <div>PV: {record.volumeName || t('k8s:storage.unbound')}</div>
                     <div style={{ color: 'var(--text-dim)' }}>SC: {record.storageClass || 'default'}</div>
                 </div>
             ),
         },
         {
-            title: '创建时间',
+            title: t('k8s:storage.colCreatedAt'),
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 160,
-            render: (t: string) => (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t || '-'}</span>
+            render: (tVal: string) => (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{tVal || '-'}</span>
             ),
         },
         {
-            title: '操作',
+            title: t('k8s:storage.colActions'),
             key: 'actions',
             width: 170,
             align: 'right',
@@ -460,18 +462,18 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('PersistentVolumeClaim', record.namespace, record.name)}
                     >
-                        编辑
+                        {t('common.edit')}
                     </Button>
                     <Popconfirm
-                        title={`确定删除 PVC [${record.name}] 吗？`}
-                        description={`所属命名空间: ${record.namespace}。删除持久卷声明可能导致存储数据无法恢复，此操作不可逆。`}
-                        okText="确认删除"
-                        cancelText="取消"
+                        title={t('k8s:storage.deletePvcConfirm', { name: record.name })}
+                        description={t('k8s:storage.deletePvcDesc', { namespace: record.namespace })}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeletePVC(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            删除
+                            {t('common.delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -502,7 +504,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                                 label: (
                                     <Space size={6}>
                                         <FileCode size={13} />
-                                        <span>ConfigMaps ({configMaps.length})</span>
+                                        <span>{t('k8s:storage.cmTab', { count: configMaps.length })}</span>
                                     </Space>
                                 ),
                                 value: 'configmap',
@@ -511,7 +513,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                                 label: (
                                     <Space size={6}>
                                         <Lock size={13} />
-                                        <span>Secrets ({secrets.length})</span>
+                                        <span>{t('k8s:storage.secretTab', { count: secrets.length })}</span>
                                     </Space>
                                 ),
                                 value: 'secret',
@@ -520,7 +522,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                                 label: (
                                     <Space size={6}>
                                         <HardDrive size={13} />
-                                        <span>PVC 存储卷 ({pvcs.length})</span>
+                                        <span>{t('k8s:storage.pvcTab', { count: pvcs.length })}</span>
                                     </Space>
                                 ),
                                 value: 'pvc',
@@ -529,7 +531,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                     />
 
                     <Input
-                        placeholder="搜索名称 / 命名空间..."
+                        placeholder={t('k8s:storage.searchCommonPlaceholder')}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -549,14 +551,14 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         size="small"
                         onClick={() => openCreateYaml(getResourceKindName())}
                     >
-                        新建 {subTab === 'configmap' ? 'ConfigMap' : subTab === 'secret' ? 'Secret' : 'PVC'}
+                        {`${t('common.create')} ${subTab === 'configmap' ? 'ConfigMap' : subTab === 'secret' ? 'Secret' : 'PVC'}`}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchData}
                     >
-                        刷新
+                        {t('common.refresh')}
                     </Button>
                 </div>
             </div>
@@ -575,7 +577,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         total: filteredConfigMaps.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)
@@ -595,7 +597,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         total: filteredSecrets.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)
@@ -615,7 +617,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         total: filteredPvcs.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)

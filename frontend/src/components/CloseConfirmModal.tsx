@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal, Radio, Checkbox, Space } from 'antd'
 import { Minimize2, Power } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export interface CloseConfirmModalProps {
     open: boolean
@@ -15,6 +16,7 @@ export default function CloseConfirmModal({
     onCancel,
     afterClose,
 }: CloseConfirmModalProps) {
+    const { t } = useTranslation(['titlebar', 'common'])
     const [action, setAction] = useState<'minimize' | 'quit'>('minimize')
     const [remember, setRemember] = useState(false)
 
@@ -34,8 +36,8 @@ export default function CloseConfirmModal({
             onOk={handleOk}
             onCancel={onCancel}
             afterClose={handleAfterClose}
-            okText="确定"
-            cancelText="取消"
+            okText={t('common:ok')}
+            cancelText={t('common:cancel')}
             width={440}
             centered
             closable={false}
@@ -66,7 +68,7 @@ export default function CloseConfirmModal({
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13 }}>
                                     <Minimize2 size={14} style={{ color: 'var(--primary, #2b90ee)' }} />
-                                    <span>最小化到系统托盘，后台继续运行 (推荐)</span>
+                                    <span>{t('titlebar:closeConfirm.minimize')}</span>
                                 </div>
                             </div>
                         </div>
@@ -89,7 +91,7 @@ export default function CloseConfirmModal({
                             <div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 13 }}>
                                     <Power size={14} style={{ color: 'var(--danger, #ff4d4f)' }} />
-                                    <span>直接退出程序</span>
+                                    <span>{t('titlebar:closeConfirm.quit')}</span>
                                 </div>
                             </div>
                         </div>
@@ -102,7 +104,7 @@ export default function CloseConfirmModal({
                         onChange={(e) => setRemember(e.target.checked)}
                     >
                         <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            记住我的选择，不再提醒（可在设置中随时更改）
+                            {t('titlebar:closeConfirm.remember')}
                         </span>
                     </Checkbox>
                 </div>

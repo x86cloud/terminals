@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react'
+import i18n from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { Modal, Input, Button, Tag, Popconfirm, Empty, Tooltip } from 'antd'
 import { History, Plus, Search, MessageSquare, Edit2, Trash2, Check, X } from 'lucide-react'
 import { AgentSessionItem } from '@/types'
@@ -23,7 +25,7 @@ function formatTime(timestamp?: number): string {
     const pad = (n: number) => (n < 10 ? `0${n}` : n)
     const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`
     if (isToday) {
-        return `今天 ${timeStr}`
+        return i18n.t('agent:historyModal.today', { time: timeStr, defaultValue: `今天 ${timeStr}` })
     }
     const yearDiff = now.getFullYear() - d.getFullYear()
     if (yearDiff === 0) {
@@ -42,6 +44,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
     onDeleteSession,
     onClose,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const [searchText, setSearchText] = useState<string>('')
     const [editingId, setEditingId] = useState<string | null>(null)
     const [editingTitle, setEditingTitle] = useState<string>('')
@@ -55,7 +58,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
     const handleStartEdit = (e: React.MouseEvent, session: AgentSessionItem) => {
         e.stopPropagation()
         setEditingId(session.id)
-        setEditingTitle(session.title || '新会话')
+        setEditingTitle(session.title || t('agent:newSessionDefault', { defaultValue: '新会话' }))
     }
 
     const handleSaveEdit = (e?: React.MouseEvent | React.KeyboardEvent, id?: string) => {
@@ -83,9 +86,9 @@ export const HistorySessionsModal: React.FC<Props> = ({
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <History size={18} color="#2b90ee" />
-                    <span>历史会话</span>
+                    <span>{t('agent:historyModal.title', { defaultValue: '历史会话' })}</span>
                     <Tag color="default" style={{ marginLeft: 4 }}>
-                        {sessions.length} 个会话
+                        {t('agent:historyModal.sessionsCount', { count: sessions.length, defaultValue: `${sessions.length} 个会话` })}
                     </Tag>
                 </div>
             }
@@ -100,7 +103,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
                 <div className={s.topBar}>
                     <Input
                         prefix={<Search size={14} color="#8c8c8c" />}
-                        placeholder="搜索会话名称..."
+                        placeholder={t('agent:historyModal.searchPlaceholder', { defaultValue: '搜索会话名称...' })}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         allowClear
@@ -113,7 +116,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
                         onClick={handleCreate}
                         size="middle"
                     >
-                        新建会话
+                        {t('agent:historyModal.newSession', { defaultValue: '新建会话' })}
                     </Button>
                 </div>
 
@@ -122,7 +125,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
                     {filteredSessions.length === 0 ? (
                         <Empty
                             image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            description={searchText ? '未搜索到匹配会话' : '暂无历史会话'}
+                            description={searchText ? t('agent:historyModal.noMatchingSessions', { defaultValue: '未搜索到匹配会话' }) : t('agent:historyModal.noHistorySessions', { defaultValue: '暂无历史会话' })}
                             style={{ margin: '32px 0' }}
                         />
                     ) : (
@@ -180,12 +183,12 @@ export const HistorySessionsModal: React.FC<Props> = ({
                                             ) : (
                                                 <>
                                                     <div className={s.itemTitleRow}>
-                                                        <Tooltip title={item.title || '新会话'} placement="topLeft" mouseEnterDelay={0.3}>
-                                                            <span className={s.itemTitle}>{item.title || '新会话'}</span>
+                                                        <Tooltip title={item.title || t('agent:newSessionDefault', { defaultValue: '新会话' })} placement="topLeft" mouseEnterDelay={0.3}>
+                                                            <span className={s.itemTitle}>{item.title || t('agent:newSessionDefault', { defaultValue: '新会话' })}</span>
                                                         </Tooltip>
                                                         {isActive && (
                                                             <Tag color="processing" style={{ margin: 0, padding: '0 4px', fontSize: 11, lineHeight: '18px', flexShrink: 0 }}>
-                                                                当前
+                                                                {t('agent:historyModal.currentBadge', { defaultValue: '当前' })}
                                                             </Tag>
                                                         )}
                                                     </div>
@@ -200,7 +203,7 @@ export const HistorySessionsModal: React.FC<Props> = ({
                                             className={s.itemActions}
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <Tooltip title="重命名会话">
+                                            <Tooltip title={t('agent:historyModal.renameTooltip', { defaultValue: '重命名会话' })}>
                                                 <Button
                                                     type="text"
                                                     size="small"
@@ -209,14 +212,14 @@ export const HistorySessionsModal: React.FC<Props> = ({
                                                 />
                                             </Tooltip>
                                             <Popconfirm
-                                                title="确认删除该会话？"
-                                                description="删除后该会话下的所有对话与实施方案均无法恢复。"
-                                                okText="删除"
-                                                cancelText="取消"
+                                                title={t('agent:historyModal.deleteConfirmTitle', { defaultValue: '确认删除该会话？' })}
+                                                description={t('agent:historyModal.deleteConfirmDesc', { defaultValue: '删除后该会话下的所有对话与实施方案均无法恢复。' })}
+                                                okText={t('common:delete', { defaultValue: '删除' })}
+                                                cancelText={t('common:cancel', { defaultValue: '取消' })}
                                                 okButtonProps={{ danger: true }}
                                                 onConfirm={() => onDeleteSession(item.id)}
                                             >
-                                                <Tooltip title="删除会话">
+                                                <Tooltip title={t('agent:historyModal.deleteTooltip', { defaultValue: '删除会话' })}>
                                                     <Button
                                                         type="text"
                                                         danger

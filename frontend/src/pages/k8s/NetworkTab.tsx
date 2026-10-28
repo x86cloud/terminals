@@ -21,6 +21,7 @@ import {
     Trash2,
     Plus,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { copyText } from '@/utils'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
@@ -75,6 +76,7 @@ spec:
 `
 
 export default function NetworkTab({ serverId, currentNamespace, initialSearchKw, initialSubTab }: Props) {
+    const { t } = useTranslation(['k8s', 'common'])
     const { message } = App.useApp()
     const [subTab, setSubTab] = useState<'service' | 'ingress'>(initialSubTab || 'service')
     const [services, setServices] = useState<K8sServiceInfo[]>([])
@@ -114,7 +116,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                 setIngresses(list)
             }
         } catch (err: any) {
-            message.error(`获取数据失败: ${err.message || String(err)}`)
+            message.error(t('k8s:network.fetchFail', { error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
@@ -129,7 +131,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             await API.k8sDeleteService(serverId, record.namespace, record.name)
             fetchData()
         } catch (err: any) {
-            message.error(`删除 Service 失败: ${err.message || String(err)}`)
+            message.error(t('k8s:network.deleteServiceFail', { error: err.message || String(err) }))
         }
     }
 
@@ -138,7 +140,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             await API.k8sDeleteIngress(serverId, record.namespace, record.name)
             fetchData()
         } catch (err: any) {
-            message.error(`删除 Ingress 失败: ${err.message || String(err)}`)
+            message.error(t('k8s:network.deleteIngressFail', { error: err.message || String(err) }))
         }
     }
 
@@ -179,21 +181,21 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
 
     const serviceColumns: ColumnsType<K8sServiceInfo> = [
         {
-            title: '服务名称',
+            title: t('k8s:network.colServiceName'),
             dataIndex: 'name',
             key: 'name',
             render: (name: string, record) => (
                 <Space size={8}>
                     <Network size={14} color="var(--accent)" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{name}</span>
-                    <Tooltip title="复制服务名称">
+                    <Tooltip title={t('k8s:network.copyServiceName')}>
                         <Button
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
                             onClick={async () => {
                                 if (await copyText(name)) {
-                                    message.success('已复制服务名称')
+                                    message.success(t('k8s:network.copiedServiceName'))
                                 }
                             }}
                         />
@@ -202,14 +204,14 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             ),
         },
         {
-            title: '命名空间',
+            title: t('k8s:network.colNamespace'),
             dataIndex: 'namespace',
             key: 'namespace',
             width: 140,
             render: (ns: string) => <Tag color="blue">{ns}</Tag>,
         },
         {
-            title: '服务类型',
+            title: t('k8s:network.colType'),
             dataIndex: 'type',
             key: 'type',
             width: 140,
@@ -229,7 +231,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             render: (ip: string) => <span className={s.monoText}>{ip || '-'}</span>,
         },
         {
-            title: '暴露端口 (Port : Target / Node)',
+            title: t('k8s:network.colPorts'),
             dataIndex: 'ports',
             key: 'ports',
             render: (ports: string[]) => (
@@ -243,16 +245,16 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             ),
         },
         {
-            title: '创建时间',
+            title: t('k8s:network.colCreatedAt'),
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 160,
-            render: (t: string) => (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t || '-'}</span>
+            render: (tVal: string) => (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{tVal || '-'}</span>
             ),
         },
         {
-            title: '操作',
+            title: t('k8s:network.colActions'),
             key: 'actions',
             width: 170,
             align: 'right',
@@ -263,18 +265,18 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('Service', record.namespace, record.name)}
                     >
-                        编辑
+                        {t('common.edit')}
                     </Button>
                     <Popconfirm
-                        title={`确定删除 Service [${record.name}] 吗？`}
-                        description={`所属命名空间: ${record.namespace}。删除后将停止该服务的集群内外部流量转发，此操作不可逆。`}
-                        okText="确认删除"
-                        cancelText="取消"
+                        title={t('k8s:network.deleteConfirm', { name: record.name })}
+                        description={t('k8s:network.deleteDesc', { namespace: record.namespace })}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteService(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            删除
+                            {t('common.delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -284,21 +286,21 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
 
     const ingressColumns: ColumnsType<K8sIngressInfo> = [
         {
-            title: '路由名称 (Ingress Name)',
+            title: t('k8s:network.colIngressName'),
             dataIndex: 'name',
             key: 'name',
             render: (name: string, record) => (
                 <Space size={8}>
                     <Globe size={14} color="var(--accent)" />
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{name}</span>
-                    <Tooltip title="复制 Ingress 名称">
+                    <Tooltip title={t('k8s:network.copyIngressName')}>
                         <Button
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
                             onClick={async () => {
                                 if (await copyText(name)) {
-                                    message.success('已复制 Ingress 名称')
+                                    message.success(t('k8s:network.copiedIngressName'))
                                 }
                             }}
                         />
@@ -307,21 +309,21 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             ),
         },
         {
-            title: '命名空间',
+            title: t('k8s:network.colNamespace'),
             dataIndex: 'namespace',
             key: 'namespace',
             width: 140,
             render: (ns: string) => <Tag color="blue">{ns}</Tag>,
         },
         {
-            title: 'Class',
+            title: t('k8s:network.colClass'),
             dataIndex: 'ingressClass',
             key: 'ingressClass',
             width: 120,
             render: (cls: string) => <Tag color="purple">{cls || 'default'}</Tag>,
         },
         {
-            title: 'Hosts 域名',
+            title: t('k8s:network.colHosts'),
             dataIndex: 'hosts',
             key: 'hosts',
             render: (hosts: string[]) => (
@@ -335,7 +337,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             ),
         },
         {
-            title: '路由规则 (Rules)',
+            title: t('k8s:network.colRules'),
             dataIndex: 'rules',
             key: 'rules',
             render: (rules: string[]) => (
@@ -349,16 +351,16 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
             ),
         },
         {
-            title: '创建时间',
+            title: t('k8s:network.colCreatedAt'),
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 160,
-            render: (t: string) => (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t || '-'}</span>
+            render: (tVal: string) => (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{tVal || '-'}</span>
             ),
         },
         {
-            title: '操作',
+            title: t('k8s:network.colActions'),
             key: 'actions',
             width: 170,
             align: 'right',
@@ -369,18 +371,18 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('Ingress', record.namespace, record.name)}
                     >
-                        编辑
+                        {t('common.edit')}
                     </Button>
                     <Popconfirm
-                        title={`确定删除 Ingress [${record.name}] 吗？`}
-                        description={`所属命名空间: ${record.namespace}。删除后域名路由转发将立即失效，此操作不可逆。`}
-                        okText="确认删除"
-                        cancelText="取消"
+                        title={t('k8s:network.deleteIngressConfirm', { name: record.name })}
+                        description={t('k8s:network.deleteIngressDesc', { namespace: record.namespace })}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteIngress(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            删除
+                            {t('common.delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -405,7 +407,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                                 label: (
                                     <Space size={6}>
                                         <Network size={13} />
-                                        <span>Services ({services.length})</span>
+                                        <span>{t('k8s:network.servicesTab', { count: services.length })}</span>
                                     </Space>
                                 ),
                                 value: 'service',
@@ -414,7 +416,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                                 label: (
                                     <Space size={6}>
                                         <Globe size={13} />
-                                        <span>Ingress 路由 ({ingresses.length})</span>
+                                        <span>{t('k8s:network.ingressTab', { count: ingresses.length })}</span>
                                     </Space>
                                 ),
                                 value: 'ingress',
@@ -423,7 +425,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                     />
 
                     <Input
-                        placeholder={`搜索 ${subTab === 'service' ? '服务' : 'Ingress'} 名称 / 命名空间 / IP / 域名...`}
+                        placeholder={subTab === 'service' ? t('k8s:network.searchServicePlaceholder') : t('k8s:network.searchIngressPlaceholder')}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -443,14 +445,14 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         size="small"
                         onClick={() => openCreateYaml(subTab === 'service' ? 'Service' : 'Ingress')}
                     >
-                        新建 {subTab === 'service' ? 'Service' : 'Ingress'}
+                        {`${t('common.create')} ${subTab === 'service' ? 'Service' : 'Ingress'}`}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchData}
                     >
-                        刷新
+                        {t('common.refresh')}
                     </Button>
                 </div>
             </div>
@@ -469,7 +471,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         total: filteredServices.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)
@@ -489,7 +491,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         total: filteredIngresses.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)

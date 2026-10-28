@@ -1,0 +1,24 @@
+{
+  "collapseSidebar": "Collapse sidebar",
+  "expandSidebar": "Expand sidebar",
+  "collapseAi": "Collapse AI Agent",
+  "expandAi": "Expand AI Agent",
+  "switchToLight": "Switch to light mode",
+  "switchToDark": "Switch to dark mode",
+  "unpinWindow": "Unpin window",
+  "pinWindow": "Pin window to top",
+  "settings": "Settings",
+  "switchLanguage": "Switch Language",
+  "minimise": "Minimize",
+  "restore": "Restore",
+  "maximise": "Maximize",
+  "close": "Close",
+  "closeConfirm": {
+    "minimize": "Minimize to system tray and keep running in background (Recommended)",
+    "quit": "Quit application directly",
+    "remember": "Remember my choice and don't ask again (can be changed in settings anytime)"
+  },
+  "langSystem": "System Default",
+  "langZh": "简体中文",
+  "langEn": "English"
+}

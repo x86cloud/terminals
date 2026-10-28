@@ -1,5 +1,4 @@
-import { Button } from 'antd'
-import AppLogo from '@/components/AppLogo'
+import { useTranslation } from 'react-i18next'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import SessionWorkspace from '@/pages/ssh/SessionWorkspace'
 import RedisClient from '@/pages/redis/RedisClient'
@@ -12,8 +11,8 @@ import DockerClient from '@/pages/docker/DockerClient'
 import K8sClient from '@/pages/k8s/K8sClient'
 import ApiClient from '@/pages/api/ApiClient'
 import WikiClient from '@/pages/wiki/WikiClient'
+import AiAgentPanel from '@/pages/agent/AiAgentPanel'
 import DevTools from '@/components/DevTools'
-import g from '@/styles/global.module.less'
 import a from '@/components/app/Stage.module.less'
 import { AppSettings } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
@@ -32,6 +31,7 @@ const shownPane = {
 export interface StageProps {
     nativeDrop: boolean
     settings: AppSettings
+    onUpdateSettings?: (newSettings: AppSettings) => Promise<void>
     onPathChange: (sessionId: string, p: string) => void
     onNewServer: () => void
 }
@@ -39,9 +39,10 @@ export interface StageProps {
 export default function Stage({
     nativeDrop,
     settings,
+    onUpdateSettings,
     onPathChange,
-    onNewServer,
 }: StageProps) {
+    const { t } = useTranslation('common')
     const { sessions, tools, activeTarget, closeSession, closeTool, updateSession } = useSession()
 
     const activeId = activeTarget?.kind === 'ssh' ? activeTarget.id : null
@@ -54,22 +55,19 @@ export default function Stage({
     const activeMongoId = activeTarget?.kind === 'mongo' ? activeTarget.id : null
     const activeSqliteId = activeTarget?.kind === 'sqlite' ? activeTarget.id : null
 
-    const empty =
-        sessions.ssh.length === 0 &&
-        sessions.docker.length === 0 &&
-        sessions.k8s.length === 0 &&
-        sessions.redis.length === 0 &&
-        sessions.mysql.length === 0 &&
-        sessions.postgres.length === 0 &&
-        sessions.mqtt.length === 0 &&
-        sessions.mongo.length === 0 &&
-        sessions.sqlite.length === 0 &&
-        !tools.devtools.open &&
-        !tools.api.open &&
-        !tools.wiki.open
+    const isAiAgentActive = !activeTarget || activeTarget.kind === 'aiAgent'
 
     return (
         <div className={a.stage}>
+            <div style={isAiAgentActive ? shownPane : hiddenPane}>
+                <ErrorBoundary title={t('errorBoundary.aiAgent', 'AI 智能体渲染异常')}>
+                    <AiAgentPanel
+                        settings={settings}
+                        onUpdateSettings={onUpdateSettings}
+                    />
+                </ErrorBoundary>
+            </div>
+
             {sessions.ssh.map((s) => (
                 <SessionWorkspace
                     key={s.id}
@@ -82,7 +80,7 @@ export default function Stage({
 
             {sessions.docker.map((s) => (
                 <div key={s.id} style={s.id === activeDockerId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="Docker 页面渲染异常" onClose={() => void closeSession('docker', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.docker', 'Docker 页面渲染异常')} onClose={() => void closeSession('docker', s.id)}>
                         <DockerClient
                             session={s}
                             onClose={() => void closeSession('docker', s.id)}
@@ -93,7 +91,7 @@ export default function Stage({
 
             {sessions.k8s.map((s) => (
                 <div key={s.id} style={s.id === activeK8sId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="Kubernetes 页面渲染异常" onClose={() => void closeSession('k8s', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.k8s', 'Kubernetes 页面渲染异常')} onClose={() => void closeSession('k8s', s.id)}>
                         <K8sClient
                             session={s}
                         />
@@ -103,7 +101,7 @@ export default function Stage({
 
             {sessions.redis.map((s) => (
                 <div key={s.id} style={s.id === activeRedisId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="Redis 页面渲染异常" onClose={() => void closeSession('redis', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.redis', 'Redis 页面渲染异常')} onClose={() => void closeSession('redis', s.id)}>
                         <RedisClient
                             session={s}
                             onClose={() => void closeSession('redis', s.id)}
@@ -115,7 +113,7 @@ export default function Stage({
 
             {sessions.mysql.map((s) => (
                 <div key={s.id} style={s.id === activeMysqlId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="MySQL 页面渲染异常" onClose={() => void closeSession('mysql', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.mysql', 'MySQL 页面渲染异常')} onClose={() => void closeSession('mysql', s.id)}>
                         <MysqlClient
                             session={s}
                             onClose={() => void closeSession('mysql', s.id)}
@@ -127,7 +125,7 @@ export default function Stage({
 
             {sessions.postgres.map((s) => (
                 <div key={s.id} style={s.id === activePostgresId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="PostgreSQL 页面渲染异常" onClose={() => void closeSession('postgres', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.postgres', 'PostgreSQL 页面渲染异常')} onClose={() => void closeSession('postgres', s.id)}>
                         <PostgresClient
                             session={s}
                             onClose={() => void closeSession('postgres', s.id)}
@@ -139,7 +137,7 @@ export default function Stage({
 
             {sessions.mqtt.map((s) => (
                 <div key={s.id} style={s.id === activeMqttId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="MQTT 页面渲染异常" onClose={() => void closeSession('mqtt', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.mqtt', 'MQTT 页面渲染异常')} onClose={() => void closeSession('mqtt', s.id)}>
                         <MqttClient
                             session={s}
                             onClose={() => void closeSession('mqtt', s.id)}
@@ -150,7 +148,7 @@ export default function Stage({
 
             {sessions.mongo.map((s) => (
                 <div key={s.id} style={s.id === activeMongoId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="MongoDB 页面渲染异常" onClose={() => void closeSession('mongo', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.mongo', 'MongoDB 页面渲染异常')} onClose={() => void closeSession('mongo', s.id)}>
                         <MongoClient
                             session={s}
                             onClose={() => void closeSession('mongo', s.id)}
@@ -162,7 +160,7 @@ export default function Stage({
 
             {sessions.sqlite.map((s) => (
                 <div key={s.id} style={s.id === activeSqliteId ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="SQLite 页面渲染异常" onClose={() => void closeSession('sqlite', s.id)}>
+                    <ErrorBoundary title={t('errorBoundary.sqlite', 'SQLite 页面渲染异常')} onClose={() => void closeSession('sqlite', s.id)}>
                         <SqliteClient
                             session={s}
                             onClose={() => void closeSession('sqlite', s.id)}
@@ -173,7 +171,7 @@ export default function Stage({
 
             {tools.devtools.open && (
                 <div style={activeTarget?.kind === 'devtools' ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="DevTools 页面渲染异常" onClose={() => closeTool('devtools')}>
+                    <ErrorBoundary title={t('errorBoundary.devtools', 'DevTools 页面渲染异常')} onClose={() => closeTool('devtools')}>
                         <DevTools onClose={() => closeTool('devtools')} />
                     </ErrorBoundary>
                 </div>
@@ -181,7 +179,7 @@ export default function Stage({
 
             {tools.api.open && (
                 <div style={activeTarget?.kind === 'api' ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="API 页面渲染异常" onClose={() => closeTool('api')}>
+                    <ErrorBoundary title={t('errorBoundary.api', 'API 页面渲染异常')} onClose={() => closeTool('api')}>
                         <ApiClient onClose={() => closeTool('api')} />
                     </ErrorBoundary>
                 </div>
@@ -189,26 +187,9 @@ export default function Stage({
 
             {tools.wiki.open && (
                 <div style={activeTarget?.kind === 'wiki' ? shownPane : hiddenPane}>
-                    <ErrorBoundary title="知识库页面渲染异常" onClose={() => closeTool('wiki')}>
+                    <ErrorBoundary title={t('errorBoundary.wiki', '知识库页面渲染异常')} onClose={() => closeTool('wiki')}>
                         <WikiClient onClose={() => closeTool('wiki')} />
                     </ErrorBoundary>
-                </div>
-            )}
-
-            {empty && (
-                <div className={g.emptyStage}>
-                    <AppLogo size={54} />
-                    <h2>xTerminal </h2>
-                    <p>
-                        xTerminal 是一款跨平台桌面客户端，集成了 SSH 终端、SFTP、Redis、MySQL、SQLite、
-                        MQTT 与 HTTP 接口调试等常用运维工具。
-                    </p>
-                    <a className={g.emptyLink} href="https://github.com/x86cloud/terminals" target="_blank" rel="noreferrer">
-                        GitHub: https://github.com/x86cloud/terminals
-                    </a>
-                    <div className={g.emptyActions}>
-                        <Button type="primary" onClick={() => onNewServer()}>新建服务器</Button>
-                    </div>
                 </div>
             )}
         </div>

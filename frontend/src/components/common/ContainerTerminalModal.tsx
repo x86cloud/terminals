@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { Modal, Space, Tag, Button, Tooltip, App } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
     Terminal as TerminalIcon,
     RotateCw,
@@ -36,6 +37,7 @@ interface Props {
 }
 
 export default function ContainerTerminalModal({ open, onClose, target }: Props) {
+    const { t } = useTranslation('common')
     const { message } = App.useApp()
     const { isDark } = useTheme()
     const hostRef = useRef<HTMLDivElement>(null)
@@ -79,7 +81,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
 
             if (target.type === 'docker') {
                 if (!target.containerId) {
-                    throw new Error('未指定 Docker 容器 ID')
+                    throw new Error(t('missingDockerContainerId', '未指定 Docker 容器 ID'))
                 }
                 execId = await API.dockerExecStart(
                     target.serverId,
@@ -90,7 +92,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                 )
             } else if (target.type === 'k8s') {
                 if (!target.namespace || !target.podName || !target.containerName) {
-                    throw new Error('缺少 Kubernetes Pod 容器参数')
+                    throw new Error(t('missingK8sPodParams', '缺少 Kubernetes Pod 容器参数'))
                 }
                 execId = await API.k8sExecStart(
                     target.serverId,
@@ -122,7 +124,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
             })
             const offClosed = subscribe(`${eventPrefix}:closed:${execId}`, (reason: string) => {
                 setStatus('closed')
-                termRef.current?.writeln(`\r\n\x1b[33m[会话已退出] ${reason || '容器终端已关闭'}\x1b[0m\r\n`)
+                termRef.current?.writeln(`\r\n\x1b[33m[${t('sessionExited', '会话已退出')}] ${reason || t('containerClosed', '容器终端已关闭')}\x1b[0m\r\n`)
             })
             unsubsRef.current = [offData, offClosed]
 
@@ -132,7 +134,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
             }
         } catch (err: any) {
             setStatus('closed')
-            termRef.current?.writeln(`\r\n\x1b[31m[连接终端失败] ${err?.message || err}\x1b[0m\r\n`)
+            termRef.current?.writeln(`\r\n\x1b[31m[${t('connectFailed', '连接终端失败')}] ${err?.message || err}\x1b[0m\r\n`)
         }
     }, [open, target, cleanSession])
 
@@ -257,9 +259,9 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
     const handleCopy = () => {
         if (termRef.current && termRef.current.hasSelection()) {
             navigator.clipboard.writeText(termRef.current.getSelection())
-            message.success('已复制选中终端内容')
+            message.success(t('copiedSelected', '已复制选中终端内容'))
         } else {
-            message.info('请先用鼠标划选终端文本内容')
+            message.info(t('selectTextFirst', '请先用鼠标划选终端文本内容'))
         }
     }
 
@@ -292,7 +294,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                                 }}
                             />
                             <TerminalIcon size={16} color="var(--accent)" />
-                            <span style={{ fontWeight: 600, fontSize: 14 }}>容器终端 (Exec)</span>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>{t('containerTerminal', '容器终端 (Exec)')}</span>
                         </div>
 
                         <Tag color={target.type === 'docker' ? 'blue' : 'purple'}>
@@ -309,16 +311,16 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                     </Space>
 
                     <Space size={6}>
-                        <Tooltip title="复制选中内容">
+                        <Tooltip title={t('copySelected', '复制选中内容')}>
                             <Button size="small" icon={<Copy size={12} />} onClick={handleCopy} />
                         </Tooltip>
-                        <Tooltip title="清空终端屏幕">
+                        <Tooltip title={t('clearScreen', '清空终端屏幕')}>
                             <Button size="small" icon={<Eraser size={12} />} onClick={handleClear} />
                         </Tooltip>
-                        <Tooltip title="重新连接">
+                        <Tooltip title={t('reconnect', '重新连接')}>
                             <Button size="small" icon={<RotateCw size={12} />} onClick={connectTerminal} />
                         </Tooltip>
-                        <Tooltip title="关闭终端">
+                        <Tooltip title={t('closeTerminal', '关闭终端')}>
                             <Button size="small" icon={<X size={13} />} onClick={onClose} />
                         </Tooltip>
                     </Space>

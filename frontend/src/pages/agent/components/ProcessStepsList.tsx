@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react'
+import i18n from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { RotateCw, ChevronDown, ChevronRight } from 'lucide-react'
 import { ProcessStep, AiMessage } from '@/types'
 import s from './ProcessStepsList.module.less'
@@ -12,6 +14,7 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = React.memo(({
     steps,
     isStreaming = false,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const [masterExpanded, setMasterExpanded] = useState<boolean>(isStreaming)
     const [expandedSteps, setExpandedSteps] = useState<Record<string, boolean>>({})
 
@@ -28,7 +31,7 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = React.memo(({
                     <div className={s.pipelineMasterHeader}>
                         <div className={s.pipelineMasterLeft}>
                             <RotateCw size={12} className={s.spinIcon} />
-                            <span className={s.pipelineMasterTitle}>正在深度推演与准备中…</span>
+                            <span className={s.pipelineMasterTitle}>{t('agent:steps.pipelineMasterTitle', { defaultValue: '正在深度推演与准备中…' })}</span>
                         </div>
                     </div>
                 </div>
@@ -52,11 +55,11 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = React.memo(({
     }
 
     const formatSummary = (step: ProcessStep) => {
-        if (step.type === 'think') return '深度思考过程'
+        if (step.type === 'think') return t('agent:steps.deepThinking', { defaultValue: '深度思考过程' })
         if (step.status === 'running') {
-            return `${step.title} (正在调用...)`
+            return t('agent:steps.callingTool', { title: step.title, defaultValue: `${step.title} (正在调用...)` })
         }
-        if (step.summary && !step.summary.startsWith('正在调用')) {
+        if (step.summary && !step.summary.startsWith('正在调用') && !step.summary.startsWith('Calling')) {
             const trimmed = step.summary.trim()
             if (trimmed.length > 50 || trimmed.includes('\n')) {
                 return step.title
@@ -71,7 +74,7 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = React.memo(({
             <div
                 className={s.pipelineMasterHeader}
                 onClick={() => setMasterExpanded(!masterExpanded)}
-                title="点击展开/折叠推演与工具调用"
+                title={t('agent:steps.toggleSteps', { defaultValue: '点击展开/折叠推演与工具调用' })}
             >
                 <div className={s.pipelineMasterLeft}>
                     {isStreaming ? (
@@ -81,8 +84,11 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = React.memo(({
                     )}
                     <span className={s.pipelineMasterTitle}>
                         {isStreaming
-                            ? '正在深度推演中…'
-                            : `思考与工具执行 (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`}
+                            ? t('agent:steps.deepReasoning', { defaultValue: '正在深度推演中…' })
+                            : t('agent:steps.reasoningHeader', {
+                                details: `${thinkCount ? t('agent:steps.thinkCount', { count: thinkCount, defaultValue: `${thinkCount} 思考` }) : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? t('agent:steps.toolCount', { count: toolCount, defaultValue: `${toolCount} 工具` }) : ''}`,
+                                defaultValue: `思考与工具执行 (${thinkCount ? `${thinkCount} 思考` : ''}${thinkCount && toolCount ? ' · ' : ''}${toolCount ? `${toolCount} 工具` : ''})`
+                              })}
                     </span>
                 </div>
                 {masterExpanded ? (
@@ -130,32 +136,32 @@ export const ProcessStepsList: React.FC<ProcessStepsListProps> = React.memo(({
                                 {isStepExpanded && (
                                     <div className={s.stepBlockBody}>
                                         {step.type === 'think' ? (
-                                            <div className={s.reasoningBox}>{step.content || '思考中...'}</div>
+                                            <div className={s.reasoningBox}>{step.content || t('agent:steps.thinkingInProgress', { defaultValue: '思考中...' })}</div>
                                         ) : (
                                             <div>
                                                 {durText && (
                                                     <div style={{ fontSize: 11, color: 'var(--text-dim)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                        <span>⏱️ 执行耗时:</span>
+                                                        <span>{t('agent:steps.duration', { defaultValue: '⏱️ 执行耗时:' })}</span>
                                                         <span style={{ fontWeight: 600, color: 'var(--text)' }}>{durText}</span>
                                                     </div>
                                                 )}
-                                                {step.summary && !step.summary.startsWith('正在调用') && (
+                                                {step.summary && !step.summary.startsWith('正在调用') && !step.summary.startsWith('Calling') && (
                                                     <div className={s.toolSection}>
-                                                        <div className={s.toolSectionTitle}>输入参数 (Input):</div>
+                                                        <div className={s.toolSectionTitle}>{t('agent:steps.inputParams', { defaultValue: '输入参数 (Input):' })}</div>
                                                         <pre className={s.toolCodeBox}>{step.summary}</pre>
                                                     </div>
                                                 )}
                                                 {step.content ? (
                                                     <div className={s.toolSection}>
-                                                        <div className={s.toolSectionTitle}>输出结果 (Output):</div>
+                                                        <div className={s.toolSectionTitle}>{t('agent:steps.outputResult', { defaultValue: '输出结果 (Output):' })}</div>
                                                         <pre className={s.toolCodeBox}>{step.content}</pre>
                                                     </div>
                                                 ) : step.status === 'running' ? (
                                                     <div className={s.toolSection}>
-                                                        <div className={s.toolSectionTitle}>执行状态:</div>
+                                                        <div className={s.toolSectionTitle}>{t('agent:steps.execStatus', { defaultValue: '执行状态:' })}</div>
                                                         <div style={{ color: 'var(--text-dim)', fontSize: 11, display: 'flex', alignItems: 'center', gap: 6, padding: '4px 0' }}>
                                                             <RotateCw size={11} className={s.spinIcon} />
-                                                            <span>正在执行工具中...</span>
+                                                            <span>{t('agent:steps.executingTool', { defaultValue: '正在执行工具中...' })}</span>
                                                         </div>
                                                     </div>
                                                 ) : null}
@@ -191,7 +197,7 @@ export const getStepsForMessage = (msg: AiMessage): ProcessStep[] => {
         steps.push({
             id: `think_${stableBase}`,
             type: 'think',
-            title: '深度思考过程',
+            title: i18n.t('agent:steps.deepThinking', { defaultValue: '深度思考过程' }),
             content: reasoning,
             status: 'completed',
             timestamp: msg.timestamp || 0,

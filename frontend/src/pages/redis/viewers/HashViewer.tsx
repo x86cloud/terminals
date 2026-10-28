@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Edit3, Eye, Copy, FileCode, Table as TableIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -24,6 +25,7 @@ interface HashRow {
 }
 
 export default function HashViewer({ session, selected, value, onReload, flash }: Props) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -115,17 +117,17 @@ export default function HashViewer({ session, selected, value, onReload, flash }
 
     const handleSaveField = async () => {
         if (!modalField.trim()) {
-            message.warning('字段名 (field) 不能为空')
+            message.warning(t('viewers.hash.reqField'))
             return
         }
         setSubmitting(true)
         try {
             await API.redisHashFieldSet(session.id, selected, modalField.trim(), modalVal)
-            message.success(isAdding ? `已新增字段 [${modalField}]` : `已更新字段 [${modalField}]`)
+            message.success(isAdding ? t('viewers.hash.fieldAdded', { field: modalField }) : t('viewers.hash.fieldUpdated', { field: modalField }))
             setEditModalOpen(false)
             onReload()
         } catch (e: any) {
-            message.error('操作失败: ' + (e?.message || e))
+            message.error(t('viewers.hash.opFail', { error: e?.message || e }))
         } finally {
             setSubmitting(false)
         }
@@ -134,10 +136,10 @@ export default function HashViewer({ session, selected, value, onReload, flash }
     const handleDeleteSingle = async (field: string) => {
         try {
             await API.redisHashFieldDel(session.id, selected, [field])
-            message.success(`已删除字段 [${field}]`)
+            message.success(t('viewers.hash.fieldDeleted', { field }))
             onReload()
         } catch (e: any) {
-            message.error('删除失败: ' + (e?.message || e))
+            message.error(t('viewers.hash.deleteFail', { error: e?.message || e }))
         }
     }
 
@@ -146,11 +148,11 @@ export default function HashViewer({ session, selected, value, onReload, flash }
         if (fields.length === 0) return
         try {
             await API.redisHashFieldDel(session.id, selected, fields)
-            message.success(`已成功批量删除 ${fields.length} 个字段`)
+            message.success(t('viewers.hash.batchDeleted', { count: fields.length }))
             setSelectedRowKeys([])
             onReload()
         } catch (e: any) {
-            message.error('批量删除失败: ' + (e?.message || e))
+            message.error(t('viewers.hash.batchDeleteFail', { error: e?.message || e }))
         }
     }
 
@@ -164,7 +166,7 @@ export default function HashViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '字段名 (Field)',
+            title: t('viewers.hash.colField'),
             dataIndex: 'field',
             key: 'field',
             width: 220,
@@ -176,7 +178,7 @@ export default function HashViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '字段值 (Value)',
+            title: t('viewers.hash.colValue'),
             dataIndex: 'val',
             key: 'val',
             ellipsis: true,
@@ -186,10 +188,10 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span
                             className={s.cellValue}
-                            title="点击查看 / 编辑完整值"
+                            title={t('viewers.hash.clickInspect')}
                             onClick={() => setInspectDrawer({ open: true, field: row.field, val })}
                         >
-                            {val || <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>(空值)</span>}
+                            {val || <span style={{ color: 'var(--text-dim)', fontStyle: 'italic' }}>{t('viewers.hash.emptyVal')}</span>}
                         </span>
                         {isJson && <Tag color="geekblue" style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>JSON</Tag>}
                     </div>
@@ -197,7 +199,7 @@ export default function HashViewer({ session, selected, value, onReload, flash }
             },
         },
         {
-            title: '大小',
+            title: t('viewers.common.colSize'),
             dataIndex: 'size',
             key: 'size',
             width: 90,
@@ -206,13 +208,13 @@ export default function HashViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '操作',
+            title: t('viewers.common.colAction'),
             key: 'actions',
             width: 120,
             align: 'right' as const,
             render: (_: any, row: HashRow) => (
                 <Space size={2}>
-                    <Tooltip title="查看完整详情">
+                    <Tooltip title={t('viewers.hash.inspectTooltip')}>
                         <Button
                             size="small"
                             type="text"
@@ -220,7 +222,7 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                             onClick={() => setInspectDrawer({ open: true, field: row.field, val: row.val })}
                         />
                     </Tooltip>
-                    <Tooltip title="编辑字段">
+                    <Tooltip title={t('viewers.hash.editTooltip')}>
                         <Button
                             size="small"
                             type="text"
@@ -229,13 +231,13 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                         />
                     </Tooltip>
                     <Popconfirm
-                        title={`确定删除字段 [${row.field}] 吗？`}
+                        title={t('viewers.hash.deleteConfirm', { field: row.field })}
                         onConfirm={() => handleDeleteSingle(row.field)}
-                        okText="删除"
-                        cancelText="取消"
+                        okText={t('viewers.common.delete')}
+                        cancelText={t('viewers.common.cancel')}
                         okButtonProps={{ danger: true }}
                     >
-                        <Tooltip title="删除字段 (HDEL)">
+                        <Tooltip title={t('viewers.hash.deleteTooltip')}>
                             <Button size="small" type="text" danger icon={<Trash2 size={12} />} />
                         </Tooltip>
                     </Popconfirm>
@@ -251,26 +253,26 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                     <Input
                         size="small"
                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
-                        placeholder="搜索字段名或内容..."
+                        placeholder={t('viewers.hash.searchPlaceholder')}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         allowClear
                         className={s.searchInput}
                     />
                     <span className={s.countBadge}>
-                        共 {rows.length} 个字段
-                        {searchText && ` (过滤显示 ${filteredRows.length} 个)`}
+                        {t('viewers.hash.totalFields', { count: rows.length })}
+                        {searchText && t('viewers.hash.filteredFields', { count: filteredRows.length })}
                     </span>
                     {selectedRowKeys.length > 0 && (
                         <Popconfirm
-                            title={`确定批量删除选中的 ${selectedRowKeys.length} 个字段吗？`}
+                            title={t('viewers.hash.batchDeleteConfirm', { count: selectedRowKeys.length })}
                             onConfirm={handleBatchDelete}
-                            okText="批量删除"
-                            cancelText="取消"
+                            okText={t('viewers.common.batchDelete')}
+                            cancelText={t('viewers.common.cancel')}
                             okButtonProps={{ danger: true }}
                         >
                             <Button size="small" danger icon={<Trash2 size={12} />}>
-                                批量删除 ({selectedRowKeys.length})
+                                {t('viewers.hash.batchDeleteBtn', { count: selectedRowKeys.length })}
                             </Button>
                         </Popconfirm>
                     )}
@@ -282,10 +284,10 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                         icon={viewMode === 'table' ? <FileCode size={12} /> : <TableIcon size={12} />}
                         onClick={() => setViewMode(viewMode === 'table' ? 'json' : 'table')}
                     >
-                        {viewMode === 'table' ? '查看 JSON' : '表格视图'}
+                        {viewMode === 'table' ? t('viewers.common.viewJson') : t('viewers.common.viewTable')}
                     </Button>
                     <Button size="small" type="primary" icon={<Plus size={12} />} onClick={openAddModal}>
-                        新增字段 (HSET)
+                        {t('viewers.hash.addFieldBtn')}
                     </Button>
                 </div>
             </div>
@@ -301,7 +303,7 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                             defaultPageSize: 50,
                             pageSizeOptions: ['20', '50', '100', '200'],
                             showSizeChanger: true,
-                            showTotal: (total) => `共 ${total} 条`,
+                            showTotal: (total) => t('viewers.common.totalRecords', { total }),
                             size: 'small',
                         }}
                         rowSelection={{
@@ -311,9 +313,9 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                         locale={{
                             emptyText: (
                                 <div className={s.emptyTip}>
-                                    <span>当前 Hash 无任何字段</span>
+                                    <span>{t('viewers.hash.emptyHash')}</span>
                                     <Button size="small" type="primary" icon={<Plus size={12} />} onClick={openAddModal}>
-                                        新增第一个字段
+                                        {t('viewers.hash.addFirstField')}
                                     </Button>
                                 </div>
                             ),
@@ -335,34 +337,34 @@ export default function HashViewer({ session, selected, value, onReload, flash }
 
             {/* Edit / Add Field Modal */}
             <Modal
-                title={isAdding ? '新增 Hash 字段 (HSET)' : `编辑字段 [${modalField}]`}
+                title={isAdding ? t('viewers.hash.addModalTitle') : t('viewers.hash.editModalTitle', { field: modalField })}
                 open={editModalOpen}
                 onOk={handleSaveField}
                 confirmLoading={submitting}
                 onCancel={() => setEditModalOpen(false)}
-                okText="保存写入"
-                cancelText="取消"
+                okText={t('viewers.common.saveWrite')}
+                cancelText={t('viewers.common.cancel')}
                 width={560}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 16 }}>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>字段名 (Field)</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('viewers.hash.fieldLabel')}</div>
                         <Input
-                            placeholder="例如: username, age, config..."
+                            placeholder={t('viewers.hash.fieldPlaceholder')}
                             value={modalField}
                             disabled={!isAdding}
                             onChange={(e) => setModalField(e.target.value)}
                         />
                     </div>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>字段值 (Value)</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('viewers.hash.valLabel')}</div>
                         <CodeEditor
                             value={modalVal}
                             onChange={setModalVal}
                             lang={/^\s*[[{]/.test(modalVal) ? 'json' : 'plain'}
                             height="200px"
                             bordered
-                            placeholder="字段具体内容，支持多行或 JSON 格式..."
+                            placeholder={t('viewers.hash.valPlaceholder')}
                         />
                     </div>
                 </div>
@@ -370,7 +372,7 @@ export default function HashViewer({ session, selected, value, onReload, flash }
 
             {/* Inspect Drawer for Large Value */}
             <Drawer
-                title={`查看字段: ${inspectDrawer.field}`}
+                title={t('viewers.hash.inspectTitle', { field: inspectDrawer.field })}
                 open={inspectDrawer.open}
                 onClose={() => setInspectDrawer({ open: false, field: '', val: '' })}
                 width={620}
@@ -380,10 +382,10 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                             size="small"
                             icon={<Copy size={12} />}
                             onClick={async () => {
-                                if (await copyText(inspectDrawer.val)) message.success('已复制值内容')
+                                if (await copyText(inspectDrawer.val)) message.success(t('viewers.common.copiedVal'))
                             }}
                         >
-                            复制
+                            {t('viewers.common.copy')}
                         </Button>
                         <Button
                             size="small"
@@ -399,14 +401,14 @@ export default function HashViewer({ session, selected, value, onReload, flash }
                                 })
                             }}
                         >
-                            编辑
+                            {t('viewers.common.edit')}
                         </Button>
                     </Space>
                 }
             >
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                        长度: {inspectDrawer.val.length} 字符 | 大小: {formatBytes(new Blob([inspectDrawer.val]).size)}
+                        {t('viewers.common.lengthAndSize', { length: inspectDrawer.val.length, size: formatBytes(new Blob([inspectDrawer.val]).size) })}
                     </div>
                     <div style={{ flex: 1, minHeight: 0 }}>
                         <CodeEditor
@@ -423,3 +425,4 @@ export default function HashViewer({ session, selected, value, onReload, flash }
         </div>
     )
 }
+

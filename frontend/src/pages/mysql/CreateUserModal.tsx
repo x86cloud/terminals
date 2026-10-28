@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Modal, Form, Input, Select, Switch, Segmented, Space, Button, Alert } from 'antd'
 import { KeyRound, Shield, Dices, Eye } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 
@@ -11,16 +12,8 @@ interface Props {
     onSuccess: (newUser: string, host: string) => void
 }
 
-const HOST_PRESETS = [
-    { label: '% (允许所有远程主机连接)', value: '%' },
-    { label: 'localhost (仅限本机连接)', value: 'localhost' },
-    { label: '127.0.0.1 (本地回环)', value: '127.0.0.1' },
-    { label: '192.168.%.% (内网网段)', value: '192.168.%.%' },
-    { label: '10.%.%.% (内网网段)', value: '10.%.%.%' },
-    { label: '172.16.%.% (内网网段)', value: '172.16.%.%' },
-]
-
 export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onSuccess }) => {
+    const { t } = useTranslation(['db', 'common'])
     const [form] = Form.useForm()
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
@@ -31,6 +24,15 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
     const [password, setPassword] = useState('')
     const [locked, setLocked] = useState(false)
     const [initialPriv, setInitialPriv] = useState<'none' | 'readonly' | 'readwrite' | 'all'>('none')
+
+    const hostPresets = useMemo(() => [
+        { label: t('db:mysql.createUser.hostPresetAll'), value: '%' },
+        { label: t('db:mysql.createUser.hostPresetLocal'), value: 'localhost' },
+        { label: t('db:mysql.createUser.hostPresetLoopback'), value: '127.0.0.1' },
+        { label: t('db:mysql.createUser.hostPresetLan1'), value: '192.168.%.%' },
+        { label: t('db:mysql.createUser.hostPresetLan2'), value: '10.%.%.%' },
+        { label: t('db:mysql.createUser.hostPresetLan3'), value: '172.16.%.%' },
+    ], [t])
 
     const generateRandomPassword = () => {
         const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*'
@@ -50,18 +52,22 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
             sql += ` IDENTIFIED BY '${password.replace(/'/g, "''")}'`
         }
         if (locked) {
-            sql += ` ACCOUNT LOCK`
+            sql += ' ACCOUNT LOCK'
         }
-        sql += `;\n`
+        sql += ';'
 
         if (initialPriv === 'readonly') {
-            sql += `GRANT SELECT, SHOW VIEW ON *.* TO '${u}'@'${h}';\n`
+            sql += `\nGRANT SELECT, SHOW VIEW ON *.* TO '${u}'@'${h}';`
         } else if (initialPriv === 'readwrite') {
-            sql += `GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE, SHOW VIEW ON *.* TO '${u}'@'${h}';\n`
+            sql += `\nGRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE, SHOW VIEW ON *.* TO '${u}'@'${h}';`
         } else if (initialPriv === 'all') {
-            sql += `GRANT ALL PRIVILEGES ON *.* TO '${u}'@'${h}' WITH GRANT OPTION;\n`
+            sql += `\nGRANT ALL PRIVILEGES ON *.* TO '${u}'@'${h}' WITH GRANT OPTION;`
         }
-        sql += `FLUSH PRIVILEGES;`
+
+        if (initialPriv !== 'none') {
+            sql += '\nFLUSH PRIVILEGES;'
+        }
+
         return sql
     }, [user, host, password, locked, initialPriv])
 
@@ -72,12 +78,17 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
             setError('')
 
             const targetUser = values.user.trim()
-            const targetHost = (values.host || '%').trim()
-            const targetPassword = values.password || ''
-            const isLocked = !!values.locked
+            const targetHost = values.host.trim()
 
             // 1. Create User
-            await API.mysqlCreateUser(sessionId, targetUser, targetHost, targetPassword, '', isLocked)
+            await API.mysqlCreateUser(
+                sessionId,
+                targetUser,
+                targetHost,
+                values.password || '',
+                'caching_sha2_password',
+                !!values.locked
+            )
 
             // 2. Grant initial privs if selected
             if (initialPriv === 'readonly') {
@@ -105,22 +116,22 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Shield size={18} color="var(--accent)" />
-                    <span>新建 MySQL 用户</span>
+                    <span>{t('db:mysql.createUser.title')}</span>
                 </div>
             }
             open={open}
             onCancel={onClose}
             onOk={handleOk}
             confirmLoading={busy}
-            okText="创建用户"
-            cancelText="取消"
+            okText={t('db:mysql.createUser.ok')}
+            cancelText={t('common:cancel')}
             width={580}
             destroyOnHidden
         >
             {error && (
                 <Alert
                     type="error"
-                    message="创建失败"
+                    message={t('db:mysql.createUser.fail')}
                     description={error}
                     showIcon
                     style={{ marginBottom: 16 }}
@@ -142,54 +153,54 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
                     <Form.Item
                         name="user"
-                        label="用户名"
+                        label={t('db:mysql.createUser.username')}
                         rules={[
-                            { required: true, message: '请输入用户名' },
-                            { pattern: /^[a-zA-Z0-9_.-]+$/, message: '用户名仅支持字母、数字、下划线、减号与点' },
+                            { required: true, message: t('db:mysql.createUser.usernameRequired') },
+                            { pattern: /^[a-zA-Z0-9_.-]+$/, message: t('db:mysql.createUser.usernamePattern') },
                         ]}
                     >
-                        <Input placeholder="如 app_user / dev_rw" autoFocus />
+                        <Input placeholder={t('db:mysql.createUser.usernamePlaceholder')} autoFocus />
                     </Form.Item>
 
                     <Form.Item
                         name="host"
-                        label="允许连接的主机 (Host)"
-                        rules={[{ required: true, message: '请选择或输入 Host' }]}
+                        label={t('db:mysql.createUser.host')}
+                        rules={[{ required: true, message: t('db:mysql.createUser.hostRequired') }]}
                     >
                         <Select
-                            options={HOST_PRESETS}
+                            options={hostPresets}
                             showSearch
                             allowClear={false}
-                            placeholder="如 % 或 localhost"
+                            placeholder={t('db:mysql.createUser.hostPlaceholder')}
                         />
                     </Form.Item>
                 </div>
 
-                <Form.Item label="登录密码" style={{ marginBottom: 12 }}>
+                <Form.Item label={t('db:mysql.createUser.password')} style={{ marginBottom: 12 }}>
                     <Space.Compact style={{ width: '100%' }}>
                         <Form.Item name="password" noStyle>
                             <Input.Password
                                 prefix={<KeyRound size={14} color="var(--text-dim)" />}
-                                placeholder="输入密码（留空则为无密码登录）"
+                                placeholder={t('db:mysql.createUser.passwordPlaceholder')}
                             />
                         </Form.Item>
-                        <Button icon={<Dices size={14} />} onClick={generateRandomPassword} title="生成随机强密码">
-                            随机生成
+                        <Button icon={<Dices size={14} />} onClick={generateRandomPassword} title={t('db:mysql.createUser.randomGenTitle')}>
+                            {t('db:mysql.createUser.randomGen')}
                         </Button>
                     </Space.Compact>
                 </Form.Item>
 
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 6 }}>
                     <div>
-                        <div style={{ fontSize: 13, fontWeight: 500 }}>锁定账户 (ACCOUNT LOCK)</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>锁定后该用户将暂时无法连接登录</div>
+                        <div style={{ fontSize: 13, fontWeight: 500 }}>{t('db:mysql.createUser.lockAccount')}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('db:mysql.createUser.lockAccountDesc')}</div>
                     </div>
                     <Form.Item name="locked" valuePropName="checked" noStyle>
                         <Switch size="small" />
                     </Form.Item>
                 </div>
 
-                <Form.Item name="initialPriv" label="初始权限预设">
+                <Form.Item name="initialPriv" label={t('db:mysql.createUser.initialPriv')}>
                     <Segmented
                         block
                         value={initialPriv}
@@ -198,10 +209,10 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
                             form.setFieldsValue({ initialPriv: v })
                         }}
                         options={[
-                            { label: '暂不关联', value: 'none' },
-                            { label: '🔍 全局只读', value: 'readonly' },
-                            { label: '✏️ 全局读写', value: 'readwrite' },
-                            { label: '👑 全部权限', value: 'all' },
+                            { label: t('db:mysql.createUser.privNone'), value: 'none' },
+                            { label: t('db:mysql.createUser.privReadonly'), value: 'readonly' },
+                            { label: t('db:mysql.createUser.privReadwrite'), value: 'readwrite' },
+                            { label: t('db:mysql.createUser.privAll'), value: 'all' },
                         ]}
                     />
                 </Form.Item>
@@ -209,7 +220,7 @@ export const CreateUserModal: React.FC<Props> = ({ open, sessionId, onClose, onS
                 <div style={{ marginTop: 8 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>
                         <Eye size={12} />
-                        <span>实时 SQL 预览</span>
+                        <span>{t('db:mysql.createUser.sqlPreview')}</span>
                     </div>
                     <pre
                         style={{

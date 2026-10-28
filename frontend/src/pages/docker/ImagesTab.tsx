@@ -25,6 +25,7 @@ import {
 import { API } from '@/api'
 import { copyText } from '@/utils'
 import type { DockerImageInfo } from '@/types'
+import { useTranslation } from 'react-i18next'
 import s from './DockerClient.module.less'
 
 interface Props {
@@ -33,6 +34,7 @@ interface Props {
 }
 
 export default function ImagesTab({ serverId, onRunImage }: Props) {
+    const { t } = useTranslation(['docker', 'common'])
     const { message } = App.useApp()
     const [images, setImages] = useState<DockerImageInfo[]>([])
     const [loading, setLoading] = useState(false)
@@ -64,7 +66,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             const list = await API.dockerListImages(serverId)
             setImages(list)
         } catch (err: any) {
-            message.error(`获取镜像列表失败: ${err.message || String(err)}`)
+            message.error(t('images.fetchFail', { defaultValue: '获取镜像列表失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
@@ -76,18 +78,18 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
 
     const handlePull = async () => {
         if (!pullImageName.trim()) {
-            message.warning('请输入要拉取的镜像名称')
+            message.warning(t('images.reqName', '请输入要拉取的镜像名称'))
             return
         }
         setPulling(true)
-        setPullLogs(`正在连接仓库拉取 ${pullImageName.trim()} ...\n`)
+        setPullLogs(t('images.pullConnecting', { defaultValue: '正在连接仓库拉取 {{name}} ...\n', name: pullImageName.trim() }))
         try {
             const logs = await API.dockerPullImage(serverId, pullImageName.trim())
-            setPullLogs(logs || '镜像拉取完成！\n')
+            setPullLogs(logs || t('images.pullDone', '镜像拉取完成！\n'))
             fetchImages()
         } catch (err: any) {
-            setPullLogs((prev) => prev + `\n拉取失败: ${err.message || String(err)}`)
-            message.error(`拉取镜像失败: ${err.message || String(err)}`)
+            setPullLogs((prev) => prev + '\n' + t('images.pullFail', { defaultValue: '拉取镜像失败: {{error}}', error: err.message || String(err) }))
+            message.error(t('images.pullFail', { defaultValue: '拉取镜像失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setPulling(false)
         }
@@ -104,7 +106,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         const defaultName = `${repoClean}_${tagClean}.tar`
 
         setSavingId(img.id)
-        const hide = message.loading(`正在准备导出镜像 ${fullImage} ...`, 0)
+        const hide = message.loading(t('images.exportPreparing', { defaultValue: '正在准备导出镜像 {{name}} ...', name: fullImage }), 0)
         try {
             const savePath = await API.dockerSaveImage(serverId, fullImage, defaultName)
             hide()
@@ -112,7 +114,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             }
         } catch (err: any) {
             hide()
-            message.error(`导出镜像失败: ${err.message || String(err)}`)
+            message.error(t('images.exportFail', { defaultValue: '导出镜像失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setSavingId(null)
         }
@@ -120,7 +122,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
 
     const handleLoadImage = async () => {
         setImporting(true)
-        const hide = message.loading('正在导入镜像文件 (.tar) ...', 0)
+        const hide = message.loading(t('images.importLoading', '正在导入镜像文件 (.tar) ...'), 0)
         try {
             const result = await API.dockerLoadImage(serverId)
             hide()
@@ -129,7 +131,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             }
         } catch (err: any) {
             hide()
-            message.error(`导入镜像失败: ${err.message || String(err)}`)
+            message.error(t('images.importFail', { defaultValue: '导入镜像失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setImporting(false)
         }
@@ -140,7 +142,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             await API.dockerRemoveImage(serverId, imageId, force)
             fetchImages()
         } catch (err: any) {
-            message.error(`删除镜像失败: ${err.message || String(err)}`)
+            message.error(t('images.deleteFail', { defaultValue: '删除镜像失败: {{error}}', error: err.message || String(err) }))
         }
     }
 
@@ -149,11 +151,11 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             const json = await API.dockerInspectImage(serverId, img.id)
             setInspectModal({
                 open: true,
-                title: `镜像详情 (Inspect): ${img.repository}:${img.tag}`,
+                title: t('images.inspectTitle', { defaultValue: '镜像详情 (Inspect): {{name}}', name: `${img.repository}:${img.tag}` }),
                 json,
             })
         } catch (err: any) {
-            message.error(`获取详情失败: ${err.message || String(err)}`)
+            message.error(t('images.inspectFail', { defaultValue: '获取详情失败: {{error}}', error: err.message || String(err) }))
         }
     }
 
@@ -175,7 +177,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
 
     const columns: ColumnsType<DockerImageInfo> = [
         {
-            title: '仓库名称 / 镜像 (Repository)',
+            title: t('images.colRepo', '仓库名称 / 镜像 (Repository)'),
             dataIndex: 'repository',
             render: (repo: string, record) => (
                 <div>
@@ -187,7 +189,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             ),
         },
         {
-            title: '标签 (Tag)',
+            title: t('images.colTag', '标签 (Tag)'),
             dataIndex: 'tag',
             width: 140,
             render: (tag: string) => (
@@ -197,13 +199,13 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             ),
         },
         {
-            title: '大小 (Size)',
+            title: t('images.colSize', '大小 (Size)'),
             dataIndex: 'sizeStr',
             width: 120,
             render: (sizeStr: string) => <span className={s.monoText}>{sizeStr}</span>,
         },
         {
-            title: '创建时间',
+            title: t('images.colCreatedAt', '创建时间'),
             dataIndex: 'created',
             width: 180,
             render: (created: number) => (
@@ -211,15 +213,15 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             ),
         },
         {
-            title: '关联容器',
+            title: t('images.colContainers', '关联容器'),
             dataIndex: 'containers',
             width: 100,
             render: (cnt: number) => (
-                <Tag color={cnt > 0 ? 'processing' : 'default'}>{cnt > 0 ? `${cnt} 个运行` : '未使用'}</Tag>
+                <Tag color={cnt > 0 ? 'processing' : 'default'}>{cnt > 0 ? t('images.runningContainers', { count: cnt, defaultValue: `${cnt} 个运行` }) : t('images.unused', '未使用')}</Tag>
             ),
         },
         {
-            title: '快捷操作',
+            title: t('images.colActions', '快捷操作'),
             key: 'actions',
             width: 210,
             fixed: 'right',
@@ -229,7 +231,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                 return (
                     <Space size={4}>
                         {onRunImage && (
-                            <Tooltip title="基于此镜像运行容器">
+                            <Tooltip title={t('images.runTooltip', '基于此镜像运行容器')}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -240,7 +242,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                             </Tooltip>
                         )}
 
-                        <Tooltip title="导出/下载镜像为本地文件 (.tar)">
+                        <Tooltip title={t('images.exportTooltip', '导出/下载镜像为本地文件 (.tar)')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -250,7 +252,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                             />
                         </Tooltip>
 
-                        <Tooltip title="查看 Inspect JSON">
+                        <Tooltip title={t('images.inspectTooltip', '查看 Inspect JSON')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -260,14 +262,14 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                         </Tooltip>
 
                         <Popconfirm
-                            title="确定要删除此镜像吗？"
-                            description="若镜像被容器使用，删除可能失败，可选择强制删除"
+                            title={t('images.deleteConfirm', '确定要删除此镜像吗？')}
+                            description={t('images.deleteDesc', '若镜像被容器使用，删除可能失败，可选择强制删除')}
                             onConfirm={() => handleDelete(record.id, false)}
-                            okText="删除"
-                            cancelText="取消"
+                            okText={t('images.deleteBtn', '删除')}
+                            cancelText={t('images.cancelBtn', '取消')}
                             okButtonProps={{ danger: true }}
                         >
-                            <Tooltip title="删除镜像">
+                            <Tooltip title={t('images.deleteTooltip', '删除镜像')}>
                                 <Button size="small" type="text" danger icon={<Trash2 size={13} />} />
                             </Tooltip>
                         </Popconfirm>
@@ -283,7 +285,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             <div className={s.toolbar}>
                 <div className={s.toolbarLeft}>
                     <Input
-                        placeholder="搜索镜像名称 / 标签 / ID..."
+                        placeholder={t('images.searchPlaceholder', '搜索镜像名称 / 标签 / ID...')}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -303,7 +305,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                         loading={importing}
                         onClick={handleLoadImage}
                     >
-                        导入镜像
+                        {t('images.importBtn', '导入镜像')}
                     </Button>
                     <Button
                         type="primary"
@@ -314,14 +316,14 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                             setPullModal(true)
                         }}
                     >
-                        拉取镜像
+                        {t('images.pullBtn', '拉取镜像')}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchImages}
                     >
-                        刷新
+                        {t('common:refresh', '刷新')}
                     </Button>
                 </div>
             </div>
@@ -339,7 +341,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                    showTotal: (total, range) => t('common:pagination.totalRange', { from: range[0], to: range[1], total, defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条` }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -349,15 +351,15 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
 
             {/* 拉取镜像模态框 */}
             <AntdModal
-                title="在线拉取 Docker 镜像"
+                title={t('images.pullTitle', '在线拉取 Docker 镜像')}
                 open={pullModal}
                 onCancel={() => !pulling && setPullModal(false)}
                 footer={[
                     <Button key="close" onClick={() => setPullModal(false)} disabled={pulling}>
-                        关闭
+                        {t('images.close', '关闭')}
                     </Button>,
                     <Button key="pull" type="primary" loading={pulling} onClick={handlePull}>
-                        开始拉取
+                        {t('images.startPull', '开始拉取')}
                     </Button>,
                 ]}
                 width={620}
@@ -365,22 +367,22 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             >
                 <div style={{ padding: '8px 0' }}>
                     <div style={{ fontSize: 13, marginBottom: 6, fontWeight: 500 }}>
-                        镜像完整名称 (包含 Tag，如未填默认为 :latest)
+                        {t('images.pullFullLabel', '镜像完整名称 (包含 Tag，如未填默认为 :latest)')}
                     </div>
                     <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
                         <Input
-                            placeholder="如: nginx:alpine / redis:7 / ghcr.io/owner/repo:tag"
+                            placeholder={t('images.pullPlaceholder', '如: nginx:alpine / redis:7 / ghcr.io/owner/repo:tag')}
                             value={pullImageName}
                             onChange={(e) => setPullImageName(e.target.value)}
                             onPressEnter={handlePull}
                         />
                         <Button type="primary" loading={pulling} onClick={handlePull}>
-                            拉取
+                            {t('images.pullSubmit', '拉取')}
                         </Button>
                     </Space.Compact>
 
                     <div style={{ marginBottom: 8, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>常用推荐:</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('images.presets', '常用推荐:')}</span>
                         <Tag style={{ cursor: 'pointer' }} onClick={() => setPullImageName('nginx:alpine')}>nginx:alpine</Tag>
                         <Tag style={{ cursor: 'pointer' }} onClick={() => setPullImageName('redis:alpine')}>redis:alpine</Tag>
                         <Tag style={{ cursor: 'pointer' }} onClick={() => setPullImageName('postgres:16-alpine')}>postgres:16-alpine</Tag>
@@ -390,7 +392,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
 
                     {pullLogs && (
                         <div>
-                            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>拉取进度日志:</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('images.pullProgress', '拉取进度日志:')}</div>
                             <pre className={s.logTerminal} style={{ height: 240 }}>{pullLogs}</pre>
                         </div>
                     )}
@@ -408,14 +410,14 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                         icon={<Copy size={13} />}
                         onClick={async () => {
                             if (await copyText(inspectModal.json)) {
-                                message.success('已复制 JSON')
+                                message.success(t('images.copiedJson', '已复制 JSON'))
                             }
                         }}
                     >
-                        复制 JSON
+                        {t('images.copyJson', '复制 JSON')}
                     </Button>,
                     <Button key="close" type="primary" onClick={() => setInspectModal({ open: false, title: '', json: '' })}>
-                        关闭
+                        {t('images.close', '关闭')}
                     </Button>,
                 ]}
                 width={800}

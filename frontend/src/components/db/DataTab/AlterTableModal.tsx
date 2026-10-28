@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, Alert, Button, Space, App } from 'antd'
 import { Copy, AlertTriangle, Database } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
@@ -21,22 +22,23 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
     onOk,
     onCancel,
 }) => {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const sqlText = useMemo(() => {
         if (!plan || !plan.sqls || plan.sqls.length === 0) {
-            return '-- 无需执行任何 ALTER TABLE 变更'
+            return t('db:modals.alterTable.noChanges')
         }
         return plan.sqls.join('\n\n')
-    }, [plan])
+    }, [plan, t])
 
     const handleCopy = () => {
         if (!sqlText) return
         navigator.clipboard.writeText(sqlText)
-        message.success('已复制 SQL 变更脚本到剪贴板')
+        message.success(t('db:modals.alterTable.copiedSql'))
     }
 
     const hasDestructiveOps = Boolean(
-        plan?.isRebuild || (plan?.warning && plan.warning.includes('永久删除'))
+        plan?.isRebuild || (plan?.warning && (plan.warning.includes('永久删除') || plan.warning.includes('permanently delete')))
     )
 
     return (
@@ -45,8 +47,7 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Database size={17} style={{ color: 'var(--accent, #1677ff)' }} />
                     <span>
-                        修改表结构 - DDL 预览确认 (
-                        <code style={{ fontSize: 13, color: '#e06c75' }}>{tableName}</code>)
+                        {t('db:modals.alterTable.title', { table: tableName, defaultValue: `修改表结构 - DDL 预览确认 (${tableName})` })}
                     </span>
                 </div>
             }
@@ -58,11 +59,11 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Button icon={<Copy size={13} />} onClick={handleCopy} disabled={!plan?.sqls?.length}>
-                        复制 SQL
+                        {t('db:modals.alterTable.copySql')}
                     </Button>
                     <Space size={8}>
                         <Button onClick={onCancel} disabled={loading}>
-                            取消
+                            {t('common:cancel')}
                         </Button>
                         <Button
                             type="primary"
@@ -71,7 +72,7 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
                             onClick={onOk}
                             disabled={!plan || plan.sqls.length === 0}
                         >
-                            {hasDestructiveOps ? '确认并强制应用变更' : '确认执行并应用'}
+                            {hasDestructiveOps ? t('db:modals.alterTable.confirmRebuild') : t('db:modals.alterTable.confirmApply')}
                         </Button>
                     </Space>
                 </div>
@@ -83,7 +84,7 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
                         type={plan.isRebuild ? 'warning' : 'error'}
                         showIcon
                         icon={plan.isRebuild ? <AlertTriangle size={16} /> : undefined}
-                        message={plan.isRebuild ? '表重建风险提示' : '危险变更提示'}
+                        message={plan.isRebuild ? t('db:modals.alterTable.rebuildRisk') : t('db:modals.alterTable.dangerWarning')}
                         description={
                             <div style={{ whiteSpace: 'pre-line', fontSize: 13, lineHeight: '1.6' }}>
                                 {plan.warning}
@@ -102,11 +103,11 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
                         }}
                     >
                         <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-main, #333)' }}>
-                            即将执行的 SQL 脚本 ({plan?.sqls?.length ?? 0} 条语句):
+                            {t('db:modals.alterTable.sqlsToExecute', { count: plan?.sqls?.length ?? 0 })}
                         </span>
                         {plan?.isRebuild && (
                             <span style={{ fontSize: 12, color: '#fa8c16' }}>
-                                (已自动包裹在安全事务临时表中)
+                                {t('db:modals.alterTable.safeTxNotice')}
                             </span>
                         )}
                     </div>

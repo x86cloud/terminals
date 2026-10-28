@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Modal, Input, InputNumber, Segmented, Button, Space, Tag, Alert, Select } from 'antd'
 import { Plus, Trash2, Sparkles, Minimize2, Key, Database, Clock, Layers } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 
 export type RedisKeyType = 'string' | 'hash' | 'list' | 'set' | 'zset'
@@ -22,16 +23,8 @@ interface Props {
     onCreate: (key: string, type: RedisKeyType, serializedValue: string, ttl: number) => Promise<void>
 }
 
-const TTL_PRESETS = [
-    { label: '永久 (-1)', value: -1 },
-    { label: '1 分钟 (60s)', value: 60 },
-    { label: '1 小时 (3600s)', value: 3600 },
-    { label: '1 天 (86400s)', value: 86400 },
-    { label: '7 天', value: 604800 },
-    { label: '30 天', value: 2592000 },
-]
-
 export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: Props) {
+    const { t } = useTranslation('redis')
     const [key, setKey] = useState('')
     const [type, setType] = useState<RedisKeyType>('string')
     const [ttl, setTtl] = useState<number>(-1)
@@ -59,13 +52,22 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
         { member: 'item_2', score: 20 },
     ])
 
+    const ttlPresets = useMemo(() => [
+        { label: t('header.ttlForever'), value: -1 },
+        { label: t('header.preset1m'), value: 60 },
+        { label: t('header.preset1h'), value: 3600 },
+        { label: t('header.preset1d'), value: 86400 },
+        { label: t('header.preset7d'), value: 604800 },
+        { label: t('header.preset30d'), value: 2592000 },
+    ], [t])
+
     // JSON helpers for string
     const beautifyJson = () => {
         try {
             const obj = JSON.parse(stringValue)
             setStringValue(JSON.stringify(obj, null, 2))
         } catch {
-            setError('当前字符串内容不是合法的 JSON 格式')
+            setError(t('viewers.string.notJsonWarn'))
         }
     }
 
@@ -74,7 +76,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
             const obj = JSON.parse(stringValue)
             setStringValue(JSON.stringify(obj))
         } catch {
-            setError('当前字符串内容不是合法的 JSON 格式')
+            setError(t('viewers.string.notJsonWarn'))
         }
     }
 
@@ -99,7 +101,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
     const handleCreate = async () => {
         const trimmedKey = key.trim()
         if (!trimmedKey) {
-            setError('请输入键名 (Key)')
+            setError(t('create.reqKeyName'))
             return
         }
 
@@ -110,7 +112,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
         } else if (type === 'hash') {
             const valid = hashPairs.filter((p) => p.field.trim() !== '')
             if (valid.length === 0) {
-                setError('Hash 至少需要提供一个有效字段 (field)')
+                setError(t('create.reqHashField'))
                 return
             }
             const lines: string[] = []
@@ -121,21 +123,21 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
         } else if (type === 'list') {
             const valid = listItems.map((i) => i.trim()).filter(Boolean)
             if (valid.length === 0) {
-                setError('List 至少需要提供一个元素')
+                setError(t('create.reqListItem'))
                 return
             }
             serialized = valid.join('\n')
         } else if (type === 'set') {
             const valid = setMembers.map((i) => i.trim()).filter(Boolean)
             if (valid.length === 0) {
-                setError('Set 至少需要提供一个成员')
+                setError(t('create.reqSetMember'))
                 return
             }
             serialized = valid.join('\n')
         } else if (type === 'zset') {
             const valid = zsetPairs.filter((p) => p.member.trim() !== '')
             if (valid.length === 0) {
-                setError('ZSet 至少需要提供一个成员 (member)')
+                setError(t('create.reqZsetMember'))
                 return
             }
             const lines: string[] = []
@@ -164,7 +166,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600 }}>
                     <Key size={16} color="var(--accent)" />
-                    <span>新建 Redis 键</span>
+                    <span>{t('create.title')}</span>
                     <Tag color="geekblue" style={{ marginLeft: 4, borderRadius: 10, fontSize: 11 }}>
                         DB {currentDb}
                     </Tag>
@@ -176,10 +178,10 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
             footer={
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, paddingTop: 4 }}>
                     <Button onClick={onClose} disabled={busy}>
-                        取消
+                        {t('viewers.common.cancel')}
                     </Button>
                     <Button type="primary" loading={busy} onClick={handleCreate} style={{ minWidth: 80 }}>
-                        创建
+                        {t('create.createBtn')}
                     </Button>
                 </div>
             }
@@ -193,10 +195,10 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                     <div>
                         <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                             <Database size={13} color="var(--accent)" />
-                            <span>键名 <span style={{ color: '#ef4444' }}>*</span></span>
+                            <span>{t('create.keyName')} <span style={{ color: '#ef4444' }}>*</span></span>
                         </div>
                         <Input
-                            placeholder="例如：user:profile:1001 或 app:config"
+                            placeholder={t('create.keyNamePlaceholder')}
                             value={key}
                             onChange={(e) => setKey(e.target.value)}
                             autoFocus
@@ -207,23 +209,23 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                         <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                                 <Clock size={13} color="var(--accent)" />
-                                <span>过期时间 (TTL)</span>
+                                <span>{t('create.ttl')}</span>
                             </span>
-                            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>秒 (-1永久)</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-dim)', fontWeight: 400 }}>{t('create.secondsPermanent')}</span>
                         </div>
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                             <InputNumber
                                 style={{ flex: 1 }}
                                 value={ttl}
                                 onChange={(v) => setTtl(v ?? -1)}
-                                placeholder="-1 永久"
+                                placeholder={t('create.ttlForever')}
                             />
                             <Select
-                                value={TTL_PRESETS.some((p) => p.value === ttl) ? ttl : undefined}
-                                placeholder="快捷预设"
+                                value={ttlPresets.some((p) => p.value === ttl) ? ttl : undefined}
+                                placeholder={t('create.quickPresets')}
                                 onChange={(v) => setTtl(v)}
                                 style={{ width: 105 }}
-                                options={TTL_PRESETS}
+                                options={ttlPresets}
                             />
                         </div>
                     </div>
@@ -233,7 +235,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                 <div>
                     <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 5 }}>
                         <Layers size={13} color="var(--accent)" />
-                        <span>数据类型 </span>
+                        <span>{t('create.keyType')}</span>
                     </div>
                     <Segmented
                         block
@@ -252,14 +254,14 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                 {/* 3. 动态数据表单 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 12.5, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>数据内容</span>
+                        <span>{t('create.dataContent')}</span>
                         {type === 'string' && (
                             <Space size={6}>
                                 <Button size="small" type="dashed" icon={<Sparkles size={11} />} onClick={beautifyJson}>
-                                    美化 JSON
+                                    {t('create.formatJson')}
                                 </Button>
                                 <Button size="small" type="dashed" icon={<Minimize2 size={11} />} onClick={minifyJson}>
-                                    压缩 JSON
+                                    {t('create.compressJson')}
                                 </Button>
                             </Space>
                         )}
@@ -275,7 +277,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                 height="160px"
                                 lineNumbers={false}
                                 bordered={false}
-                                placeholder="输入字符串或 JSON 内容..."
+                                placeholder={t('create.strPlaceholder')}
                             />
                         </div>
                     )}
@@ -298,7 +300,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                     <Input
                                         size="small"
                                         style={{ width: 160 }}
-                                        placeholder="字段名 (Field)"
+                                        placeholder={t('create.hashFieldPlaceholder')}
                                         value={pair.field}
                                         onChange={(e) => {
                                             const copy = [...hashPairs]
@@ -309,7 +311,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                     <Input
                                         size="small"
                                         style={{ flex: 1 }}
-                                        placeholder="字段值 (Value)"
+                                        placeholder={t('create.hashValuePlaceholder')}
                                         value={pair.value}
                                         onChange={(e) => {
                                             const copy = [...hashPairs]
@@ -334,7 +336,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                 onClick={() => setHashPairs([...hashPairs, { field: '', value: '' }])}
                                 style={{ alignSelf: 'flex-start', marginTop: 2 }}
                             >
-                                添加字段 (Field)
+                                {t('create.addField')}
                             </Button>
                         </div>
                     )}
@@ -358,7 +360,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                     <Input
                                         size="small"
                                         style={{ flex: 1 }}
-                                        placeholder={`元素内容 #${idx + 1}`}
+                                        placeholder={t('create.listItemPlaceholder', { idx: idx + 1 })}
                                         value={item}
                                         onChange={(e) => {
                                             const copy = [...listItems]
@@ -383,7 +385,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                 onClick={() => setListItems([...listItems, ''])}
                                 style={{ alignSelf: 'flex-start', marginTop: 2 }}
                             >
-                                添加元素 (Item)
+                                {t('create.addItem')}
                             </Button>
                         </div>
                     )}
@@ -406,7 +408,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                     <Input
                                         size="small"
                                         style={{ flex: 1 }}
-                                        placeholder={`唯一成员 #${idx + 1}`}
+                                        placeholder={t('create.setMemberPlaceholder', { idx: idx + 1 })}
                                         value={member}
                                         onChange={(e) => {
                                             const copy = [...setMembers]
@@ -431,7 +433,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                 onClick={() => setSetMembers([...setMembers, ''])}
                                 style={{ alignSelf: 'flex-start', marginTop: 2 }}
                             >
-                                添加成员 (Member)
+                                {t('create.addMember')}
                             </Button>
                         </div>
                     )}
@@ -454,7 +456,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                     <Input
                                         size="small"
                                         style={{ flex: 1 }}
-                                        placeholder="成员内容 (Member)"
+                                        placeholder={t('create.zsetMemberPlaceholder')}
                                         value={pair.member}
                                         onChange={(e) => {
                                             const copy = [...zsetPairs]
@@ -465,7 +467,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                     <InputNumber
                                         size="small"
                                         style={{ width: 130 }}
-                                        placeholder="分数 (Score)"
+                                        placeholder={t('create.zsetScorePlaceholder')}
                                         value={pair.score}
                                         onChange={(v) => {
                                             const copy = [...zsetPairs]
@@ -490,7 +492,7 @@ export default function CreateKeyModal({ open, currentDb, onClose, onCreate }: P
                                 onClick={() => setZsetPairs([...zsetPairs, { member: '', score: 0 }])}
                                 style={{ alignSelf: 'flex-start', marginTop: 2 }}
                             >
-                                添加有序成员 (Member + Score)
+                                {t('create.addZsetMember')}
                             </Button>
                         </div>
                     )}

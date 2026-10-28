@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Checkbox, Tooltip, App } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload } from 'lucide-react'
 import ContextMenu, { closedMenu, MenuItem, MenuState } from '@/components/ContextMenu'
 import { ConfirmModal, ConfirmState, PromptModal, PromptState } from '@/components/Modal'
@@ -23,6 +24,7 @@ const emptyPrompt: PromptState = { open: false, title: '', value: '' }
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
 
 export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange }: Props) {
+    const { t } = useTranslation(['file', 'common'])
     const { message } = App.useApp()
     const [path, setPath] = useState(homeDir || '/')
     const [pathInput, setPathInput] = useState(homeDir || '/')
@@ -176,11 +178,11 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
             if (est.isInsufficient) {
                 setConfirm({
                     open: true,
-                    title: '远端存储空间不足',
+                    title: t('file:insufficientSpaceTitle'),
                     danger: true,
-                    message: `上传大小 (${formatSize(est.totalSize)}) 超过远端剩余可用空间 (${formatSize(est.remoteFree)})，是否继续上传？`,
-                    confirmText: '确认上传',
-                    cancelText: '取消',
+                    message: t('file:insufficientSpaceDesc', { totalSize: formatSize(est.totalSize), remoteFree: formatSize(est.remoteFree) }),
+                    confirmText: t('file:confirmUpload'),
+                    cancelText: t('common:cancel'),
                     onConfirm: async () => {
                         setConfirm(emptyConfirm)
                         try {
@@ -225,8 +227,8 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
     const askNewFile = () => {
         setPrompt({
             open: true,
-            title: '新建文件',
-            label: '文件名称',
+            title: t('file:newFileTitle'),
+            label: t('file:newFilePrompt'),
             value: 'new-file.txt',
             onConfirm: async (value) => {
                 setPrompt(emptyPrompt)
@@ -244,8 +246,8 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
     const askNewFolder = () => {
         setPrompt({
             open: true,
-            title: '新建文件夹',
-            label: '文件夹名称',
+            title: t('file:newFolderTitle'),
+            label: t('file:newFolderPrompt'),
             value: 'new-folder',
             onConfirm: async (value) => {
                 setPrompt(emptyPrompt)
@@ -262,8 +264,8 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
     const askRename = (item: FileItem) => {
         setPrompt({
             open: true,
-            title: '重命名',
-            label: '新名称',
+            title: t('file:renameTitle'),
+            label: t('file:renamePrompt'),
             value: item.name,
             onConfirm: async (value) => {
                 setPrompt(emptyPrompt)
@@ -279,13 +281,11 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
 
     const askDelete = (paths: string[]) => {
         if (!paths.length) return
-        const label =
-            paths.length === 1 ? `“${paths[0].split('/').pop()}”` : `选中的 ${paths.length} 个项目`
         setConfirm({
             open: true,
-            title: '删除确认',
+            title: t('file:deleteTitle'),
             danger: true,
-            message: `确定要删除 ${label} 吗？目录将被递归删除，该操作不可恢复。`,
+            message: t('file:deleteConfirm', { count: paths.length }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
@@ -300,27 +300,27 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
 
     const itemMenu = (item: FileItem, targets: string[]): MenuItem[] => [
         ...(item.isDir
-            ? [{ key: 'open', label: '打开', icon: 'folder' as const, onClick: () => load(item.path) }]
-            : [{ key: 'edit', label: '编辑文件', icon: 'edit' as const, disabled: targets.length > 1, onClick: () => askEdit(item) }]),
-        { key: 'download', label: `下载${targets.length > 1 ? ` (${targets.length})` : ''}`, icon: 'download', onClick: () => download(targets) },
-        { key: 'rename', label: '重命名', icon: 'edit', disabled: targets.length > 1, onClick: () => askRename(item) },
-        { key: 'copy', label: '复制路径', icon: 'copy', onClick: async () => { if (await copyText(targets.join('\n'))) message.success('已复制路径') } },
+            ? [{ key: 'open', label: t('file:open'), icon: 'folder' as const, onClick: () => load(item.path) }]
+            : [{ key: 'edit', label: t('file:editFile'), icon: 'edit' as const, disabled: targets.length > 1, onClick: () => askEdit(item) }]),
+        { key: 'download', label: targets.length > 1 ? t('file:downloadWithCount', { count: targets.length }) : t('file:download'), icon: 'download', onClick: () => download(targets) },
+        { key: 'rename', label: t('file:rename'), icon: 'edit', disabled: targets.length > 1, onClick: () => askRename(item) },
+        { key: 'copy', label: t('file:copyPath'), icon: 'copy', onClick: async () => { if (await copyText(targets.join('\n'))) message.success(t('file:copiedPath')) } },
         { key: 'd1', label: '', divider: true },
-        { key: 'upload', label: '上传到当前目录', icon: 'upload', onClick: uploadViaDialog },
-        { key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile },
-        { key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder },
+        { key: 'upload', label: t('file:uploadToCurrent'), icon: 'upload', onClick: uploadViaDialog },
+        { key: 'newFile', label: t('file:newFile'), icon: 'edit', onClick: askNewFile },
+        { key: 'mkdir', label: t('file:newFolder'), icon: 'newFolder', onClick: askNewFolder },
         { key: 'd2', label: '', divider: true },
-        { key: 'delete', label: '删除', icon: 'trash', danger: true, onClick: () => askDelete(targets) },
+        { key: 'delete', label: t('common:delete'), icon: 'trash', danger: true, onClick: () => askDelete(targets) },
     ]
 
     const blankMenu = (): MenuItem[] => [
-        { key: 'upload', label: '上传文件', icon: 'upload', onClick: uploadViaDialog },
-        { key: 'uploadDir', label: '上传文件夹', icon: 'folder', onClick: uploadFolderViaDialog },
-        { key: 'newFile', label: '新建文件', icon: 'edit', onClick: askNewFile },
-        { key: 'mkdir', label: '新建文件夹', icon: 'newFolder', onClick: askNewFolder },
+        { key: 'upload', label: t('file:uploadFile'), icon: 'upload', onClick: uploadViaDialog },
+        { key: 'uploadDir', label: t('file:uploadFolder'), icon: 'folder', onClick: uploadFolderViaDialog },
+        { key: 'newFile', label: t('file:newFile'), icon: 'edit', onClick: askNewFile },
+        { key: 'mkdir', label: t('file:newFolder'), icon: 'newFolder', onClick: askNewFolder },
         { key: 'd1', label: '', divider: true },
-        { key: 'copy', label: '复制当前路径', icon: 'copy', onClick: async () => { if (await copyText(path)) message.success('已复制当前路径') } },
-        { key: 'refresh', label: '刷新', icon: 'refresh', onClick: () => load(path) },
+        { key: 'copy', label: t('file:copyCurrentPath'), icon: 'copy', onClick: async () => { if (await copyText(path)) message.success(t('file:copiedCurrentPath')) } },
+        { key: 'refresh', label: t('common:refresh'), icon: 'refresh', onClick: () => load(path) },
     ]
 
     /* ---------------- 浏览器降级拖拽 ---------------- */
@@ -340,11 +340,11 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                 if (est.isInsufficient) {
                     setConfirm({
                         open: true,
-                        title: '远端存储空间不足',
+                        title: t('file:insufficientSpaceTitle'),
                         danger: true,
-                        message: `上传大小 (${formatSize(est.totalSize)}) 超过远端剩余可用空间 (${formatSize(est.remoteFree)})，是否继续上传？`,
-                        confirmText: '确认上传',
-                        cancelText: '取消',
+                        message: t('file:insufficientSpaceDesc', { totalSize: formatSize(est.totalSize), remoteFree: formatSize(est.remoteFree) }),
+                        confirmText: t('file:confirmUpload'),
+                        cancelText: t('common:cancel'),
                         onConfirm: async () => {
                             setConfirm(emptyConfirm)
                             try {
@@ -383,7 +383,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
             onDrop={onDrop}
         >
             <div className={fp.fileToolbar} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Tooltip title="上级目录">
+                <Tooltip title={t('file:parentDir')}>
                     <Button
                         size="small"
                         type="text"
@@ -391,7 +391,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                         onClick={() => load(parentRemote(path))}
                     />
                 </Tooltip>
-                <Tooltip title="主目录">
+                <Tooltip title={t('file:homeDir')}>
                     <Button
                         size="small"
                         type="text"
@@ -399,7 +399,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                         onClick={() => load(homeDir || '/')}
                     />
                 </Tooltip>
-                <Tooltip title="刷新">
+                <Tooltip title={t('common:refresh')}>
                     <Button
                         size="small"
                         type="text"
@@ -422,7 +422,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                     size="small"
                     className={fp.filterInput}
                     value={filter}
-                    placeholder="过滤..."
+                    placeholder={t('file:filterPlaceholder')}
                     allowClear
                     onChange={(e) => setFilter(e.target.value)}
                 />
@@ -431,19 +431,19 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                         checked={showHidden}
                         onChange={(e) => setShowHidden(e.target.checked)}
                     >
-                        隐藏文件
+                        {t('file:showHidden')}
                     </Checkbox>
                     <Checkbox
                         checked={showTime}
                         onChange={(e) => setShowTime(e.target.checked)}
                     >
-                        修改时间
+                        {t('file:modTime')}
                     </Checkbox>
                     <Checkbox
                         checked={showMode}
                         onChange={(e) => setShowMode(e.target.checked)}
                     >
-                        权限
+                        {t('file:permissions')}
                     </Checkbox>
                 </div>
             </div>
@@ -460,14 +460,14 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                 }}
             >
                 <div className={`${fp.fileRow} ${fp.head}`} style={{ gridTemplateColumns: gridCols }}>
-                    <span className={fp.colName}>名称</span>
-                    <span className={fp.colSize}>大小</span>
-                    {showTime && <span className={fp.colTime}>修改时间</span>}
-                    {showMode && <span className={fp.colMode}>权限</span>}
+                    <span className={fp.colName}>{t('common:name')}</span>
+                    <span className={fp.colSize}>{t('common:size')}</span>
+                    {showTime && <span className={fp.colTime}>{t('file:modTime')}</span>}
+                    {showMode && <span className={fp.colMode}>{t('file:permissions')}</span>}
                 </div>
 
-                {loading && <div className={fp.fileEmpty}>加载中…</div>}
-                {!loading && visible.length === 0 && <div className={fp.fileEmpty}>空目录，拖入文件即可上传</div>}
+                {loading && <div className={fp.fileEmpty}>{t('common:loading')}</div>}
+                {!loading && visible.length === 0 && <div className={fp.fileEmpty}>{t('file:emptyDir')}</div>}
 
                 {!loading &&
                     visible.map((item, index) => (
@@ -510,13 +510,13 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                 }}
             />
             <div className={fp.fileStatus}>
-                <span>{visible.length} 项</span>
+                <span>{t('file:itemsCount', { count: visible.length, defaultValue: `${visible.length} 项` })}</span>
                 <span className={g.spacer} />
             </div>
             {isDropActive && (
                 <div className={fp.dropHint}>
                     <Upload size={28} />
-                    <span>释放以上传到 {path}</span>
+                    <span>{t('file:dropToUpload', { path, defaultValue: `释放以上传到 ${path}` })}</span>
                 </div>
             )}
 

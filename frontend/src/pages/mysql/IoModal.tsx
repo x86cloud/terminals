@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal, Segmented, Input, InputNumber, Alert } from 'antd'
+import { useTranslation } from 'react-i18next'
 
 export interface ExportOptions {
     mode: 'sql' | 'csv' | 'json'
@@ -25,6 +26,7 @@ export default function IoModal(props: {
     onImport: (o: ImportOptions) => void
 }) {
     const { kind, table, sqlText, busy, msg, onClose, onExport, onImport } = props
+    const { t } = useTranslation(['db', 'common'])
     const [mode, setMode] = useState<'sql' | 'csv' | 'json'>('sql')
     const [source, setSource] = useState<'table' | 'query'>('table')
     const [tableName, setTableName] = useState(table)
@@ -45,18 +47,18 @@ export default function IoModal(props: {
         <Modal
             closable={false}
             open={true}
-            title={kind === 'export' ? '导出数据' : '导入数据'}
+            title={kind === 'export' ? t('db:io.exportTitle') : t('db:io.importTitle')}
             onCancel={() => !busy && onClose()}
             onOk={handleOk}
             confirmLoading={busy}
-            okText={kind === 'export' ? '导出' : '选择文件并导入'}
-            cancelText="取消"
+            okText={kind === 'export' ? t('db:io.exportBtn') : t('db:io.importBtn')}
+            cancelText={t('common:cancel')}
             okButtonProps={{ disabled: busy || (kind === 'export' ? !canExport : !canImport) }}
             width={520}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>
                 <div>
-                    <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>格式</label>
+                    <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>{t('db:io.format')}</label>
                     <Segmented
                         size="small"
                         value={mode}
@@ -72,56 +74,56 @@ export default function IoModal(props: {
                 {kind === 'export' ? (
                     <>
                         <div>
-                            <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>来源</label>
+                            <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>{t('db:io.source')}</label>
                             <Segmented
                                 size="small"
                                 value={source}
                                 onChange={(v) => setSource(v as 'table' | 'query')}
                                 options={[
-                                    { label: '当前表', value: 'table', disabled: !table },
-                                    { label: '查询结果', value: 'query' },
+                                    { label: t('db:io.currentTable'), value: 'table', disabled: !table },
+                                    { label: t('db:io.queryResult'), value: 'query' },
                                 ]}
                             />
                         </div>
                         {source === 'table' ? (
                             <div>
-                                <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>表名</label>
-                                <Input value={tableName} onChange={(e) => setTableName(e.target.value)} placeholder="目标表名" />
+                                <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>{t('db:io.tableName')}</label>
+                                <Input value={tableName} onChange={(e) => setTableName(e.target.value)} placeholder={t('db:io.targetTableName')} />
                             </div>
                         ) : (
                             <div>
-                                <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>查询语句（来自 SQL 编辑器）</label>
+                                <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>{t('db:io.querySql')}</label>
                                 <Input.TextArea value={sqlText} readOnly rows={4} style={{ fontFamily: 'monospace', fontSize: 12 }} />
                             </div>
                         )}
                         <div>
-                            <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>限制行数（0 表示不限制）</label>
+                            <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>{t('db:io.limitRows')}</label>
                             <InputNumber min={0} value={limit} onChange={(v) => setLimit(v ?? 0)} style={{ width: '100%' }} />
                         </div>
                     </>
                 ) : (
                     <div>
                         <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                            {mode === 'sql' ? '目标数据库' : '目标表名'}（CSV/JSON 必填）
+                            {mode === 'sql' ? t('db:io.targetDb') : t('db:io.targetTableName')}{t('db:io.csvJsonReq')}
                         </label>
                         <Input
                             value={tableName}
                             onChange={(e) => setTableName(e.target.value)}
-                            placeholder={mode === 'sql' ? '可选，留空使用当前库' : '导入到的表名'}
+                            placeholder={mode === 'sql' ? t('db:io.sqlDbPlaceholder') : t('db:io.importTablePlaceholder')}
                         />
                         <div style={{ fontSize: 12, color: 'var(--text-dim)', marginTop: 6 }}>
-                            {mode === 'sql' ? '将逐条执行文件中的 SQL 语句（支持多语句）。'
-                                : mode === 'json' ? 'JSON 为对象数组，键对应列名。'
-                                    : 'CSV 首行为列名，其余为数据行，空单元格写入 NULL。'}
+                            {mode === 'sql' ? t('db:io.sqlHint')
+                                : mode === 'json' ? t('db:io.jsonHint')
+                                    : t('db:io.csvHint')}
                         </div>
                     </div>
                 )}
 
                 {msg && (
                     <Alert
-                        type={msg.startsWith('失败') ? 'error' : 'success'}
+                        type={msg.includes('失败') || msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') ? 'error' : 'success'}
                         showIcon
-                        message={msg}
+                        title={msg}
                     />
                 )}
             </div>

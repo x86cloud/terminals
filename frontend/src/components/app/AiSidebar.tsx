@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AppSettings } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -16,6 +17,7 @@ const MIN_WIDTH = 340
 const MAX_WIDTH = 800
 
 export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps) {
+    const { t } = useTranslation('common')
     const { aiSidebarOpen, setAiSidebarOpen } = useSession()
 
     const [width, setWidth] = useState<number>(() => {
@@ -92,7 +94,7 @@ export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps
                 <div
                     className={`${s.resizeHandle} ${isResizing ? s.resizing : ''}`}
                     onMouseDown={handleMouseDown}
-                    title="拖拽调整 AI 侧边栏宽度"
+                    title={t('dragResizeAiSidebar', '拖拽调整 AI 侧边栏宽度')}
                 />
             )}
             <div
@@ -103,7 +105,7 @@ export default function AiSidebar({ settings, onUpdateSettings }: AiSidebarProps
                 }}
             >
                 <ErrorBoundary
-                    title="AI 智能体渲染异常"
+                    title={t('errorBoundary.aiAgent', 'AI 智能体渲染异常')}
                     onClose={handleClose}
                 >
                     <AiAgentPanel

@@ -1,5 +1,6 @@
 import { Component, ErrorInfo, ReactNode } from 'react'
 import { Button, Result, Space } from 'antd'
+import i18n from '@/i18n'
 import s from './ErrorBoundary.module.less'
 
 interface Props {
@@ -37,16 +38,16 @@ export default class ErrorBoundary extends Component<Props, State> {
                 <div className={s.errorContainer}>
                     <Result
                         status="error"
-                        title={this.props.title || '页面渲染异常'}
-                        subTitle={this.state.error?.message || '发生了未捕获的渲染错误'}
+                        title={this.props.title || i18n.t('common:errorBoundary.defaultTitle', '页面渲染异常')}
+                        subTitle={this.state.error?.message || i18n.t('common:errorBoundary.defaultMessage', '发生了未捕获的渲染错误')}
                         extra={
                             <Space size={12}>
                                 <Button type="primary" onClick={this.handleReset}>
-                                    重试加载
+                                    {i18n.t('common:retry', '重试加载')}
                                 </Button>
                                 {this.props.onClose && (
                                     <Button onClick={this.props.onClose}>
-                                        关闭标签页
+                                        {i18n.t('common:closeTab', '关闭标签页')}
                                     </Button>
                                 )}
                             </Space>

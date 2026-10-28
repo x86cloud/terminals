@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input, Button, Table, Tag, Tooltip, Alert, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Power } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { SSHProcessInfo } from '@/types'
 import { errorMessage } from '@/utils'
@@ -28,6 +29,7 @@ function fmtBytes(bytes: number): string {
 }
 
 export default function ProcessPanel({ sessionId, active }: Props) {
+    const { t } = useTranslation(['ssh', 'common'])
     const { message } = App.useApp()
     const [procs, setProcs] = useState<SSHProcessInfo[]>([])
     const [busy, setBusy] = useState(false)
@@ -59,7 +61,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
-            message.error(`读取进程列表失败: ${msg}`)
+            message.error(msg)
         } finally {
             setBusy(false)
             setLoaded(true)
@@ -86,19 +88,19 @@ export default function ProcessPanel({ sessionId, active }: Props) {
     const handleKill = (proc: SSHProcessInfo) => {
         setConfirm({
             open: true,
-            title: '结束进程确认',
+            title: t('ssh:process.killTitle'),
             danger: true,
-            message: `确认要发送 SIGKILL (kill -9) 结束进程 ${proc.command.split(' ')[0]} (PID: ${proc.pid}) 吗？`,
+            message: t('ssh:process.killMessage', { name: proc.command.split(' ')[0], pid: proc.pid }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
                     await API.sshKillProcess(sessionId, proc.pid)
-                    message.success(`已成功结束进程 PID ${proc.pid}`)
+                    message.success(t('ssh:process.killSuccess', { pid: proc.pid }))
                     await fetchProcesses()
                 } catch (e) {
                     const msg = errorMessage(e)
                     setError(msg)
-                    message.error(`结束进程失败: ${msg}`)
+                    message.error(msg)
                 }
             },
         })
@@ -106,7 +108,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
 
     const columns: ColumnsType<SSHProcessInfo> = [
         {
-            title: 'PID',
+            title: t('ssh:process.pid'),
             dataIndex: 'pid',
             key: 'pid',
             width: 80,
@@ -114,7 +116,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
             render: (pid) => <Tag color="blue">{pid}</Tag>,
         },
         {
-            title: '用户',
+            title: t('ssh:process.user'),
             dataIndex: 'user',
             key: 'user',
             width: 90,
@@ -122,7 +124,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
             render: (u) => <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{u}</span>,
         },
         {
-            title: 'CPU %',
+            title: t('ssh:process.cpuPercent'),
             dataIndex: 'cpu',
             key: 'cpu',
             width: 85,
@@ -135,7 +137,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
             ),
         },
         {
-            title: 'MEM %',
+            title: t('ssh:process.memPercent'),
             dataIndex: 'mem',
             key: 'mem',
             width: 85,
@@ -143,7 +145,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
             render: (mem) => `${mem.toFixed(1)}%`,
         },
         {
-            title: 'RSS 内存',
+            title: 'RSS',
             dataIndex: 'rss',
             key: 'rss',
             width: 100,
@@ -151,18 +153,18 @@ export default function ProcessPanel({ sessionId, active }: Props) {
             render: (rss) => fmtBytes(rss),
         },
         {
-            title: '进程命令',
+            title: t('ssh:process.command'),
             dataIndex: 'command',
             key: 'command',
             ellipsis: true,
             render: (cmd) => <span title={cmd} style={{ fontFamily: 'monospace', fontSize: 12 }}>{cmd}</span>,
         },
         {
-            title: '操作',
+            title: t('common:actions'),
             key: 'action',
             width: 60,
             render: (_, record) => (
-                <Tooltip title={`结束进程 (PID: ${record.pid})`}>
+                <Tooltip title={`${t('ssh:process.kill')} (PID: ${record.pid})`}>
                     <Button
                         size="small"
                         type="text"
@@ -184,20 +186,20 @@ export default function ProcessPanel({ sessionId, active }: Props) {
                     size="small"
                     className={p.searchInput}
                     value={keyword}
-                    placeholder="搜索 PID / 用户 / 命令..."
+                    placeholder={t('ssh:process.searchPlaceholder')}
                     prefix={<Search size={13} />}
                     allowClear
                     onChange={(e) => setKeyword(e.target.value)}
                 />
                 <div className={p.toolbarActions}>
-                    {lastUpdate && <span className={p.lastUpdate}>更新于 {lastUpdate}</span>}
+                    {lastUpdate && <span className={p.lastUpdate}>{t('ssh:process.updatedAt', { time: lastUpdate })}</span>}
                     <Button
                         size="small"
                         icon={<RotateCw size={12} />}
                         loading={busy}
                         onClick={fetchProcesses}
                     >
-                        刷新
+                        {t('common:refresh')}
                     </Button>
                 </div>
             </div>
@@ -210,7 +212,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
                     className={p.alertBox}
                     action={
                         <Button size="small" type="primary" danger onClick={fetchProcesses}>
-                            重试
+                            {t('common:retry')}
                         </Button>
                     }
                 />
@@ -229,7 +231,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
                         total: filtered.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (t) => `共 ${t} 个进程`,
+                        showTotal: (total) => `${t('common:total', { defaultValue: '共' })} ${total}`,
                         size: 'small',
                         onChange: (p, ps) => {
                             setPage(p)

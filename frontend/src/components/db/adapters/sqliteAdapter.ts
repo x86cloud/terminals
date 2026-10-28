@@ -1,4 +1,5 @@
 import { API } from '@/api'
+import i18n from '@/i18n'
 import { ColumnFilterState } from '@/components/ColumnFilterPopover'
 import {
     DbAdapter,
@@ -298,7 +299,7 @@ export function createSqliteAdapter(
             if (res && res.rows && res.rows[0] && res.rows[0].sql) {
                 return res.rows[0].sql + ';'
             }
-            return '-- 未能获取到 DDL'
+            return i18n.t('db:adapters.cannotGetDdl')
         },
 
         async generateAlterTableSql(currentCols: DbColumnMeta[], origCols: DbColumnMeta[]): Promise<AlterTablePlan> {
@@ -333,11 +334,11 @@ export function createSqliteAdapter(
             let warning: string | undefined
 
             if (droppedCols.length > 0) {
-                warning = `警告：本次修改将永久删除 [${droppedCols.map((c) => c.name).join(', ')}] 列及其所有数据！`
+                warning = i18n.t('db:adapters.warnDropCol', { cols: droppedCols.map((c) => c.name).join(', ') })
             }
 
             if (requiresRebuild) {
-                const rebuildWarning = `⚠️ SQLite 原生不支持直接修改列的数据类型/默认值/主键/可空性约束。本次操作将通过安全事务临时表（12 步迁移法）进行全表数据迁移与重建。`
+                const rebuildWarning = i18n.t('db:adapters.sqliteRebuildWarning')
                 warning = warning ? `${warning}\n${rebuildWarning}` : rebuildWarning
 
                 const tempTableName = `${tableName}_dg_tmp`
@@ -554,8 +555,7 @@ export function createSqliteAdapter(
             return {
                 sqls,
                 isRebuild: true,
-                warning:
-                    '⚠️ SQLite 原生不支持 ALTER TABLE 动态添加约束。本次将通过 12 步事务临时表进行全表数据迁移与重建，已自动包裹在安全事务中。',
+                warning: i18n.t('db:adapters.sqliteAddConstraintWarning'),
             }
         },
 
@@ -623,7 +623,7 @@ export function createSqliteAdapter(
             return {
                 sqls,
                 isRebuild: true,
-                warning: `⚠️ SQLite 原生不支持 ALTER TABLE 动态删除约束。本次将通过 12 步事务临时表进行全表数据迁移与重建，已自动包裹在安全事务中。`,
+                warning: i18n.t('db:adapters.sqliteDropConstraintWarning'),
             }
         },
 
@@ -653,7 +653,7 @@ export function createSqliteSqlAdapter(
         serverId: sessionId,
         dbName: dbTitle,
         defaultSql: `SELECT name, type, sql FROM sqlite_master WHERE type IN ('table', 'view');`,
-        placeholder: '-- 输入 SQLite SQL 语句，按 Ctrl+Enter 快速执行',
+        placeholder: i18n.t('db:sql.defaultInputPlaceholder', { dialect: 'SQLite' }),
 
         async runSql(sql: string): Promise<DbQueryResult> {
             const t0 = performance.now()

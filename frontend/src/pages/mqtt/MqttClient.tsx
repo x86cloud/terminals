@@ -26,6 +26,7 @@ import {
     Filter,
     Layers,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API, subscribe } from '@/api'
 import CodeEditor from '@/components/CodeEditor'
 import { errorMessage } from '@/utils'
@@ -69,6 +70,7 @@ const MAX_MESSAGES = 1000
 const DISPLAY_LIMIT = 150
 
 export default function MqttClient({ session, onClose }: Props) {
+    const { t } = useTranslation(['server', 'common'])
     const [subs, setSubs] = useState<MqttSubscription[]>([])
     const [messages, setMessages] = useState<MqttMessage[]>([])
     const [subTopic, setSubTopic] = useState('')
@@ -156,14 +158,14 @@ export default function MqttClient({ session, onClose }: Props) {
     }, [session.id, reloadSubs, flushMessages])
 
     // Stats
-    const totalIn = useMemo(() => messages.filter((m) => m.dir === 'in').length, [messages])
-    const totalOut = useMemo(() => messages.filter((m) => m.dir === 'out').length, [messages])
+    const totalIn = useMemo(() => messages.filter((msgItem) => msgItem.dir === 'in').length, [messages])
+    const totalOut = useMemo(() => messages.filter((msgItem) => msgItem.dir === 'out').length, [messages])
 
     // Topic message counts
     const topicCounts = useMemo(() => {
         const counts: Record<string, number> = {}
-        messages.forEach((m) => {
-            counts[m.topic] = (counts[m.topic] || 0) + 1
+        messages.forEach((msgItem) => {
+            counts[msgItem.topic] = (counts[msgItem.topic] || 0) + 1
         })
         return counts
     }, [messages])
@@ -208,15 +210,15 @@ export default function MqttClient({ session, onClose }: Props) {
 
     // Actions
     const doSubscribe = async () => {
-        const t = subTopic.trim()
-        if (!t) {
-            setError('请输入要订阅的主题')
+        const tTopic = subTopic.trim()
+        if (!tTopic) {
+            setError(t('mqtt.client.inputSubTopicReq'))
             return
         }
         setBusy(true)
         setError('')
         try {
-            await API.mqttSubscribe(session.id, t, subQos)
+            await API.mqttSubscribe(session.id, tTopic, subQos)
             await reloadSubs()
             setSubTopic('')
             setShowAddSub(false)
@@ -242,21 +244,21 @@ export default function MqttClient({ session, onClose }: Props) {
     }
 
     const doPublish = async () => {
-        const t = pubTopic.trim()
-        if (!t) {
-            setError('请输入发布主题')
+        const tTopic = pubTopic.trim()
+        if (!tTopic) {
+            setError(t('mqtt.client.inputPubTopicReq'))
             return
         }
         setBusy(true)
         setError('')
         try {
-            await API.mqttPublish(session.id, t, pubPayload, pubQos, pubRetained)
+            await API.mqttPublish(session.id, tTopic, pubPayload, pubQos, pubRetained)
             const now = Date.now()
             setMessages((prev) => {
                 const next = prev.concat({
                     id: `${now}-${++msgSeqRef.current}`,
                     dir: 'out',
-                    topic: t,
+                    topic: tTopic,
                     payload: pubPayload,
                     qos: pubQos,
                     retained: pubRetained,
@@ -277,7 +279,7 @@ export default function MqttClient({ session, onClose }: Props) {
             const obj = JSON.parse(pubPayload)
             setPubPayload(JSON.stringify(obj, null, 2))
         } catch (e) {
-            setError('当前内容不是合法的 JSON 格式')
+            setError(t('mqtt.client.invalidJson'))
         }
     }
 
@@ -286,7 +288,7 @@ export default function MqttClient({ session, onClose }: Props) {
             const obj = JSON.parse(pubPayload)
             setPubPayload(JSON.stringify(obj))
         } catch (e) {
-            setError('当前内容不是合法的 JSON 格式')
+            setError(t('mqtt.client.invalidJson'))
         }
     }
 
@@ -315,7 +317,7 @@ export default function MqttClient({ session, onClose }: Props) {
                         </div>
                         <span className={`${m.statusPill} ${status.connected ? m.connected : m.disconnected}`}>
                             <span className={`${m.statusDot} ${status.connected ? m.pulsing : ''}`} />
-                            {status.connected ? '已连接' : '已断开'}
+                            {status.connected ? t('mqtt.client.connected') : t('mqtt.client.disconnected')}
                         </span>
                     </div>
 
@@ -332,7 +334,7 @@ export default function MqttClient({ session, onClose }: Props) {
                     <div className={m.subSectionHeader}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                             <Layers size={13} color="var(--accent)" />
-                            <span>订阅列表</span>
+                            <span>{t('mqtt.client.subList')}</span>
                             <Tag style={{ borderRadius: 10, fontSize: 10, lineHeight: '14px', padding: '0 5px' }}>
                                 {subs.length}
                             </Tag>
@@ -342,9 +344,9 @@ export default function MqttClient({ session, onClose }: Props) {
                             type={showAddSub ? 'primary' : 'dashed'}
                             icon={showAddSub ? <ChevronUp size={12} /> : <Plus size={12} />}
                             onClick={() => setShowAddSub(!showAddSub)}
-                            title="添加新主题订阅"
+                            title={t('mqtt.client.addSubTitle')}
                         >
-                            {showAddSub ? '收起' : '订阅'}
+                            {showAddSub ? t('mqtt.client.collapse') : t('mqtt.client.subscribe')}
                         </Button>
                     </div>
 
@@ -353,7 +355,7 @@ export default function MqttClient({ session, onClose }: Props) {
                         <div className={m.subAddInline}>
                             <Input
                                 size="small"
-                                placeholder="主题，如 sensor/# 或 home/+"
+                                placeholder={t('mqtt.client.subPlaceholder')}
                                 value={subTopic}
                                 onChange={(e) => setSubTopic(e.target.value)}
                                 onPressEnter={doSubscribe}
@@ -377,7 +379,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                     loading={busy}
                                     onClick={doSubscribe}
                                 >
-                                    确认订阅
+                                    {t('mqtt.client.confirmSub')}
                                 </Button>
                             </div>
                         </div>
@@ -388,8 +390,8 @@ export default function MqttClient({ session, onClose }: Props) {
                         {subs.length === 0 && !showAddSub && (
                             <div style={{ padding: '24px 12px', textAlign: 'center', color: 'var(--text-dim)', fontSize: 12 }}>
                                 <Inbox size={28} style={{ opacity: 0.3, marginBottom: 6 }} />
-                                <div>暂无订阅主题</div>
-                                <div style={{ fontSize: 11, marginTop: 2 }}>点击上方按钮添加订阅</div>
+                                <div>{t('mqtt.client.noSubs')}</div>
+                                <div style={{ fontSize: 11, marginTop: 2 }}>{t('mqtt.client.noSubsHint')}</div>
                             </div>
                         )}
 
@@ -402,7 +404,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                     key={s.topic}
                                     className={`${m.subItem}${isFilteringThis ? ' ' + m.active : ''}`}
                                     onClick={() => setFilterTopic(isFilteringThis ? '' : s.topic)}
-                                    title={isFilteringThis ? '点击清除当前主题筛选' : '点击仅查看此主题消息'}
+                                    title={isFilteringThis ? t('mqtt.client.clearFilterHint') : t('mqtt.client.filterTopicHint')}
                                 >
                                     <div className={m.subTopicInfo}>
                                         <div className={m.subTopicTitle} style={{ color: topicColor }}>
@@ -414,14 +416,14 @@ export default function MqttClient({ session, onClose }: Props) {
                                             </Tag>
                                             {count > 0 && (
                                                 <span style={{ fontSize: 10.5, color: 'var(--text-dim)' }}>
-                                                    {count} 条消息
+                                                    {t('mqtt.client.messagesCount', { count })}
                                                 </span>
                                             )}
                                         </div>
                                     </div>
 
                                     <div className={m.subActions} onClick={(e) => e.stopPropagation()}>
-                                        <Tooltip title="快速以此主题发布">
+                                        <Tooltip title={t('mqtt.client.quickPublish')}>
                                             <Button
                                                 size="small"
                                                 type="text"
@@ -429,7 +431,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                                 onClick={() => fillToPublish(s.topic)}
                                             />
                                         </Tooltip>
-                                        <Tooltip title="取消订阅">
+                                        <Tooltip title={t('mqtt.client.unsubscribe')}>
                                             <Button
                                                 size="small"
                                                 type="text"
@@ -457,9 +459,9 @@ export default function MqttClient({ session, onClose }: Props) {
                             value={dirFilter}
                             onChange={(v) => setDirFilter(v as any)}
                             options={[
-                                { label: `全部 (${messages.length})`, value: 'all' },
-                                { label: `📥 接收 (${totalIn})`, value: 'in' },
-                                { label: `📤 发送 (${totalOut})`, value: 'out' },
+                                { label: t('mqtt.client.allMessages', { count: messages.length }), value: 'all' },
+                                { label: t('mqtt.client.incomingMessages', { count: totalIn }), value: 'in' },
+                                { label: t('mqtt.client.outgoingMessages', { count: totalOut }), value: 'out' },
                             ]}
                         />
 
@@ -468,7 +470,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                 <Filter size={11} />
                                 <span>{filterTopic}</span>
                                 <span
-                                    title="清除主题筛选"
+                                    title={t('mqtt.client.clearFilter')}
                                     onClick={() => setFilterTopic('')}
                                     style={{ display: 'inline-flex', cursor: 'pointer', marginLeft: 2 }}
                                 >
@@ -480,16 +482,16 @@ export default function MqttClient({ session, onClose }: Props) {
                         <Input
                             size="small"
                             style={{ width: 180 }}
-                            placeholder="搜索主题或内容..."
+                            placeholder={t('mqtt.client.searchPlaceholder')}
                             prefix={<Search size={12} color="var(--text-dim)" />}
                             value={searchKeyword}
                             onChange={(e) => setSearchKeyword(e.target.value)}
                             allowClear
                         />
 
-                        <span style={{ fontSize: 11.5, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
-                            显示 <strong>{filteredMessages.length}</strong> / {messages.length} 条
-                        </span>
+                        <span style={{ fontSize: 11.5, color: 'var(--text-dim)', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{
+                            __html: t('mqtt.client.showingCount', { count: filteredMessages.length, total: messages.length })
+                        }} />
                     </div>
 
                     <div className={m.streamRightControls}>
@@ -501,17 +503,17 @@ export default function MqttClient({ session, onClose }: Props) {
                             onChange={(e) => setAutoScroll(e.target.checked)}
                             style={{ fontSize: 12 }}
                         >
-                            自动滚屏
+                            {t('mqtt.client.autoScroll')}
                         </Checkbox>
                         <Button
                             size="small"
                             onClick={() => setMessages([])}
                             disabled={messages.length === 0}
-                            title="清空当前消息流"
+                            title={t('mqtt.client.clearStream')}
                         >
-                            清空
+                            {t('mqtt.client.clearStream')}
                         </Button>
-                        <Tooltip title="关闭 MQTT 客户端">
+                        <Tooltip title={t('mqtt.client.closeClient')}>
                             <Button size="small" type="text" icon={<X size={14} />} onClick={onClose} />
                         </Tooltip>
                     </div>
@@ -523,12 +525,12 @@ export default function MqttClient({ session, onClose }: Props) {
                         <div className={m.emptyStream}>
                             <Inbox size={40} style={{ opacity: 0.3 }} />
                             <div className={m.emptyTitle}>
-                                {messages.length === 0 ? '暂无实时消息' : '未匹配到符合条件的消息'}
+                                {messages.length === 0 ? t('mqtt.client.emptyLiveTitle') : t('mqtt.client.emptyMatchTitle')}
                             </div>
                             <div className={m.emptySubtitle}>
                                 {messages.length === 0
-                                    ? '订阅主题并发布或接收消息后，实时消息流将在此展示'
-                                    : '请尝试更换搜索关键词或重置筛选条件'}
+                                    ? t('mqtt.client.emptyLiveHint')
+                                    : t('mqtt.client.emptyMatchHint')}
                             </div>
                         </div>
                     )}
@@ -542,7 +544,7 @@ export default function MqttClient({ session, onClose }: Props) {
                             borderBottom: '1px dashed var(--border-color, rgba(140, 140, 140, 0.2))',
                             marginBottom: 6,
                         }}>
-                            已展示最新 {DISPLAY_LIMIT} 条消息（当前筛选共 {filteredMessages.length} 条）
+                            {t('mqtt.client.showingLimit', { limit: DISPLAY_LIMIT, count: filteredMessages.length })}
                         </div>
                     )}
 
@@ -562,7 +564,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                             color={isIncoming ? 'success' : 'processing'}
                                             style={{ margin: 0, fontSize: 10, lineHeight: '16px', padding: '0 4px' }}
                                         >
-                                            {isIncoming ? '📥 接收' : '📤 发送'}
+                                            {isIncoming ? t('mqtt.client.incomingTag') : t('mqtt.client.outgoingTag')}
                                         </Tag>
                                         <span
                                             className={m.msgCardTopic}
@@ -583,7 +585,7 @@ export default function MqttClient({ session, onClose }: Props) {
 
                                     <div className={m.msgCardMetaRight}>
                                         <div className={m.cardHoverActions}>
-                                            <Tooltip title={isCopied ? '已复制' : '复制 Payload'}>
+                                            <Tooltip title={isCopied ? t('mqtt.client.copied') : t('mqtt.client.copyPayload')}>
                                                 <Button
                                                     size="small"
                                                     type="text"
@@ -591,7 +593,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                                     onClick={() => copyPayload(msg.payload, msgId)}
                                                 />
                                             </Tooltip>
-                                            <Tooltip title="以此主题发布">
+                                            <Tooltip title={t('mqtt.client.publishThisTopic')}>
                                                 <Button
                                                     size="small"
                                                     type="text"
@@ -599,7 +601,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                                     onClick={() => fillToPublish(msg.topic, msg.payload)}
                                                 />
                                             </Tooltip>
-                                            <Tooltip title="仅看此主题">
+                                            <Tooltip title={t('mqtt.client.onlyThisTopic')}>
                                                 <Button
                                                     size="small"
                                                     type="text"
@@ -625,7 +627,7 @@ export default function MqttClient({ session, onClose }: Props) {
                         <Input
                             style={{ flex: 1 }}
                             size="small"
-                            placeholder="发布主题，如 sensor/temperature/1"
+                            placeholder={t('mqtt.client.pubTopicPlaceholder')}
                             value={pubTopic}
                             onChange={(e) => setPubTopic(e.target.value)}
                             onPressEnter={doPublish}
@@ -648,26 +650,26 @@ export default function MqttClient({ session, onClose }: Props) {
                             onChange={(e) => setPubRetained(e.target.checked)}
                             style={{ fontSize: 12 }}
                         >
-                            保留 (Retain)
+                            {t('mqtt.client.retain')}
                         </Checkbox>
 
                         <Space size={4}>
-                            <Tooltip title="美化 JSON 格式">
+                            <Tooltip title={t('mqtt.client.beautifyTitle')}>
                                 <Button
                                     size="small"
                                     icon={<Sparkles size={12} />}
                                     onClick={beautifyJson}
                                 >
-                                    美化
+                                    {t('mqtt.client.beautify')}
                                 </Button>
                             </Tooltip>
-                            <Tooltip title="压缩为单行 JSON">
+                            <Tooltip title={t('mqtt.client.minifyTitle')}>
                                 <Button
                                     size="small"
                                     icon={<Minimize2 size={12} />}
                                     onClick={minifyJson}
                                 >
-                                    压缩
+                                    {t('mqtt.client.minify')}
                                 </Button>
                             </Tooltip>
                         </Space>
@@ -679,10 +681,10 @@ export default function MqttClient({ session, onClose }: Props) {
                             loading={busy}
                             onClick={doPublish}
                         >
-                            发送
+                            {t('mqtt.client.send')}
                         </Button>
 
-                        <Tooltip title={publishDockExpanded ? '收起编辑器' : '展开编辑器'}>
+                        <Tooltip title={publishDockExpanded ? t('mqtt.client.collapseEditor') : t('mqtt.client.expandEditor')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -702,7 +704,7 @@ export default function MqttClient({ session, onClose }: Props) {
                                 minHeight="160px"
                                 bordered={false}
                                 lineNumbers={false}
-                                placeholder="输入发布内容（Ctrl/Cmd + Enter 快速发布）"
+                                placeholder={t('mqtt.client.editorPlaceholder')}
                                 onModEnter={doPublish}
                             />
                         </div>

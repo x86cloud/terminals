@@ -3,8 +3,8 @@
 
 .aiSidebar {
     position: relative;
-    height: calc(100% - 8px);
-    margin-bottom: 8px;
+    height: 100%;
+    margin-bottom: 0;
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
@@ -14,7 +14,7 @@
     z-index: 20;
     overflow: hidden;
     border-top-left-radius: @radius-lg;
-    border-bottom-left-radius: @radius-lg;
+    border-bottom-left-radius: 0;
     transition: width 0.28s cubic-bezier(0.2, 0, 0, 1), opacity 0.22s ease;
 
     &.noTransition {
@@ -46,7 +46,7 @@
     background: transparent;
     transition: background 0.2s ease;
     border-top-left-radius: @radius-lg;
-    border-bottom-left-radius: @radius-lg;
+    border-bottom-left-radius: 0;
 
     &:hover,
     &.resizing {
@@ -64,8 +64,8 @@
     background: @bg-1;
     border-left: 1px solid @border;
     border-top: 1px solid @border;
-    border-bottom: 1px solid @border;
+    border-bottom: none;
     border-top-left-radius: @radius-lg;
-    border-bottom-left-radius: @radius-lg;
+    border-bottom-left-radius: 0;
     box-sizing: border-box;
 }

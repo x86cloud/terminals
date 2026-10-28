@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, Form, Input, Select, Radio, Alert, App } from 'antd'
 import { Link2, Sparkles, AlertTriangle } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
@@ -14,13 +15,6 @@ interface CreateConstraintModalProps {
     onCancel: () => void
 }
 
-const CASCADE_OPTIONS = [
-    { value: 'RESTRICT', label: 'RESTRICT (拒绝变更)' },
-    { value: 'CASCADE', label: 'CASCADE (级联更新/删除)' },
-    { value: 'SET NULL', label: 'SET NULL (置为空值)' },
-    { value: 'NO ACTION', label: 'NO ACTION (不作处理)' },
-]
-
 export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
     open,
     tableName,
@@ -29,6 +23,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
     onSuccess,
     onCancel,
 }) => {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [constraintType, setConstraintType] = useState<'FOREIGN KEY' | 'CHECK'>('FOREIGN KEY')
     const [name, setName] = useState('')
@@ -46,6 +41,13 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
     const [targetCols, setTargetCols] = useState<string[]>([])
     const [loadingTables, setLoadingTables] = useState(false)
     const [loadingCols, setLoadingCols] = useState(false)
+
+    const cascadeOptions = useMemo(() => [
+        { value: 'RESTRICT', label: t('db:modals.createConstraint.restrict') },
+        { value: 'CASCADE', label: t('db:modals.createConstraint.cascade') },
+        { value: 'SET NULL', label: t('db:modals.createConstraint.setNull') },
+        { value: 'NO ACTION', label: t('db:modals.createConstraint.noAction') },
+    ], [t])
 
     // 重置与加载表列表
     useEffect(() => {
@@ -111,7 +113,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
             setTargetCols([])
             setForeignCol('')
         }
-    }, [foreignTable, tableName, columns, adapter])
+    }, [foreignTable, tableName, columns, foreignCol, adapter])
 
     // 智能建议约束名称
     useEffect(() => {
@@ -139,7 +141,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
 
         if (!name.trim() || !adapter.previewCreateConstraintSql) {
             setPreviewState({
-                sqlText: '-- 请完整填写约束名称与必要参数',
+                sqlText: t('db:modals.createConstraint.tipIncomplete'),
                 isRebuild: false,
             })
             return
@@ -147,7 +149,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
 
         if (constraintType === 'FOREIGN KEY' && (!localCol || !foreignTable || !foreignCol)) {
             setPreviewState({
-                sqlText: '-- 请选择外键对应的本地字段、引用目标表及引用目标字段',
+                sqlText: t('db:modals.createConstraint.tipSelectFk'),
                 isRebuild: false,
             })
             return
@@ -155,7 +157,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
 
         if (constraintType === 'CHECK' && !checkExpr.trim()) {
             setPreviewState({
-                sqlText: '-- 请输入检查约束表达式',
+                sqlText: t('db:modals.createConstraint.tipInputCheck'),
                 isRebuild: false,
             })
             return
@@ -201,7 +203,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
         } catch (e: any) {
             if (active) {
                 setPreviewState({
-                    sqlText: '-- 生成 SQL 失败: ' + (e.message || e),
+                    sqlText: t('db:modals.createConstraint.generateSqlFail', { msg: e.message || e }),
                     isRebuild: false,
                 })
             }
@@ -210,29 +212,29 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
         return () => {
             active = false
         }
-    }, [constraintType, name, localCol, foreignTable, foreignCol, onDelete, onUpdate, checkExpr, adapter])
+    }, [constraintType, name, localCol, foreignTable, foreignCol, onDelete, onUpdate, checkExpr, adapter, t])
 
     const handleOk = async () => {
         const cleanName = name.trim()
         if (!cleanName) {
-            message.warning('请输入约束名称')
+            message.warning(t('db:modals.createConstraint.enterName'))
             return
         }
 
         if (constraintType === 'FOREIGN KEY') {
             if (!localCol || !foreignTable || !foreignCol) {
-                message.warning('请完整选择外键本地字段、引用目标表及引用目标字段')
+                message.warning(t('db:modals.createConstraint.incompleteFk'))
                 return
             }
         } else {
             if (!checkExpr.trim()) {
-                message.warning('请输入检查约束表达式')
+                message.warning(t('db:modals.createConstraint.enterCheck'))
                 return
             }
         }
 
         if (!adapter.createConstraint) {
-            message.error('当前驱动不支持在线创建约束')
+            message.error(t('db:modals.createConstraint.unsupportedCreateConstraint'))
             return
         }
 
@@ -248,10 +250,10 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                 onUpdate,
                 checkExpr: checkExpr.trim(),
             })
-            message.success(`约束 [${cleanName}] 创建成功！`)
+            message.success(t('db:modals.createConstraint.createSuccess', { name: cleanName }))
             onSuccess()
         } catch (e: any) {
-            message.error('创建约束失败: ' + (e.message || e))
+            message.error(t('db:modals.createConstraint.createFail', { msg: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -263,7 +265,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Link2 size={17} style={{ color: '#722ed1' }} />
                     <span>
-                        新建约束 - <code style={{ fontSize: 13, color: '#e06c75' }}>{tableName}</code>
+                        {t('db:modals.createConstraint.title', { tableName })}
                     </span>
                 </div>
             }
@@ -271,28 +273,28 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
             onCancel={loading ? undefined : onCancel}
             onOk={handleOk}
             confirmLoading={loading}
-            okText="确定创建"
-            cancelText="取消"
+            okText={t('common:ok')}
+            cancelText={t('common:cancel')}
             width={680}
             destroyOnClose
             maskClosable={false}
         >
             <Form layout="vertical" style={{ marginTop: 16 }}>
-                <Form.Item label="约束类型 (Constraint Type)">
+                <Form.Item label={t('db:modals.createConstraint.typeLabel')}>
                     <Radio.Group
                         value={constraintType}
                         onChange={(e) => setConstraintType(e.target.value)}
                         optionType="button"
                         buttonStyle="solid"
                     >
-                        <Radio.Button value="FOREIGN KEY">外键约束 (Foreign Key)</Radio.Button>
-                        <Radio.Button value="CHECK">检查约束 (Check)</Radio.Button>
+                        <Radio.Button value="FOREIGN KEY">{t('db:modals.createConstraint.typeFk')}</Radio.Button>
+                        <Radio.Button value="CHECK">{t('db:modals.createConstraint.typeCheck')}</Radio.Button>
                     </Radio.Group>
                 </Form.Item>
 
-                <Form.Item label="约束名称 (Constraint Name)" required>
+                <Form.Item label={t('db:modals.createConstraint.nameLabel')} required>
                     <Input
-                        placeholder="如 fk_orders_user_id"
+                        placeholder={t('db:modals.createConstraint.namePlaceholder')}
                         value={name}
                         onChange={(e) => {
                             setIsCustomName(true)
@@ -300,7 +302,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                         }}
                         suffix={
                             !isCustomName && localCol ? (
-                                <span title="智能自动命名" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                <span title={t('db:modals.createIndex.smartNaming')} style={{ display: 'inline-flex', alignItems: 'center' }}>
                                     <Sparkles size={13} style={{ color: '#fa8c16' }} />
                                 </span>
                             ) : undefined
@@ -311,52 +313,52 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                 {constraintType === 'FOREIGN KEY' && (
                     <>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-                            <Form.Item label="本表字段 (Column)" required>
+                            <Form.Item label={t('db:modals.createConstraint.colLabel')} required>
                                 <Select
-                                    placeholder="选择字段"
+                                    placeholder={t('db:modals.createConstraint.colPlaceholder')}
                                     value={localCol}
                                     onChange={(val) => setLocalCol(val)}
-                                    options={columns.map((c) => ({ value: c, label: c }))}
+                                    options={columns.map((colName) => ({ value: colName, label: colName }))}
                                 />
                             </Form.Item>
 
-                            <Form.Item label="引用目标表 (Ref Table)" required>
+                            <Form.Item label={t('db:modals.createConstraint.refTableLabel')} required>
                                 <Select
                                     showSearch
-                                    placeholder="选择引用的表"
+                                    placeholder={t('db:modals.createConstraint.refTablePlaceholder')}
                                     loading={loadingTables}
                                     value={foreignTable || undefined}
                                     onChange={(val) => setForeignTable(val)}
-                                    options={tables.map((t) => ({ value: t, label: t }))}
+                                    options={tables.map((tName) => ({ value: tName, label: tName }))}
                                 />
                             </Form.Item>
 
-                            <Form.Item label="引用字段 (Ref Column)" required>
+                            <Form.Item label={t('db:modals.createConstraint.refColLabel')} required>
                                 <Select
-                                    placeholder="选择目标字段"
+                                    placeholder={t('db:modals.createConstraint.refColPlaceholder')}
                                     loading={loadingCols}
                                     disabled={!foreignTable}
                                     value={foreignCol || undefined}
                                     onChange={(val) => setForeignCol(val)}
-                                    options={targetCols.map((c) => ({ value: c, label: c }))}
+                                    options={targetCols.map((colName) => ({ value: colName, label: colName }))}
                                 />
                             </Form.Item>
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            <Form.Item label="删除规则 (ON DELETE)">
+                            <Form.Item label={t('db:modals.createConstraint.onDeleteLabel')}>
                                 <Select
                                     value={onDelete}
                                     onChange={(val) => setOnDelete(val)}
-                                    options={CASCADE_OPTIONS}
+                                    options={cascadeOptions}
                                 />
                             </Form.Item>
 
-                            <Form.Item label="更新规则 (ON UPDATE)">
+                            <Form.Item label={t('db:modals.createConstraint.onUpdateLabel')}>
                                 <Select
                                     value={onUpdate}
                                     onChange={(val) => setOnUpdate(val)}
-                                    options={CASCADE_OPTIONS}
+                                    options={cascadeOptions}
                                 />
                             </Form.Item>
                         </div>
@@ -365,12 +367,12 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
 
                 {constraintType === 'CHECK' && (
                     <Form.Item
-                        label="检查条件表达式 (Check Expression)"
+                        label={t('db:modals.createConstraint.checkExprLabel')}
                         required
-                        tooltip="输入标准的 SQL 逻辑表达式，如 age >= 0 AND age <= 150"
+                        tooltip={t('db:modals.createConstraint.checkExprTooltip')}
                     >
                         <Input
-                            placeholder="如 status IN ('pending', 'active', 'closed')"
+                            placeholder={t('db:modals.createConstraint.checkExprPlaceholder')}
                             value={checkExpr}
                             onChange={(e) => setCheckExpr(e.target.value)}
                         />
@@ -382,13 +384,13 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
                         type="warning"
                         showIcon
                         icon={<AlertTriangle size={15} />}
-                        message="表重建与迁移提醒"
+                        message={t('db:modals.createConstraint.rebuildNotice')}
                         description={previewState.warning}
                         style={{ marginBottom: 12 }}
                     />
                 )}
 
-                <Form.Item label="即将执行的 DDL 语句预览">
+                <Form.Item label={t('db:modals.createConstraint.ddlPreview')}>
                     <CodeEditor
                         value={previewState.sqlText}
                         onChange={() => {}}

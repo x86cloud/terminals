@@ -1,6 +1,7 @@
 import React from 'react'
 import { Tag } from 'antd'
 import { API } from '@/api'
+import i18n from '@/i18n'
 import { buildMysqlWhereClause } from '@/components/ColumnFilterPopover'
 import {
     DbAdapter,
@@ -71,7 +72,7 @@ function renderMysqlPlanNode(node: any): any {
                 React.createElement(
                     'span',
                     { style: { color: 'var(--text-secondary)', fontSize: 12 } },
-                    `扫描行数: ${t.rows_examined_per_scan ?? t.rows ?? '-'} ${t.filtered ? ` | 过滤率: ${t.filtered}%` : ''}`
+                    `${i18n.t('db:adapters.mysqlExamined', { rows: t.rows_examined_per_scan ?? t.rows ?? '-' })}${t.filtered ? i18n.t('db:adapters.mysqlFiltered', { filtered: t.filtered }) : ''}`
                 )
             ),
         }
@@ -295,7 +296,7 @@ export function createMysqlAdapter(
                     JSON.stringify(res.rows[0])
                 return createSql + ';'
             }
-            return '-- 未能获取到 DDL'
+            return i18n.t('db:adapters.cannotGetDdl')
         },
 
         async exportToFile(mode: 'csv' | 'json', limit = 0): Promise<string> {
@@ -366,7 +367,7 @@ export function createMysqlAdapter(
             return {
                 sqls,
                 isRebuild: false,
-                warning: droppedCols.length > 0 ? `警告：本次修改将永久删除 [${droppedCols.map((c) => c.name).join(', ')}] 列及其所有数据！` : undefined,
+                warning: droppedCols.length > 0 ? i18n.t('db:adapters.warnDropCol', { cols: droppedCols.map((c) => c.name).join(', ') }) : undefined,
             }
         },
 
@@ -445,7 +446,7 @@ export function createMysqlSqlAdapter(serverId: string, dbName: string): DbSqlEd
         serverId,
         dbName,
         defaultSql: `SELECT table_name, table_rows, data_length, create_time FROM information_schema.tables WHERE table_schema = '${dbName}' LIMIT 20;`,
-        placeholder: '-- 输入 MySQL SQL 语句，按 Ctrl+Enter 快速执行',
+        placeholder: i18n.t('db:sql.defaultInputPlaceholder', { dialect: 'MySQL' }),
 
         async runSql(sql: string): Promise<DbQueryResult> {
             const t0 = performance.now()

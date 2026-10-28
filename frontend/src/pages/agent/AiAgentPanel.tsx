@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Button, Modal, Space, Tooltip, Input } from 'antd'
 import { Trash2, AlertTriangle, PanelRightClose, Plus, History } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { AppSettings, AgentHitlConfirmRequest } from '@/types'
 import { useAgentSessions } from './hooks/useAgentSessions'
@@ -20,6 +21,7 @@ interface Props {
 }
 
 export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSettings, onClose }: Props) => {
+    const { t } = useTranslation(['agent', 'common'])
     const [noticeText, setNoticeText] = useState<string>('')
     const [pendingAsk, setPendingAsk] = useState<any>(null)
     const [pendingHitl, setPendingHitl] = useState<AgentHitlConfirmRequest | null>(null)
@@ -47,7 +49,7 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
     } = useAgentSessions()
 
     const handleStartEditTitle = () => {
-        setEditingTitleValue(currentSession?.title || '新会话')
+        setEditingTitleValue(currentSession?.title || t('newSessionDefault', '新会话'))
         setIsEditingTitle(true)
     }
 
@@ -136,8 +138,8 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                             ...st,
                             status: approved ? 'running' : 'completed',
                             summary: approved
-                                ? '已审批允许，正在执行...'
-                                : `用户已拒绝执行${reason ? ` (理由: ${reason})` : ''}`,
+                                ? t('agent:hitlModal.approvedExecuting', { defaultValue: '已审批允许，正在执行...' })
+                                : t('agent:hitlModal.rejectedExecution', { reason: reason ? ` (${t('common:reason', { defaultValue: '理由' })}: ${reason})` : '', defaultValue: `用户已拒绝执行${reason ? ` (理由: ${reason})` : ''}` }),
                         }
                     }
                     return st
@@ -174,13 +176,15 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                     if (
                         st.id === askId ||
                         (st.title?.includes('ask_user') && st.status === 'running') ||
-                        (st.title === '交互询问' && st.status === 'running')
+                        (st.title?.includes(t('agent:askUser.interactiveAsk', { defaultValue: '交互询问' })) && st.status === 'running')
                     ) {
                         found = true
                         return {
                             ...st,
                             status: 'completed',
-                            summary: answer ? `已回复: ${answer}` : '用户已取消/忽略',
+                            summary: answer
+                                ? t('agent:askUser.answered', { answer, defaultValue: `已回复: ${answer}` })
+                                : t('agent:askUser.canceled', { defaultValue: '用户已取消/忽略' }),
                         }
                     }
                     return st
@@ -189,8 +193,10 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                     last.process_steps.push({
                         id: `ask_${Date.now()}`,
                         type: 'tool',
-                        title: '交互询问',
-                        summary: answer ? `已回复: ${answer}` : '用户已取消/忽略',
+                        title: t('agent:askUser.interactiveAsk', { defaultValue: '交互询问' }),
+                        summary: answer
+                            ? t('agent:askUser.answered', { answer, defaultValue: `已回复: ${answer}` })
+                            : t('agent:askUser.canceled', { defaultValue: '用户已取消/忽略' }),
                         content: '',
                         status: 'completed',
                         timestamp: Date.now(),
@@ -259,12 +265,12 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                                     className={s.titleInput}
                                 />
                             ) : (
-                                <Tooltip title="点击重命名会话">
+                                <Tooltip title={t('renameTip', '点击重命名会话')}>
                                     <span
                                         className={s.sessionTitleText}
                                         onClick={handleStartEditTitle}
                                     >
-                                        {currentSession?.title || '新会话'}
+                                        {currentSession?.title || t('newSessionDefault', '新会话')}
                                     </span>
                                 </Tooltip>
                             )}
@@ -272,7 +278,7 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                     </div>
 
                     <div className={s.actions}>
-                        <Tooltip title="新增会话">
+                        <Tooltip title={t('newChat', '新增会话')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -280,7 +286,7 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                                 onClick={() => createSession()}
                             />
                         </Tooltip>
-                        <Tooltip title="历史会话">
+                        <Tooltip title={t('history', '历史会话')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -288,7 +294,7 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                                 onClick={() => setShowHistoryModal(true)}
                             />
                         </Tooltip>
-                        <Tooltip title="清空会话历史">
+                        <Tooltip title={t('clearChat', '清空会话历史')}>
                             <Button
                                 size="small"
                                 type='primary'
@@ -298,7 +304,7 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                             />
                         </Tooltip>
                         {onClose && (
-                            <Tooltip title="收起智能体">
+                            <Tooltip title={t('collapse', '收起智能体')}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -373,7 +379,7 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                 title={
                     <Space size={6}>
                         <AlertTriangle size={18} color="#faad14" />
-                        <span>确认清空会话历史</span>
+                        <span>{t('clearHistoryTitle', '确认清空会话历史')}</span>
                     </Space>
                 }
                 onCancel={() => setShowClearConfirm(false)}
@@ -381,11 +387,11 @@ export const AiAgentPanel: React.FC<Props> = React.memo(({ settings, onUpdateSet
                     await clearMessages()
                     setShowClearConfirm(false)
                 }}
-                okText="确定清空"
+                okText={t('confirmClear', '确定清空')}
                 okButtonProps={{ danger: true }}
-                cancelText="取消"
+                cancelText={t('common:cancel', '取消')}
             >
-                <p style={{ margin: '8px 0', fontSize: 14 }}>确定要清空当前的全部对话记录吗？清空后不可恢复。</p>
+                <p style={{ margin: '8px 0', fontSize: 14 }}>{t('clearHistoryDesc', '确定要清空当前的全部对话记录吗？清空后不可恢复。')}</p>
             </Modal>
 
             {/* HITL High Risk Action Confirmation Modal */}

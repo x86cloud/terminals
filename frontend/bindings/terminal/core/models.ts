@@ -67,6 +67,11 @@ export interface AppSettings {
      * "ask" | "minimize" | "quit"
      */
     "closeAction": string;
+
+    /**
+     * "system" | "zh-CN" | "en-US"
+     */
+    "language": string;
 }
 
 export interface AppVersionInfo {

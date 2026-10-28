@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react'
 import { Dropdown, Button, Tooltip } from 'antd'
 import type { MenuProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { X, ChevronDown, Check } from 'lucide-react'
 import s from './TabBar.module.less'
 
@@ -41,6 +42,7 @@ export default function TabBar({
     style,
     size = 'middle',
 }: TabBarProps) {
+    const { t } = useTranslation('common')
     const scrollRef = useRef<HTMLDivElement>(null)
     const tabRefs = useRef<Record<string, HTMLDivElement | null>>({})
     const [hasOverflow, setHasOverflow] = useState(false)
@@ -133,25 +135,25 @@ export default function TabBar({
         return [
             {
                 key: 'close',
-                label: '关闭',
+                label: t('close', '关闭'),
                 disabled: !isClosable,
                 onClick: () => executeClose(item.key),
             },
             {
                 key: 'closeAll',
-                label: '全部关闭',
+                label: t('closeAll', '全部关闭'),
                 disabled: !hasAnyClosable,
                 onClick: () => executeCloseAll(),
             },
             {
                 key: 'closeLeft',
-                label: '关闭左侧',
+                label: t('closeLeft', '关闭左侧'),
                 disabled: !hasLeftClosable,
                 onClick: () => executeCloseLeft(item.key),
             },
             {
                 key: 'closeRight',
-                label: '关闭右侧',
+                label: t('closeRight', '关闭右侧'),
                 disabled: !hasRightClosable,
                 onClick: () => executeCloseRight(item.key),
             },
@@ -252,7 +254,7 @@ export default function TabBar({
                             trigger={['click']}
                             placement="bottomRight"
                         >
-                            <Tooltip title="查看全部标签页">
+                            <Tooltip title={t('viewAllTabs', '查看全部标签页')}>
                                 <Button
                                     size="small"
                                     type="text"

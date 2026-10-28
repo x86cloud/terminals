@@ -21,6 +21,7 @@ import {
     Copy,
     ChevronDown,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage, copyText } from '@/utils'
 import { MongoSessionInfo } from '@/types'
@@ -36,40 +37,13 @@ interface Props {
     collectionsMap?: Record<string, string[]>
 }
 
-const TEMPLATES = [
-    {
-        key: 'find',
-        label: 'find 查询模板',
-        content: `{\n  "find": "users",\n  "filter": {},\n  "sort": { "_id": -1 },\n  "limit": 50\n}`,
-    },
-    {
-        key: 'aggregate',
-        label: 'aggregate 聚合管道模板',
-        content: `{\n  "aggregate": "users",\n  "pipeline": [\n    { "$match": {} },\n    { "$limit": 50 }\n  ],\n  "cursor": {}\n}`,
-    },
-    {
-        key: 'count',
-        label: 'count 文档计数',
-        content: `{\n  "count": "users",\n  "query": {}\n}`,
-    },
-    {
-        key: 'distinct',
-        label: 'distinct 唯一值',
-        content: `{\n  "distinct": "users",\n  "key": "status",\n  "query": {}\n}`,
-    },
-    {
-        key: 'serverStatus',
-        label: 'serverStatus 服务器状态',
-        content: `{\n  "serverStatus": 1\n}`,
-    },
-]
-
 export default function MqlEditor({ session, databases, currentDb, onChangeDb, collectionsMap = {} }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const id = session.id
     const [db, setDb] = useState<string>(currentDb || databases[0] || 'admin')
     const [selectedColl, setSelectedColl] = useState<string>('')
-    const [code, setCode] = useState<string>(TEMPLATES[0].content)
+    const [code, setCode] = useState<string>(`{\n  "find": "users",\n  "filter": {},\n  "sort": { "_id": -1 },\n  "limit": 50\n}`)
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
     const [duration, setDuration] = useState(0)
@@ -79,6 +53,34 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
     const [parsedResult, setParsedResult] = useState<any>(null)
     const [resultMode, setResultMode] = useState<'table' | 'json' | 'explain'>('json')
     const [explainText, setExplainText] = useState('')
+
+    const templates = useMemo(() => [
+        {
+            key: 'find',
+            label: t('mongo.mql.findTpl', 'find 查询模板'),
+            content: `{\n  "find": "users",\n  "filter": {},\n  "sort": { "_id": -1 },\n  "limit": 50\n}`,
+        },
+        {
+            key: 'aggregate',
+            label: t('mongo.mql.aggregateTpl', 'aggregate 聚合管道模板'),
+            content: `{\n  "aggregate": "users",\n  "pipeline": [\n    { "$match": {} },\n    { "$limit": 50 }\n  ],\n  "cursor": {}\n}`,
+        },
+        {
+            key: 'count',
+            label: t('mongo.mql.countTpl', 'count 文档计数'),
+            content: `{\n  "count": "users",\n  "query": {}\n}`,
+        },
+        {
+            key: 'distinct',
+            label: t('mongo.mql.distinctTpl', 'distinct 唯一值'),
+            content: `{\n  "distinct": "users",\n  "key": "status",\n  "query": {}\n}`,
+        },
+        {
+            key: 'serverStatus',
+            label: t('mongo.mql.serverStatusTpl', 'serverStatus 服务器状态'),
+            content: `{\n  "serverStatus": 1\n}`,
+        },
+    ], [t])
 
     const collections = useMemo(() => {
         return collectionsMap[db] || []
@@ -101,16 +103,16 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
         try {
             const obj = JSON.parse(code)
             setCode(JSON.stringify(obj, null, 2))
-            message.success('JSON 已格式化')
+            message.success(t('mongo.mql.jsonFormatted', 'JSON 已格式化'))
         } catch {
-            message.warning('当前输入不是有效的 JSON')
+            message.warning(t('mongo.mql.invalidJson', '当前输入不是有效的 JSON'))
         }
     }
 
     // 运行查询
     const handleRun = useCallback(async () => {
         if (!db) {
-            message.warning('请先选择目标数据库')
+            message.warning(t('mongo.mql.selectDbWarn', '请先选择目标数据库'))
             return
         }
         setBusy(true)
@@ -123,13 +125,13 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
             try {
                 cmdObj = JSON.parse(code.trim())
             } catch (err: any) {
-                throw new Error(`JSON 语法解析失败: ${err.message}`)
+                throw new Error(t('mongo.mql.syntaxError', { error: err.message, defaultValue: `JSON 语法解析失败: ${err.message}` }))
             }
 
             // 如果输入的是纯数组，且选了集合，自动包装为 aggregate
             if (Array.isArray(cmdObj)) {
                 if (!selectedColl) {
-                    throw new Error('当前输入为聚合管道数组，请在上方选择目标集合')
+                    throw new Error(t('mongo.mql.pipelineNeedColl', '当前输入为聚合管道数组，请在上方选择目标集合'))
                 }
                 cmdObj = {
                     aggregate: selectedColl,
@@ -260,12 +262,12 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
     }, [resultRows])
 
     const templateMenu: MenuProps = {
-        items: TEMPLATES.map((t) => ({
-            key: t.key,
-            label: t.label,
+        items: templates.map((tItem) => ({
+            key: tItem.key,
+            label: tItem.label,
             onClick: () => {
-                let text = t.content
-                if (selectedColl && (t.key === 'find' || t.key === 'aggregate' || t.key === 'count' || t.key === 'distinct')) {
+                let text = tItem.content
+                if (selectedColl && (tItem.key === 'find' || tItem.key === 'aggregate' || tItem.key === 'count' || tItem.key === 'distinct')) {
                     text = text.replace(/"users"/g, `"${selectedColl}"`)
                 }
                 setCode(text)
@@ -287,7 +289,7 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                             onChangeDb(v)
                         }}
                         options={databases.map((d) => ({ label: d, value: d }))}
-                        placeholder="选择数据库"
+                        placeholder={t('mongo.mql.selectDbPlaceholder', '选择数据库')}
                     />
                     <Select
                         size="small"
@@ -295,18 +297,18 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                         value={selectedColl || undefined}
                         onChange={setSelectedColl}
                         options={collections.map((c) => ({ label: c, value: c }))}
-                        placeholder="选择集合"
+                        placeholder={t('mongo.mql.selectCollPlaceholder', '选择集合')}
                         allowClear
                     />
                     <Dropdown menu={templateMenu}>
                         <Button size="small" icon={<ChevronDown size={12} />}>
-                            指令模板
+                            {t('mongo.mql.cmdTemplates', '指令模板')}
                         </Button>
                     </Dropdown>
                 </Space>
 
                 <Space size={8} style={{ marginLeft: 8 }}>
-                    <Tooltip title="执行当前指令 (快捷键: Ctrl + Enter)">
+                    <Tooltip title={t('mongo.mql.execTooltip', '执行当前指令 (快捷键: Ctrl + Enter)')}>
                         <Button
                             type="primary"
                             size="small"
@@ -314,23 +316,23 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                             loading={busy}
                             onClick={handleRun}
                         >
-                            执行
+                            {t('mongo.mql.execute', '执行')}
                         </Button>
                     </Tooltip>
                     <Button size="small" icon={<FileText size={12} />} loading={busy} onClick={handleExplain}>
-                        Explain 执行计划
+                        {t('mongo.mql.explainBtn', 'Explain 执行计划')}
                     </Button>
                     <Button size="small" icon={<AlignLeft size={12} />} onClick={formatCode}>
-                        格式化
+                        {t('mongo.mql.format', '格式化')}
                     </Button>
                     <Button size="small" icon={<Trash2 size={12} />} onClick={() => setCode('{\n  \n}')}>
-                        清空
+                        {t('mongo.mql.clear', '清空')}
                     </Button>
                 </Space>
 
                 <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {duration > 0 && <Tag color="geekblue">{duration}ms</Tag>}
-                    {resultRows.length > 0 && <Tag color="green">{resultRows.length} 条数据</Tag>}
+                    {resultRows.length > 0 && <Tag color="green">{t('mongo.mql.docsCount', { count: resultRows.length, defaultValue: `${resultRows.length} 条数据` })}</Tag>}
                 </div>
             </div>
 
@@ -342,7 +344,7 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                     value={code}
                     onChange={setCode}
                     height="100%"
-                    placeholder="输入 MongoDB 数据库命令 JSON 或 MQL"
+                    placeholder={t('mongo.mql.editorPlaceholder', '输入 MongoDB 数据库命令 JSON 或 MQL')}
                 />
             </div>
 
@@ -354,9 +356,9 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                         value={resultMode}
                         onChange={(v) => setResultMode(v as any)}
                         options={[
-                            { label: '表格视图', value: 'table', icon: <TableIcon size={12} />, disabled: resultRows.length === 0 },
-                            { label: 'JSON 响应', value: 'json', icon: <Code size={12} /> },
-                            { label: '执行计划', value: 'explain', icon: <FileText size={12} />, disabled: !explainText },
+                            { label: t('mongo.mql.viewTable', '表格视图'), value: 'table', icon: <TableIcon size={12} />, disabled: resultRows.length === 0 },
+                            { label: t('mongo.mql.viewJson', 'JSON 响应'), value: 'json', icon: <Code size={12} /> },
+                            { label: t('mongo.mql.viewExplain', '执行计划'), value: 'explain', icon: <FileText size={12} />, disabled: !explainText },
                         ]}
                     />
 
@@ -367,10 +369,10 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                                 type="text"
                                 icon={<Copy size={12} />}
                                 onClick={async () => {
-                                    if (await copyText(rawResult)) message.success('已复制 JSON 响应')
+                                    if (await copyText(rawResult)) message.success(t('mongo.mql.copyJsonSuccess', '已复制 JSON 响应'))
                                 }}
                             >
-                                复制 JSON
+                                {t('mongo.mql.copyJson', '复制 JSON')}
                             </Button>
                         )}
                         {resultMode === 'explain' && explainText && (
@@ -379,10 +381,10 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                                 type="text"
                                 icon={<Copy size={12} />}
                                 onClick={async () => {
-                                    if (await copyText(explainText)) message.success('已复制执行计划')
+                                    if (await copyText(explainText)) message.success(t('mongo.mql.copyPlanSuccess', '已复制执行计划'))
                                 }}
                             >
-                                复制计划
+                                {t('mongo.mql.copyPlan', '复制计划')}
                             </Button>
                         )}
                     </Space>
@@ -439,8 +441,8 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
                         ) : (
                             !error && (
                                 <div className={e.emptyTip}>
-                                    <span>暂无执行结果</span>
-                                    <span style={{ fontSize: 11 }}>点击上方「执行」或按 Ctrl+Enter 运行 MQL 指令</span>
+                                    <span>{t('mongo.mql.noResult', '暂无执行结果')}</span>
+                                    <span style={{ fontSize: 11 }}>{t('mongo.mql.noResultHint', '点击上方「执行」或按 Ctrl+Enter 运行 MQL 指令')}</span>
                                 </div>
                             )
                         )

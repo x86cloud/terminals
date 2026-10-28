@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
-import { BarChart2, Link as LinkIcon, BookOpen } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Bot, BarChart2, Link as LinkIcon, BookOpen } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import TabBar, { TabItem } from '@/components/common/TabBar'
 import { ConnType } from '@/types'
@@ -7,20 +8,28 @@ import { useSession } from '@/contexts/SessionContext'
 import s from './SessionTabs.module.less'
 
 export default function SessionTabs() {
+    const { t } = useTranslation('sidebar')
     const { sessions, tools, activeTarget, activateTab, closeSession, closeTool } = useSession()
 
     // 计算当前激活的 Tab Key
     const activeKey = useMemo(() => {
-        if (!activeTarget) return null
+        if (!activeTarget || activeTarget.kind === 'aiAgent') return 'aiAgent'
         if (activeTarget.kind === 'devtools') return 'devtools'
         if (activeTarget.kind === 'api') return 'api'
         if (activeTarget.kind === 'wiki') return 'wiki'
         return `${activeTarget.kind}:${activeTarget.id}`
     }, [activeTarget])
 
-    // 生成所有 Tab 项
+    // 生成所有 Tab 项（AI 智能体固定在最左侧第一位且不可关闭）
     const items: TabItem[] = useMemo(() => {
-        const list: TabItem[] = []
+        const list: TabItem[] = [
+            {
+                key: 'aiAgent',
+                label: t('tools.aiAgent', 'AI 智能体'),
+                icon: <Bot size={14} />,
+                closable: false,
+            },
+        ]
 
         sessions.ssh.forEach((s) => {
             list.push({
@@ -115,7 +124,7 @@ export default function SessionTabs() {
         if (tools.devtools.open) {
             list.push({
                 key: 'devtools',
-                label: '开发工具',
+                label: t('tools.devTools', '开发工具'),
                 icon: <BarChart2 size={13} />,
                 closable: true,
             })
@@ -124,7 +133,7 @@ export default function SessionTabs() {
         if (tools.api.open) {
             list.push({
                 key: 'api',
-                label: 'API 调试',
+                label: t('tools.apiDebug', 'API 调试'),
                 icon: <LinkIcon size={13} />,
                 closable: true,
             })
@@ -133,17 +142,21 @@ export default function SessionTabs() {
         if (tools.wiki.open) {
             list.push({
                 key: 'wiki',
-                label: '知识库',
+                label: t('tools.wiki', '知识库'),
                 icon: <BookOpen size={13} />,
                 closable: true,
             })
         }
 
         return list
-    }, [sessions, tools])
+    }, [sessions, tools, t])
 
     // 处理 Tab 切换点击
     const handleChange = (key: string) => {
+        if (key === 'aiAgent') {
+            activateTab('aiAgent')
+            return
+        }
         if (key === 'devtools') {
             activateTab('devtools')
             return
@@ -167,6 +180,9 @@ export default function SessionTabs() {
 
     // 处理 Tab 关闭
     const handleClose = (key: string) => {
+        if (key === 'aiAgent') {
+            return
+        }
         if (key === 'devtools') {
             closeTool('devtools')
             return

@@ -1,4 +1,6 @@
 import React, { useMemo } from 'react'
+import i18n from 'i18next'
+import { useTranslation } from 'react-i18next'
 import { FileText, MessageSquare } from 'lucide-react'
 import s from './SlashCommandMenu.module.less'
 
@@ -16,15 +18,15 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
     {
         key: 'plan',
         command: '/plan',
-        title: '实施方案规划',
-        description: '调研现场并生成实施方案 (implementation_plan.md) 供确认',
+        get title() { return i18n.t('agent:slash.planTitle', { defaultValue: '实施方案规划' }) },
+        get description() { return i18n.t('agent:slash.planDesc', { defaultValue: '调研现场并生成实施方案 (implementation_plan.md) 供确认' }) },
         icon: <FileText size={14} color="#2b90ee" />,
     },
     {
         key: 'grill-me',
         command: '/grill-me',
-        title: '深度需求访谈',
-        description: '交互式提问排查关键分歧与设计决策，逐步理清需求',
+        get title() { return i18n.t('agent:slash.interviewTitle', { defaultValue: '深度需求访谈' }) },
+        get description() { return i18n.t('agent:slash.interviewDesc', { defaultValue: '交互式提问排查关键分歧与设计决策，逐步理清需求' }) },
         icon: <MessageSquare size={14} color="#a855f7" />,
     },
 ]
@@ -43,6 +45,7 @@ export const SlashCommandMenu: React.FC<Props> = ({
     selectedIndex,
     onSelect,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const filteredList = useMemo(() => {
         const query = filterText.toLowerCase().replace(/^\//, '').trim()
         if (!query) return SLASH_COMMANDS
@@ -59,8 +62,8 @@ export const SlashCommandMenu: React.FC<Props> = ({
     return (
         <div className={s.menuOverlay}>
             <div className={s.menuHeader}>
-                <span>快捷指令</span>
-                <span className={s.headerHint}>↑↓ 切换 · Enter 选中 · Esc 退出</span>
+                <span>{t('agent:slash.title', { defaultValue: '快捷指令' })}</span>
+                <span className={s.headerHint}>{t('agent:slash.hint', { defaultValue: '↑↓ 切换 · Enter 选中 · Esc 退出' })}</span>
             </div>
             <div className={s.commandList}>
                 {filteredList.map((cmd, idx) => {

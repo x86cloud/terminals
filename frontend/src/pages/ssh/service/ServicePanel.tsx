@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Segmented, Input, Button, Table, Badge, Modal, Alert, Space, Spin, Tooltip, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Play, Power, FileText } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { SSHServiceInfo } from '@/types'
 import { errorMessage } from '@/utils'
@@ -15,6 +16,7 @@ interface Props {
 type FilterTab = 'all' | 'active' | 'inactive' | 'failed'
 
 export default function ServicePanel({ sessionId, active }: Props) {
+    const { t } = useTranslation(['ssh', 'common'])
     const { message } = App.useApp()
     const [services, setServices] = useState<SSHServiceInfo[]>([])
     const [busy, setBusy] = useState(false)
@@ -52,7 +54,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
-            message.error(`读取 Systemd 服务列表失败: ${msg}`)
+            message.error(msg)
         } finally {
             setBusy(false)
             setLoaded(true)
@@ -100,15 +102,15 @@ export default function ServicePanel({ sessionId, active }: Props) {
     }, [services, filterTab, keyword])
 
     const handleControl = async (svc: SSHServiceInfo, action: 'start' | 'stop' | 'restart') => {
-        const actionText = action === 'start' ? '启动' : action === 'stop' ? '停止' : '重启'
+        const actionText = action === 'start' ? t('ssh:service.start') : action === 'stop' ? t('ssh:service.stop') : t('ssh:service.restart')
         setActionBusy(`${svc.name}-${action}`)
         try {
             await API.sshControlService(sessionId, svc.name, action)
-            message.success(`已成功${actionText}服务 ${svc.name}`)
+            message.success(`${actionText}: ${svc.name}`)
             await fetchServices()
         } catch (e) {
             const msg = errorMessage(e)
-            message.error(`执行 ${actionText} 失败: ${msg}`)
+            message.error(`${actionText} failed: ${msg}`)
         } finally {
             setActionBusy('')
         }
@@ -120,10 +122,10 @@ export default function ServicePanel({ sessionId, active }: Props) {
         setLogText('')
         try {
             const text = await API.sshServiceLogs(sessionId, svc.name)
-            setLogText(text || '（暂无日志输出）')
+            setLogText(text || '')
         } catch (e) {
             const msg = errorMessage(e)
-            setLogText(`读取日志失败: ${msg}`)
+            setLogText(msg)
         } finally {
             setLogLoading(false)
         }
@@ -131,7 +133,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
 
     const columns: ColumnsType<SSHServiceInfo> = [
         {
-            title: '服务名称',
+            title: t('ssh:service.name'),
             dataIndex: 'name',
             key: 'name',
             width: 220,
@@ -139,7 +141,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
             render: (name) => <span style={{ fontWeight: 500, fontFamily: 'monospace' }}>{name}</span>,
         },
         {
-            title: '状态',
+            title: t('ssh:service.status'),
             dataIndex: 'active',
             key: 'active',
             width: 110,
@@ -151,21 +153,21 @@ export default function ServicePanel({ sessionId, active }: Props) {
             },
         },
         {
-            title: '子状态',
+            title: 'Sub',
             dataIndex: 'sub',
             key: 'sub',
             width: 100,
             render: (sub) => <span style={{ color: 'var(--text-dim)', fontSize: 12 }}>{sub}</span>,
         },
         {
-            title: '服务描述',
+            title: t('ssh:service.description'),
             dataIndex: 'description',
             key: 'description',
             ellipsis: true,
             render: (desc) => desc || '-',
         },
         {
-            title: '操作',
+            title: t('common:actions'),
             key: 'actions',
             width: 110,
             render: (_, svc) => {
@@ -173,7 +175,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
                 return (
                     <Space size={2}>
                         {isRunning ? (
-                            <Tooltip title="停止服务">
+                            <Tooltip title={t('ssh:service.stop')}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -184,7 +186,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
                                 />
                             </Tooltip>
                         ) : (
-                            <Tooltip title="启动服务">
+                            <Tooltip title={t('ssh:service.start')}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -194,7 +196,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
                                 />
                             </Tooltip>
                         )}
-                        <Tooltip title="重启服务">
+                        <Tooltip title={t('ssh:service.restart')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -203,7 +205,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
                                 onClick={() => handleControl(svc, 'restart')}
                             />
                         </Tooltip>
-                        <Tooltip title="查看服务日志">
+                        <Tooltip title={t('ssh:service.logs')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -227,10 +229,10 @@ export default function ServicePanel({ sessionId, active }: Props) {
                     value={filterTab}
                     onChange={(v) => setFilterTab(v as FilterTab)}
                     options={[
-                        { label: `全部 (${counts.all})`, value: 'all' },
-                        { label: `运行中 (${counts.active})`, value: 'active' },
-                        { label: `已停止 (${counts.inactive})`, value: 'inactive' },
-                        { label: `失败 (${counts.failed})`, value: 'failed' },
+                        { label: `${t('ssh:service.filterAll')} (${counts.all})`, value: 'all' },
+                        { label: `${t('ssh:service.filterActive')} (${counts.active})`, value: 'active' },
+                        { label: `${t('ssh:service.filterInactive')} (${counts.inactive})`, value: 'inactive' },
+                        { label: `${t('ssh:service.filterFailed')} (${counts.failed})`, value: 'failed' },
                     ]}
                 />
 
@@ -238,21 +240,21 @@ export default function ServicePanel({ sessionId, active }: Props) {
                     size="small"
                     className={s.searchInput}
                     value={keyword}
-                    placeholder="搜索服务名 / 描述..."
+                    placeholder={t('ssh:service.searchPlaceholder')}
                     prefix={<Search size={13} />}
                     allowClear
                     onChange={(e) => setKeyword(e.target.value)}
                 />
 
                 <div className={s.toolbarActions}>
-                    {lastUpdate && <span className={s.lastUpdate}>更新于 {lastUpdate}</span>}
+                    {lastUpdate && <span className={s.lastUpdate}>{t('ssh:service.updatedAt', { time: lastUpdate })}</span>}
                     <Button
                         size="small"
                         icon={<RotateCw size={12} />}
                         loading={busy}
                         onClick={fetchServices}
                     >
-                        刷新
+                        {t('common:refresh')}
                     </Button>
                 </div>
             </div>
@@ -265,7 +267,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
                     className={s.alertBox}
                     action={
                         <Button size="small" type="primary" danger onClick={fetchServices}>
-                            重试
+                            {t('common:retry')}
                         </Button>
                     }
                 />
@@ -284,7 +286,7 @@ export default function ServicePanel({ sessionId, active }: Props) {
                         total: filteredServices.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (t) => `共 ${t} 个服务`,
+                        showTotal: (total) => `${t('common:total', { defaultValue: '共' })} ${total}`,
                         size: 'small',
                         onChange: (p, ps) => {
                             setPage(p)
@@ -297,14 +299,14 @@ export default function ServicePanel({ sessionId, active }: Props) {
 
             <Modal
                 open={!!logService}
-                title={`服务日志: ${logService}`}
+                title={`${t('ssh:service.serviceLogs')}: ${logService}`}
                 onCancel={() => setLogService('')}
                 width={800}
-                footer={<Button onClick={() => setLogService('')}>关闭</Button>}
+                footer={<Button onClick={() => setLogService('')}>{t('common:close')}</Button>}
             >
                 <div className={s.logContainer}>
                     {logLoading ? (
-                        <Spin tip="正在读取 journalctl 日志…" />
+                        <Spin />
                     ) : (
                         <pre style={{ margin: 0, fontFamily: 'Consolas, monospace', fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
                             {logText}

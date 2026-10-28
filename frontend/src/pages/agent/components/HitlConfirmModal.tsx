@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, Button, Tag, Input, Space } from 'antd'
 import { ShieldAlert, Check, X } from 'lucide-react'
 import { AgentHitlConfirmRequest } from '@/types'
@@ -9,6 +10,7 @@ interface Props {
 }
 
 export const HitlConfirmModal: React.FC<Props> = ({ pendingHitl, onResolve }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const [rejectReason, setRejectReason] = useState<string>('')
     const [submitting, setSubmitting] = useState<boolean>(false)
 
@@ -74,10 +76,10 @@ export const HitlConfirmModal: React.FC<Props> = ({ pendingHitl, onResolve }) =>
                         <ShieldAlert size={18} color="#ef4444" />
                         <div>
                             <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-color, #1f2937)' }}>
-                                高风险操作确认
+                                {t('agent:hitlModal.title', { defaultValue: '高风险操作确认' })}
                             </div>
                             <div style={{ fontSize: 12, color: 'var(--text-secondary, #6b7280)', fontWeight: 400 }}>
-                                智能体请求执行以下指令，请核对并决定是否允许
+                                {t('agent:hitlModal.desc', { defaultValue: '智能体请求执行以下指令，请核对并决定是否允许' })}
                             </div>
                         </div>
                     </div>
@@ -96,7 +98,7 @@ export const HitlConfirmModal: React.FC<Props> = ({ pendingHitl, onResolve }) =>
                             loading={submitting}
                             onClick={handleReject}
                         >
-                            拒绝
+                            {t('agent:hitlModal.reject', { defaultValue: '拒绝' })}
                         </Button>
                         <Button
                             type="primary"
@@ -104,7 +106,7 @@ export const HitlConfirmModal: React.FC<Props> = ({ pendingHitl, onResolve }) =>
                             loading={submitting}
                             onClick={handleApprove}
                         >
-                            允许
+                            {t('agent:hitlModal.approve', { defaultValue: '允许' })}
                         </Button>
                     </Space>
                 </div>
@@ -143,12 +145,12 @@ export const HitlConfirmModal: React.FC<Props> = ({ pendingHitl, onResolve }) =>
                 {/* Optional Rejection Reason Field */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary, #6b7280)', fontWeight: 500 }}>
-                        拒绝原因 / 修正建议给大模型（可选）：
+                        {t('agent:hitlModal.rejectReasonLabel', { defaultValue: '拒绝原因 / 修正建议给大模型（可选）：' })}
                     </div>
                     <Input
                         value={rejectReason}
                         onChange={(e) => setRejectReason(e.target.value)}
-                        placeholder="如：请不要删除整个目录，仅清理 build 临时产物..."
+                        placeholder={t('agent:hitlModal.rejectReasonPlaceholder', { defaultValue: '如：请不要删除整个目录，仅清理 build 临时产物...' })}
                         style={{
                             fontSize: 12.5,
                             borderRadius: 6,

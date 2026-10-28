@@ -20,6 +20,7 @@ import {
     Trash2,
     Plus,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
 import type { K8sDeploymentInfo } from '@/types'
@@ -63,6 +64,7 @@ spec:
 `
 
 export default function DeploymentsTab({ serverId, currentNamespace, initialSearchKw }: Props) {
+    const { t } = useTranslation(['k8s', 'common'])
     const { message } = App.useApp()
     const [deployments, setDeployments] = useState<K8sDeploymentInfo[]>([])
     const [loading, setLoading] = useState(false)
@@ -94,7 +96,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
             const list = await API.k8sListDeployments(serverId, currentNamespace)
             setDeployments(list)
         } catch (err: any) {
-            message.error(`获取 Deployment 列表失败: ${err.message || String(err)}`)
+            message.error(t('k8s:deployments.fetchFail', { error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
@@ -112,7 +114,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
             setScaleModalOpen(false)
             fetchDeployments()
         } catch (err: any) {
-            message.error(`扩缩容失败: ${err.message || String(err)}`)
+            message.error(t('k8s:deployments.scaleFail', { error: err.message || String(err) }))
         } finally {
             setScaleLoading(false)
         }
@@ -123,7 +125,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
             await API.k8sRestartDeployment(serverId, record.namespace, record.name)
             fetchDeployments()
         } catch (err: any) {
-            message.error(`重启 Deployment 失败: ${err.message || String(err)}`)
+            message.error(t('k8s:deployments.restartFail', { error: err.message || String(err) }))
         }
     }
 
@@ -132,7 +134,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
             await API.k8sDeleteDeployment(serverId, record.namespace, record.name)
             fetchDeployments()
         } catch (err: any) {
-            message.error(`删除 Deployment 失败: ${err.message || String(err)}`)
+            message.error(t('k8s:deployments.deleteFail', { error: err.message || String(err) }))
         }
     }
 
@@ -160,20 +162,20 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
 
     const columns: ColumnsType<K8sDeploymentInfo> = [
         {
-            title: '应用名称 (Deployment Name)',
+            title: t('k8s:deployments.colName'),
             dataIndex: 'name',
             key: 'name',
             render: (name: string, record) => (
                 <div>
                     <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>{name}</span>
                     <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>
-                        命名空间: <Tag color="blue" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>{record.namespace}</Tag>
+                        {t('k8s:deployments.namespaceLabel')} <Tag color="blue" style={{ fontSize: 10, lineHeight: '16px', padding: '0 4px' }}>{record.namespace}</Tag>
                     </div>
                 </div>
             ),
         },
         {
-            title: '状态 (Status)',
+            title: t('k8s:deployments.colStatus'),
             key: 'status',
             width: 140,
             render: (_, record) => {
@@ -187,14 +189,14 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
             },
         },
         {
-            title: '更新策略',
+            title: t('k8s:deployments.colStrategy'),
             dataIndex: 'strategy',
             key: 'strategy',
             width: 120,
             render: (st: string) => <Tag color="default">{st || 'RollingUpdate'}</Tag>,
         },
         {
-            title: '容器镜像 (Images)',
+            title: t('k8s:deployments.colImages'),
             dataIndex: 'images',
             key: 'images',
             render: (images: string[]) => (
@@ -208,16 +210,16 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
             ),
         },
         {
-            title: '创建时间',
+            title: t('k8s:deployments.colCreatedAt'),
             dataIndex: 'createdAt',
             key: 'createdAt',
             width: 160,
-            render: (t: string) => (
-                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t || '-'}</span>
+            render: (tVal: string) => (
+                <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{tVal || '-'}</span>
             ),
         },
         {
-            title: '操作',
+            title: t('k8s:deployments.colActions'),
             key: 'actions',
             width: 290,
             align: 'right',
@@ -232,17 +234,17 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                             setScaleModalOpen(true)
                         }}
                     >
-                        扩缩容
+                        {t('k8s:deployments.scaleBtn')}
                     </Button>
                     <Popconfirm
-                        title={`确定重启 Deployment [${record.name}] 吗？`}
-                        description="将触发 Rolling Update 滚动平滑重启所有 Pod 副本。"
-                        okText="确认重启"
-                        cancelText="取消"
+                        title={t('k8s:deployments.restartConfirm', { name: record.name })}
+                        description={t('k8s:deployments.restartDesc')}
+                        okText={t('k8s:deployments.confirmRestart')}
+                        cancelText={t('common.cancel')}
                         onConfirm={() => handleRestart(record)}
                     >
                         <Button size="small" icon={<RotateCw size={12} />}>
-                            重启
+                            {t('k8s:deployments.restartBtn')}
                         </Button>
                     </Popconfirm>
                     <Button
@@ -250,18 +252,18 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml(record)}
                     >
-                        编辑
+                        {t('common.edit')}
                     </Button>
                     <Popconfirm
-                        title={`确定删除 Deployment [${record.name}] 吗？`}
-                        description={`所属命名空间: ${record.namespace}。删除后该应用所属的所有 Pod 副本也将被同时销毁，此操作不可逆。`}
-                        okText="确认删除"
-                        cancelText="取消"
+                        title={t('k8s:deployments.deleteConfirm', { name: record.name })}
+                        description={t('k8s:deployments.deleteDescDetail', { namespace: record.namespace, defaultValue: `所属命名空间: ${record.namespace}。删除后该应用所属的所有 Pod 副本也将被同时销毁，此操作不可逆。` })}
+                        okText={t('common.confirm')}
+                        cancelText={t('common.cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteDeployment(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            删除
+                            {t('common.delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -275,7 +277,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
             <div className={s.toolbar}>
                 <div className={s.toolbarLeft}>
                     <Input
-                        placeholder="搜索 Deployment 名称 / 镜像 / 命名空间..."
+                        placeholder={t('k8s:deployments.searchPlaceholder')}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -295,14 +297,14 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                         size="small"
                         onClick={openCreateYaml}
                     >
-                        新建
+                        {t('common.create')}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchDeployments}
                     >
-                        刷新
+                        {t('common.refresh')}
                     </Button>
                 </div>
             </div>
@@ -320,7 +322,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -335,21 +337,21 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <TrendingUp size={16} color="var(--accent)" />
-                        <span>调整副本数量: {activeDeploy?.name}</span>
+                        <span>{t('k8s:deployments.scaleModalTitleWithName', { name: activeDeploy?.name, defaultValue: `调整副本数量: ${activeDeploy?.name}` })}</span>
                     </div>
                 }
                 width={420}
                 onCancel={() => setScaleModalOpen(false)}
                 onOk={handleScale}
                 confirmLoading={scaleLoading}
-                okText="确认调整"
-                cancelText="取消"
+                okText={t('k8s:deployments.scaleSubmit')}
+                cancelText={t('common.cancel')}
             >
                 <div style={{ padding: '12px 0' }}>
                     <div style={{ fontSize: 13, marginBottom: 8, color: 'var(--text-dim)' }}>
-                        命名空间: <Tag color="blue">{activeDeploy?.namespace}</Tag>
+                        {t('k8s:deployments.namespaceLabel')} <Tag color="blue">{activeDeploy?.namespace}</Tag>
                     </div>
-                    <div style={{ fontSize: 13, marginBottom: 8 }}>目标 Pod 副本数 (Replicas):</div>
+                    <div style={{ fontSize: 13, marginBottom: 8 }}>{t('k8s:deployments.scaleTargetLabel')}</div>
                     <InputNumber
                         min={0}
                         max={200}
@@ -358,7 +360,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                         style={{ width: '100%' }}
                     />
                     <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>
-                        提示：设置为 0 时将停止所有副本容器。
+                        {t('k8s:deployments.scaleZeroTip')}
                     </div>
                 </div>
             </Modal>

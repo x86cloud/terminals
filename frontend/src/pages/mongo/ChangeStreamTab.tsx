@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
 import { Select, Button, Space, Tag, App } from 'antd'
 import {Play, X} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import {API, subscribe} from '@/api'
 import {errorMessage} from '@/utils'
 import {MongoSessionInfo, MongoChangeEvent} from '@/types'
@@ -22,6 +23,7 @@ function pretty(text: string): string {
 }
 
 export default function ChangeStreamTab({session, db, collection}: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [scope, setScope] = useState<'deployment' | 'database' | 'collection'>('collection')
     const [pipeline, setPipeline] = useState('[]')
@@ -46,7 +48,7 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
     useEffect(() => {
         subRef.current = subscribe('mongo:change:' + id, (evt: MongoChangeEvent) => {
             if (evt.error) {
-                message.error('变更流错误：' + evt.error)
+                message.error(t('mongo.stream.errorMsg', { error: evt.error, defaultValue: '变更流错误：' + evt.error }))
                 return
             }
             setEvents((prev) => [evt, ...prev].slice(0, 200))
@@ -57,7 +59,7 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
                 API.mongoUnwatch(id, watchKeyRef.current).catch(() => undefined)
             }
         }
-    }, [id])
+    }, [id, t, message])
 
     // 切换库时清空上一个库的事件列表
     useEffect(() => {
@@ -72,13 +74,13 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
             setWatchKey(key)
             setWatching(true)
             setEvents([])
-            message.success('已开启变更流监听：' + key)
+            message.success(t('mongo.stream.started', { key, defaultValue: '已开启变更流监听：' + key }))
         } catch (e) {
             message.error(errorMessage(e))
         } finally {
             setBusy(false)
         }
-    }, [id, scope, db, collection, pipeline, fullDoc])
+    }, [id, scope, db, collection, pipeline, fullDoc, t, message])
 
     const stop = useCallback(async () => {
         try {
@@ -95,36 +97,36 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
             <div className={sh.mongoRow}>
                 {!watching ? (
                     <Button type="primary" size="small" icon={<Play size={13}/>} disabled={busy} onClick={start}>
-                        开始监听
+                        {t('mongo.stream.startWatch', '开始监听')}
                     </Button>
                 ) : (
                     <Button danger size="small" icon={<X size={13}/>} disabled={busy} onClick={stop}>
-                        停止监听
+                        {t('mongo.stream.stopWatch', '停止监听')}
                     </Button>
                 )}
                 <Space size={6}>
-                    <span className={sh.mongoDim}>范围</span>
+                    <span className={sh.mongoDim}>{t('mongo.stream.scopeLabel', '范围')}</span>
                     <Select
                         size="small"
                         style={{ width: 100 }}
                         value={scope}
                         onChange={v => setScope(v as any)}
                         options={[
-                            { value: 'deployment', label: '集群' },
-                            { value: 'database', label: '数据库' },
-                            { value: 'collection', label: '集合' },
+                            { value: 'deployment', label: t('mongo.stream.scopeDeployment', '集群') },
+                            { value: 'database', label: t('mongo.stream.scopeDatabase', '数据库') },
+                            { value: 'collection', label: t('mongo.stream.scopeCollection', '集合') },
                         ]}
                     />
                 </Space>
                 <Space size={6}>
-                    <span className={sh.mongoDim}>完整文档</span>
+                    <span className={sh.mongoDim}>{t('mongo.stream.fullDocLabel', '完整文档')}</span>
                     <Select
                         size="small"
                         style={{ width: 130 }}
                         value={fullDoc}
                         onChange={setFullDoc}
                         options={[
-                            { value: 'default', label: '默认' },
+                            { value: 'default', label: t('mongo.stream.fullDocDefault', '默认') },
                             { value: 'updateLookup', label: 'updateLookup' },
                             { value: 'whenAvailable', label: 'whenAvailable' },
                             { value: 'required', label: 'required' },
@@ -132,27 +134,33 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
                     />
                 </Space>
                 <span className={sh.toolbarRight}>
-                    {watching && <Tag color="processing">监听中 · {events.length} 事件</Tag>}
+                    {watching && <Tag color="processing">{t('mongo.stream.watchingTag', { count: events.length, defaultValue: `监听中 · ${events.length} 事件` })}</Tag>}
                 </span>
             </div>
 
             {(scope === 'database' || scope === 'collection') && !db && (
-                <div className={sh.mongoEmpty}>请先在左上角选择数据库{scope === 'collection' ? '与集合' : ''}</div>
+                <div className={sh.mongoEmpty}>{t('mongo.stream.selectDbCollHint', { detail: scope === 'collection' ? t('mongo.stream.andCollection', '与集合') : '', defaultValue: `请先在左上角选择数据库${scope === 'collection' ? '与集合' : ''}` })}</div>
             )}
 
             <label className={sh.mongoField}>
-                <span>变更流管道（可选，JSON 数组，如只关心 insert）</span>
+                <span>{t('mongo.stream.pipelineLabel', '变更流管道（可选，JSON 数组，如只关心 insert）')}</span>
                 <CodeEditor lang="json" height="72px" value={pipeline} onChange={setPipeline}
                             placeholder='[ { "$match": { "operationType": "insert" } } ]'/>
             </label>
 
             {events.length === 0 ? (
-                <div className={`${sh.mongoEmpty}`}>暂无变更事件</div>
+                <div className={`${sh.mongoEmpty}`}>{t('mongo.stream.noEvents', '暂无变更事件')}</div>
             ) : (
                 <div className={sh.mongoGridWrap}>
                     <table className={sh.mongoTable}>
                         <thead>
-                        <tr><th style={{width: 40}}>#</th><th>操作</th><th>命名空间</th><th>时间</th><th>文档</th></tr>
+                        <tr>
+                            <th style={{width: 40}}>#</th>
+                            <th>{t('mongo.stream.colOp', '操作')}</th>
+                            <th>{t('mongo.stream.colNs', '命名空间')}</th>
+                            <th>{t('mongo.stream.colTime', '时间')}</th>
+                            <th>{t('mongo.stream.colDoc', '文档')}</th>
+                        </tr>
                         </thead>
                         <tbody>
                         {events.map((ev, i) => (
@@ -171,7 +179,7 @@ export default function ChangeStreamTab({session, db, collection}: Props) {
 
             {events.length > 0 && (
                 <>
-                    <div className={sh.mongoH}>最近事件详情</div>
+                    <div className={sh.mongoH}>{t('mongo.stream.latestDetail', '最近事件详情')}</div>
                     <pre className={sh.mongoJson}>{pretty(events[0].document)}</pre>
                 </>
             )}

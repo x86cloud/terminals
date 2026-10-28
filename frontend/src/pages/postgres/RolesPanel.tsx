@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Table, Button, Tag, Input, Modal, Form, Checkbox, InputNumber, Popconfirm, Space, App } from 'antd'
 import { UserPlus, Key, Shield, Trash2, RotateCw, Check, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { PgRole } from './postgresTypes'
 import pg from './RolesPanel.module.less'
@@ -12,6 +13,7 @@ export default function RolesPanel({
     serverId: string
     dbName: string
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [roles, setRoles] = useState<PgRole[]>([])
     const [loading, setLoading] = useState(false)
@@ -38,7 +40,7 @@ export default function RolesPanel({
             const list = await API.postgresRoles(serverId)
             setRoles(list || [])
         } catch (e: any) {
-            message.error(`加载角色失败: ${e.message || e}`)
+            message.error(t('postgres.loadRoleFailed', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -65,13 +67,13 @@ export default function RolesPanel({
             createForm.resetFields()
             loadRoles()
         } catch (e: any) {
-            message.error(`创建失败: ${e.message || e}`)
+            message.error(t('postgres.roles.createFail', { error: e.message || e }))
         }
     }
 
     const handleChangePassword = async () => {
         if (!newPassword.trim()) {
-            message.warning('请输入新密码')
+            message.warning(t('postgres.roles.newPwdReq'))
             return
         }
         try {
@@ -79,7 +81,7 @@ export default function RolesPanel({
             setPwdModalOpen(false)
             setNewPassword('')
         } catch (e: any) {
-            message.error(`修改密码失败: ${e.message || e}`)
+            message.error(t('postgres.roles.updatePwdFail', { error: e.message || e }))
         }
     }
 
@@ -88,13 +90,13 @@ export default function RolesPanel({
             await API.postgresDropRole(serverId, roleName)
             loadRoles()
         } catch (e: any) {
-            message.error(`删除失败: ${e.message || e}`)
+            message.error(t('postgres.roles.dropFail', { error: e.message || e }))
         }
     }
 
     const handleGrant = async (isGrant: boolean) => {
         if (grantPrivs.length === 0) {
-            message.warning('请至少勾选一项权限')
+            message.warning(t('postgres.roles.grantPrivReq'))
             return
         }
         try {
@@ -109,7 +111,7 @@ export default function RolesPanel({
             )
             setGrantModalOpen(false)
         } catch (e: any) {
-            message.error(`操作失败: ${e.message || e}`)
+            message.error(t('postgres.roles.opFail', { error: e.message || e }))
         }
     }
 
@@ -117,9 +119,9 @@ export default function RolesPanel({
         <div className={pg.rolesWrap}>
             <div className={pg.headBar}>
                 <div>
-                    <span style={{ fontSize: 15, fontWeight: 700 }}>角色与权限管理 (Roles & Privileges)</span>
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>{t('postgres.roles.title')}</span>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>
-                        查看系统角色、用户登录属性及 Schema/Table 权限配置
+                        {t('postgres.roles.subtitle')}
                     </div>
                 </div>
 
@@ -130,7 +132,7 @@ export default function RolesPanel({
                         icon={<UserPlus size={14} />}
                         onClick={() => setCreateModalOpen(true)}
                     >
-                        新建角色 / 用户
+                        {t('postgres.roles.createRole')}
                     </Button>
                     <Button
                         size="small"
@@ -149,7 +151,7 @@ export default function RolesPanel({
                     pagination={false}
                     columns={[
                         {
-                            title: '角色名称',
+                            title: t('postgres.roles.colName'),
                             dataIndex: 'name',
                             render: (name, r: PgRole) => (
                                 <span>
@@ -160,37 +162,37 @@ export default function RolesPanel({
                             ),
                         },
                         {
-                            title: '超级用户',
+                            title: t('postgres.roles.colSuper'),
                             dataIndex: 'super',
                             render: (v) => (v ? <Check size={14} style={{ color: '#52c41a' }} /> : <X size={14} style={{ color: 'var(--text-faint)' }} />),
                         },
                         {
-                            title: '允许登录',
+                            title: t('postgres.roles.colCanLogin'),
                             dataIndex: 'canLogin',
                             render: (v) => (v ? <Check size={14} style={{ color: '#52c41a' }} /> : <X size={14} style={{ color: 'var(--text-faint)' }} />),
                         },
                         {
-                            title: '建库权限',
+                            title: t('postgres.roles.colCreateDb'),
                             dataIndex: 'createDb',
                             render: (v) => (v ? <Check size={14} style={{ color: '#52c41a' }} /> : <X size={14} style={{ color: 'var(--text-faint)' }} />),
                         },
                         {
-                            title: '建角色权限',
+                            title: t('postgres.roles.colCreateRole'),
                             dataIndex: 'createRole',
                             render: (v) => (v ? <Check size={14} style={{ color: '#52c41a' }} /> : <X size={14} style={{ color: 'var(--text-faint)' }} />),
                         },
                         {
-                            title: '连接限制',
+                            title: t('postgres.roles.colConnLimit'),
                             dataIndex: 'connLimit',
-                            render: (v) => (v < 0 ? '无限制' : v),
+                            render: (v) => (v < 0 ? t('postgres.roles.unlimited') : v),
                         },
                         {
-                            title: '有效期至',
+                            title: t('postgres.roles.colValidUntil'),
                             dataIndex: 'validUntil',
-                            render: (v) => v || '永久',
+                            render: (v) => v || t('postgres.roles.forever'),
                         },
                         {
-                            title: '操作',
+                            title: t('postgres.roles.colAction'),
                             width: 220,
                             render: (_, r: PgRole) => (
                                 <Space size={6}>
@@ -204,7 +206,7 @@ export default function RolesPanel({
                                             setPwdModalOpen(true)
                                         }}
                                     >
-                                        改密
+                                        {t('postgres.roles.changePwd')}
                                     </Button>
 
                                     <Button
@@ -217,11 +219,11 @@ export default function RolesPanel({
                                             setGrantModalOpen(true)
                                         }}
                                     >
-                                        授权
+                                        {t('postgres.roles.grant')}
                                     </Button>
 
                                     <Popconfirm
-                                        title={`确定要删除角色「${r.name}」吗？`}
+                                        title={t('postgres.roles.dropConfirm', { name: r.name })}
                                         okButtonProps={{ danger: true }}
                                         onConfirm={() => handleDropRole(r.name)}
                                     >
@@ -232,7 +234,7 @@ export default function RolesPanel({
                                             icon={<Trash2 size={13} />}
                                             style={{ padding: 0 }}
                                         >
-                                            删除
+                                            {t('postgres.roles.delete')}
                                         </Button>
                                     </Popconfirm>
                                 </Space>
@@ -244,36 +246,36 @@ export default function RolesPanel({
 
             {/* 新建角色弹窗 */}
             <Modal
-                title="新建角色 / 用户"
+                title={t('postgres.roles.createModalTitle')}
                 open={createModalOpen}
                 onOk={handleCreateRole}
                 onCancel={() => setCreateModalOpen(false)}
-                okText="创建"
-                cancelText="取消"
+                okText={t('postgres.obj.create')}
+                cancelText={t('postgres.obj.cancel')}
             >
                 <Form form={createForm} layout="vertical" initialValues={{ canLogin: true, connLimit: -1 }}>
-                    <Form.Item label="角色名称" name="name" rules={[{ required: true, message: '请输入角色名称' }]}>
-                        <Input placeholder="输入角色名称 (如 app_user, readonly_role)" />
+                    <Form.Item label={t('postgres.roles.roleName')} name="name" rules={[{ required: true, message: t('postgres.roles.roleNameReq') }]}>
+                        <Input placeholder={t('postgres.roles.roleNamePlaceholder')} />
                     </Form.Item>
-                    <Form.Item label="登录密码" name="password">
-                        <Input.Password placeholder="输入密码 (若允许登录)" />
+                    <Form.Item label={t('postgres.roles.password')} name="password">
+                        <Input.Password placeholder={t('postgres.roles.passwordPlaceholder')} />
                     </Form.Item>
-                    <Form.Item label="连接上限" name="connLimit">
-                        <InputNumber style={{ width: '100%' }} placeholder="-1 表示不限制" />
+                    <Form.Item label={t('postgres.roles.connLimit')} name="connLimit">
+                        <InputNumber style={{ width: '100%' }} placeholder={t('postgres.roles.connLimitPlaceholder')} />
                     </Form.Item>
-                    <Form.Item label="权限属性">
+                    <Form.Item label={t('postgres.roles.privAttrs')}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                             <Form.Item name="canLogin" valuePropName="checked" noStyle>
-                                <Checkbox>允许登录 (LOGIN)</Checkbox>
+                                <Checkbox>{t('postgres.roles.attrLogin')}</Checkbox>
                             </Form.Item>
                             <Form.Item name="super" valuePropName="checked" noStyle>
-                                <Checkbox>超级用户 (SUPERUSER)</Checkbox>
+                                <Checkbox>{t('postgres.roles.attrSuper')}</Checkbox>
                             </Form.Item>
                             <Form.Item name="createDb" valuePropName="checked" noStyle>
-                                <Checkbox>创建数据库 (CREATEDB)</Checkbox>
+                                <Checkbox>{t('postgres.roles.attrCreateDb')}</Checkbox>
                             </Form.Item>
                             <Form.Item name="createRole" valuePropName="checked" noStyle>
-                                <Checkbox>创建角色 (CREATEROLE)</Checkbox>
+                                <Checkbox>{t('postgres.roles.attrCreateRole')}</Checkbox>
                             </Form.Item>
                         </div>
                     </Form.Item>
@@ -282,16 +284,16 @@ export default function RolesPanel({
 
             {/* 修改密码弹窗 */}
             <Modal
-                title={`修改角色「${selectedRole}」密码`}
+                title={t('postgres.roles.changePwdModalTitle', { name: selectedRole })}
                 open={pwdModalOpen}
                 onOk={handleChangePassword}
                 onCancel={() => setPwdModalOpen(false)}
-                okText="更新密码"
-                cancelText="取消"
+                okText={t('postgres.roles.updatePwd')}
+                cancelText={t('postgres.obj.cancel')}
             >
                 <div style={{ marginTop: 12 }}>
                     <Input.Password
-                        placeholder="输入新的角色密码"
+                        placeholder={t('postgres.roles.newPwdPlaceholder')}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                     />
@@ -300,29 +302,29 @@ export default function RolesPanel({
 
             {/* 授权管理弹窗 */}
             <Modal
-                title={`为「${grantRole}」配置权限`}
+                title={t('postgres.roles.grantModalTitle', { name: grantRole })}
                 open={grantModalOpen}
                 onCancel={() => setGrantModalOpen(false)}
                 footer={[
                     <Button key="revoke" danger onClick={() => handleGrant(false)}>
-                        撤销权限 (REVOKE)
+                        {t('postgres.roles.revokeBtn')}
                     </Button>,
                     <Button key="grant" type="primary" onClick={() => handleGrant(true)}>
-                        授予权限 (GRANT)
+                        {t('postgres.roles.grantBtn')}
                     </Button>,
                 ]}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>目标 Schema</div>
-                        <Input value={grantSchema} onChange={(e) => setGrantSchema(e.target.value)} placeholder="如 public" />
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.roles.targetSchema')}</div>
+                        <Input value={grantSchema} onChange={(e) => setGrantSchema(e.target.value)} placeholder={t('postgres.roles.targetSchemaPlaceholder')} />
                     </div>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>目标数据表 (留空代表针对整个 Schema)</div>
-                        <Input value={grantTable} onChange={(e) => setGrantTable(e.target.value)} placeholder="如 users, orders (可选)" />
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.roles.targetTable')}</div>
+                        <Input value={grantTable} onChange={(e) => setGrantTable(e.target.value)} placeholder={t('postgres.roles.targetTablePlaceholder')} />
                     </div>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>权限集合</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4 }}>{t('postgres.roles.privCollection')}</div>
                         <Checkbox.Group
                             options={['ALL', 'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER', 'USAGE', 'CREATE']}
                             value={grantPrivs}

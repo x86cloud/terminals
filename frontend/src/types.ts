@@ -1117,6 +1117,7 @@ export interface AppSettings {
     mcpServerPort?: number
     mcpServerHost?: string
     closeAction?: 'ask' | 'minimize' | 'quit'
+    language?: 'system' | 'zh-CN' | 'en-US'
 }
 
 export interface McpServerStatus {

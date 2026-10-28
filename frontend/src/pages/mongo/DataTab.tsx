@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     Button,
     Space,
@@ -56,6 +57,7 @@ interface Props {
 const DEFAULT_LIMIT = 50
 
 export default function DataTab({ session, db, collection, initialSubTab = 'documents', onClose }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const id = session.id
     const [subTab, setSubTab] = useState<'documents' | 'indexes' | 'schema' | 'stream'>(initialSubTab)
@@ -373,7 +375,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
             // 固定 150 字符截断，结尾追加提示，避免 Tooltip 撑爆或溢出
             let preview = fullStr
             if (preview.length > 150) {
-                preview = preview.slice(0, 150) + '\n... 点击查看完整内容与编辑'
+                preview = preview.slice(0, 150) + t('mongo.data.actions.inspectFull', '\n... 点击查看完整内容与编辑')
             }
 
             const label = isArr ? `Array(${val.length})` : Object.keys(val).length ? '{ ... }' : '{}'
@@ -432,7 +434,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
             try {
                 parsedVal = JSON.parse(cellModal.text)
             } catch (err: any) {
-                setCellModalError(`JSON 语法解析失败: ${err?.message || '请检查语法格式'}`)
+                setCellModalError(t('mongo.data.actions.jsonParseFail', { error: err?.message || 'Syntax Error', defaultValue: `JSON 语法解析失败: ${err?.message || '请检查语法格式'}` }))
                 setCellModalBusy(false)
                 return
             }
@@ -462,7 +464,12 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
 
             const res = await API.mongoUpdateOne(id, db, collection, filterSpec, updateSpec, false)
             message.success(
-                `已更新字段 ${cellModal.colKey}（匹配 ${res.matchedCount ?? 1} 条，更新 ${res.modifiedCount ?? 1} 条）`
+                t('mongo.data.actions.updatedField', {
+                    col: cellModal.colKey,
+                    matched: res.matchedCount ?? 1,
+                    modified: res.modifiedCount ?? 1,
+                    defaultValue: `已更新字段 ${cellModal.colKey}（匹配 ${res.matchedCount ?? 1} 条，更新 ${res.modifiedCount ?? 1} 条）`,
+                })
             )
             setCellModal(null)
             void runQuery(page, pageSize)
@@ -486,15 +493,17 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
         const idStr = idVal !== undefined ? JSON.stringify(idVal) : ''
         setConfirm({
             open: true,
-            title: '删除文档',
-            message: idStr ? `确定要删除 _id 为 ${idStr} 的文档吗？` : '确定要删除选中的文档吗？',
+            title: t('mongo.data.actions.deleteDocTitle', '删除文档'),
+            message: idStr
+                ? t('mongo.data.actions.deleteDocConfirmId', { id: idStr, defaultValue: `确定要删除 _id 为 ${idStr} 的文档吗？` })
+                : t('mongo.data.actions.deleteDocConfirm', '确定要删除选中的文档吗？'),
             danger: true,
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
                     const filterSpec = idStr ? `{"_id":${idStr}}` : raw
                     const deletedCount = await API.mongoDeleteOne(id, db, collection, filterSpec)
-                    message.success(`已删除 ${deletedCount} 条文档`)
+                    message.success(t('mongo.data.actions.deletedCount', { count: deletedCount, defaultValue: `已删除 ${deletedCount} 条文档` }))
                     void runQuery(page, pageSize)
                 } catch (e) {
                     message.error(errorMessage(e))
@@ -539,7 +548,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
         try {
             if (editOpen?.mode === 'insert') {
                 await API.mongoInsertOne(id, db, collection, editorText)
-                message.success('文档插入成功')
+                message.success(t('mongo.data.actions.insertSuccess', '文档插入成功'))
             } else if (editOpen?.mode === 'update') {
                 let filterSpec = '{}'
                 if (editOpen.raw) {
@@ -551,7 +560,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     }
                 }
                 const res = await API.mongoUpdateOne(id, db, collection, filterSpec, editorText, false)
-                message.success(`已更新文档（匹配 ${res.matchedCount ?? 1} 条）`)
+                message.success(t('mongo.data.actions.updateSuccess', { matched: res.matchedCount ?? 1, defaultValue: `已更新文档（匹配 ${res.matchedCount ?? 1} 条）` }))
             } else if (editOpen?.mode === 'replace') {
                 let filterSpec = '{}'
                 if (editOpen.raw) {
@@ -563,7 +572,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     }
                 }
                 const res = await API.mongoReplaceOne(id, db, collection, filterSpec, editorText, false)
-                message.success(`已替换文档（匹配 ${res.matchedCount ?? 1} 条）`)
+                message.success(t('mongo.data.actions.replaceSuccess', { matched: res.matchedCount ?? 1, defaultValue: `已替换文档（匹配 ${res.matchedCount ?? 1} 条）` }))
             }
             setEditOpen(null)
             void runQuery(page, pageSize)
@@ -578,14 +587,14 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
     const truncateCollection = () => {
         setConfirm({
             open: true,
-            title: '清空集合',
+            title: t('mongo.data.actions.truncateTitle', '清空集合'),
             danger: true,
-            message: `确定要清空集合 ${collection} 的全部文档吗？此操作不可逆！`,
+            message: t('mongo.data.actions.truncateConfirm', { coll: collection, defaultValue: `确定要清空集合 ${collection} 的全部文档吗？此操作不可逆！` }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
                     const count = await API.mongoDeleteMany(id, db, collection, '{}')
-                    message.success(`已清空 ${count} 条文档`)
+                    message.success(t('mongo.data.actions.truncatedCount', { count, defaultValue: `已清空 ${count} 条文档` }))
                     void runQuery(1, pageSize)
                 } catch (e) {
                     message.error(errorMessage(e))
@@ -626,32 +635,32 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
             {
                 key: 'edit',
                 icon: <Edit size={13} />,
-                label: '编辑文档 ($set)',
+                label: t('mongo.data.actions.editDocSet', '编辑文档 ($set)'),
                 onClick: () => openUpdate(raw),
             },
             {
                 key: 'replace',
                 icon: <FileText size={13} />,
-                label: '替换整个文档',
+                label: t('mongo.data.actions.replaceWholeDoc', '替换整个文档'),
                 onClick: () => openReplace(raw),
             },
             { type: 'divider' },
             {
                 key: 'copy-cell',
                 icon: <Copy size={13} />,
-                label: '复制当前单元格值',
+                label: t('mongo.data.actions.copyCellVal', '复制当前单元格值'),
                 onClick: async () => {
                     const col = contextMenu.col
                     if (col && row[col] !== undefined) {
                         const cellText = typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])
-                        if (await copyText(cellText)) message.success('已复制单元格内容')
+                        if (await copyText(cellText)) message.success(t('mongo.data.actions.copiedCellVal', '已复制单元格内容'))
                     }
                 },
             },
             {
                 key: 'copy-json',
                 icon: <Code size={13} />,
-                label: '复制完整文档 JSON',
+                label: t('mongo.data.actions.copyDocJson', '复制完整文档 JSON'),
                 onClick: async () => {
                     let target = raw
                     try {
@@ -659,7 +668,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     } catch {
                         target = raw
                     }
-                    if (await copyText(target)) message.success('已复制文档 JSON')
+                    if (await copyText(target)) message.success(t('mongo.data.actions.copiedDocJson', '已复制文档 JSON'))
                 },
             },
             ...(idStr
@@ -667,21 +676,21 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     {
                         key: 'copy-id',
                         icon: <Copy size={13} />,
-                        label: `复制 _id (${idStr})`,
-                        onClick: async () => { if (await copyText(idStr)) message.success('已复制 _id 到剪贴板') },
+                        label: t('mongo.data.actions.copyDocId', { id: idStr, defaultValue: `复制 _id (${idStr})` }),
+                        onClick: async () => { if (await copyText(idStr)) message.success(t('mongo.data.actions.copiedDocId', '已复制 _id 到剪贴板')) },
                     },
                 ]
                 : []),
             {
                 key: 'clone-doc',
                 icon: <CopyPlus size={13} />,
-                label: '克隆并插入新文档',
+                label: t('mongo.data.actions.cloneDoc', '克隆并插入新文档'),
                 onClick: async () => {
                     try {
                         const cloned = JSON.parse(raw)
                         delete cloned._id
                         await API.mongoInsertOne(id, db, collection, JSON.stringify(cloned))
-                        message.success('已克隆文档并保存')
+                        message.success(t('mongo.data.actions.cloneSuccess', '已克隆文档并保存'))
                         void runQuery(1, pageSize)
                     } catch (e) {
                         message.error(errorMessage(e))
@@ -693,7 +702,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                 key: 'delete',
                 icon: <Trash2 size={13} />,
                 danger: true,
-                label: '删除此文档',
+                label: t('mongo.data.actions.deleteDoc', '删除此文档'),
                 onClick: () => deleteDoc(raw),
             },
         ]
@@ -710,7 +719,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                         {collection}
                     </span>
                     <span className={d.countBadge}>
-                        <Tag color="blue">{total} 文档</Tag>
+                        <Tag color="blue">{t('mongo.data.actions.totalDocs', { count: total, defaultValue: `${total} 文档` })}</Tag>
                         {duration > 0 && <span style={{ color: 'var(--text-faint)' }}>{duration}ms</span>}
                     </span>
                 </div>
@@ -721,10 +730,10 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     value={subTab}
                     onChange={(v) => setSubTab(v as any)}
                     options={[
-                        { label: '文档数据', value: 'documents', icon: <TableIcon size={12} /> },
-                        { label: '索引管理', value: 'indexes', icon: <Layers size={12} /> },
-                        { label: '结构校验', value: 'schema', icon: <SlidersHorizontal size={12} /> },
-                        { label: '变更流', value: 'stream', icon: <Activity size={12} /> },
+                        { label: t('mongo.data.subTabs.documents', '文档数据'), value: 'documents', icon: <TableIcon size={12} /> },
+                        { label: t('mongo.data.subTabs.indexes', '索引管理'), value: 'indexes', icon: <Layers size={12} /> },
+                        { label: t('mongo.data.subTabs.schema', '结构校验'), value: 'schema', icon: <SlidersHorizontal size={12} /> },
+                        { label: t('mongo.data.subTabs.stream', '变更流'), value: 'stream', icon: <Activity size={12} /> },
                     ]}
                 />
 
@@ -737,8 +746,8 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                 value={viewMode}
                                 onChange={(v) => setViewMode(v as any)}
                                 options={[
-                                    { label: '表格', value: 'table', icon: <TableIcon size={12} /> },
-                                    { label: 'JSON', value: 'json', icon: <Code size={12} /> },
+                                    { label: t('mongo.data.actions.viewTable', '表格'), value: 'table', icon: <TableIcon size={12} /> },
+                                    { label: t('mongo.data.actions.viewJson', 'JSON'), value: 'json', icon: <Code size={12} /> },
                                 ]}
                             />
                             <Button
@@ -747,44 +756,44 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                 icon={<Plus size={12} />}
                                 onClick={openInsert}
                             >
-                                添加文档
+                                {t('mongo.data.actions.insertDoc', '添加文档')}
                             </Button>
                             <Button
                                 size="small"
                                 icon={showBuilder ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
                                 onClick={() => setShowBuilder((v) => !v)}
                             >
-                                查询过滤
+                                {t('mongo.data.actions.queryFilter', '查询过滤')}
                             </Button>
                             <Button
                                 size="small"
                                 icon={<Download size={12} />}
                                 onClick={() => setIoExportOpen(true)}
                             >
-                                导出
+                                {t('mongo.data.actions.export', '导出')}
                             </Button>
                             <Button
                                 size="small"
                                 icon={<BarChart2 size={12} />}
                                 onClick={openStats}
                             >
-                                统计
+                                {t('mongo.data.actions.stats', '统计')}
                             </Button>
                             <Popconfirm
-                                title="确定要清空该集合中的所有文档吗？"
-                                okText="确定清空"
-                                cancelText="取消"
+                                title={t('mongo.data.actions.truncatePopConfirm', '确定要清空该集合中的所有文档吗？')}
+                                okText={t('mongo.data.actions.confirmTruncate', '确定清空')}
+                                cancelText={t('common.cancel', '取消')}
                                 okButtonProps={{ danger: true }}
                                 onConfirm={truncateCollection}
                             >
                                 <Button size="small" danger icon={<Trash2 size={12} />}>
-                                    清空
+                                    {t('mongo.data.actions.truncate', '清空')}
                                 </Button>
                             </Popconfirm>
                         </>
                     )}
 
-                    <Tooltip title="刷新">
+                    <Tooltip title={t('mongo.data.actions.refresh', '刷新')}>
                         <Button
                             size="small"
                             icon={<RotateCw size={12} />}
@@ -800,7 +809,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                 <div className={d.filterBuilder}>
                     <div className={d.filterGrid}>
                         <div className={d.filterField}>
-                            <span className={d.filterLabel}>过滤条件 Filter (JSON)</span>
+                            <span className={d.filterLabel}>{t('mongo.data.filter.queryFilter', '过滤条件 Filter (JSON)')}</span>
                             <CodeEditor
                                 lang="json"
                                 height="65px"
@@ -811,7 +820,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                             />
                         </div>
                         <div className={d.filterField}>
-                            <span className={d.filterLabel}>投影 Projection (可选)</span>
+                            <span className={d.filterLabel}>{t('mongo.data.filter.projection', '投影 Projection (可选)')}</span>
                             <CodeEditor
                                 lang="json"
                                 height="65px"
@@ -822,7 +831,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                             />
                         </div>
                         <div className={d.filterField}>
-                            <span className={d.filterLabel}>排序 Sort (可选)</span>
+                            <span className={d.filterLabel}>{t('mongo.data.filter.sort', '排序 Sort (可选)')}</span>
                             <CodeEditor
                                 lang="json"
                                 height="65px"
@@ -843,7 +852,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                     onClick={() => runQuery(1, pageSize)}
                                     className={d.queryBtn}
                                 >
-                                    执行查询
+                                    {t('mongo.data.filter.run', '执行查询')}
                                 </Button>
                                 <Button
                                     size="small"
@@ -856,7 +865,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                     }}
                                     className={d.resetBtn}
                                 >
-                                    重置全部
+                                    {t('mongo.data.filter.reset', '重置全部')}
                                 </Button>
                             </div>
                         </div>
@@ -887,7 +896,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                         {viewMode === 'table' && (
                             parsedRows.length === 0 && !busy ? (
                                 <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-faint)', fontSize: 13 }}>
-                                    暂无文档（或当前过滤条件无匹配数据）
+                                    {t('mongo.data.actions.emptyDocsMatch', '暂无文档（或当前过滤条件无匹配数据）')}
                                 </div>
                             ) : (
                                 <ResizableTable
@@ -981,7 +990,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                                     </span>
                                                 </Space>
                                                 <Space size={4}>
-                                                    <Tooltip title="编辑">
+                                                    <Tooltip title={t('mongo.data.actions.editDoc', '编辑')}>
                                                         <Button
                                                             size="small"
                                                             type="text"
@@ -989,15 +998,15 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                                             onClick={() => openUpdate(row.__raw)}
                                                         />
                                                     </Tooltip>
-                                                    <Tooltip title="复制 JSON">
+                                                    <Tooltip title={t('mongo.data.actions.copyDocJson', '复制 JSON')}>
                                                         <Button
                                                             size="small"
                                                             type="text"
                                                             icon={<Copy size={12} />}
-                                                            onClick={async () => { if (await copyText(pretty)) message.success('已复制文档 JSON') }}
+                                                            onClick={async () => { if (await copyText(pretty)) message.success(t('mongo.data.actions.copiedDocJson', '已复制文档 JSON')) }}
                                                         />
                                                     </Tooltip>
-                                                    <Tooltip title="删除文档">
+                                                    <Tooltip title={t('mongo.data.actions.deleteDoc', '删除文档')}>
                                                         <Button
                                                             size="small"
                                                             type="text"
@@ -1018,7 +1027,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                         {/* 分页控制栏 */}
                         <div className={d.paginationFooter}>
                             <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                                共 {total} 条文档 · 每页 {pageSize} 条
+                                {t('mongo.data.actions.pageFooter', { total, pageSize, defaultValue: `共 ${total} 条文档 · 每页 ${pageSize} 条` })}
                             </span>
                             <Pagination
                                 size="small"
@@ -1064,16 +1073,16 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     open={true}
                     title={
                         editOpen.mode === 'insert'
-                            ? '添加新文档'
+                            ? t('mongo.data.actions.insertTitle', '添加新文档')
                             : editOpen.mode === 'replace'
-                                ? '替换完整文档'
-                                : '更新文档（支持 $set 等修改器）'
+                                ? t('mongo.data.actions.replaceTitle', '替换完整文档')
+                                : t('mongo.data.actions.updateTitle', '更新文档（支持 $set 等修改器）')
                     }
                     onCancel={() => setEditOpen(null)}
                     onOk={handleSaveDocModal}
                     confirmLoading={editorBusy}
-                    okText={editOpen.mode === 'insert' ? '插入' : '保存更新'}
-                    cancelText="取消"
+                    okText={editOpen.mode === 'insert' ? t('mongo.data.actions.insertBtn', '插入') : t('mongo.data.actions.saveUpdate', '保存更新')}
+                    cancelText={t('common.cancel', '取消')}
                     width={600}
                 >
                     <div style={{ marginTop: 8 }}>
@@ -1091,27 +1100,29 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
             {statsModalOpen && (
                 <Modal
                     open={true}
-                    title={`${collection} 集合统计`}
+                    title={t('mongo.data.actions.collStatsTitle', { coll: collection, defaultValue: `${collection} 集合统计` })}
                     onCancel={() => setStatsModalOpen(false)}
                     footer={[
                         <Button key="close" type="primary" onClick={() => setStatsModalOpen(false)}>
-                            关闭
+                            {t('mongo.data.actions.close', '关闭')}
                         </Button>,
                     ]}
                     width={440}
                 >
                     {statsBusy ? (
-                        <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-dim)' }}>加载中…</div>
+                        <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-dim)' }}>
+                            {t('mongo.data.actions.loading', '加载中…')}
+                        </div>
                     ) : stats ? (
                         <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
                             <tbody>
                                 {[
-                                    ['文档总数', String(stats.count)],
-                                    ['数据大小', String(stats.size)],
-                                    ['平均文档大小', String(stats.avgObjSize)],
-                                    ['存储占用大小', String(stats.storageSize)],
-                                    ['索引总大小', String(stats.totalIndexSize)],
-                                    ['索引数量', String(stats.nindexes)],
+                                    [t('mongo.data.actions.docCount', '文档总数'), String(stats.count)],
+                                    [t('mongo.data.actions.dataSize', '数据大小'), String(stats.size)],
+                                    [t('mongo.data.actions.avgObjSize', '平均文档大小'), String(stats.avgObjSize)],
+                                    [t('mongo.data.actions.storageSize', '存储占用大小'), String(stats.storageSize)],
+                                    [t('mongo.data.actions.totalIndexSize', '索引总大小'), String(stats.totalIndexSize)],
+                                    [t('mongo.data.actions.indexCount', '索引数量'), String(stats.nindexes)],
                                 ].map(([label, val]) => (
                                     <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
                                         <th style={{ textAlign: 'left', padding: '8px 4px', color: 'var(--text-dim)', fontSize: 12 }}>
@@ -1125,7 +1136,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                             </tbody>
                         </table>
                     ) : (
-                        <div style={{ color: 'var(--text-dim)', padding: 12 }}>无法获取统计信息</div>
+                        <div style={{ color: 'var(--text-dim)', padding: 12 }}>{t('mongo.data.actions.noStats', '无法获取统计信息')}</div>
                     )}
                 </Modal>
             )}
@@ -1147,7 +1158,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                 <Modal
                     title={
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span>字段详情与在线编辑</span>
+                            <span>{t('mongo.data.actions.cellModalTitle', '字段详情与在线编辑')}</span>
                             <Tag color="blue" style={{ fontFamily: 'monospace', fontSize: 12 }}>
                                 {cellModal.colKey}
                             </Tag>
@@ -1167,10 +1178,10 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                             key="copy"
                             icon={<Copy size={13} />}
                             onClick={async () => {
-                                if (await copyText(cellModal.text)) message.success('已复制完整字段内容')
+                                if (await copyText(cellModal.text)) message.success(t('mongo.data.actions.copiedCellContent', '已复制完整字段内容'))
                             }}
                         >
-                            复制内容
+                            {t('mongo.data.actions.copyContent', '复制内容')}
                         </Button>,
                         <Button
                             key="format"
@@ -1181,16 +1192,16 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                                         prev ? { ...prev, text: JSON.stringify(parsed, null, 2) } : null
                                     )
                                     setCellModalError('')
-                                    message.success('JSON 已格式化')
+                                    message.success(t('mongo.data.actions.jsonFormatted', 'JSON 已格式化'))
                                 } catch (e: any) {
-                                    setCellModalError(`格式化失败: ${e?.message}`)
+                                    setCellModalError(t('mongo.data.actions.formatFail', { error: e?.message, defaultValue: `格式化失败: ${e?.message}` }))
                                 }
                             }}
                         >
-                            格式化 JSON
+                            {t('mongo.data.actions.formatJson', '格式化 JSON')}
                         </Button>,
                         <Button key="cancel" onClick={() => setCellModal(null)}>
-                            取消
+                            {t('common.cancel', '取消')}
                         </Button>,
                         <Button
                             key="save"
@@ -1198,7 +1209,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                             loading={cellModalBusy}
                             onClick={handleSaveCellModal}
                         >
-                            保存修改 ($set)
+                            {t('mongo.data.actions.saveChangesSet', '保存修改 ($set)')}
                         </Button>,
                     ]}
                 >

@@ -1,12 +1,13 @@
-import {useCallback, useEffect, useMemo, useState} from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Input, Button, Switch, Table, Modal, Alert, Space, Tooltip, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Plus, Search, RotateCw, Play, Edit, Trash2 } from 'lucide-react'
-import {ConfirmModal, ConfirmState} from '@/components/Modal'
-import CronModal, {explainCron} from '@/pages/ssh/cron/CronModal'
-import {API} from '@/api'
-import {SSHCronItem} from '@/types'
-import {errorMessage} from '@/utils'
+import { useTranslation } from 'react-i18next'
+import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import CronModal, { explainCron } from '@/pages/ssh/cron/CronModal'
+import { API } from '@/api'
+import { SSHCronItem } from '@/types'
+import { errorMessage } from '@/utils'
 import c from '@/pages/ssh/cron/CronPanel.module.less'
 
 interface Props {
@@ -14,7 +15,8 @@ interface Props {
     active: boolean
 }
 
-export default function CronPanel({sessionId, active}: Props) {
+export default function CronPanel({ sessionId, active }: Props) {
+    const { t } = useTranslation(['ssh', 'common'])
     const { message } = App.useApp()
     const [items, setItems] = useState<SSHCronItem[]>([])
     const [busy, setBusy] = useState(false)
@@ -57,7 +59,7 @@ export default function CronPanel({sessionId, active}: Props) {
         } catch (e) {
             const msg = errorMessage(e)
             setError(msg)
-            message.error(`读取 Crontab 任务失败: ${msg}`)
+            message.error(msg)
         } finally {
             setBusy(false)
             setLoaded(true)
@@ -86,10 +88,10 @@ export default function CronPanel({sessionId, active}: Props) {
         try {
             await API.sshSaveCronList(sessionId, nextList)
             setItems(nextList)
-            message.success('Crontab 定时任务保存成功')
+            message.success(t('ssh:cron.saveSuccess'))
         } catch (e) {
             const msg = errorMessage(e)
-            message.error(`保存失败: ${msg}`)
+            message.error(msg)
             await fetchCrons()
         } finally {
             setBusy(false)
@@ -98,7 +100,7 @@ export default function CronPanel({sessionId, active}: Props) {
 
     const handleToggleEnabled = (target: SSHCronItem) => {
         const nextList = items.map((it) =>
-            it.id === target.id ? {...it, enabled: !it.enabled} : it
+            it.id === target.id ? { ...it, enabled: !it.enabled } : it
         )
         void handleSaveList(nextList)
     }
@@ -118,7 +120,7 @@ export default function CronPanel({sessionId, active}: Props) {
         if (editingItem) {
             // 编辑
             const nextList = items.map((it) =>
-                it.id === editingItem.id ? ({...it, ...itemData} as SSHCronItem) : it
+                it.id === editingItem.id ? ({ ...it, ...itemData } as SSHCronItem) : it
             )
             void handleSaveList(nextList)
         } else {
@@ -137,11 +139,11 @@ export default function CronPanel({sessionId, active}: Props) {
     const handleDelete = (target: SSHCronItem) => {
         setConfirm({
             open: true,
-            title: '删除定时任务',
-            message: `确定要删除任务 "${target.expression} ${target.command}" 吗？`,
+            title: t('ssh:cron.delete'),
+            message: `${t('ssh:cron.deleteConfirm')} "${target.expression} ${target.command}"`,
             danger: true,
             onConfirm: () => {
-                setConfirm((prev) => ({...prev, open: false}))
+                setConfirm((prev) => ({ ...prev, open: false }))
                 const nextList = items.filter((it) => it.id !== target.id)
                 void handleSaveList(nextList)
             },
@@ -154,9 +156,9 @@ export default function CronPanel({sessionId, active}: Props) {
         setRunOutput('')
         try {
             const out = await API.sshRunCronCommand(sessionId, target.command)
-            setRunOutput(out || '（无输出）')
+            setRunOutput(out || '')
         } catch (e) {
-            setRunOutput(`试运行失败: ${errorMessage(e)}`)
+            setRunOutput(errorMessage(e))
         } finally {
             setRunBusy(false)
         }
@@ -164,18 +166,18 @@ export default function CronPanel({sessionId, active}: Props) {
 
     const columns: ColumnsType<SSHCronItem> = [
         {
-            title: '状态',
+            title: t('common:status'),
             dataIndex: 'enabled',
             key: 'enabled',
             width: 70,
             render: (enabled, record) => (
-                <Tooltip title={enabled ? '点击禁用 (加 # 注释)' : '点击启用'}>
+                <Tooltip title={enabled ? 'Disable' : 'Enable'}>
                     <Switch size="small" checked={enabled} onChange={() => handleToggleEnabled(record)} />
                 </Tooltip>
             ),
         },
         {
-            title: '运行周期',
+            title: t('ssh:cron.schedule'),
             dataIndex: 'expression',
             key: 'expression',
             width: 180,
@@ -187,7 +189,7 @@ export default function CronPanel({sessionId, active}: Props) {
             ),
         },
         {
-            title: '执行命令 / 备注',
+            title: t('ssh:cron.command'),
             key: 'command',
             render: (_, item) => (
                 <div>
@@ -201,12 +203,12 @@ export default function CronPanel({sessionId, active}: Props) {
             ),
         },
         {
-            title: '操作',
+            title: t('common:actions'),
             key: 'actions',
             width: 110,
             render: (_, item) => (
                 <Space size={4}>
-                    <Tooltip title="手动运行一次该命令">
+                    <Tooltip title={t('ssh:cron.testRun')}>
                         <Button
                             size="small"
                             type="text"
@@ -214,7 +216,7 @@ export default function CronPanel({sessionId, active}: Props) {
                             onClick={() => handleRunNow(item)}
                         />
                     </Tooltip>
-                    <Tooltip title="编辑任务">
+                    <Tooltip title={t('ssh:cron.edit')}>
                         <Button
                             size="small"
                             type="text"
@@ -222,7 +224,7 @@ export default function CronPanel({sessionId, active}: Props) {
                             onClick={() => handleOpenEdit(item)}
                         />
                     </Tooltip>
-                    <Tooltip title="删除任务">
+                    <Tooltip title={t('ssh:cron.delete')}>
                         <Button
                             size="small"
                             type="text"
@@ -247,28 +249,28 @@ export default function CronPanel({sessionId, active}: Props) {
                     icon={<Plus size={13} />}
                     onClick={handleOpenCreate}
                 >
-                    新建任务
+                    {t('ssh:cron.add')}
                 </Button>
 
                 <Input
                     size="small"
                     className={c.searchInput}
                     value={keyword}
-                    placeholder="搜索 命令 / 说明 / 表达式..."
+                    placeholder="Search command / expression..."
                     prefix={<Search size={13} />}
                     allowClear
                     onChange={(e) => setKeyword(e.target.value)}
                 />
 
                 <div className={c.toolbarActions}>
-                    {lastUpdate && <span className={c.lastUpdate}>更新于 {lastUpdate}</span>}
+                    {lastUpdate && <span className={c.lastUpdate}>{t('ssh:cron.updatedAt', { time: lastUpdate })}</span>}
                     <Button
                         size="small"
                         icon={<RotateCw size={12} />}
                         loading={busy}
                         onClick={fetchCrons}
                     >
-                        刷新
+                        {t('common:refresh')}
                     </Button>
                 </div>
             </div>
@@ -281,7 +283,7 @@ export default function CronPanel({sessionId, active}: Props) {
                     className={c.alertBox}
                     action={
                         <Button size="small" type="primary" danger onClick={fetchCrons}>
-                            重试
+                            {t('common:retry')}
                         </Button>
                     }
                 />
@@ -311,14 +313,14 @@ export default function CronPanel({sessionId, active}: Props) {
             {/* 试运行输出 Modal */}
             <Modal
                 open={!!runCommand}
-                title={`试运行输出: ${runCommand}`}
+                title={`${t('ssh:cron.testRun')}: ${runCommand}`}
                 onCancel={() => setRunCommand('')}
                 width={720}
-                footer={<Button onClick={() => setRunCommand('')}>关闭</Button>}
+                footer={<Button onClick={() => setRunCommand('')}>{t('common:close')}</Button>}
             >
                 <div className={c.outputContainer}>
                     <pre style={{ margin: 0, fontFamily: 'Consolas, monospace', fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
-                        {runBusy ? '正在远端命令行后台试运行该命令…' : runOutput}
+                        {runBusy ? t('ssh:cron.running') : runOutput}
                     </pre>
                 </div>
             </Modal>

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Popover, Select, Input, Button, Tooltip } from 'antd'
+import { useTranslation } from 'react-i18next'
+import i18n from '@/i18n'
 import { Filter } from 'lucide-react'
 
 export type FilterOp =
@@ -36,35 +38,10 @@ export const OP_LABELS: Record<FilterOp, string> = {
     is_not_null: '非 NULL',
 }
 
-const OP_OPTIONS = [
-    {
-        label: '模糊匹配',
-        options: [
-            { label: '包含', value: 'contains' },
-            { label: '不包含', value: 'not_contains' },
-            { label: '开头是', value: 'starts_with' },
-            { label: '结尾是', value: 'ends_with' },
-        ],
-    },
-    {
-        label: '精确与比较',
-        options: [
-            { label: '等于 (=)', value: 'equals' },
-            { label: '不等于 (!=)', value: 'not_equals' },
-            { label: '大于 (>)', value: 'gt' },
-            { label: '大于等于 (>=)', value: 'gte' },
-            { label: '小于 (<)', value: 'lt' },
-            { label: '小于等于 (<=)', value: 'lte' },
-        ],
-    },
-    {
-        label: '空值判断',
-        options: [
-            { label: '为 NULL', value: 'is_null' },
-            { label: '非 NULL', value: 'is_not_null' },
-        ],
-    },
-]
+export function getOpLabel(op: FilterOp): string {
+    return i18n.t(`common:columnFilter.op.${op}`, OP_LABELS[op] || op)
+}
+
 
 function isNumeric(val: string): boolean {
     return val.trim() !== '' && !isNaN(Number(val))
@@ -176,9 +153,9 @@ export function buildMysqlWhereClause(filters: Record<string, ColumnFilterState>
  * 格式化过滤描述文本
  */
 export function formatFilterLabel(col: string, f: ColumnFilterState): string {
-    if (f.op === 'is_null') return `${col} 为 NULL`
-    if (f.op === 'is_not_null') return `${col} 非 NULL`
-    return `${col} ${OP_LABELS[f.op]} '${f.value}'`
+    if (f.op === 'is_null') return `${col} ${getOpLabel('is_null')}`
+    if (f.op === 'is_not_null') return `${col} ${getOpLabel('is_not_null')}`
+    return `${col} ${getOpLabel(f.op)} '${f.value}'`
 }
 
 export interface ColumnFilterPopoverProps {
@@ -192,6 +169,7 @@ export default function ColumnFilterPopover({
     activeFilter,
     onApply,
 }: ColumnFilterPopoverProps) {
+    const { t } = useTranslation('common')
     const [open, setOpen] = useState(false)
     const [op, setOp] = useState<FilterOp>(activeFilter?.op || 'contains')
     const [val, setVal] = useState<string>(activeFilter?.value || '')
@@ -199,6 +177,36 @@ export default function ColumnFilterPopover({
 
     const isNoVal = op === 'is_null' || op === 'is_not_null'
     const isFiltered = !!activeFilter
+
+    const opOptions = [
+        {
+            label: t('columnFilter.groupFuzzy', '模糊匹配'),
+            options: [
+                { label: t('columnFilter.op.contains', '包含'), value: 'contains' },
+                { label: t('columnFilter.op.not_contains', '不包含'), value: 'not_contains' },
+                { label: t('columnFilter.op.starts_with', '开头是'), value: 'starts_with' },
+                { label: t('columnFilter.op.ends_with', '结尾是'), value: 'ends_with' },
+            ],
+        },
+        {
+            label: t('columnFilter.groupExact', '精确与比较'),
+            options: [
+                { label: t('columnFilter.op.equals', '等于 (=)'), value: 'equals' },
+                { label: t('columnFilter.op.not_equals', '不等于 (!=)'), value: 'not_equals' },
+                { label: t('columnFilter.op.gt', '大于 (>)'), value: 'gt' },
+                { label: t('columnFilter.op.gte', '大于等于 (>=)'), value: 'gte' },
+                { label: t('columnFilter.op.lt', '小于 (<)'), value: 'lt' },
+                { label: t('columnFilter.op.lte', '小于等于 (<=)'), value: 'lte' },
+            ],
+        },
+        {
+            label: t('columnFilter.groupNull', '空值判断'),
+            options: [
+                { label: t('columnFilter.op.is_null', '为 NULL'), value: 'is_null' },
+                { label: t('columnFilter.op.is_not_null', '非 NULL'), value: 'is_not_null' },
+            ],
+        },
+    ]
 
     useEffect(() => {
         if (open) {
@@ -239,7 +247,7 @@ export default function ColumnFilterPopover({
         >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
                 <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    筛选: <code style={{ color: 'var(--accent, #1677ff)' }}>{col}</code>
+                    {t('columnFilter.filter', '筛选')}: <code style={{ color: 'var(--accent, #1677ff)' }}>{col}</code>
                 </span>
                 {isFiltered && (
                     <Button
@@ -248,7 +256,7 @@ export default function ColumnFilterPopover({
                         style={{ padding: 0, height: 'auto', fontSize: 12 }}
                         onClick={handleReset}
                     >
-                        清空
+                        {t('columnFilter.clear', '清空')}
                     </Button>
                 )}
             </div>
@@ -257,7 +265,7 @@ export default function ColumnFilterPopover({
                 size="small"
                 value={op}
                 onChange={(v) => setOp(v)}
-                options={OP_OPTIONS}
+                options={opOptions}
                 style={{ width: '100%' }}
                 popupMatchSelectWidth={false}
             />
@@ -266,7 +274,7 @@ export default function ColumnFilterPopover({
                 <Input
                     ref={inputRef}
                     size="small"
-                    placeholder="输入匹配值..."
+                    placeholder={t('columnFilter.inputPlaceholder', '输入匹配值...')}
                     value={val}
                     onChange={(e) => setVal(e.target.value)}
                     onKeyDown={(e) => {
@@ -280,18 +288,18 @@ export default function ColumnFilterPopover({
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 2 }}>
                 <Button size="small" onClick={() => setOpen(false)}>
-                    取消
+                    {t('cancel', '取消')}
                 </Button>
                 <Button size="small" type="primary" onClick={handleConfirm}>
-                    确定
+                    {t('ok', '确定')}
                 </Button>
             </div>
         </div>
     )
 
     const tooltipTitle = isFiltered
-        ? `已筛选: ${formatFilterLabel(col, activeFilter)} (点击编辑)`
-        : `按 ${col} 筛选`
+        ? t('columnFilter.filteredTooltip', '已筛选: {{label}} (点击编辑)', { label: formatFilterLabel(col, activeFilter) })
+        : t('columnFilter.filterByTooltip', '按 {{col}} 筛选', { col })
 
     return (
         <Popover

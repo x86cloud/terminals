@@ -21,6 +21,7 @@ import {
     Trash2,
     Copy,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage, copyText } from '@/utils'
 import { MongoSessionInfo, MongoUserInfo, MongoRoleItem } from '@/types'
@@ -32,19 +33,8 @@ interface Props {
     currentDb: string
 }
 
-const PRESET_ROLES = [
-    { role: 'read', label: '只读 (read)', desc: '允许读取指定数据库中的所有集合数据' },
-    { role: 'readWrite', label: '读写 (readWrite)', desc: '允许读写指定数据库中的所有集合数据' },
-    { role: 'dbAdmin', label: '库管 (dbAdmin)', desc: '允许执行数据库管理任务（索引、统计分析、结构校验）' },
-    { role: 'userAdmin', label: '用户管 (userAdmin)', desc: '允许创建和修改当前数据库的用户及自定义角色' },
-    { role: 'dbOwner', label: '全权库主 (dbOwner)', desc: '包含 readWrite、dbAdmin 和 userAdmin 的所有权限' },
-    { role: 'clusterAdmin', label: '集群管理 (clusterAdmin)', desc: '管理副本集/分片集群运维（限 admin 库）' },
-    { role: 'readAnyDatabase', label: '全库只读 (readAnyDatabase)', desc: '允许读取除 local/config 外任意库（限 admin 库）' },
-    { role: 'readWriteAnyDatabase', label: '全库读写 (readWriteAnyDatabase)', desc: '允许读写除 local/config 外任意库（限 admin 库）' },
-    { role: 'root', label: '超级管理员 (root)', desc: '系统至高特权管理员，拥有全局所有控制权（限 admin 库）' },
-]
-
 export default function UsersTab({ session, databases, currentDb }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const id = session.id
     const [selectedDb, setSelectedDb] = useState<string>(currentDb || 'admin')
@@ -52,6 +42,18 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
     const [users, setUsers] = useState<MongoUserInfo[]>([])
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+
+    const presetRoles = useMemo(() => [
+        { role: 'read', label: t('mongo.users.roles.read', '只读 (read)'), desc: t('mongo.users.roles.readDesc', '允许读取指定数据库中的所有集合数据') },
+        { role: 'readWrite', label: t('mongo.users.roles.readWrite', '读写 (readWrite)'), desc: t('mongo.users.roles.readWriteDesc', '允许读写指定数据库中的所有集合数据') },
+        { role: 'dbAdmin', label: t('mongo.users.roles.dbAdmin', '库管 (dbAdmin)'), desc: t('mongo.users.roles.dbAdminDesc', '允许执行数据库管理任务（索引、统计分析、结构校验）') },
+        { role: 'userAdmin', label: t('mongo.users.roles.userAdmin', '用户管 (userAdmin)'), desc: t('mongo.users.roles.userAdminDesc', '允许创建和修改当前数据库的用户及自定义角色') },
+        { role: 'dbOwner', label: t('mongo.users.roles.dbOwner', '全权库主 (dbOwner)'), desc: t('mongo.users.roles.dbOwnerDesc', '包含 readWrite、dbAdmin 和 userAdmin 的所有权限') },
+        { role: 'clusterAdmin', label: t('mongo.users.roles.clusterAdmin', '集群管理 (clusterAdmin)'), desc: t('mongo.users.roles.clusterAdminDesc', '管理副本集/分片集群运维（限 admin 库）') },
+        { role: 'readAnyDatabase', label: t('mongo.users.roles.readAnyDatabase', '全库只读 (readAnyDatabase)'), desc: t('mongo.users.roles.readAnyDatabaseDesc', '允许读取除 local/config 外任意库（限 admin 库）') },
+        { role: 'readWriteAnyDatabase', label: t('mongo.users.roles.readWriteAnyDatabase', '全库读写 (readWriteAnyDatabase)'), desc: t('mongo.users.roles.readWriteAnyDatabaseDesc', '允许读写除 local/config 外任意库（限 admin 库）') },
+        { role: 'root', label: t('mongo.users.roles.root', '超级管理员 (root)'), desc: t('mongo.users.roles.rootDesc', '系统至高特权管理员，拥有全局所有控制权（限 admin 库）') },
+    ], [t])
 
     // 新建用户弹窗
     const [createOpen, setCreateOpen] = useState(false)
@@ -111,11 +113,11 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
     // 处理新建用户
     const handleCreateUser = async () => {
         if (!newUsername.trim() || !newPassword.trim()) {
-            setCreateMsg('用户名和密码均不能为空')
+            setCreateMsg(t('mongo.users.reqUserPwd', '用户名和密码均不能为空'))
             return
         }
         if (!newRoles.length) {
-            setCreateMsg('请至少分配一个角色权限')
+            setCreateMsg(t('mongo.users.reqRole', '请至少分配一个角色权限'))
             return
         }
         setCreateBusy(true)
@@ -127,7 +129,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                 db: newUserDb || 'admin',
                 roles: newRoles,
             })
-            message.success(`用户 ${newUsername} 创建成功`)
+            message.success(t('mongo.users.userCreated', { name: newUsername, defaultValue: `用户 ${newUsername} 创建成功` }))
             setCreateOpen(false)
             setNewUsername('')
             setNewPassword('')
@@ -142,7 +144,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
     // 处理更新密码
     const handleUpdatePassword = async () => {
         if (!pwdModal.user || !pwdModal.newPwd.trim()) {
-            message.warning('新密码不能为空')
+            message.warning(t('mongo.users.reqNewPwd', '新密码不能为空'))
             return
         }
         setPwdBusy(true)
@@ -152,7 +154,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                 db: pwdModal.user.db,
                 pwd: pwdModal.newPwd.trim(),
             })
-            message.success(`用户 ${pwdModal.user.user} 密码已修改`)
+            message.success(t('mongo.users.pwdUpdated', { name: pwdModal.user.user, defaultValue: `用户 ${pwdModal.user.user} 密码已修改` }))
             setPwdModal({ open: false, user: null, newPwd: '' })
         } catch (e: any) {
             message.error(errorMessage(e))
@@ -171,7 +173,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                 db: rolesModal.user.db,
                 roles: rolesModal.roles,
             })
-            message.success(`用户 ${rolesModal.user.user} 权限已更新`)
+            message.success(t('mongo.users.rolesUpdated', { name: rolesModal.user.user, defaultValue: `用户 ${rolesModal.user.user} 权限已更新` }))
             setRolesModal({ open: false, user: null, roles: [] })
             void loadUsers()
         } catch (e: any) {
@@ -185,7 +187,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
     const handleDeleteUser = async (u: MongoUserInfo) => {
         try {
             await API.mongoDropUser(id, u.db, u.user)
-            message.success(`用户 ${u.user} 已删除`)
+            message.success(t('mongo.users.userDropped', { name: u.user, defaultValue: `用户 ${u.user} 已删除` }))
             void loadUsers()
         } catch (e: any) {
             message.error(errorMessage(e))
@@ -195,9 +197,10 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
     // 复制连接凭据模板
     const handleCopyUri = async (u: MongoUserInfo) => {
         const portPart = session.port ? `:${session.port}` : ''
-        const uri = `mongodb://${u.user}:<密码>@${session.host || 'localhost'}${portPart}/${u.db}?authSource=${u.db}`
+        const pwdPlaceholder = t('mongo.users.uriPwdPlaceholder', '<密码>')
+        const uri = `mongodb://${u.user}:${pwdPlaceholder}@${session.host || 'localhost'}${portPart}/${u.db}?authSource=${u.db}`
         if (await copyText(uri)) {
-            message.success('已复制连接串模板')
+            message.success(t('mongo.users.copiedUri', '已复制连接串模板'))
         }
     }
 
@@ -221,21 +224,21 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
             {/* 顶部工具栏 */}
             <div className={s.toolbar}>
                 <div className={s.toolbarLeft}>
-                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>数据库：</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('mongo.users.dbLabel', '数据库：')}</span>
                     <Select
                         size="small"
                         style={{ width: 150 }}
                         value={selectedDb}
                         onChange={(v) => setSelectedDb(v)}
                         options={[
-                            { label: '全部库 (admin 视图)', value: 'admin' },
+                            { label: t('mongo.users.allDbsAdminView', '全部库 (admin 视图)'), value: 'admin' },
                             ...databases.map((db) => ({ label: db, value: db })),
                         ]}
                     />
 
                     <Input
                         size="small"
-                        placeholder="搜索用户或角色..."
+                        placeholder={t('mongo.users.searchPlaceholder', '搜索用户或角色...')}
                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
                         style={{ width: 200 }}
                         value={searchQuery}
@@ -243,7 +246,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                         allowClear
                     />
 
-                    <Tooltip title="刷新用户列表">
+                    <Tooltip title={t('mongo.users.refreshTooltip', '刷新用户列表')}>
                         <Button
                             size="small"
                             type="text"
@@ -265,7 +268,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                             setCreateMsg('')
                         }}
                     >
-                        新建用户
+                        {t('mongo.users.newUser', '新建用户')}
                     </Button>
                 </div>
             </div>
@@ -276,7 +279,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                     type="error"
                     showIcon
                     closable
-                    message={`加载用户列表失败: ${error}`}
+                    message={t('mongo.users.loadFail', { error, defaultValue: `加载用户列表失败: ${error}` })}
                     style={{ margin: 8 }}
                 />
             )}
@@ -286,7 +289,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                 {filteredUsers.length === 0 && !loading ? (
                     <div className={s.emptyState}>
                         <Users size={36} opacity={0.35} />
-                        <div>当前数据库未检索到任何用户</div>
+                        <div>{t('mongo.users.noUsers', '当前数据库未检索到任何用户')}</div>
                         <Button
                             size="small"
                             type="primary"
@@ -296,7 +299,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                                 setCreateOpen(true)
                             }}
                         >
-                            创建首个用户
+                            {t('mongo.users.createFirstUser', '创建首个用户')}
                         </Button>
                     </div>
                 ) : (
@@ -306,13 +309,13 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                                 <div className={s.userHeader}>
                                     <span className={s.userName}>{u.user}</span>
                                     <Tag color={u.db === 'admin' ? 'blue' : 'purple'}>
-                                        认证库: {u.db}
+                                        {t('mongo.users.authDb', { db: u.db, defaultValue: `认证库: ${u.db}` })}
                                     </Tag>
                                 </div>
 
                                 <div className={s.rolesList}>
                                     <span style={{ fontSize: 11, color: 'var(--text-dim)', marginRight: 4 }}>
-                                        授予角色:
+                                        {t('mongo.users.grantedRoles', '授予角色:')}
                                     </span>
                                     {u.roles && u.roles.length > 0 ? (
                                         u.roles.map((r, rIdx) => (
@@ -321,13 +324,13 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                                             </Tag>
                                         ))
                                     ) : (
-                                        <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>无角色</span>
+                                        <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>{t('mongo.users.noRoles', '无角色')}</span>
                                     )}
                                 </div>
                             </div>
 
                             <div className={s.userActions}>
-                                <Tooltip title="修改角色分配">
+                                <Tooltip title={t('mongo.users.editRolesTooltip', '修改角色分配')}>
                                     <Button
                                         size="small"
                                         type="text"
@@ -340,11 +343,11 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                                             })
                                         }}
                                     >
-                                        角色
+                                        {t('mongo.users.roleBtn', '角色')}
                                     </Button>
                                 </Tooltip>
 
-                                <Tooltip title="修改密码">
+                                <Tooltip title={t('mongo.users.changePwdTooltip', '修改密码')}>
                                     <Button
                                         size="small"
                                         type="text"
@@ -353,11 +356,11 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                                             setPwdModal({ open: true, user: u, newPwd: '' })
                                         }}
                                     >
-                                        改密
+                                        {t('mongo.users.changePwdBtn', '改密')}
                                     </Button>
                                 </Tooltip>
 
-                                <Tooltip title="复制连接串模板">
+                                <Tooltip title={t('mongo.users.copyUriTooltip', '复制连接串模板')}>
                                     <Button
                                         size="small"
                                         type="text"
@@ -367,14 +370,14 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                                 </Tooltip>
 
                                 <Popconfirm
-                                    title="删除确认"
-                                    description={`确定要永久删除用户 ${u.user} (${u.db}) 吗？`}
-                                    okText="删除"
-                                    cancelText="取消"
+                                    title={t('mongo.users.dropConfirmTitle', '删除确认')}
+                                    description={t('mongo.users.dropConfirmDesc', { name: u.user, db: u.db, defaultValue: `确定要永久删除用户 ${u.user} (${u.db}) 吗？` })}
+                                    okText={t('mongo.users.dropBtn', '删除')}
+                                    cancelText={t('common:cancel', '取消')}
                                     okButtonProps={{ danger: true }}
                                     onConfirm={() => void handleDeleteUser(u)}
                                 >
-                                    <Tooltip title="删除用户">
+                                    <Tooltip title={t('mongo.users.dropTooltip', '删除用户')}>
                                         <Button
                                             size="small"
                                             type="text"
@@ -391,13 +394,13 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
 
             {/* 新建用户弹窗 */}
             <Modal
-                title="新建 MongoDB 用户"
+                title={t('mongo.users.createModalTitle', '新建 MongoDB 用户')}
                 open={createOpen}
                 onCancel={() => !createBusy && setCreateOpen(false)}
                 onOk={handleCreateUser}
                 confirmLoading={createBusy}
-                okText="创建用户"
-                cancelText="取消"
+                okText={t('mongo.users.createBtn', '创建用户')}
+                cancelText={t('common:cancel', '取消')}
                 width={560}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '8px 0' }}>
@@ -405,19 +408,19 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                         <div>
-                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>用户名：</div>
+                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('mongo.users.username', '用户名：')}</div>
                             <Input
                                 size="small"
-                                placeholder="如 app_reader"
+                                placeholder={t('mongo.users.usernamePlaceholder', '如 app_reader')}
                                 value={newUsername}
                                 onChange={(e) => setNewUsername(e.target.value)}
                             />
                         </div>
                         <div>
-                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>密码：</div>
+                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('mongo.users.password', '密码：')}</div>
                             <Input.Password
                                 size="small"
-                                placeholder="输入密码"
+                                placeholder={t('mongo.users.passwordPlaceholder', '输入密码')}
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                             />
@@ -425,23 +428,23 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>认证归属数据库 (authSource)：</div>
+                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('mongo.users.authSourceLabel', '认证归属数据库 (authSource)：')}</div>
                         <Select
                             size="small"
                             style={{ width: '100%' }}
                             value={newUserDb}
                             onChange={(v) => setNewUserDb(v)}
                             options={[
-                                { label: 'admin (全局管理库推荐)', value: 'admin' },
+                                { label: t('mongo.users.adminRecommended', 'admin (全局管理库推荐)'), value: 'admin' },
                                 ...databases.filter((d) => d !== 'admin').map((d) => ({ label: d, value: d })),
                             ]}
                         />
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>快捷分配内置预设角色：</div>
+                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('mongo.users.quickPresetRoles', '快捷分配内置预设角色：')}</div>
                         <div className={s.presetGrid}>
-                            {PRESET_ROLES.map((pr) => {
+                            {presetRoles.map((pr) => {
                                 const isChecked = newRoles.some((r) => r.role === pr.role && r.db === newUserDb)
                                 return (
                                     <div
@@ -465,7 +468,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>当前已选角色：</div>
+                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('mongo.users.currentSelectedRoles', '当前已选角色：')}</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, minHeight: 28 }}>
                             {newRoles.map((r, i) => (
                                 <Tag
@@ -484,19 +487,19 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
 
             {/* 修改密码弹窗 */}
             <Modal
-                title={`修改用户密码 - ${pwdModal.user?.user}`}
+                title={t('mongo.users.changePwdTitle', { name: pwdModal.user?.user, defaultValue: `修改用户密码 - ${pwdModal.user?.user}` })}
                 open={pwdModal.open}
                 onCancel={() => !pwdBusy && setPwdModal({ open: false, user: null, newPwd: '' })}
                 onOk={handleUpdatePassword}
                 confirmLoading={pwdBusy}
-                okText="保存密码"
-                cancelText="取消"
+                okText={t('mongo.users.savePwd', '保存密码')}
+                cancelText={t('common:cancel', '取消')}
                 width={400}
             >
                 <div style={{ padding: '12px 0' }}>
-                    <div style={{ fontSize: 12, marginBottom: 6 }}>请输入新密码：</div>
+                    <div style={{ fontSize: 12, marginBottom: 6 }}>{t('mongo.users.inputNewPwd', '请输入新密码：')}</div>
                     <Input.Password
-                        placeholder="输入新密码"
+                        placeholder={t('mongo.users.passwordPlaceholder', '输入新密码')}
                         value={pwdModal.newPwd}
                         onChange={(e) => setPwdModal((prev) => ({ ...prev, newPwd: e.target.value }))}
                     />
@@ -505,19 +508,19 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
 
             {/* 修改角色弹窗 */}
             <Modal
-                title={`修改角色分配 - ${rolesModal.user?.user}`}
+                title={t('mongo.users.editRolesTitle', { name: rolesModal.user?.user, defaultValue: `修改角色分配 - ${rolesModal.user?.user}` })}
                 open={rolesModal.open}
                 onCancel={() => !rolesBusy && setRolesModal({ open: false, user: null, roles: [] })}
                 onOk={handleUpdateRoles}
                 confirmLoading={rolesBusy}
-                okText="保存角色"
-                cancelText="取消"
+                okText={t('mongo.users.saveRoles', '保存角色')}
+                cancelText={t('common:cancel', '取消')}
                 width={560}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: '8px 0' }}>
-                    <div style={{ fontSize: 12, fontWeight: 500 }}>快捷分配当前库 ({rolesModal.user?.db}) 内置角色：</div>
+                    <div style={{ fontSize: 12, fontWeight: 500 }}>{t('mongo.users.quickPresetCurrentDb', { db: rolesModal.user?.db, defaultValue: `快捷分配当前库 (${rolesModal.user?.db}) 内置角色：` })}</div>
                     <div className={s.presetGrid}>
-                        {PRESET_ROLES.map((pr) => {
+                        {presetRoles.map((pr) => {
                             const uDb = rolesModal.user?.db || 'admin'
                             const isChecked = rolesModal.roles.some((r) => r.role === pr.role && r.db === uDb)
                             return (
@@ -545,7 +548,7 @@ export default function UsersTab({ session, databases, currentDb }: Props) {
                     </div>
 
                     <div>
-                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>已分配角色清单：</div>
+                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('mongo.users.assignedRolesList', '已分配角色清单：')}</div>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                             {rolesModal.roles.map((r, i) => (
                                 <Tag

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { Button, Tooltip } from 'antd'
+import { Button, Tooltip, Dropdown } from 'antd'
+import type { MenuProps } from 'antd'
 import {
     Pin,
     Settings,
@@ -10,9 +11,10 @@ import {
     Sun,
     Moon,
     PanelLeft,
-    PanelRight,
+    Languages,
 } from 'lucide-react'
 import { Window, Events } from '@wailsio/runtime'
+import { useTranslation } from 'react-i18next'
 import { useSession } from '@/contexts/SessionContext'
 import AppLogo from './AppLogo'
 import s from './TitleBar.module.less'
@@ -24,9 +26,9 @@ interface TitleBarProps {
     onToggleTheme?: () => void
     sidebarOpen?: boolean
     onToggleSidebar?: () => void
-    aiSidebarOpen?: boolean
-    onToggleAiSidebar?: () => void
     onRequestClose?: () => void
+    language?: 'system' | 'zh-CN' | 'en-US'
+    onChangeLanguage?: (lang: 'system' | 'zh-CN' | 'en-US') => void
 }
 
 export const TitleBar: React.FC<TitleBarProps> = ({
@@ -36,17 +38,17 @@ export const TitleBar: React.FC<TitleBarProps> = ({
     onToggleTheme,
     sidebarOpen,
     onToggleSidebar,
-    aiSidebarOpen,
-    onToggleAiSidebar,
     onRequestClose,
+    language = 'system',
+    onChangeLanguage,
 }) => {
+    const { t } = useTranslation('titlebar')
     const session = useSession()
     const isSidebarOpen = sidebarOpen ?? session.sidebarOpen
     const handleToggleSidebar = onToggleSidebar ?? session.toggleSidebar
-    const isAiSidebarOpen = aiSidebarOpen ?? session.aiSidebarOpen
-    const handleToggleAiSidebar = onToggleAiSidebar ?? session.toggleAiSidebar
     const [isMaximised, setIsMaximised] = useState<boolean>(false)
     const [isAlwaysOnTop, setIsAlwaysOnTop] = useState<boolean>(false)
+    const [langDropdownOpen, setLangDropdownOpen] = useState<boolean>(false)
 
     const updateWindowStates = async () => {
         try {
@@ -131,6 +133,33 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             window.matchMedia &&
             window.matchMedia('(prefers-color-scheme: dark)').matches)
 
+    const langMenuItems: MenuProps['items'] = [
+        {
+            key: 'system',
+            label: t('titlebar:langSystem', '跟随系统'),
+            onClick: () => {
+                setLangDropdownOpen(false)
+                onChangeLanguage?.('system')
+            },
+        },
+        {
+            key: 'zh-CN',
+            label: t('titlebar:langZh', '简体中文'),
+            onClick: () => {
+                setLangDropdownOpen(false)
+                onChangeLanguage?.('zh-CN')
+            },
+        },
+        {
+            key: 'en-US',
+            label: t('titlebar:langEn', 'English'),
+            onClick: () => {
+                setLangDropdownOpen(false)
+                onChangeLanguage?.('en-US')
+            },
+        },
+    ]
+
     return (
         <header
             className={s.titleBar}
@@ -154,7 +183,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
             <div className={s.right} style={{ ['--wails-draggable' as any]: 'no-drag' }}>
                 <div className={s.quickActions}>
                     {handleToggleSidebar && (
-                        <Tooltip title={isSidebarOpen ? '收起主侧边栏' : '展开主侧边栏'}>
+                        <Tooltip title={isSidebarOpen ? t('collapseSidebar') : t('expandSidebar')}>
                             <Button
                                 size="small"
                                 type={isSidebarOpen ? 'primary' : 'text'}
@@ -164,19 +193,34 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                         </Tooltip>
                     )}
 
-                    {handleToggleAiSidebar && (
-                        <Tooltip title={isAiSidebarOpen ? '收起 AI 智能体' : '展开 AI 智能体'}>
-                            <Button
-                                size="small"
-                                type={isAiSidebarOpen ? 'primary' : 'text'}
-                                icon={<PanelRight size={13} strokeWidth={1.8} />}
-                                onClick={handleToggleAiSidebar}
-                            />
-                        </Tooltip>
+                    {onChangeLanguage && (
+                        <Dropdown
+                            menu={{
+                                items: langMenuItems,
+                                selectedKeys: [language],
+                                onClick: () => setLangDropdownOpen(false),
+                            }}
+                            trigger={['click']}
+                            open={langDropdownOpen}
+                            onOpenChange={setLangDropdownOpen}
+                            placement="bottomRight"
+                        >
+                            <Tooltip
+                                title={langDropdownOpen ? null : t('switchLanguage')}
+                                open={langDropdownOpen ? false : undefined}
+                                destroyTooltipOnHide
+                            >
+                                <Button
+                                    size="small"
+                                    type={langDropdownOpen ? 'default' : 'text'}
+                                    icon={<Languages size={13} strokeWidth={1.8} />}
+                                />
+                            </Tooltip>
+                        </Dropdown>
                     )}
 
                     {onToggleTheme && (
-                        <Tooltip title={isCurrentDark ? '切换至浅色模式' : '切换至暗色模式'}>
+                        <Tooltip title={isCurrentDark ? t('switchToLight') : t('switchToDark')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -186,7 +230,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                         </Tooltip>
                     )}
 
-                    <Tooltip title={isAlwaysOnTop ? '取消窗口置顶' : '窗口置顶'}>
+                    <Tooltip title={isAlwaysOnTop ? t('unpinWindow') : t('pinWindow')}>
                         <Button
                             size="small"
                             type={isAlwaysOnTop ? 'primary' : 'text'}
@@ -196,7 +240,7 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                     </Tooltip>
 
                     {onOpenSettings && (
-                        <Tooltip title="系统设置">
+                        <Tooltip title={t('settings')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -211,9 +255,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                     <button
                         type="button"
                         className={s.controlBtn}
-                        title="最小化"
+                        title={t('minimise')}
                         onClick={handleMinimise}
-                        aria-label="最小化"
+                        aria-label={t('minimise')}
                     >
                         <Minus size={13} strokeWidth={1.5} />
                     </button>
@@ -221,9 +265,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                     <button
                         type="button"
                         className={s.controlBtn}
-                        title={isMaximised ? '向下还原' : '最大化'}
+                        title={isMaximised ? t('restore') : t('maximise')}
                         onClick={handleToggleMaximise}
-                        aria-label={isMaximised ? '向下还原' : '最大化'}
+                        aria-label={isMaximised ? t('restore') : t('maximise')}
                     >
                         {isMaximised ? <Copy size={11} strokeWidth={1.5} /> : <Square size={11} strokeWidth={1.5} />}
                     </button>
@@ -231,9 +275,9 @@ export const TitleBar: React.FC<TitleBarProps> = ({
                     <button
                         type="button"
                         className={`${s.controlBtn} ${s.close}`}
-                        title="关闭"
+                        title={t('close')}
                         onClick={handleClose}
-                        aria-label="关闭"
+                        aria-label={t('close')}
                     >
                         <X size={14} strokeWidth={1.5} />
                     </button>

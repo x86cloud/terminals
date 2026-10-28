@@ -1,11 +1,13 @@
 import { Select, Input, InputNumber, Button, Segmented, Checkbox, Tooltip, AutoComplete } from 'antd'
 import { Trash2, Plus, ChevronDown, ChevronUp } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import a from '@/pages/api/ApiConfigTabs.module.less'
 import type { ApiState } from '@/pages/api/useApi'
 import { COMMON_HEADER_KEYS, getHeaderValueOptions, getHeaderDefaultValue } from './headerPresets'
 
 export default function ApiConfigTabs({ state }: { state: ApiState }) {
+    const { t } = useTranslation(['api', 'common'])
     const {
         mode, configTab, setConfigTab, showConfig, setShowConfig,
         params, headers, bodyType, auth,
@@ -17,18 +19,18 @@ export default function ApiConfigTabs({ state }: { state: ApiState }) {
     const tabs: Array<{ key: 'params' | 'headers' | 'body' | 'auth' | 'options' | 'messages'; label: string }> =
         mode === 'ws'
             ? [
-                { key: 'messages', label: '消息' },
+                { key: 'messages', label: t('api:config.tabMessages', { defaultValue: '消息' }) },
                 { key: 'params', label: enabledParamsCount > 0 ? `Params (${enabledParamsCount})` : 'Params' },
-                { key: 'headers', label: enabledHeadersCount > 0 ? `请求头 (${enabledHeadersCount})` : '请求头' },
-                { key: 'auth', label: auth.type !== 'none' ? `鉴权 (${auth.type.toUpperCase()})` : '鉴权' },
-                { key: 'options', label: '选项' },
+                { key: 'headers', label: enabledHeadersCount > 0 ? t('api:config.tabHeadersWithCount', { defaultValue: `请求头 (${enabledHeadersCount})`, count: enabledHeadersCount }) : t('api:config.tabHeaders', { defaultValue: '请求头' }) },
+                { key: 'auth', label: auth.type !== 'none' ? t('api:config.tabAuthWithType', { defaultValue: `鉴权 (${auth.type.toUpperCase()})`, type: auth.type.toUpperCase() }) : t('api:config.tabAuth', { defaultValue: '鉴权' }) },
+                { key: 'options', label: t('api:config.tabOptions', { defaultValue: '选项' }) },
             ]
             : [
                 { key: 'params', label: enabledParamsCount > 0 ? `Params (${enabledParamsCount})` : 'Params' },
-                { key: 'headers', label: enabledHeadersCount > 0 ? `请求头 (${enabledHeadersCount})` : '请求头' },
-                { key: 'body', label: bodyType !== 'none' ? `请求体 (${bodyType.toUpperCase()})` : '请求体' },
-                { key: 'auth', label: auth.type !== 'none' ? `鉴权 (${auth.type.toUpperCase()})` : '鉴权' },
-                { key: 'options', label: '选项' },
+                { key: 'headers', label: enabledHeadersCount > 0 ? t('api:config.tabHeadersWithCount', { defaultValue: `请求头 (${enabledHeadersCount})`, count: enabledHeadersCount }) : t('api:config.tabHeaders', { defaultValue: '请求头' }) },
+                { key: 'body', label: bodyType !== 'none' ? t('api:config.tabBodyWithType', { defaultValue: `请求体 (${bodyType.toUpperCase()})`, type: bodyType.toUpperCase() }) : t('api:config.tabBody', { defaultValue: '请求体' }) },
+                { key: 'auth', label: auth.type !== 'none' ? t('api:config.tabAuthWithType', { defaultValue: `鉴权 (${auth.type.toUpperCase()})`, type: auth.type.toUpperCase() }) : t('api:config.tabAuth', { defaultValue: '鉴权' }) },
+                { key: 'options', label: t('api:config.tabOptions', { defaultValue: '选项' }) },
             ]
 
     const selectTab = (key: typeof configTab) => {
@@ -50,13 +52,14 @@ export default function ApiConfigTabs({ state }: { state: ApiState }) {
                 icon={showConfig ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                 onClick={() => setShowConfig((v) => !v)}
             >
-                {showConfig ? '收起配置' : '展开配置'}
+                {showConfig ? t('api:config.collapseConfig', { defaultValue: '收起配置' }) : t('api:config.expandConfig', { defaultValue: '展开配置' })}
             </Button>
         </div>
     )
 }
 
 export function ConfigBody({ state }: { state: ApiState }) {
+    const { t } = useTranslation(['api', 'common'])
     const {
         mode, configTab, showConfig,
         params, addParam, updateParam, removeParam,
@@ -75,9 +78,9 @@ export function ConfigBody({ state }: { state: ApiState }) {
                 <div className={a.headersEditor}>
                     {params.length > 0 && (
                         <div className={a.headerTableHead}>
-                            <span style={{ width: 24, textAlign: 'center' }}>启用</span>
-                            <span style={{ flex: 1 }}>参数名 (Key)</span>
-                            <span style={{ flex: 2 }}>参数值 (Value)</span>
+                            <span style={{ width: 24, textAlign: 'center' }}>{t('api:config.colEnable', { defaultValue: '启用' })}</span>
+                            <span style={{ flex: 1 }}>{t('api:config.colParamKey', { defaultValue: '参数名 (Key)' })}</span>
+                            <span style={{ flex: 2 }}>{t('api:config.colParamValue', { defaultValue: '参数值 (Value)' })}</span>
                             <span style={{ width: 32 }}></span>
                         </div>
                     )}
@@ -86,7 +89,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         <div key={i} className={a.headerRow}>
                             <Checkbox
                                 checked={p.enabled}
-                                title="启用"
+                                title={t('api:config.enable', { defaultValue: '启用' })}
                                 onChange={(e) => updateParam(i, { enabled: e.target.checked })}
                             />
                             <Input
@@ -103,7 +106,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                                 spellCheck={false}
                                 onChange={(e) => updateParam(i, { value: e.target.value })}
                             />
-                            <Tooltip title="删除">
+                            <Tooltip title={t('common:delete', { defaultValue: '删除' })}>
                                 <Button
                                     type="text"
                                     danger
@@ -115,7 +118,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         </div>
                     ))}
                     <Button type="dashed" icon={<Plus size={14} />} onClick={addParam} style={{ width: '100%', height: 32, marginTop: 4 }}>
-                        添加 Query 参数
+                        {t('api:config.addQueryParam', { defaultValue: '添加 Query 参数' })}
                     </Button>
                 </div>
             )}
@@ -124,9 +127,9 @@ export function ConfigBody({ state }: { state: ApiState }) {
                 <div className={a.headersEditor}>
                     {headers.length > 0 && (
                         <div className={a.headerTableHead}>
-                            <span style={{ width: 24, textAlign: 'center' }}>启用</span>
-                            <span style={{ flex: 1 }}>请求头名称 (Header)</span>
-                            <span style={{ flex: 2 }}>请求头值 (Value)</span>
+                            <span style={{ width: 24, textAlign: 'center' }}>{t('api:config.colEnable', { defaultValue: '启用' })}</span>
+                            <span style={{ flex: 1 }}>{t('api:config.colHeaderKey', { defaultValue: '请求头名称 (Header)' })}</span>
+                            <span style={{ flex: 2 }}>{t('api:config.colHeaderValue', { defaultValue: '请求头值 (Value)' })}</span>
                             <span style={{ width: 32 }}></span>
                         </div>
                     )}
@@ -134,12 +137,12 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         <div key={i} className={a.headerRow}>
                             <Checkbox
                                 checked={h.enabled}
-                                title="启用"
+                                title={t('api:config.enable', { defaultValue: '启用' })}
                                 onChange={(e) => updateHeader(i, { enabled: e.target.checked })}
                             />
                             <AutoComplete
                                 style={{ flex: 1, minWidth: 0 }}
-                                placeholder="Header Key (如 Content-Type)"
+                                placeholder={t('api:config.headerKeyPlaceholder', { defaultValue: 'Header Key (如 Content-Type)' })}
                                 value={h.name}
                                 options={COMMON_HEADER_KEYS}
                                 showSearch={{
@@ -176,7 +179,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                                 onChange={(val) => updateHeader(i, { value: val })}
                                 defaultActiveFirstOption={false}
                             />
-                            <Tooltip title="删除">
+                            <Tooltip title={t('common:delete', { defaultValue: '删除' })}>
                                 <Button
                                     type="text"
                                     danger
@@ -188,7 +191,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         </div>
                     ))}
                     <Button type="dashed" icon={<Plus size={14} />} onClick={addHeader} style={{ width: '100%', height: 32, marginTop: 4 }}>
-                        添加请求头
+                        {t('api:config.addHeader', { defaultValue: '添加请求头' })}
                     </Button>
                 </div>
             )}
@@ -196,15 +199,15 @@ export function ConfigBody({ state }: { state: ApiState }) {
             {configTab === 'body' && (
                 <div className={a.bodyEditor}>
                     <div className={a.bodyTypeRow}>
-                        <span className={a.label}>数据类型</span>
+                        <span className={a.label}>{t('api:config.dataType', { defaultValue: '数据类型' })}</span>
                         <Select
                             style={{ width: 130, height: 32 }}
                             value={bodyType}
                             onChange={(val) => setBodyType(val)}
                             options={[
-                                { value: 'none', label: '无 (None)' },
+                                { value: 'none', label: t('api:config.typeNone', { defaultValue: '无 (None)' }) },
                                 { value: 'json', label: 'JSON' },
-                                { value: 'text', label: '文本 (Text)' },
+                                { value: 'text', label: t('api:config.typeText', { defaultValue: '文本 (Text)' }) },
                                 { value: 'xml', label: 'XML' },
                             ]}
                         />
@@ -212,13 +215,13 @@ export function ConfigBody({ state }: { state: ApiState }) {
                             <Button
                                 style={{ height: 32 }}
                                 disabled={!allowBody}
-                                title={allowBody ? '格式化 JSON' : '当前方法不支持请求体'}
+                                title={allowBody ? t('api:config.formatJson', { defaultValue: '格式化 JSON' }) : t('api:config.bodyNotAllowed', { defaultValue: '当前方法不支持请求体' })}
                                 onClick={formatJsonBody}
                             >
-                                格式化 JSON
+                                {t('api:config.formatJson', { defaultValue: '格式化 JSON' })}
                             </Button>
                         )}
-                        {!allowBody && <span className={a.warnText}>GET / HEAD 方法通常不携带请求体</span>}
+                        {!allowBody && <span className={a.warnText}>{t('api:config.noBodyWarning', { defaultValue: 'GET / HEAD 方法通常不携带请求体' })}</span>}
                     </div>
                     {bodyType !== 'none' && (
                         <div style={{ height: 180, borderRadius: 4, overflow: 'hidden' }}>
@@ -228,7 +231,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                                 lang={bodyType === 'json' ? 'json' : 'plain'}
                                 height="100%"
                                 readOnly={bodyType === 'none'}
-                                placeholder="在此输入请求体内容..."
+                                placeholder={t('api:config.bodyPlaceholder', { defaultValue: '在此输入请求体内容...' })}
                                 onModEnter={() => doSend()}
                             />
                         </div>
@@ -239,13 +242,13 @@ export function ConfigBody({ state }: { state: ApiState }) {
             {configTab === 'auth' && (
                 <div className={a.authEditor}>
                     <div className={a.authRow}>
-                        <span className={a.label} style={{ width: 75 }}>鉴权类型</span>
+                        <span className={a.label} style={{ width: 75 }}>{t('api:config.authType', { defaultValue: '鉴权类型' })}</span>
                         <Select
                             style={{ width: 150, height: 32 }}
                             value={auth.type}
                             onChange={(v) => setAuth((x) => ({ ...x, type: v as ApiState['auth']['type'] }))}
                             options={[
-                                { value: 'none', label: '无 (No Auth)' },
+                                { value: 'none', label: t('api:config.noAuth', { defaultValue: '无 (No Auth)' }) },
                                 { value: 'basic', label: 'Basic Auth' },
                                 { value: 'bearer', label: 'Bearer Token' },
                             ]}
@@ -254,7 +257,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                     {auth.type === 'basic' && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                             <div className={a.authRow}>
-                                <span className={a.label} style={{ width: 75 }}>用户名</span>
+                                <span className={a.label} style={{ width: 75 }}>{t('api:config.username', { defaultValue: '用户名' })}</span>
                                 <Input
                                     style={{ maxWidth: 340, height: 32 }}
                                     placeholder="Username"
@@ -263,7 +266,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
                                 />
                             </div>
                             <div className={a.authRow}>
-                                <span className={a.label} style={{ width: 75 }}>密码</span>
+                                <span className={a.label} style={{ width: 75 }}>{t('api:config.password', { defaultValue: '密码' })}</span>
                                 <Input.Password
                                     style={{ maxWidth: 340, height: 32 }}
                                     placeholder="Password"
@@ -290,7 +293,7 @@ export function ConfigBody({ state }: { state: ApiState }) {
             {configTab === 'options' && (
                 <div className={a.optionsEditor}>
                     <div className={a.optRow}>
-                        <span className={a.label} style={{ width: 90 }}>超时时间(ms)</span>
+                        <span className={a.label} style={{ width: 90 }}>{t('api:config.timeout', { defaultValue: '超时时间(ms)' })}</span>
                         <InputNumber
                             min={0}
                             style={{ width: 150, height: 32 }}
@@ -300,10 +303,10 @@ export function ConfigBody({ state }: { state: ApiState }) {
                     </div>
                     {mode === 'ws' && (
                         <div className={a.optRow}>
-                            <span className={a.label} style={{ width: 90 }}>子协议</span>
+                            <span className={a.label} style={{ width: 90 }}>{t('api:config.subprotocols', { defaultValue: '子协议' })}</span>
                             <Input
                                 style={{ maxWidth: 340, height: 32 }}
-                                placeholder="逗号分隔，如 chat, json"
+                                placeholder={t('api:config.subprotocolsPlaceholder', { defaultValue: '逗号分隔，如 chat, json' })}
                                 value={wsProtocols}
                                 spellCheck={false}
                                 onChange={(e) => setWsProtocols(e.target.value)}
@@ -314,13 +317,13 @@ export function ConfigBody({ state }: { state: ApiState }) {
                         checked={followRedirects}
                         onChange={(e) => setFollowRedirects(e.target.checked)}
                     >
-                        自动跟随重定向 (Follow Redirects)
+                        {t('api:config.followRedirects', { defaultValue: '自动跟随重定向 (Follow Redirects)' })}
                     </Checkbox>
                     <Checkbox
                         checked={insecureTLS}
                         onChange={(e) => setInsecureTLS(e.target.checked)}
                     >
-                        跳过 TLS 证书校验 (Insecure TLS)
+                        {t('api:config.insecureTls', { defaultValue: '跳过 TLS 证书校验 (Insecure TLS)' })}
                     </Checkbox>
                 </div>
             )}

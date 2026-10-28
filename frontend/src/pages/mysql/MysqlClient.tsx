@@ -18,6 +18,7 @@ import {
     Layers,
     Eye,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import ClientIcon from '@/components/ClientIcon'
 import { MysqlSessionInfo } from '@/types'
@@ -47,7 +48,8 @@ interface TableStatusItem {
     isView: boolean
 }
 
-export default function MysqlClient({ session, onClose, onChange }: Props) {
+export default function MysqlClient({ session, onClose: _onClose, onChange }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const serverId = session.serverId || session.id
     const [currentDb, setCurrentDb] = useState<string>(session.database || '')
@@ -64,14 +66,14 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const [tabs, setTabs] = useState<MysqlTabItem[]>([
         {
             key: 'status',
-            label: '监控仪表盘',
+            label: 'dashboard',
             type: 'status',
             dbName: currentDb,
             closable: false,
         },
         {
             key: 'sql_1',
-            label: 'SQL 编辑器',
+            label: 'sqlEditor',
             type: 'sql',
             dbName: currentDb,
             closable: false,
@@ -110,6 +112,31 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     // ER 图缓存
     const [schemaMap, setSchemaMap] = useState<Record<string, Schema>>({})
 
+    // 加载指定数据库下的表与视图
+    const loadTables = useCallback(async (dbName: string) => {
+        if (!dbName) return
+        setLoadingDbs((prev) => ({ ...prev, [dbName]: true }))
+        try {
+            const raw = await API.mysqlTables(serverId, dbName)
+            const list: TableStatusItem[] = (raw || []).map((t: any) => {
+                if (typeof t === 'string') {
+                    return { name: t, rows: 0, dataSize: '-', isView: false }
+                }
+                return {
+                    name: t.name || t.Name || '',
+                    rows: t.rows || t.Rows || 0,
+                    dataSize: t.dataSize || t.DataSize || '-',
+                    isView: !!(t.isView || t.IsView),
+                }
+            })
+            setTablesMap((prev) => ({ ...prev, [dbName]: list }))
+        } catch (e) {
+            console.error(t('db:mysql.loadTablesFailed'), e)
+        } finally {
+            setLoadingDbs((prev) => ({ ...prev, [dbName]: false }))
+        }
+    }, [serverId, t])
+
     // 连接初始化
     const initConnection = useCallback(async () => {
         setLoadingTree(true)
@@ -126,52 +153,15 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             }
             setIsReady(true)
         } catch (e: any) {
-            message.error(`连接 MySQL 失败: ${e.message || e}`)
+            message.error(t('db:mysql.connectFailed', { error: e.message || e }))
         } finally {
             setLoadingTree(false)
         }
-    }, [serverId, session.database])
+    }, [serverId, session.database, loadTables, t, message])
 
     useEffect(() => {
         initConnection()
     }, [initConnection])
-
-    // 加载指定数据库下的表与视图
-    const loadTables = async (dbName: string) => {
-        setLoadingDbs((prev) => ({ ...prev, [dbName]: true }))
-        try {
-            const [tblNames, statusList] = await Promise.all([
-                API.mysqlTables(serverId, dbName).catch(() => []),
-                API.mysqlTableStatus(serverId, dbName).catch(() => []),
-            ])
-
-            const statusMap: Record<string, any> = {}
-            if (Array.isArray(statusList)) {
-                statusList.forEach((s: any) => {
-                    const name = s.Name || s.TABLE_NAME || ''
-                    if (name) statusMap[name] = s
-                })
-            }
-
-            const items: TableStatusItem[] = (tblNames || []).map((name) => {
-                const s = statusMap[name] || {}
-                const rows = Number(s.Rows ?? s.TABLE_ROWS ?? 0)
-                const isView = s.Comment === 'VIEW' || s.Engine === null
-                return {
-                    name,
-                    rows,
-                    dataSize: '',
-                    isView,
-                }
-            })
-
-            setTablesMap((prev) => ({ ...prev, [dbName]: items }))
-        } catch (e: any) {
-            console.error('加载 MySQL 数据表失败:', e)
-        } finally {
-            setLoadingDbs((prev) => ({ ...prev, [dbName]: false }))
-        }
-    }
 
     // 打开数据表 Tab
     const openTableTab = (dbName: string, table: string) => {
@@ -184,7 +174,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
         const newTab: MysqlTabItem = {
             key: tabKey,
-            label: `${table}`,
+            label: `${dbName}.${table}`,
             type: 'data',
             dbName,
             table,
@@ -206,18 +196,18 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         // 异步预加载 ER 图数据
         if (!schemaMap[dbName]) {
             try {
-                const s: any = await API.mysqlSchema(serverId, dbName)
+                const s = await API.mysqlSchema(serverId, dbName)
                 if (s) {
-                    setSchemaMap((prev) => ({ ...prev, [dbName]: s }))
+                    setSchemaMap((prev) => ({ ...prev, [dbName]: s as Schema }))
                 }
             } catch (e) {
-                console.warn('获取 ER 结构失败:', e)
+                console.warn(t('db:mysql.loadErFailed'), e)
             }
         }
 
         const newTab: MysqlTabItem = {
             key: tabKey,
-            label: `ER 图 (${dbName})`,
+            label: t('db:mysql.erDiagram', { dbName }),
             type: 'er',
             dbName,
             closable: true,
@@ -236,7 +226,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         }
         const newTab: MysqlTabItem = {
             key: tabKey,
-            label: '用户与权限',
+            label: t('db:mysql.usersGrants'),
             type: 'users',
             dbName: currentDb,
             closable: true,
@@ -245,23 +235,31 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         setActiveTabKey(tabKey)
     }
 
+    const getTabLabel = (item: MysqlTabItem) => {
+        if (item.type === 'status') return t('db:mysql.dashboard')
+        if (item.type === 'sql') return t('db:mysql.sqlEditor')
+        if (item.type === 'users') return t('db:mysql.usersGrants')
+        if (item.type === 'er') return t('db:mysql.erDiagram', { dbName: item.dbName })
+        return item.label
+    }
+
     const tabItems: TabItem[] = useMemo(() => {
-        return tabs.map((t) => {
+        return tabs.map((item) => {
             let icon: React.ReactNode = null
-            if (t.type === 'status') icon = <Activity size={13} />
-            else if (t.type === 'sql') icon = <Play size={13} />
-            else if (t.type === 'data') icon = <TableIcon size={13} />
-            else if (t.type === 'users') icon = <Users size={13} />
-            else if (t.type === 'er') icon = <Network size={13} />
+            if (item.type === 'status') icon = <Activity size={13} />
+            else if (item.type === 'sql') icon = <Play size={13} />
+            else if (item.type === 'data') icon = <TableIcon size={13} />
+            else if (item.type === 'users') icon = <Users size={13} />
+            else if (item.type === 'er') icon = <Network size={13} />
 
             return {
-                key: t.key,
-                label: t.label,
+                key: item.key,
+                label: getTabLabel(item),
                 icon,
-                closable: t.closable,
+                closable: item.closable,
             }
         })
-    }, [tabs])
+    }, [tabs, t])
 
     // 关闭单个 Tab
     const handleCloseTab = (key: string) => {
@@ -312,16 +310,16 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const handleDropDb = async (dbName: string) => {
         setConfirm({
             open: true,
-            title: '删除数据库',
+            title: t('db:mysql.deleteDbTitle'),
             danger: true,
-            message: `确认删除数据库「${dbName}」？库中所有表和数据将被永久清除。`,
+            message: t('db:mysql.deleteDbConfirm', { name: dbName }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
                     await API.mysqlDropDatabase(serverId, dbName)
                     initConnection()
                 } catch (e: any) {
-                    message.error(`删除数据库失败: ${e.message || e}`)
+                    message.error(t('db:mysql.deleteDbFailed', { error: e.message || e }))
                 }
             },
         })
@@ -331,9 +329,9 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const handleDropTable = async (dbName: string, table: string) => {
         setConfirm({
             open: true,
-            title: '删除数据表',
+            title: t('db:mysql.deleteTableTitle'),
             danger: true,
-            message: `确认删除表「${table}」？表中数据将无法找回。`,
+            message: t('db:mysql.deleteTableConfirm', { name: table }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
@@ -342,7 +340,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                     // 如果该表的 Tab 正打开，自动关闭
                     handleCloseTab(`tbl_${dbName}_${table}`)
                 } catch (e: any) {
-                    message.error(`删除表失败: ${e.message || e}`)
+                    message.error(t('db:mysql.deleteTableFailed', { error: e.message || e }))
                 }
             },
         })
@@ -352,16 +350,16 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     const handleTruncateTable = async (dbName: string, table: string) => {
         setConfirm({
             open: true,
-            title: '清空表数据',
+            title: t('db:mysql.truncateTableTitle'),
             danger: true,
-            message: `确认清空表「${table}」的所有数据 (TRUNCATE)？`,
+            message: t('db:mysql.truncateTableConfirm', { name: table }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
                     await API.mysqlTruncateTable(serverId, dbName, table)
                     loadTables(dbName)
                 } catch (e: any) {
-                    message.error(`清空表失败: ${e.message || e}`)
+                    message.error(t('db:mysql.truncateTableFailed', { error: e.message || e }))
                 }
             },
         })
@@ -370,15 +368,15 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
     // 备份数据库
     const handleBackupDb = async (dbName: string) => {
         try {
-            message.loading({ content: `正在导出并备份数据库 ${dbName}...`, key: 'backup' })
+            message.loading({ content: t('db:mysql.backupRunning', { name: dbName }), key: 'backup' })
             const path = await API.mysqlBackupToFile(serverId, dbName)
             if (path) {
-                message.success({ content: `已成功保存备份文件至: ${path}`, key: 'backup', duration: 5 })
+                message.success({ content: t('db:mysql.backupSuccess', { path }), key: 'backup', duration: 5 })
             } else {
-                message.info({ content: '已取消备份', key: 'backup' })
+                message.info({ content: t('db:mysql.backupCancelled'), key: 'backup' })
             }
         } catch (e: any) {
-            message.error({ content: `备份失败: ${e.message || e}`, key: 'backup' })
+            message.error({ content: t('db:mysql.backupFailed', { error: e.message || e }), key: 'backup' })
         }
     }
 
@@ -414,7 +412,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         try {
             const path = await API.mysqlExportToFile(serverId, currentDb, o.mode, o.source, o.table, o.sqlText, o.limit)
             if (path) {
-                message.success(`数据已成功导出到：${path}`)
+                message.success(t('db:mysql.exportSuccess', { path }))
                 setIoModal(null)
             }
         } catch (e: any) {
@@ -429,7 +427,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         setIoMsg('')
         try {
             const res = await API.mysqlImportFromFile(serverId, currentDb, o.mode, o.table)
-            message.success(res || '导入完成')
+            message.success(res || t('db:mysql.importSuccess'))
             setIoModal(null)
             if (currentDb) loadTables(currentDb)
         } catch (e: any) {
@@ -454,11 +452,11 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             setProcessList(pl || [])
             setSlowLog(sl || [])
         } catch (e: any) {
-            message.error(`获取监控状态失败: ${e.message || e}`)
+            message.error(t('db:mysql.getStatusFailed', { error: e.message || e }))
         } finally {
             setStatusBusy(false)
         }
-    }, [serverId])
+    }, [serverId, t, message])
 
     // 用户列表刷新
     const loadUsers = useCallback(async () => {
@@ -476,7 +474,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             const gr = await API.mysqlGrants(serverId, user, host)
             setGrants(gr)
         } catch (e: any) {
-            setGrants('查询权限失败：' + (e.message || e))
+            setGrants(t('db:mysql.queryGrantsFailed', { error: e.message || e }))
         }
     }
 
@@ -515,7 +513,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             // 数据表分组节点
             dbChildren.push({
                 key: `tbls_${dbName}`,
-                title: isLoadingDb ? '数据表 (加载中...)' : `数据表 (${tbls.length})`,
+                title: isLoadingDb ? t('db:mysql.tablesLoading') : t('db:mysql.tablesCount', { count: tbls.length }),
                 raw: { type: 'folder_tables', db: dbName },
                 isLeaf: false,
                 children: tableChildren,
@@ -525,7 +523,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             if (views.length > 0) {
                 dbChildren.push({
                     key: `views_${dbName}`,
-                    title: isLoadingDb ? '视图 (加载中...)' : `视图 (${views.length})`,
+                    title: isLoadingDb ? t('db:mysql.viewsLoading') : t('db:mysql.viewsCount', { count: views.length }),
                     raw: { type: 'folder_views', db: dbName },
                     isLeaf: false,
                     children: viewChildren,
@@ -535,7 +533,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             // ER 关系图入口节点
             dbChildren.push({
                 key: `er_node_${dbName}`,
-                title: 'ER 关系图',
+                title: t('db:mysql.erDiagramTitle'),
                 raw: { type: 'er_node', db: dbName },
                 isLeaf: true,
             })
@@ -548,7 +546,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 children: dbChildren,
             }
         })
-    }, [databases, tablesMap, loadingDbs])
+    }, [databases, tablesMap, loadingDbs, t])
 
     // 左侧树与当前激活 Tab 双向联动高亮
     const selectedTreeKeys = useMemo(() => {
@@ -568,7 +566,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         {
             key: 'new-table',
             icon: <Plus size={14} />,
-            label: '新建数据表',
+            label: t('db:mysql.menu.newTable'),
             onClick: () => {
                 setCurrentDb(dbName)
                 setObjName('')
@@ -579,19 +577,19 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         {
             key: 'er-diagram',
             icon: <Network size={14} />,
-            label: '查看 ER 关系图',
+            label: t('db:mysql.menu.viewEr'),
             onClick: () => openErTab(dbName),
         },
         {
             key: 'backup',
             icon: <Copy size={14} />,
-            label: '备份数据库 (SQL)',
+            label: t('db:mysql.menu.backupDb'),
             onClick: () => handleBackupDb(dbName),
         },
         {
             key: 'refresh',
             icon: <RotateCw size={14} />,
-            label: '刷新元数据',
+            label: t('db:mysql.menu.refreshMeta'),
             onClick: () => loadTables(dbName),
         },
         { type: 'divider' },
@@ -599,7 +597,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             key: 'drop-db',
             icon: <Trash2 size={14} />,
             danger: true,
-            label: '删除数据库 (DROP)',
+            label: t('db:mysql.menu.dropDb'),
             onClick: () => handleDropDb(dbName),
         },
     ]
@@ -609,13 +607,13 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         {
             key: 'open-data',
             icon: <TableIcon size={14} />,
-            label: '查看 / 编辑数据',
+            label: t('db:mysql.menu.viewData'),
             onClick: () => openTableTab(dbName, tableName),
         },
         {
             key: 'export',
             icon: <Download size={14} />,
-            label: '导出数据 (CSV/JSON/SQL)',
+            label: t('db:mysql.menu.exportData'),
             onClick: () => {
                 setCurrentDb(dbName)
                 setIoTable(tableName)
@@ -625,7 +623,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         {
             key: 'import',
             icon: <Upload size={14} />,
-            label: '导入数据 (CSV/SQL)',
+            label: t('db:mysql.menu.importData'),
             onClick: () => {
                 setCurrentDb(dbName)
                 setIoTable(tableName)
@@ -637,14 +635,14 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
             key: 'truncate',
             icon: <Eraser size={14} />,
             danger: true,
-            label: '清空表数据 (TRUNCATE)',
+            label: t('db:mysql.menu.truncateTable'),
             onClick: () => handleTruncateTable(dbName, tableName),
         },
         {
             key: 'drop-table',
             icon: <Trash2 size={14} />,
             danger: true,
-            label: '删除表 (DROP)',
+            label: t('db:mysql.menu.dropTable'),
             onClick: () => handleDropTable(dbName, tableName),
         },
     ]
@@ -654,7 +652,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         {
             key: 'new-db',
             icon: <Plus size={14} />,
-            label: '新建数据库',
+            label: t('db:mysql.menu.newDb'),
             onClick: () => {
                 setObjName('')
                 setObjModal('createdb')
@@ -663,13 +661,13 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
         {
             key: 'users',
             icon: <Users size={14} />,
-            label: '用户与权限管理',
+            label: t('db:mysql.menu.userMgmt'),
             onClick: openUsersTab,
         },
         {
             key: 'refresh-all',
             icon: <RotateCw size={14} />,
-            label: '刷新全部',
+            label: t('db:mysql.menu.refreshAll'),
             onClick: initConnection,
         },
     ]
@@ -684,7 +682,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                         MySQL
                     </span>
                     <Space size={4}>
-                        <Tooltip title="新建数据库">
+                        <Tooltip title={t('db:mysql.menu.newDb')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -695,7 +693,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                 }}
                             />
                         </Tooltip>
-                        <Tooltip title="用户与权限">
+                        <Tooltip title={t('db:mysql.usersGrants')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -703,7 +701,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                 onClick={openUsersTab}
                             />
                         </Tooltip>
-                        <Tooltip title="刷新元数据">
+                        <Tooltip title={t('db:mysql.menu.refreshMeta')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -750,6 +748,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                     openErTab(raw.db)
                                 } else if (raw.type === 'db') {
                                     setCurrentDb(raw.dbName)
+                                    onChange?.(serverId, raw.dbName)
                                     const willExpand = !expandedKeys.includes(nodeKey)
                                     if (willExpand && !tablesMap[raw.dbName]) {
                                         await loadTables(raw.dbName)
@@ -810,7 +809,7 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                                         <div onContextMenu={(e) => e.stopPropagation()} className={my.nodeTitleWrap}>
                                             <span className={my.nodeMain}>
                                                 <Network size={13} color="#722ed1" />
-                                                <span className={my.nodeText}>ER 关系图</span>
+                                                <span className={my.nodeText}>{t('db:mysql.erDiagramTitle')}</span>
                                             </span>
                                         </div>
                                     )
@@ -859,33 +858,33 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
 
                 {/* 标签页内容渲染 */}
                 <div className={my.tabContent}>
-                    {tabs.map((t) => {
-                        const isVisible = t.key === activeTabKey
+                    {tabs.map((tabItem) => {
+                        const isVisible = tabItem.key === activeTabKey
                         if (!isVisible) return null
 
-                        if (t.type === 'data' && t.table) {
+                        if (tabItem.type === 'data' && tabItem.table) {
                             return (
                                 <DbDataTab
-                                    key={t.key}
-                                    adapter={createMysqlAdapter(serverId, t.dbName, t.table)}
-                                    onClose={() => handleCloseTab(t.key)}
+                                    key={tabItem.key}
+                                    adapter={createMysqlAdapter(serverId, tabItem.dbName, tabItem.table)}
+                                    onClose={() => handleCloseTab(tabItem.key)}
                                 />
                             )
                         }
 
-                        if (t.type === 'sql') {
+                        if (tabItem.type === 'sql') {
                             return (
                                 <DbSqlEditor
-                                    key={t.key}
-                                    adapter={createMysqlSqlAdapter(serverId, t.dbName || currentDb || 'mysql')}
+                                    key={tabItem.key}
+                                    adapter={createMysqlSqlAdapter(serverId, tabItem.dbName || currentDb || 'mysql')}
                                 />
                             )
                         }
 
-                        if (t.type === 'status') {
+                        if (tabItem.type === 'status') {
                             return (
                                 <StatusPanel
-                                    key={t.key}
+                                    key={tabItem.key}
                                     sessionId={serverId}
                                     status={status}
                                     variables={variables}
@@ -897,10 +896,10 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             )
                         }
 
-                        if (t.type === 'users') {
+                        if (tabItem.type === 'users') {
                             return (
                                 <UsersPanel
-                                    key={t.key}
+                                    key={tabItem.key}
                                     sessionId={serverId}
                                     databases={databases}
                                     users={users}
@@ -915,11 +914,11 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                             )
                         }
 
-                        if (t.type === 'er') {
+                        if (tabItem.type === 'er') {
                             return (
                                 <ErDiagram
-                                    key={t.key}
-                                    schema={schemaMap[t.dbName] || { tables: [], foreignKeys: [] }}
+                                    key={tabItem.key}
+                                    schema={schemaMap[tabItem.dbName] || { tables: [], foreignKeys: [] }}
                                     busy={false}
                                 />
                             )
@@ -932,10 +931,10 @@ export default function MysqlClient({ session, onClose, onChange }: Props) {
                 {/* 底部状态栏 */}
                 <footer className={my.statusBar}>
                     <span>
-                        MySQL · {session.host}:{session.port} | 当前库: <strong>{currentDb || '(未选择)'}</strong>
+                        MySQL · {session.host}:{session.port} | {t('db:mysql.statusBar.currentDb', { db: currentDb || t('db:mysql.statusBar.unselected') })}
                     </span>
                     <span>
-                        共 {databases.length} 个数据库 | 运行状态正常
+                        {t('db:mysql.statusBar.dbCount', { count: databases.length })} | {t('db:mysql.statusBar.statusNormal')}
                     </span>
                 </footer>
             </main>

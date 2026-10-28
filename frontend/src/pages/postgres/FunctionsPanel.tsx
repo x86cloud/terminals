@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Table, Button, Tag, Modal, App } from 'antd'
 import { RotateCw, Edit2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { PgFunction } from './postgresTypes'
@@ -14,6 +15,7 @@ export default function FunctionsPanel({
     dbName: string
     schema: string
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [funcs, setFuncs] = useState<PgFunction[]>([])
     const [loading, setLoading] = useState(false)
@@ -27,7 +29,7 @@ export default function FunctionsPanel({
             const list = await API.postgresFunctions(serverId, dbName, schema)
             setFuncs(list || [])
         } catch (e: any) {
-            message.error(`加载函数失败: ${e.message || e}`)
+            message.error(t('postgres.loadFuncFailed', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -43,9 +45,10 @@ export default function FunctionsPanel({
         try {
             await API.postgresRun(serverId, dbName, defContent.trim())
             setEditingFunc(null)
+            message.success(t('postgres.funcs.saveSuccess'))
             loadFunctions()
         } catch (e: any) {
-            message.error(`更新失败: ${e.message || e}`)
+            message.error(t('postgres.funcs.saveFail', { error: e.message || e }))
         } finally {
             setSaving(false)
         }
@@ -55,9 +58,9 @@ export default function FunctionsPanel({
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', padding: 16, gap: 16, background: 'var(--bg-surface)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-surface-secondary)', padding: '10px 16px', borderRadius: 8, border: '1px solid var(--border-color)' }}>
                 <div>
-                    <span style={{ fontSize: 14, fontWeight: 700 }}>函数与存储过程 (Functions & Procedures)</span>
+                    <span style={{ fontSize: 14, fontWeight: 700 }}>{t('postgres.funcs.title')}</span>
                     <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 8 }}>
-                        Schema: {schema} (共 {funcs.length} 个)
+                        {t('postgres.funcs.schemaCount', { schema, count: funcs.length })}
                     </span>
                 </div>
                 <Button size="small" icon={<RotateCw size={13} />} loading={loading} onClick={loadFunctions} />
@@ -71,7 +74,7 @@ export default function FunctionsPanel({
                     pagination={false}
                     columns={[
                         {
-                            title: '名称',
+                            title: t('postgres.funcs.colName'),
                             dataIndex: 'name',
                             render: (name, r: PgFunction) => (
                                 <span>
@@ -84,12 +87,12 @@ export default function FunctionsPanel({
                                 </span>
                             ),
                         },
-                        { title: '返回类型', dataIndex: 'resultType', render: (t) => t || 'void' },
-                        { title: '入参列表', dataIndex: 'argTypes', ellipsis: true },
-                        { title: '编写语言', dataIndex: 'language', render: (l) => <Tag>{l}</Tag> },
-                        { title: '说明', dataIndex: 'comment', render: (c) => c || '-' },
+                        { title: t('postgres.funcs.colResultType'), dataIndex: 'resultType', render: (val) => val || 'void' },
+                        { title: t('postgres.funcs.colArgTypes'), dataIndex: 'argTypes', ellipsis: true },
+                        { title: t('postgres.funcs.colLang'), dataIndex: 'language', render: (l) => <Tag>{l}</Tag> },
+                        { title: t('postgres.funcs.colComment'), dataIndex: 'comment', render: (c) => c || '-' },
                         {
-                            title: '操作',
+                            title: t('postgres.funcs.colAction'),
                             width: 120,
                             render: (_, r: PgFunction) => (
                                 <Button
@@ -102,7 +105,7 @@ export default function FunctionsPanel({
                                         setDefContent(r.def || '')
                                     }}
                                 >
-                                    查看 / 编辑
+                                    {t('postgres.funcs.viewEdit')}
                                 </Button>
                             ),
                         },
@@ -112,14 +115,14 @@ export default function FunctionsPanel({
 
             {/* 编辑源码弹窗 */}
             <Modal
-                title={`函数源码: ${editingFunc?.name}`}
+                title={t('postgres.funcs.editorTitle', { name: editingFunc?.name })}
                 open={!!editingFunc}
                 width={800}
                 onCancel={() => setEditingFunc(null)}
                 onOk={handleSaveDef}
                 confirmLoading={saving}
-                okText="执行并保存"
-                cancelText="关闭"
+                okText={t('postgres.funcs.saveBtn')}
+                cancelText={t('postgres.funcs.close')}
             >
                 <div style={{ marginTop: 12, border: '1px solid var(--border-color)', borderRadius: 6, overflow: 'hidden' }}>
                     <CodeEditor

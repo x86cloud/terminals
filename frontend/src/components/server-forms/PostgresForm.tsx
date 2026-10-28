@@ -1,6 +1,7 @@
 import React from 'react'
 import { Input, InputNumber, Space, Switch, Collapse, Select } from 'antd'
 import { ShieldCheck, Workflow, Zap } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { BasicFields } from './BasicFields'
 import { ServerFormProps } from './types'
 
@@ -9,6 +10,8 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
     update,
     groups,
 }) => {
+    const { t } = useTranslation(['server', 'common'])
+
     return (
         <Space orientation="vertical" size={14} style={{ width: '100%' }}>
             <BasicFields form={form} update={update} groups={groups} />
@@ -16,15 +19,15 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
             {/* Host + Port */}
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>主机地址 (Host / IP)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:host')}</div>
                     <Input
-                        placeholder="127.0.0.1 / example.com"
+                        placeholder={t('server:hostPlaceholder')}
                         value={form.host}
                         onChange={(e) => update({ host: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>端口 (Port)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:port')}</div>
                     <InputNumber
                         min={1}
                         max={65535}
@@ -38,7 +41,7 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
             {/* 用户名与密码 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>用户名 (User)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:username')}</div>
                     <Input
                         placeholder="postgres"
                         value={form.username || 'postgres'}
@@ -46,9 +49,9 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>密码 (Password)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:password')}</div>
                     <Input.Password
-                        placeholder="请输入 PostgreSQL 密码"
+                        placeholder={t('server:passwordPlaceholder')}
                         value={form.password || ''}
                         onChange={(e) => update({ password: e.target.value })}
                     />
@@ -58,7 +61,7 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
             {/* 默认数据库与 Schema */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认数据库 (Database)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:database')}</div>
                     <Input
                         placeholder="postgres"
                         value={form.postgresDatabase || form.database || 'postgres'}
@@ -66,7 +69,7 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>默认 Schema (命名空间)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:postgres.schema')}</div>
                     <Input
                         placeholder="public"
                         value={form.postgresSchema || 'public'}
@@ -86,15 +89,15 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <Workflow size={13} color={form.postgresSSHEnabled ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.postgresSSHEnabled ? 600 : 400 }}>
-                                    SSH 隧道代理 (SSH Bastion Tunnel)
+                                    {t('server:postgres.tunnel')}
                                 </span>
-                                {form.postgresSSHEnabled && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[已启用]</span>}
+                                {form.postgresSSHEnabled && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{t('server:enabled')}]</span>}
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                    <span style={{ fontSize: 12 }}>启用 SSH 隧道连接内网 PG</span>
+                                    <span style={{ fontSize: 12 }}>{t('server:postgres.tunnelDesc')}</span>
                                     <Switch
                                         size="small"
                                         checked={!!form.postgresSSHEnabled}
@@ -105,15 +108,15 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                                     <>
                                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10 }}>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4 }}>跳板机地址 (Host)</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.bastionHost')}</div>
                                                 <Input
-                                                    placeholder="如: bastion.internal.net"
+                                                    placeholder="bastion.internal.net"
                                                     value={form.postgresSSHHost || ''}
                                                     onChange={(e) => update({ postgresSSHHost: e.target.value })}
                                                 />
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4 }}>跳板机端口</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.bastionPort')}</div>
                                                 <InputNumber
                                                     min={1}
                                                     max={65535}
@@ -124,9 +127,9 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                                             </div>
                                         </div>
                                         <div>
-                                            <div style={{ fontSize: 12, marginBottom: 4 }}>跳板机用户名</div>
+                                            <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.bastionUser')}</div>
                                             <Input
-                                                placeholder="如: ec2-user / root"
+                                                placeholder="ec2-user / root"
                                                 value={form.postgresSSHUser || ''}
                                                 onChange={(e) => update({ postgresSSHUser: e.target.value })}
                                             />
@@ -142,7 +145,7 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <ShieldCheck size={13} color={form.postgresSSLMode && form.postgresSSLMode !== 'disable' ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.postgresSSLMode && form.postgresSSLMode !== 'disable' ? 600 : 400 }}>
-                                    SSL 传输安全 (SSL Mode)
+                                    {t('server:postgres.ssl')}
                                 </span>
                                 {form.postgresSSLMode && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{form.postgresSSLMode}]</span>}
                             </Space>
@@ -155,10 +158,10 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                                     value={form.postgresSSLMode || 'disable'}
                                     onChange={(val) => update({ postgresSSLMode: val })}
                                     options={[
-                                        { label: 'disable (禁用 SSL / 明文直连)', value: 'disable' },
-                                        { label: 'require (要求 SSL 加密传输)', value: 'require' },
-                                        { label: 'verify-ca (校验 CA 证书)', value: 'verify-ca' },
-                                        { label: 'verify-full (严格校验 CA 及主机名)', value: 'verify-full' },
+                                        { label: 'disable (No SSL)', value: 'disable' },
+                                        { label: 'require (SSL Required)', value: 'require' },
+                                        { label: 'verify-ca (Verify CA)', value: 'verify-ca' },
+                                        { label: 'verify-full (Verify CA & Host)', value: 'verify-full' },
                                     ]}
                                 />
                             </div>
@@ -169,13 +172,13 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                         label: (
                             <Space size={6}>
                                 <Zap size={13} />
-                                <span style={{ fontSize: 13 }}>连接池设置 (Connection Pool)</span>
+                                <span style={{ fontSize: 13 }}>{t('server:postgres.pool')}</span>
                             </Space>
                         ),
                         children: (
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4 }}>最大连接数 (MaxConns)</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.maxOpenConns')} (MaxConns)</div>
                                     <InputNumber
                                         min={1}
                                         max={500}
@@ -185,7 +188,7 @@ export const PostgresForm: React.FC<ServerFormProps> = ({
                                     />
                                 </div>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4 }}>最小空闲数 (MinConns)</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mysql.maxIdleConns')} (MinConns)</div>
                                     <InputNumber
                                         min={0}
                                         max={100}

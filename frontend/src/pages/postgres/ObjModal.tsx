@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Modal, Form, Input, Select, App } from 'antd'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 
@@ -14,6 +15,7 @@ export function CreateDbModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
@@ -24,10 +26,11 @@ export function CreateDbModal({
             setLoading(true)
             await API.postgresCreateDatabase(serverId, vals.name.trim(), vals.owner || '', vals.encoding || 'UTF8', '')
             form.resetFields()
+            message.success(t('postgres.obj.createDbSuccess'))
             onSuccess()
             onClose()
         } catch (e: any) {
-            message.error(`创建数据库失败: ${e.message || e}`)
+            message.error(t('postgres.obj.createDbFail', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -35,19 +38,19 @@ export function CreateDbModal({
 
     return (
         <Modal
-            title="新建数据库 (Create Database)"
+            title={t('postgres.obj.createDbTitle')}
             open={open}
             onOk={handleCreate}
             onCancel={onClose}
             confirmLoading={loading}
-            okText="创建"
-            cancelText="取消"
+            okText={t('postgres.obj.create')}
+            cancelText={t('postgres.obj.cancel')}
         >
             <Form form={form} layout="vertical" initialValues={{ encoding: 'UTF8' }}>
-                <Form.Item label="数据库名称" name="name" rules={[{ required: true, message: '请输入数据库名称' }]}>
-                    <Input placeholder="输入数据库名称 (例如: mydb_dev)" />
+                <Form.Item label={t('postgres.obj.dbName')} name="name" rules={[{ required: true, message: t('postgres.obj.dbNameReq') }]}>
+                    <Input placeholder={t('postgres.obj.dbNamePlaceholder')} />
                 </Form.Item>
-                <Form.Item label="字符集编码" name="encoding">
+                <Form.Item label={t('postgres.obj.encoding')} name="encoding">
                     <Select
                         options={[
                             { label: 'UTF8', value: 'UTF8' },
@@ -56,8 +59,8 @@ export function CreateDbModal({
                         ]}
                     />
                 </Form.Item>
-                <Form.Item label="所有者角色 (Owner)" name="owner">
-                    <Input placeholder="留空使用当前连接用户" />
+                <Form.Item label={t('postgres.obj.owner')} name="owner">
+                    <Input placeholder={t('postgres.obj.ownerDbPlaceholder')} />
                 </Form.Item>
             </Form>
         </Modal>
@@ -77,6 +80,7 @@ export function CreateSchemaModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [form] = Form.useForm()
     const [loading, setLoading] = useState(false)
@@ -90,7 +94,7 @@ export function CreateSchemaModal({
             onSuccess()
             onClose()
         } catch (e: any) {
-            message.error(`创建 Schema 失败: ${e.message || e}`)
+            message.error(t('postgres.obj.createSchemaFail', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -98,20 +102,20 @@ export function CreateSchemaModal({
 
     return (
         <Modal
-            title="新建 Schema 命名空间"
+            title={t('postgres.obj.createSchemaTitle')}
             open={open}
             onOk={handleCreate}
             onCancel={onClose}
             confirmLoading={loading}
-            okText="创建"
-            cancelText="取消"
+            okText={t('postgres.obj.create')}
+            cancelText={t('postgres.obj.cancel')}
         >
             <Form form={form} layout="vertical">
-                <Form.Item label="Schema 名称" name="name" rules={[{ required: true, message: '请输入 Schema 名称' }]}>
-                    <Input placeholder="输入 Schema 名称 (例如: auth, analytics)" />
+                <Form.Item label={t('postgres.obj.schemaName')} name="name" rules={[{ required: true, message: t('postgres.obj.schemaNameReq') }]}>
+                    <Input placeholder={t('postgres.obj.schemaNamePlaceholder')} />
                 </Form.Item>
-                <Form.Item label="所有者角色 (Owner)" name="owner">
-                    <Input placeholder="留空使用当前用户" />
+                <Form.Item label={t('postgres.obj.owner')} name="owner">
+                    <Input placeholder={t('postgres.obj.ownerSchemaPlaceholder')} />
                 </Form.Item>
             </Form>
         </Modal>
@@ -133,6 +137,7 @@ export function CreateTableModal({
     onClose: () => void
     onSuccess: () => void
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [tableName, setTableName] = useState('')
     const [defs, setDefs] = useState(`  id SERIAL PRIMARY KEY,\n  name VARCHAR(100) NOT NULL,\n  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`)
@@ -140,7 +145,7 @@ export function CreateTableModal({
 
     const handleCreate = async () => {
         if (!tableName.trim()) {
-            message.warning('请输入表名')
+            message.warning(t('postgres.obj.tableNameReq'))
             return
         }
         setLoading(true)
@@ -150,7 +155,7 @@ export function CreateTableModal({
             onSuccess()
             onClose()
         } catch (e: any) {
-            message.error(`创建表失败: ${e.message || e}`)
+            message.error(t('postgres.obj.createTableFail', { error: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -158,22 +163,22 @@ export function CreateTableModal({
 
     return (
         <Modal
-            title={`在 Schema「${schema}」下新建数据表`}
+            title={t('postgres.obj.createTableTitle', { schema })}
             open={open}
             width={640}
             onOk={handleCreate}
             onCancel={onClose}
             confirmLoading={loading}
-            okText="创建"
-            cancelText="取消"
+            okText={t('postgres.obj.create')}
+            cancelText={t('postgres.obj.cancel')}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>数据表名称</div>
-                    <Input placeholder="输入表名 (如 orders, accounts)" value={tableName} onChange={(e) => setTableName(e.target.value)} />
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t('postgres.obj.tableName')}</div>
+                    <Input placeholder={t('postgres.obj.tableNamePlaceholder')} value={tableName} onChange={(e) => setTableName(e.target.value)} />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>字段定义与约束 (Column Definitions)</div>
+                    <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{t('postgres.obj.colDefs')}</div>
                     <div style={{ border: '1px solid var(--border-color)', borderRadius: 6, overflow: 'hidden' }}>
                         <CodeEditor value={defs} lang="sql" height="200px" onChange={setDefs} />
                     </div>

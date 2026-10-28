@@ -3,14 +3,14 @@
 
 .fullPane {
     position: fixed;
-    top: 36px;
+    top: @titlebar-height;
     left: 0;
     right: 0;
     bottom: 0;
     background: @bg;
     z-index: 500;
     display: flex;
-    padding: 4px 8px 8px 8px;
+    padding: 0 0 0 8px;
     box-sizing: border-box;
     overflow: hidden;
     color: @text;
@@ -23,7 +23,7 @@
     width: 230px;
     background: transparent;
     border-right: none;
-    padding: 6px 12px 12px 4px;
+    padding: 8px 12px 12px 4px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -130,8 +130,14 @@
     flex: 1;
     min-width: 0;
     background: @bg-1-solid;
-    border: 1px solid @border;
-    border-radius: @radius-lg;
+    border-top: 1px solid @border;
+    border-left: 1px solid @border;
+    border-right: none;
+    border-bottom: none;
+    border-top-left-radius: @radius-lg;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom-left-radius: 0;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
     padding: 24px 36px;
     overflow-y: auto;

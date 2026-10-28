@@ -44,6 +44,7 @@ type AppSettings struct {
 	McpServerPort           int           `json:"mcpServerPort"`
 	McpServerHost           string        `json:"mcpServerHost"`
 	CloseAction             string        `json:"closeAction"` // "ask" | "minimize" | "quit"
+	Language                string        `json:"language"`    // "system" | "zh-CN" | "en-US"
 }
 
 func DefaultAppSettings() AppSettings {
@@ -59,6 +60,7 @@ func DefaultAppSettings() AppSettings {
 	}
 
 	return AppSettings{
+		Language:                "system",
 		ThemeMode:               "light",
 		FontFamily:              "Consolas",
 		FontSize:                "13",

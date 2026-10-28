@@ -11,6 +11,7 @@ import { API } from '@/api'
 import ClientIcon from '@/components/ClientIcon'
 import { emptyServer, ServerConfig, ServerGroup, ConnType } from '@/types'
 import { errorMessage } from '@/utils'
+import { useTranslation } from 'react-i18next'
 import {
     serverFormComponents,
     initServerForm,
@@ -35,6 +36,7 @@ export default function ServerDialog({
     onSaved,
     onSaveAndConnect,
 }: Props) {
+    const { t } = useTranslation(['server', 'common'])
     const [form, setForm] = useState<ServerConfig>(emptyServer())
     const [error, setError] = useState('')
     const [busy, setBusy] = useState(false)
@@ -90,30 +92,30 @@ export default function ServerDialog({
         try {
             if (form.type === 'ssh' || !form.type) {
                 const res = await API.sshTestConnection(form)
-                setTestResult({ success: true, message: `SSH 连接成功! 延迟: ${res.pingMs || 0}ms` })
+                setTestResult({ success: true, message: t('testSuccessPing', '{{protocol}} 连接成功! 延迟: {{ping}}ms', { protocol: 'SSH', ping: res.pingMs || 0 }) })
             } else if (form.type === 'docker') {
                 const msg = await API.dockerTestConnection(form)
-                setTestResult({ success: true, message: msg || 'Docker 连通性测试通过！' })
+                setTestResult({ success: true, message: msg || t('testSuccessDocker', 'Docker 连通性测试通过！') })
             } else if (form.type === 'mongo') {
                 const res = await API.mongoTestConnection(form)
-                setTestResult({ success: true, message: `MongoDB 连接成功! Ping: ${res.pingMs || 0}ms` })
+                setTestResult({ success: true, message: t('testSuccessPing', '{{protocol}} 连接成功! 延迟: {{ping}}ms', { protocol: 'MongoDB', ping: res.pingMs || 0 }) })
             } else if (form.type === 'mqtt') {
                 const res = await API.mqttTestConnection(form)
-                setTestResult({ success: true, message: `MQTT Broker 连接成功! 延迟: ${res.pingMs || 0}ms` })
+                setTestResult({ success: true, message: t('testSuccessPing', '{{protocol}} 连接成功! 延迟: {{ping}}ms', { protocol: 'MQTT Broker', ping: res.pingMs || 0 }) })
             } else if (form.type === 'redis') {
                 const res = await API.redisTestConnection(form)
-                setTestResult({ success: true, message: `Redis 连接成功! 延迟: ${res.pingMs || 0}ms` })
+                setTestResult({ success: true, message: t('testSuccessPing', '{{protocol}} 连接成功! 延迟: {{ping}}ms', { protocol: 'Redis', ping: res.pingMs || 0 }) })
             } else if (form.type === 'mysql') {
                 const res = await API.mysqlTestConnection(form)
-                setTestResult({ success: true, message: `MySQL 连接成功! 延迟: ${res.pingMs || 0}ms` })
+                setTestResult({ success: true, message: t('testSuccessPing', '{{protocol}} 连接成功! 延迟: {{ping}}ms', { protocol: 'MySQL', ping: res.pingMs || 0 }) })
             } else if (form.type === 'postgres') {
                 const res = await API.postgresTestConnection(form)
-                setTestResult({ success: true, message: `PostgreSQL 连接成功! 延迟: ${res.pingMs || 0}ms` })
+                setTestResult({ success: true, message: t('testSuccessPing', '{{protocol}} 连接成功! 延迟: {{ping}}ms', { protocol: 'PostgreSQL', ping: res.pingMs || 0 }) })
             } else if (form.type === 'k8s') {
                 const res = await API.k8sTestConnection(form)
-                setTestResult({ success: true, message: res || 'Kubernetes 连接测试成功！' })
+                setTestResult({ success: true, message: res || t('testSuccessK8s', 'Kubernetes 连接测试成功！') })
             } else {
-                setTestResult({ success: true, message: '配置格式校验通过' })
+                setTestResult({ success: true, message: t('testSuccessConfig', '配置格式校验通过') })
             }
         } catch (err) {
             setTestResult({ success: false, message: errorMessage(err) })
@@ -143,7 +145,7 @@ export default function ServerDialog({
             title={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <Server size={18} style={{ display: 'block', flexShrink: 0 }} />
-                    <span style={{ lineHeight: '18px' }}>{initial ? '编辑连接配置' : '新建连接'}</span>
+                    <span style={{ lineHeight: '18px' }}>{initial ? t('server:titleEdit') : t('server:titleNew')}</span>
                 </div>
             }
             onCancel={onClose}
@@ -155,17 +157,17 @@ export default function ServerDialog({
                     <div>
                         {['ssh', 'mongo', 'redis', 'mysql', 'postgres', 'mqtt', 'docker', 'k8s'].includes(form.type || 'ssh') && (
                             <Button onClick={handleTestConnection} loading={busy}>
-                                测试连接
+                                {t('server:testConnection')}
                             </Button>
                         )}
                     </div>
                     <Space size={8}>
-                        <Button onClick={onClose}>取消</Button>
+                        <Button onClick={onClose}>{t('common:cancel')}</Button>
                         <Button onClick={() => save(false)} loading={busy}>
-                            仅保存
+                            {t('server:saveOnly')}
                         </Button>
                         <Button type="primary" onClick={() => save(true)} loading={busy}>
-                            保存并连接
+                            {t('server:saveAndConnect')}
                         </Button>
                     </Space>
                 </div>

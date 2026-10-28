@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
 import { Input, Button, Segmented, Select, Tooltip, Dropdown, App } from 'antd'
 import { Folder, Table as TableIcon, Search, RotateCw, Download, Plus, Database, Trash2, Copy } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { RedisKeysResult, RedisSessionInfo, RedisValue } from '@/types'
 import { KeyTreeNode, TYPE_COLOR, TYPE_SHORT_LABEL, buildKeyTree } from '@/pages/redis/redisTypes'
 import KeyItemTree from '@/pages/redis/KeyItemTree'
@@ -71,6 +72,7 @@ export default function KeysTab({
     flash,
     onOpenCreateKey,
 }: KeysTabProps) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     // Sidebar width resize state
     const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -136,7 +138,7 @@ export default function KeysTab({
 
     const copyKeyName = (keyName: string) => {
         navigator.clipboard.writeText(keyName)
-        message.success('已复制键名')
+        message.success(t('keys.copiedKey'))
     }
 
     return (
@@ -153,13 +155,13 @@ export default function KeysTab({
                                 options={Array.from({ length: 16 }, (_, i) => ({ value: i, label: `DB ${i}` }))}
                                 className={k.dbSelect}
                             />
-                            <span className={k.redisDbCount} title={`${data.keys.length} 键 / 共 ${session.dbSize || 0}`}>
+                            <span className={k.redisDbCount} title={`${data.keys.length} / ${session.dbSize || 0}`}>
                                 {data.keys.length} / {session.dbSize || 0}
                             </span>
                         </div>
                         <div className={k.sideActions}>
                             {onOpenCreateKey && (
-                                <Tooltip title="新建键 (Create Key)">
+                                <Tooltip title={t('keys.addKey')}>
                                     <Button
                                         size="small"
                                         type="text"
@@ -168,7 +170,7 @@ export default function KeysTab({
                                     />
                                 </Tooltip>
                             )}
-                            <Tooltip title="重新扫描 (SCAN)">
+                            <Tooltip title={t('keys.reload')}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -177,14 +179,14 @@ export default function KeysTab({
                                 />
                             </Tooltip>
                             {String(data.cursor) !== '0' && (
-                                <Tooltip title="加载更多键">
+                                <Tooltip title={t('keys.more')}>
                                     <Button
                                         size="small"
                                         type="text"
                                         icon={<Download size={13} />}
                                         onClick={() => loadKeys(false)}
                                     >
-                                        更多
+                                        {t('keys.more')}
                                     </Button>
                                 </Tooltip>
                             )}
@@ -194,7 +196,7 @@ export default function KeysTab({
                     <div className={k.searchBar}>
                         <Input
                             size="small"
-                            placeholder="搜索/过滤 (回车远程 SCAN)..."
+                            placeholder={t('keys.searchPlaceholder')}
                             value={localFilter || (pattern !== '*' ? pattern : '')}
                             prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
                             allowClear
@@ -220,10 +222,10 @@ export default function KeysTab({
                     <div className={k.redisKeys}>
                         {filteredKeyItems.length === 0 && (
                             <div className={k.redisEmpty}>
-                                <span>{data.keys.length === 0 ? '无键' : '无匹配结果'}</span>
+                                <span>{data.keys.length === 0 ? t('keys.noKeys') : t('keys.noMatches')}</span>
                                 {data.keys.length === 0 && onOpenCreateKey && (
                                     <Button size="small" type="primary" icon={<Plus size={12} />} onClick={onOpenCreateKey}>
-                                        新建键
+                                        {t('keys.addKey')}
                                     </Button>
                                 )}
                             </div>
@@ -239,7 +241,7 @@ export default function KeysTab({
                                     const contextMenu = [
                                         {
                                             key: 'copy',
-                                            label: '复制键名',
+                                            label: t('keys.copyKey'),
                                             icon: <Copy size={13} />,
                                             onClick: () => copyKeyName(keyName),
                                         },
@@ -249,7 +251,7 @@ export default function KeysTab({
                                         {
                                             key: 'delete',
                                             danger: true,
-                                            label: '删除键',
+                                            label: t('keys.deleteKey'),
                                             icon: <Trash2 size={13} />,
                                             onClick: () => delKey(keyName),
                                         },
@@ -275,7 +277,7 @@ export default function KeysTab({
                                                         {TYPE_SHORT_LABEL[itemType] || itemType.toUpperCase()}
                                                     </span>
                                                 )}
-                                                <Tooltip title={`删除 ${keyName}`}>
+                                                <Tooltip title={t('keys.deleteKeyTooltip', { key: keyName })}>
                                                     <button
                                                         type="button"
                                                         className={k.keyDelBtn}
@@ -391,13 +393,13 @@ export default function KeysTab({
                     ) : (
                         <div className={k.emptyMain}>
                             <Database size={52} style={{ color: 'var(--text-faint)', opacity: 0.6 }} />
-                            <div className={k.emptyTitle}>未选择任何键</div>
+                            <div className={k.emptyTitle}>{t('keys.noKeySelectedTitle')}</div>
                             <div className={k.emptySubtitle}>
-                                从左侧列表点击一个键进行查看与交互式编辑，或直接新建一个键。
+                                {t('keys.noKeySelectedDesc')}
                             </div>
                             {onOpenCreateKey && (
                                 <Button type="primary" icon={<Plus size={13} />} onClick={onOpenCreateKey}>
-                                    新建键 (Create Key)
+                                    {t('keys.createKeyBtn')}
                                 </Button>
                             )}
                         </div>

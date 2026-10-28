@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Modal, Radio, Button, Input, Alert, App } from 'antd'
 import { Download, Copy } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage, copyText, downloadText } from '@/utils'
 
@@ -51,6 +52,7 @@ function convertDocsToCsv(docs: any[]): string {
 }
 
 export default function IoModal({ sessionId, db, coll, currentDocs, filter, onClose }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [format, setFormat] = useState<MongoExportFormat>('json')
     const [scope, setScope] = useState<MongoExportScope>('current')
@@ -88,7 +90,7 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
         try {
             const rawDocs = await fetchExportDocs()
             if (!rawDocs.length) {
-                message.warning('没有可导出的文档数据')
+                message.warning(t('mongo.io.noData', '没有可导出的文档数据'))
                 return
             }
 
@@ -112,11 +114,11 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
 
             if (action === 'download') {
                 triggerDownload(exportText, format === 'csv' ? 'csv' : 'json')
-                message.success(`已导出 ${rawDocs.length} 条文档`)
+                message.success(t('mongo.io.exportedDocs', { count: rawDocs.length, defaultValue: `已导出 ${rawDocs.length} 条文档` }))
                 onClose()
             } else {
                 if (await copyText(exportText)) {
-                    message.success(`已复制 ${rawDocs.length} 条文档到剪贴板`)
+                    message.success(t('mongo.io.copiedDocs', { count: rawDocs.length, defaultValue: `已复制 ${rawDocs.length} 条文档到剪贴板` }))
                 }
                 onClose()
             }
@@ -130,11 +132,11 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
     return (
         <Modal
             open={true}
-            title={`导出数据 · ${coll}`}
+            title={t('mongo.io.title', { coll, defaultValue: `导出数据 · ${coll}` })}
             onCancel={() => !busy && onClose()}
             footer={[
                 <Button key="cancel" onClick={onClose} disabled={busy}>
-                    取消
+                    {t('common:cancel', '取消')}
                 </Button>,
                 <Button
                     key="copy"
@@ -142,7 +144,7 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
                     loading={busy}
                     onClick={() => handleExport('copy')}
                 >
-                    复制到剪贴板
+                    {t('mongo.io.copyBtn', '复制到剪贴板')}
                 </Button>,
                 <Button
                     key="download"
@@ -151,7 +153,7 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
                     loading={busy}
                     onClick={() => handleExport('download')}
                 >
-                    下载导出文件
+                    {t('mongo.io.downloadBtn', '下载导出文件')}
                 </Button>,
             ]}
             width={520}
@@ -161,34 +163,34 @@ export default function IoModal({ sessionId, db, coll, currentDocs, filter, onCl
 
                 <div>
                     <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                        导出格式
+                        {t('mongo.io.exportFormat', '导出格式')}
                     </label>
                     <Radio.Group value={format} onChange={(e) => setFormat(e.target.value)}>
-                        <Radio.Button value="json">标准 JSON 数组</Radio.Button>
-                        <Radio.Button value="extended-json">JSON Lines / Extended</Radio.Button>
-                        <Radio.Button value="csv">CSV 表格文件</Radio.Button>
+                        <Radio.Button value="json">{t('mongo.io.formatJson', '标准 JSON 数组')}</Radio.Button>
+                        <Radio.Button value="extended-json">{t('mongo.io.formatExtendedJson', 'JSON Lines / Extended')}</Radio.Button>
+                        <Radio.Button value="csv">{t('mongo.io.formatCsv', 'CSV 表格文件')}</Radio.Button>
                     </Radio.Group>
                 </div>
 
                 <div>
                     <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                        导出范围
+                        {t('mongo.io.exportScope', '导出范围')}
                     </label>
                     <Radio.Group value={scope} onChange={(e) => setScope(e.target.value)}>
-                        <Radio value="current">当前页文档 ({currentDocs.length} 条)</Radio>
-                        <Radio value="all">按当前查询条件筛选全部数据 (最多 10000 条)</Radio>
+                        <Radio value="current">{t('mongo.io.scopeCurrent', { count: currentDocs.length, defaultValue: `当前页文档 (${currentDocs.length} 条)` })}</Radio>
+                        <Radio value="all">{t('mongo.io.scopeAll', '按当前查询条件筛选全部数据 (最多 10000 条)')}</Radio>
                     </Radio.Group>
                 </div>
 
                 <div>
                     <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                        保存文件名
+                        {t('mongo.io.filename', '保存文件名')}
                     </label>
                     <Input
                         value={filename}
                         onChange={(e) => setFilename(e.target.value)}
                         addonAfter={format === 'csv' ? '.csv' : '.json'}
-                        placeholder="导出文件名"
+                        placeholder={t('mongo.io.filenamePlaceholder', '导出文件名')}
                     />
                 </div>
             </div>

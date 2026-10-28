@@ -5,6 +5,7 @@ import {
     Copy,
     Save,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 
@@ -33,6 +34,7 @@ export default function K8sResourceYamlModal({
     mode = 'edit',
     onSuccess,
 }: Props) {
+    const { t } = useTranslation(['k8s', 'common'])
     const { message } = App.useApp()
     const [content, setContent] = useState(initialYaml)
     const [loading, setLoading] = useState(false)
@@ -57,7 +59,7 @@ export default function K8sResourceYamlModal({
                 })
                 .catch((err: any) => {
                     if (!mounted) return
-                    message.error(`获取 YAML 失败: ${err.message || String(err)}`)
+                    message.error(t('k8s:yamlModal.fetchFail', { error: err.message || String(err) }))
                     setContent('')
                 })
                 .finally(() => {
@@ -76,7 +78,7 @@ export default function K8sResourceYamlModal({
 
     const handleSaveAndApply = async () => {
         if (!content.trim()) {
-            message.warning('YAML 内容不能为空')
+            message.warning(t('k8s:yamlModal.emptyYaml'))
             return
         }
 
@@ -84,7 +86,7 @@ export default function K8sResourceYamlModal({
         try {
             const results = await API.k8sApplyYAML(serverId, content)
             if (!results || results.length === 0) {
-                throw new Error('未识别到有效的 Kubernetes 资源')
+                throw new Error(t('k8s:yamlModal.invalidResource'))
             }
 
             const failures = results.filter((r) => r.action === 'failed')
@@ -92,33 +94,33 @@ export default function K8sResourceYamlModal({
 
             if (failures.length === 0) {
                 const summary = successes
-                    .map((r) => `${r.kind}/${r.name} (${r.action === 'created' ? '已创建' : '已更新'})`)
+                    .map((r) => `${r.kind}/${r.name} (${r.action === 'created' ? t('k8s:yamlModal.actionCreated') : t('k8s:yamlModal.actionUpdated')})`)
                     .join('、')
-                message.success(`应用成功: ${summary}`, 4)
+                message.success(t('k8s:yamlModal.applySuccess', { summary }), 4)
                 onSuccess?.()
                 onClose()
             } else if (successes.length === 0) {
-                const detail = failures.map((r) => `${r.kind}/${r.name || '未知'}: ${r.message}`).join('; ')
-                message.error(`应用失败: ${detail}`, 5)
+                const detail = failures.map((r) => `${r.kind}/${r.name || t('common.unknown')}: ${r.message}`).join('; ')
+                message.error(t('k8s:yamlModal.applyFail', { detail }), 5)
             } else {
                 const succSummary = successes.map((r) => `${r.kind}/${r.name}`).join('、')
                 const failSummary = failures.map((r) => `${r.kind}/${r.name}: ${r.message}`).join('; ')
-                message.warning(`部分成功 (${successes.length} 成功, ${failures.length} 失败)。成功: ${succSummary}；失败: ${failSummary}`, 6)
+                message.warning(t('k8s:yamlModal.applyPartial', { succCount: successes.length, failCount: failures.length, succSummary, failSummary }), 6)
                 onSuccess?.()
                 onClose()
             }
         } catch (err: any) {
-            message.error(`保存并应用异常: ${err.message || String(err)}`, 5)
+            message.error(t('k8s:yamlModal.saveApplyError', { error: err.message || String(err) }), 5)
         } finally {
             setSaving(false)
         }
     }
 
     const defaultTitle = mode === 'create'
-        ? `新建 ${kind} 资源`
+        ? t('k8s:yamlModal.titleCreate', { kind })
         : mode === 'edit'
-        ? `编辑 ${kind}: ${name || 'YAML'}`
-        : `${kind} YAML 配置`
+        ? t('k8s:yamlModal.titleEdit', { kind, name: name || 'YAML' })
+        : t('k8s:yamlModal.titleView', { kind })
 
     return (
         <Modal
@@ -134,7 +136,7 @@ export default function K8sResourceYamlModal({
                             </Tag>
                         )}
                         <Tag color={mode === 'create' ? 'green' : 'blue'}>
-                            {mode === 'create' ? '新建模式' : mode === 'edit' ? '在线编辑' : '只读预览'}
+                            {mode === 'create' ? t('k8s:yamlModal.modeCreate') : mode === 'edit' ? t('k8s:yamlModal.modeEdit') : t('k8s:yamlModal.modeView')}
                         </Tag>
                     </Space>
                 </div>
@@ -148,13 +150,13 @@ export default function K8sResourceYamlModal({
                     onClick={() => {
                         if (!content) return
                         navigator.clipboard.writeText(content)
-                        message.success('已复制 YAML')
+                        message.success(t('k8s:yamlModal.copiedYaml'))
                     }}
                 >
-                    复制 YAML
+                    {t('k8s:yamlModal.copyYaml')}
                 </Button>,
                 <Button key="cancel" onClick={onClose} disabled={saving}>
-                    关闭
+                    {t('common.close')}
                 </Button>,
                 mode !== 'view' && (
                     <Button
@@ -164,7 +166,7 @@ export default function K8sResourceYamlModal({
                         loading={saving}
                         onClick={handleSaveAndApply}
                     >
-                        {mode === 'create' ? '立即创建' : '保存并应用到集群'}
+                        {mode === 'create' ? t('k8s:yamlModal.createNow') : t('k8s:yamlModal.saveApplyCluster')}
                     </Button>
                 ),
             ]}
@@ -173,7 +175,7 @@ export default function K8sResourceYamlModal({
             <div style={{ padding: '8px 0 0' }}>
                 {loading ? (
                     <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--text-dim)' }}>
-                        正在加载集群 YAML 配置...
+                        {t('k8s:yamlModal.loadingYaml')}
                     </div>
                 ) : (
                     <CodeEditor

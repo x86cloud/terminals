@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react'
 import { Table, Input, InputNumber, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Edit3, Eye, Copy } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -23,6 +24,7 @@ interface ZSetRow {
 }
 
 export default function ZSetViewer({ session, selected, value, onReload, flash }: Props) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
     const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([])
@@ -82,17 +84,17 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
 
     const handleSave = async () => {
         if (!modalMember.trim()) {
-            message.warning('成员内容不能为空')
+            message.warning(t('viewers.zset.reqMember'))
             return
         }
         setSubmitting(true)
         try {
             await API.redisZSetAdd(session.id, selected, modalMember.trim(), modalScore ?? 0)
-            message.success(isAdding ? `已新增有序成员 [${modalMember}]` : `已更新分值 [${modalScore}]`)
+            message.success(isAdding ? t('viewers.zset.memberAdded', { member: modalMember }) : t('viewers.zset.scoreUpdated', { score: modalScore }))
             setModalOpen(false)
             onReload()
         } catch (e: any) {
-            message.error('操作失败: ' + (e?.message || e))
+            message.error(t('viewers.zset.opFail', { error: e?.message || e }))
         } finally {
             setSubmitting(false)
         }
@@ -101,10 +103,10 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
     const handleDeleteSingle = async (member: string) => {
         try {
             await API.redisZSetRem(session.id, selected, [member])
-            message.success(`已从有序集中移除成员`)
+            message.success(t('viewers.zset.memberRemoved'))
             onReload()
         } catch (e: any) {
-            message.error('移除失败: ' + (e?.message || e))
+            message.error(t('viewers.zset.removeFail', { error: e?.message || e }))
         }
     }
 
@@ -113,17 +115,17 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
         if (members.length === 0) return
         try {
             await API.redisZSetRem(session.id, selected, members)
-            message.success(`已成功批量移除 ${members.length} 个成员`)
+            message.success(t('viewers.zset.batchRemoved', { count: members.length }))
             setSelectedRowKeys([])
             onReload()
         } catch (e: any) {
-            message.error('批量移除失败: ' + (e?.message || e))
+            message.error(t('viewers.zset.batchRemoveFail', { error: e?.message || e }))
         }
     }
 
     const columns = [
         {
-            title: '排名 (Rank)',
+            title: t('viewers.zset.colRank'),
             width: 90,
             align: 'center' as const,
             render: (_: any, __: any, index: number) => (
@@ -133,7 +135,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '分值 (Score)',
+            title: t('viewers.zset.colScore'),
             dataIndex: 'score',
             key: 'score',
             width: 140,
@@ -146,7 +148,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '成员值 (Member)',
+            title: t('viewers.zset.colMember'),
             dataIndex: 'member',
             key: 'member',
             ellipsis: true,
@@ -156,7 +158,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span
                             className={s.cellValue}
-                            title="点击查看详情"
+                            title={t('viewers.zset.clickInspect')}
                             onClick={() => setInspectDrawer({ open: true, member, score: row.score })}
                         >
                             {member}
@@ -167,7 +169,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
             },
         },
         {
-            title: '大小',
+            title: t('viewers.common.colSize'),
             dataIndex: 'size',
             key: 'size',
             width: 90,
@@ -176,13 +178,13 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '操作',
+            title: t('viewers.common.colAction'),
             key: 'actions',
             width: 120,
             align: 'right' as const,
             render: (_: any, row: ZSetRow) => (
                 <Space size={2}>
-                    <Tooltip title="查看完整详情">
+                    <Tooltip title={t('viewers.zset.inspectTooltip')}>
                         <Button
                             size="small"
                             type="text"
@@ -190,7 +192,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                             onClick={() => setInspectDrawer({ open: true, member: row.member, score: row.score })}
                         />
                     </Tooltip>
-                    <Tooltip title="修改分值 (Score)">
+                    <Tooltip title={t('viewers.zset.editScoreTooltip')}>
                         <Button
                             size="small"
                             type="text"
@@ -204,13 +206,13 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                         />
                     </Tooltip>
                     <Popconfirm
-                        title={`确定从有序集中移除该成员吗？(ZREM)`}
+                        title={t('viewers.zset.removeConfirm')}
                         onConfirm={() => handleDeleteSingle(row.member)}
-                        okText="删除"
-                        cancelText="取消"
+                        okText={t('viewers.common.delete')}
+                        cancelText={t('viewers.common.cancel')}
                         okButtonProps={{ danger: true }}
                     >
-                        <Tooltip title="删除成员 (ZREM)">
+                        <Tooltip title={t('viewers.zset.removeTooltip')}>
                             <Button size="small" type="text" danger icon={<Trash2 size={12} />} />
                         </Tooltip>
                     </Popconfirm>
@@ -226,26 +228,26 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                     <Input
                         size="small"
                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
-                        placeholder="搜索成员内容..."
+                        placeholder={t('viewers.zset.searchPlaceholder')}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         allowClear
                         className={s.searchInput}
                     />
                     <span className={s.countBadge}>
-                        共 {rows.length} 个成员
-                        {searchText && ` (匹配 ${filteredRows.length} 个)`}
+                        {t('viewers.zset.totalMembers', { count: rows.length })}
+                        {searchText && t('viewers.zset.filteredMembers', { count: filteredRows.length })}
                     </span>
                     {selectedRowKeys.length > 0 && (
                         <Popconfirm
-                            title={`确定批量移除选中的 ${selectedRowKeys.length} 个成员吗？`}
+                            title={t('viewers.zset.batchRemoveConfirm', { count: selectedRowKeys.length })}
                             onConfirm={handleBatchDelete}
-                            okText="批量移除"
-                            cancelText="取消"
+                            okText={t('viewers.common.batchRemove')}
+                            cancelText={t('viewers.common.cancel')}
                             okButtonProps={{ danger: true }}
                         >
                             <Button size="small" danger icon={<Trash2 size={12} />}>
-                                批量移除 ({selectedRowKeys.length})
+                                {t('viewers.zset.batchRemoveBtn', { count: selectedRowKeys.length })}
                             </Button>
                         </Popconfirm>
                     )}
@@ -263,7 +265,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                             setModalOpen(true)
                         }}
                     >
-                        添加有序成员 (ZADD)
+                        {t('viewers.zset.addMemberBtn')}
                     </Button>
                 </div>
             </div>
@@ -278,7 +280,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                         defaultPageSize: 50,
                         pageSizeOptions: ['20', '50', '100', '200'],
                         showSizeChanger: true,
-                        showTotal: (total) => `共 ${total} 条`,
+                        showTotal: (total) => t('viewers.common.totalRecords', { total }),
                         size: 'small',
                     }}
                     rowSelection={{
@@ -288,7 +290,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                     locale={{
                         emptyText: (
                             <div className={s.emptyTip}>
-                                <span>当前 ZSet 有序集为空</span>
+                                <span>{t('viewers.zset.emptyZSet')}</span>
                                 <Button
                                     size="small"
                                     type="primary"
@@ -300,7 +302,7 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                                         setModalOpen(true)
                                     }}
                                 >
-                                    添加第一个成员 (ZADD)
+                                    {t('viewers.zset.addFirstMember')}
                                 </Button>
                             </div>
                         ),
@@ -310,31 +312,31 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
 
             {/* Add / Edit Modal */}
             <Modal
-                title={isAdding ? '添加有序成员 (ZADD)' : `修改分值 (Score) - ${modalMember}`}
+                title={isAdding ? t('viewers.zset.addModalTitle') : t('viewers.zset.editScoreModalTitle', { member: modalMember })}
                 open={modalOpen}
                 onOk={handleSave}
                 confirmLoading={submitting}
                 onCancel={() => setModalOpen(false)}
-                okText="保存写入"
-                cancelText="取消"
+                okText={t('viewers.common.saveWrite')}
+                cancelText={t('viewers.common.cancel')}
                 width={520}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 16 }}>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>成员值 (Member)</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('viewers.zset.memberLabel')}</div>
                         <Input
-                            placeholder="输入唯一成员值..."
+                            placeholder={t('viewers.zset.memberPlaceholder')}
                             value={modalMember}
                             disabled={!isAdding}
                             onChange={(e) => setModalMember(e.target.value)}
                         />
                     </div>
                     <div>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>分值 (Score)</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 4 }}>{t('viewers.zset.scoreLabel')}</div>
                         <InputNumber
                             style={{ width: '100%' }}
                             step={1}
-                            placeholder="分值数值，支持负数与小数..."
+                            placeholder={t('viewers.zset.scorePlaceholder')}
                             value={modalScore}
                             onChange={(v) => setModalScore(v ?? 0)}
                         />
@@ -344,14 +346,14 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
 
             {/* Inspect Drawer */}
             <Drawer
-                title={`查看 ZSet 成员详情 (分值: ${inspectDrawer.score})`}
+                title={t('viewers.zset.inspectTitle', { score: inspectDrawer.score })}
                 open={inspectDrawer.open}
                 onClose={() => setInspectDrawer({ open: false, member: '', score: 0 })}
                 width={600}
                 extra={
                     <Space size={6}>
-                        <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.member)) message.success('已复制成员内容') }}>
-                            复制
+                        <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.member)) message.success(t('viewers.common.copiedMember')) }}>
+                            {t('viewers.common.copy')}
                         </Button>
                         <Button
                             size="small"
@@ -365,14 +367,14 @@ export default function ZSetViewer({ session, selected, value, onReload, flash }
                                 setModalOpen(true)
                             }}
                         >
-                            修改分值
+                            {t('viewers.zset.modifyScore')}
                         </Button>
                     </Space>
                 }
             >
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                        长度: {inspectDrawer.member.length} 字符 | 大小: {formatBytes(new Blob([inspectDrawer.member]).size)}
+                        {t('viewers.common.lengthAndSize', { length: inspectDrawer.member.length, size: formatBytes(new Blob([inspectDrawer.member]).size) })}
                     </div>
                     <div style={{ flex: 1, minHeight: 0 }}>
                         <CodeEditor

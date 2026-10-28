@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     Button,
     Tag,
@@ -68,6 +69,7 @@ function fmtMb(mb?: number): string {
 }
 
 export default function StatusPanel({ session, databases = [] }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const id = session.id
     const [subTab, setSubTab] = useState<'overview' | 'currentOps' | 'slowQueries' | 'serverStatus'>('overview')
@@ -155,10 +157,10 @@ export default function StatusPanel({ session, databases = [] }: Props) {
         setKillingOp(opid)
         try {
             await API.mongoRunCommand(id, 'admin', JSON.stringify({ killOp: 1, op: opid }))
-            message.success(`已发送终止操作请求 (OpID: ${opid})`)
+            message.success(t('mongo.status.currentOps.killSent', { opid, defaultValue: `已发送终止操作请求 (OpID: ${opid})` }))
             void loadData()
         } catch (e) {
-            message.error(`终止操作失败: ${errorMessage(e)}`)
+            message.error(t('mongo.status.currentOps.killFail', { error: errorMessage(e), defaultValue: `终止操作失败: ${errorMessage(e)}` }))
         } finally {
             setKillingOp(null)
         }
@@ -232,7 +234,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
         setSavingProfiler(true)
         try {
             await API.mongoSetProfilingStatus(id, profilerDb, editLevel, editSlowMs)
-            message.success(`已更新数据库 [${profilerDb}] 的 Profiling 级别为 Level ${editLevel}`)
+            message.success(t('mongo.status.slowQueries.profilerUpdated', { db: profilerDb, level: editLevel, defaultValue: `已更新数据库 [${profilerDb}] 的 Profiling 级别为 Level ${editLevel}` }))
             setProfilerModalOpen(false)
             void loadSlowQueries()
         } catch (e: any) {
@@ -310,18 +312,18 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                         value={subTab}
                         onChange={(v) => setSubTab(v as any)}
                         options={[
-                            { label: '运行指标概览', value: 'overview', icon: <Activity size={12} /> },
+                            { label: t('mongo.status.subTabs.overview', '运行指标概览'), value: 'overview', icon: <Activity size={12} /> },
                             {
-                                label: `实时操作进程 (${currentOpsList.length})`,
+                                label: t('mongo.status.subTabs.currentOps', { count: currentOpsList.length, defaultValue: `实时操作进程 (${currentOpsList.length})` }),
                                 value: 'currentOps',
                                 icon: <Zap size={12} />,
                             },
                             {
-                                label: `慢查询分析 (${parsedSlowQueries.length})`,
+                                label: t('mongo.status.subTabs.slowQueries', { count: parsedSlowQueries.length, defaultValue: `慢查询分析 (${parsedSlowQueries.length})` }),
                                 value: 'slowQueries',
                                 icon: <AlertTriangle size={12} />,
                             },
-                            { label: '系统参数检索', value: 'serverStatus', icon: <Search size={12} /> },
+                            { label: t('mongo.status.subTabs.serverStatus', '系统参数检索'), value: 'serverStatus', icon: <Search size={12} /> },
                         ]}
                     />
                 </Space>
@@ -341,7 +343,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                             }
                         }}
                     >
-                        刷新指标
+                        {t('mongo.status.refresh', '刷新指标')}
                     </Button>
                 </Space>
             </div>
@@ -351,31 +353,33 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                 {/* 1. 健康状态 */}
                 <div className={s.kpiCard}>
                     <div className={s.kpiLabel}>
-                        <span>服务健康度</span>
+                        <span>{t('mongo.status.health.title', '服务健康度')}</span>
                         <RadioIcon size={13} style={{ color: health?.ok ? '#22c55e' : '#ef4444' }} />
                     </div>
                     <div className={s.kpiValue} style={{ color: health?.ok ? '#22c55e' : '#ef4444' }}>
-                        {health ? (health.ok ? '健康正常' : '服务异常') : '-'}
+                        {health ? (health.ok ? t('mongo.status.health.normal', '健康正常') : t('mongo.status.health.abnormal', '服务异常')) : '-'}
                     </div>
                     <div className={s.kpiSub}>
-                        延迟: {health?.latencyMs !== undefined ? `${health.latencyMs}ms` : '-'}
+                        {t('mongo.status.health.latency', { latency: health?.latencyMs !== undefined ? `${health.latencyMs}` : '-', defaultValue: `延迟: ${health?.latencyMs !== undefined ? `${health.latencyMs}ms` : '-'}` })}
                     </div>
                 </div>
 
                 {/* 2. 当前连接 */}
                 <div className={s.kpiCard}>
                     <div className={s.kpiLabel}>
-                        <span>活跃连接数</span>
+                        <span>{t('mongo.status.health.activeConn', '活跃连接数')}</span>
                         <Server size={13} style={{ color: '#3b82f6' }} />
                     </div>
                     <div className={s.kpiValue}>{connCurrent}</div>
-                    <div className={s.kpiSub}>可用空闲: {connAvailable}</div>
+                    <div className={s.kpiSub}>
+                        {t('mongo.status.health.idleConn', { count: connAvailable, defaultValue: `可用空闲: ${connAvailable}` })}
+                    </div>
                 </div>
 
                 {/* 3. 内存使用 */}
                 <div className={s.kpiCard}>
                     <div className={s.kpiLabel}>
-                        <span>常驻内存 (Resident)</span>
+                        <span>{t('mongo.status.health.memResident', '常驻内存 (Resident)')}</span>
                         <HardDrive size={13} style={{ color: '#eab308' }} />
                     </div>
                     <div className={s.kpiValue}>
@@ -383,29 +387,29 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                     </div>
                     <div className={s.kpiSub}>
                         {memVirtual > 0
-                            ? `虚拟内存: ${fmtMb(memVirtual)}`
-                            : (wtCacheUsed > 0 ? `WT 缓存: ${fmtBytes(wtCacheUsed)}` : '虚拟内存: -')}
+                            ? t('mongo.status.health.memVirtual', { mem: fmtMb(memVirtual), defaultValue: `虚拟内存: ${fmtMb(memVirtual)}` })
+                            : (wtCacheUsed > 0 ? t('mongo.status.health.wtCache', { cache: fmtBytes(wtCacheUsed), defaultValue: `WT 缓存: ${fmtBytes(wtCacheUsed)}` }) : t('mongo.status.health.memVirtual', { mem: '-', defaultValue: '虚拟内存: -' }))}
                     </div>
                 </div>
 
                 {/* 4. 拓扑与版本 */}
                 <div className={s.kpiCard}>
                     <div className={s.kpiLabel}>
-                        <span>拓扑与架构</span>
+                        <span>{t('mongo.status.health.topology', '拓扑与架构')}</span>
                         <Cpu size={13} style={{ color: '#8b5cf6' }} />
                     </div>
                     <div className={s.kpiValue} style={{ fontSize: 16 }}>
                         {health?.topology || 'Standalone'}
                     </div>
                     <div className={s.kpiSub}>
-                        版本: {health?.version || status?.version || '-'}
+                        {t('mongo.status.health.version', { ver: health?.version || status?.version || '-', defaultValue: `版本: ${health?.version || status?.version || '-'}` })}
                     </div>
                 </div>
 
                 {/* 5. 累计操作数 */}
                 <div className={s.kpiCard}>
                     <div className={s.kpiLabel}>
-                        <span>累计总操作</span>
+                        <span>{t('mongo.status.health.opsTotal', '累计总操作')}</span>
                         <Zap size={13} style={{ color: '#ec4899' }} />
                     </div>
                     <div className={s.kpiValue}>{totalOps || client.ops || 0}</div>
@@ -417,14 +421,14 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                 {/* 6. 慢操作统计 */}
                 <div className={s.kpiCard}>
                     <div className={s.kpiLabel}>
-                        <span>慢操作 (&gt;100ms)</span>
+                        <span>{t('mongo.status.health.slowOps', '慢操作 (>100ms)')}</span>
                         <AlertTriangle size={13} style={{ color: client.slowOps ? '#f59e0b' : '#10b981' }} />
                     </div>
                     <div className={s.kpiValue} style={{ color: client.slowOps ? '#f59e0b' : undefined }}>
                         {client.slowOps ?? 0}
                     </div>
                     <div className={s.kpiSub}>
-                        失败数: {client.failures ?? 0} · 均耗: {(client.avgMs ?? 0).toFixed(1)}ms
+                        {t('mongo.status.health.slowFailures', { failures: client.failures ?? 0, avg: (client.avgMs ?? 0).toFixed(1), defaultValue: `失败数: ${client.failures ?? 0} · 均耗: ${(client.avgMs ?? 0).toFixed(1)}ms` })}
                     </div>
                 </div>
             </div>
@@ -435,49 +439,49 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                     {status && (
                         <div className={s.sectionBox}>
                             <div className={s.sectionHeader}>
-                                <span>连接池与全局状态</span>
+                                <span>{t('mongo.status.overview.poolTitle', '连接池与全局状态')}</span>
                                 <Tag color="blue">{status.host}</Tag>
                             </div>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
                                 <div>
                                     <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-dim)' }}>
-                                        连接状态 (Connections)
+                                        {t('mongo.status.overview.connStatus', '连接状态 (Connections)')}
                                     </h4>
                                     <table className={s.kvTable}>
                                         <tbody>
-                                            <tr><th>当前活跃 (current)</th><td>{String(status.connections?.current ?? client.activeConn ?? '-')}</td></tr>
-                                            <tr><th>可用余量 (available)</th><td>{String(status.connections?.available ?? client.maxPoolSize ?? '-')}</td></tr>
-                                            <tr><th>历史创建累计</th><td>{String(status.connections?.totalCreated ?? '-')}</td></tr>
-                                            <tr><th>运行进程名称</th><td>{status.process || 'mongod'}</td></tr>
-                                            <tr><th>正常运行时间 (uptime)</th><td>{status.uptime ? `${Math.floor(status.uptime / 3600)}h ${Math.floor((status.uptime % 3600) / 60)}m` : '-'}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.currentActive', '当前活跃 (current)')}</th><td>{String(status.connections?.current ?? client.activeConn ?? '-')}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.available', '可用余量 (available)')}</th><td>{String(status.connections?.available ?? client.maxPoolSize ?? '-')}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.totalCreated', '历史创建累计')}</th><td>{String(status.connections?.totalCreated ?? '-')}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.processName', '运行进程名称')}</th><td>{status.process || 'mongod'}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.uptime', '正常运行时间 (uptime)')}</th><td>{status.uptime ? `${Math.floor(status.uptime / 3600)}h ${Math.floor((status.uptime % 3600) / 60)}m` : '-'}</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                                 <div>
                                     <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-dim)' }}>
-                                        网络吞吐 (Network)
+                                        {t('mongo.status.overview.network', '网络吞吐 (Network)')}
                                     </h4>
                                     <table className={s.kvTable}>
                                         <tbody>
-                                            <tr><th>入站流量 (bytesIn)</th><td>{fmtBytes(status.network?.bytesIn)}</td></tr>
-                                            <tr><th>出站流量 (bytesOut)</th><td>{fmtBytes(status.network?.bytesOut)}</td></tr>
-                                            <tr><th>请求总数 (numRequests)</th><td>{String(status.network?.numRequests ?? '-')}</td></tr>
-                                            <tr><th>全局读锁</th><td>{String(status.globalLock?.currentQueue?.readers ?? 0)}</td></tr>
-                                            <tr><th>全局写锁</th><td>{String(status.globalLock?.currentQueue?.writers ?? 0)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.bytesIn', '入站流量 (bytesIn)')}</th><td>{fmtBytes(status.network?.bytesIn)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.bytesOut', '出站流量 (bytesOut)')}</th><td>{fmtBytes(status.network?.bytesOut)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.numRequests', '请求总数 (numRequests)')}</th><td>{String(status.network?.numRequests ?? '-')}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.globalReadLock', '全局读锁')}</th><td>{String(status.globalLock?.currentQueue?.readers ?? 0)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.globalWriteLock', '全局写锁')}</th><td>{String(status.globalLock?.currentQueue?.writers ?? 0)}</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
                                 <div>
                                     <h4 style={{ margin: '0 0 8px 0', fontSize: 12, color: 'var(--text-dim)' }}>
-                                        内存与引擎缓存 (Memory & Engine)
+                                        {t('mongo.status.overview.memEngine', '内存与引擎缓存 (Memory & Engine)')}
                                     </h4>
                                     <table className={s.kvTable}>
                                         <tbody>
-                                            <tr><th>物理常驻 (Resident)</th><td>{fmtMb(status.mem?.resident)}</td></tr>
-                                            <tr><th>虚拟内存 (Virtual)</th><td>{fmtMb(status.mem?.virtual)}</td></tr>
-                                            <tr><th>WiredTiger 缓存已用</th><td>{fmtBytes(status.wiredTiger?.cache?.['bytes currently in the cache'])}</td></tr>
-                                            <tr><th>WiredTiger 缓存上限</th><td>{fmtBytes(status.wiredTiger?.cache?.['maximum bytes configured'])}</td></tr>
-                                            <tr><th>缺页异常 (Page Faults)</th><td>{String(status.extra_info?.page_faults ?? '-')}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.resident', '物理常驻 (Resident)')}</th><td>{fmtMb(status.mem?.resident)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.virtual', '虚拟内存 (Virtual)')}</th><td>{fmtMb(status.mem?.virtual)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.wtCacheUsed', 'WiredTiger 缓存已用')}</th><td>{fmtBytes(status.wiredTiger?.cache?.['bytes currently in the cache'])}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.wtCacheMax', 'WiredTiger 缓存上限')}</th><td>{fmtBytes(status.wiredTiger?.cache?.['maximum bytes configured'])}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.pageFaults', '缺页异常 (Page Faults)')}</th><td>{String(status.extra_info?.page_faults ?? '-')}</td></tr>
                                         </tbody>
                                     </table>
                                 </div>
@@ -488,7 +492,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                     {health?.hosts && health.hosts.length > 0 && (
                         <div className={s.sectionBox}>
                             <div className={s.sectionHeader}>
-                                <span>集群成员主机 (Hosts)</span>
+                                <span>{t('mongo.status.overview.clusterHosts', '集群成员主机 (Hosts)')}</span>
                                 <Tag color="purple">{health.setName || 'ReplicaSet'}</Tag>
                             </div>
                             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -507,9 +511,9 @@ export default function StatusPanel({ session, databases = [] }: Props) {
             {subTab === 'currentOps' && (
                 <div className={s.sectionBox}>
                     <div className={s.sectionHeader}>
-                        <span>活动操作列表（$currentOp）</span>
+                        <span>{t('mongo.status.currentOps.title', '活动操作列表（$currentOp）')}</span>
                         <span style={{ fontSize: 11.5, color: 'var(--text-faint)' }}>
-                            共 {currentOpsList.length} 个正在执行的活动操作
+                            {t('mongo.status.currentOps.activeCount', { count: currentOpsList.length, defaultValue: `共 ${currentOpsList.length} 个正在执行的活动操作` })}
                         </span>
                     </div>
 
@@ -526,25 +530,25 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 render: (v) => <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{v}</span>,
                             },
                             {
-                                title: '命名空间 (ns)',
+                                title: t('mongo.status.currentOps.colNs', '命名空间 (ns)'),
                                 dataIndex: 'ns',
                                 width: 160,
                                 ellipsis: true,
                             },
                             {
-                                title: '操作类型',
+                                title: t('mongo.status.currentOps.colType', '操作类型'),
                                 dataIndex: 'op',
                                 width: 90,
                                 render: (op) => <Tag color="cyan">{op}</Tag>,
                             },
                             {
-                                title: '客户端',
+                                title: t('mongo.status.currentOps.colClient', '客户端'),
                                 dataIndex: 'client',
                                 width: 150,
                                 ellipsis: true,
                             },
                             {
-                                title: '耗时 (s)',
+                                title: t('mongo.status.currentOps.colDuration', '耗时 (s)'),
                                 dataIndex: 'secs_running',
                                 width: 85,
                                 sorter: (a, b) => (a.secs_running || 0) - (b.secs_running || 0),
@@ -555,7 +559,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 ),
                             },
                             {
-                                title: '命令详情',
+                                title: t('mongo.status.currentOps.colCommand', '命令详情'),
                                 dataIndex: 'commandSummary',
                                 ellipsis: true,
                                 render: (cmd) => (
@@ -565,14 +569,14 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 ),
                             },
                             {
-                                title: '操作',
+                                title: t('mongo.status.currentOps.colAction', '操作'),
                                 width: 90,
                                 align: 'center',
                                 render: (_, record) => (
                                     <Popconfirm
-                                        title={`确定要强行终止该操作 (OpID: ${record.opid}) 吗？`}
-                                        okText="强行终止"
-                                        cancelText="取消"
+                                        title={t('mongo.status.currentOps.killConfirm', { opid: record.opid, defaultValue: `确定要强行终止该操作 (OpID: ${record.opid}) 吗？` })}
+                                        okText={t('mongo.status.currentOps.killOk', '强行终止')}
+                                        cancelText={t('common.cancel', '取消')}
                                         okButtonProps={{ danger: true }}
                                         onConfirm={() => handleKillOp(record.opid)}
                                     >
@@ -596,28 +600,28 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                 <div className={s.sectionBox}>
                     <div className={s.sectionHeader}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                            <span>慢查询分析 (system.profile)</span>
+                            <span>{t('mongo.status.slowQueries.title', '慢查询分析 (system.profile)')}</span>
                             <Select
                                 size="small"
                                 style={{ width: 140 }}
                                 value={profilerDb}
                                 onChange={(v) => setProfilerDb(v)}
                                 options={[
-                                    { label: 'admin 库', value: 'admin' },
+                                    { label: t('mongo.status.slowQueries.adminDb', 'admin 库'), value: 'admin' },
                                     ...databases.filter((d) => d !== 'admin').map((d) => ({ label: d, value: d })),
                                 ]}
                             />
                             {profilerStatus?.was === 0 && (
-                                <Tag color="default">Profiler 未开启 (Level 0)</Tag>
+                                <Tag color="default">{t('mongo.status.slowQueries.profilerOff', 'Profiler 未开启 (Level 0)')}</Tag>
                             )}
                             {profilerStatus?.was === 1 && (
                                 <Tag color="green">
-                                    Profiler 仅慢操作 (Level 1, 阈值: {profilerStatus.slowms ?? 100}ms)
+                                    {t('mongo.status.slowQueries.profilerSlow', { slowms: profilerStatus.slowms ?? 100, defaultValue: `Profiler 仅慢操作 (Level 1, 阈值: ${profilerStatus.slowms ?? 100}ms)` })}
                                 </Tag>
                             )}
                             {profilerStatus?.was === 2 && (
                                 <Tag color="warning">
-                                    Profiler 全量操作 (Level 2)
+                                    {t('mongo.status.slowQueries.profilerAll', 'Profiler 全量操作 (Level 2)')}
                                 </Tag>
                             )}
                         </div>
@@ -628,7 +632,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 icon={<Sliders size={12} />}
                                 onClick={() => setProfilerModalOpen(true)}
                             >
-                                配置 Profiler
+                                {t('mongo.status.slowQueries.configBtn', '配置 Profiler')}
                             </Button>
                             <Button
                                 size="small"
@@ -636,7 +640,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 icon={<RotateCw size={12} className={loadingSlow ? 'spin' : ''} />}
                                 onClick={() => void loadSlowQueries()}
                             >
-                                刷新
+                                {t('mongo.status.slowQueries.refresh', '刷新')}
                             </Button>
                         </Space>
                     </div>
@@ -645,8 +649,8 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                         <Alert
                             type="info"
                             showIcon
-                            message={`提示: ${slowError}`}
-                            description="若提示集合不存在，说明当前库尚未开启 Profiler 或尚未产生慢查询记录。可点击上方「配置 Profiler」开启记录。"
+                            message={t('mongo.status.slowQueries.tip', { error: slowError, defaultValue: `提示: ${slowError}` })}
+                            description={t('mongo.status.slowQueries.tipDesc', '若提示集合不存在，说明当前库尚未开启 Profiler 或尚未产生慢查询记录。可点击上方「配置 Profiler」开启记录。')}
                         />
                     )}
 
@@ -658,13 +662,13 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                         pagination={{ pageSize: 20, size: 'small', showSizeChanger: true }}
                         columns={[
                             {
-                                title: '执行时间',
+                                title: t('mongo.status.slowQueries.colExecTime', '执行时间'),
                                 dataIndex: 'ts',
                                 width: 160,
                                 render: (ts) => <span style={{ fontSize: 11 }}>{ts}</span>,
                             },
                             {
-                                title: '耗时',
+                                title: t('mongo.status.slowQueries.colDuration', '耗时'),
                                 dataIndex: 'millis',
                                 width: 90,
                                 sorter: (a, b) => a.millis - b.millis,
@@ -681,7 +685,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 },
                             },
                             {
-                                title: '类型',
+                                title: t('mongo.status.slowQueries.colType', '类型'),
                                 dataIndex: 'op',
                                 width: 85,
                                 render: (op) => {
@@ -696,30 +700,30 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 },
                             },
                             {
-                                title: '命名空间 (ns)',
+                                title: t('mongo.status.slowQueries.colNs', '命名空间 (ns)'),
                                 dataIndex: 'ns',
                                 width: 160,
                                 ellipsis: true,
                                 render: (ns) => <span style={{ fontFamily: 'monospace', fontSize: 11.5 }}>{ns}</span>,
                             },
                             {
-                                title: '扫描 / 返回比',
+                                title: t('mongo.status.slowQueries.colRatio', '扫描 / 返回比'),
                                 width: 170,
                                 render: (_, r) => (
                                     <span style={{ fontSize: 11, fontFamily: 'monospace' }}>
-                                        扫描 {r.docsExamined} / 索引 {r.keysExamined} / 返回 {r.nreturned}
+                                        {t('mongo.status.slowQueries.colRatioVal', { docs: r.docsExamined, keys: r.keysExamined, nreturned: r.nreturned, defaultValue: `扫描 ${r.docsExamined} / 索引 ${r.keysExamined} / 返回 ${r.nreturned}` })}
                                     </span>
                                 ),
                             },
                             {
-                                title: '客户端',
+                                title: t('mongo.status.slowQueries.colClient', '客户端'),
                                 dataIndex: 'client',
                                 width: 130,
                                 ellipsis: true,
                                 render: (cl) => <span style={{ fontSize: 11 }}>{cl}</span>,
                             },
                             {
-                                title: '命令摘要',
+                                title: t('mongo.status.slowQueries.colSummary', '命令摘要'),
                                 dataIndex: 'commandSummary',
                                 ellipsis: true,
                                 render: (cmd, r) => (
@@ -728,7 +732,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                         onClick={() =>
                                             setCmdDetailModal({
                                                 open: true,
-                                                title: `慢查询详情 (${r.ns} - ${r.millis}ms)`,
+                                                title: t('mongo.status.slowQueries.detailTitle', { ns: r.ns, millis: r.millis, defaultValue: `慢查询详情 (${r.ns} - ${r.millis}ms)` }),
                                                 json: r.cmdStr || r.raw,
                                             })
                                         }
@@ -738,17 +742,17 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                 ),
                             },
                             {
-                                title: '操作',
+                                title: t('mongo.status.slowQueries.colAction', '操作'),
                                 width: 80,
                                 align: 'center',
                                 render: (_, r) => (
-                                    <Tooltip title="复制命令 JSON">
+                                    <Tooltip title={t('mongo.status.slowQueries.copyCmd', '复制命令 JSON')}>
                                         <Button
                                             size="small"
                                             type="text"
                                             icon={<Copy size={12} />}
                                             onClick={async () => {
-                                                if (await copyText(r.cmdStr || r.raw)) message.success('已复制慢查询命令')
+                                                if (await copyText(r.cmdStr || r.raw)) message.success(t('mongo.status.slowQueries.copiedCmd', '已复制慢查询命令'))
                                             }}
                                         />
                                     </Tooltip>
@@ -763,10 +767,10 @@ export default function StatusPanel({ session, databases = [] }: Props) {
             {subTab === 'serverStatus' && (
                 <div className={s.sectionBox}>
                     <div className={s.sectionHeader}>
-                        <span>ServerStatus 参数实时检索</span>
+                        <span>{t('mongo.status.serverStatus.title', 'ServerStatus 参数实时检索')}</span>
                         <Input
                             size="small"
-                            placeholder="搜索参数名或值..."
+                            placeholder={t('mongo.status.serverStatus.searchPlaceholder', '搜索参数名或值...')}
                             prefix={<Search size={12} style={{ color: 'var(--text-faint)' }} />}
                             value={searchParam}
                             onChange={(e) => setSearchParam(e.target.value)}
@@ -782,19 +786,19 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                         pagination={{ pageSize: 50, size: 'small', showSizeChanger: false }}
                         columns={[
                             {
-                                title: '所属分组',
+                                title: t('mongo.status.serverStatus.colGroup', '所属分组'),
                                 dataIndex: 'section',
                                 width: 140,
                                 render: (sec) => <Tag color="default">{sec}</Tag>,
                             },
                             {
-                                title: '参数名称 (Key)',
+                                title: t('mongo.status.serverStatus.colKey', '参数名称 (Key)'),
                                 dataIndex: 'key',
                                 width: 340,
                                 render: (k) => <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{k}</span>,
                             },
                             {
-                                title: '参数值 (Value)',
+                                title: t('mongo.status.serverStatus.colVal', '参数值 (Value)'),
                                 dataIndex: 'value',
                                 ellipsis: true,
                                 render: (v) => <span style={{ fontFamily: 'monospace' }}>{v}</span>,
@@ -806,7 +810,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
 
             {/* 慢查询详情弹窗 */}
             <Modal
-                title={cmdDetailModal?.title || '慢查询详情'}
+                title={cmdDetailModal?.title || t('mongo.status.slowQueries.defaultDetailTitle', '慢查询详情')}
                 open={Boolean(cmdDetailModal?.open)}
                 onCancel={() => setCmdDetailModal(null)}
                 footer={[
@@ -815,14 +819,14 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                         icon={<Copy size={12} />}
                         onClick={async () => {
                             if (cmdDetailModal && (await copyText(cmdDetailModal.json))) {
-                                message.success('已复制完整命令')
+                                message.success(t('mongo.status.slowQueries.copiedFullCmd', '已复制完整命令'))
                             }
                         }}
                     >
-                        复制 JSON
+                        {t('mongo.status.slowQueries.copyJson', '复制 JSON')}
                     </Button>,
                     <Button key="close" type="primary" onClick={() => setCmdDetailModal(null)}>
-                        关闭
+                        {t('mongo.status.slowQueries.close', '关闭')}
                     </Button>,
                 ]}
                 width={650}
@@ -836,18 +840,18 @@ export default function StatusPanel({ session, databases = [] }: Props) {
 
             {/* 配置 Profiler 弹窗 */}
             <Modal
-                title={`配置数据库 [${profilerDb}] Profiler`}
+                title={t('mongo.status.slowQueries.configModalTitle', { db: profilerDb, defaultValue: `配置数据库 [${profilerDb}] Profiler` })}
                 open={profilerModalOpen}
                 onCancel={() => !savingProfiler && setProfilerModalOpen(false)}
                 onOk={handleSaveProfiler}
                 confirmLoading={savingProfiler}
-                okText="保存配置"
-                cancelText="取消"
+                okText={t('mongo.status.slowQueries.saveConfig', '保存配置')}
+                cancelText={t('common.cancel', '取消')}
                 width={480}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>
                     <div>
-                        <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8 }}>分析日志级别 (Profiling Level)：</div>
+                        <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 8 }}>{t('mongo.status.slowQueries.levelLabel', '分析日志级别 (Profiling Level)：')}</div>
                         <Radio.Group
                             value={editLevel}
                             onChange={(e) => setEditLevel(e.target.value)}
@@ -855,20 +859,20 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                         >
                             <Radio value={0}>
                                 <div>
-                                    <span style={{ fontWeight: 600 }}>Level 0 - 关闭</span>
-                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>不收集任何查询日志，零性能损耗</div>
+                                    <span style={{ fontWeight: 600 }}>{t('mongo.status.slowQueries.level0Title', 'Level 0 - 关闭')}</span>
+                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{t('mongo.status.slowQueries.level0Desc', '不收集任何查询日志，零性能损耗')}</div>
                                 </div>
                             </Radio>
                             <Radio value={1}>
                                 <div>
-                                    <span style={{ fontWeight: 600 }}>Level 1 - 仅慢查询 (推荐)</span>
-                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>仅记录耗时超过阈值的操作到 system.profile</div>
+                                    <span style={{ fontWeight: 600 }}>{t('mongo.status.slowQueries.level1Title', 'Level 1 - 仅慢查询 (推荐)')}</span>
+                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{t('mongo.status.slowQueries.level1Desc', '仅记录耗时超过阈值的操作到 system.profile')}</div>
                                 </div>
                             </Radio>
                             <Radio value={2}>
                                 <div>
-                                    <span style={{ fontWeight: 600 }}>Level 2 - 全量收集 (调试)</span>
-                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>记录库内所有读写操作，会产生一定 I/O 写入开销</div>
+                                    <span style={{ fontWeight: 600 }}>{t('mongo.status.slowQueries.level2Title', 'Level 2 - 全量收集 (调试)')}</span>
+                                    <div style={{ fontSize: 11, color: 'var(--text-dim)' }}>{t('mongo.status.slowQueries.level2Desc', '记录库内所有读写操作，会产生一定 I/O 写入开销')}</div>
                                 </div>
                             </Radio>
                         </Radio.Group>
@@ -876,7 +880,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
 
                     {editLevel > 0 && (
                         <div>
-                            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>慢查询耗时阈值 (slowms)：</div>
+                            <div style={{ fontSize: 12, fontWeight: 500, marginBottom: 6 }}>{t('mongo.status.slowQueries.slowmsLabel', '慢查询耗时阈值 (slowms)：')}</div>
                             <Space size={8}>
                                 <InputNumber
                                     min={1}
@@ -886,7 +890,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                     addonAfter="ms"
                                     style={{ width: 140 }}
                                 />
-                                <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>默认 100ms</span>
+                                <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{t('mongo.status.slowQueries.slowmsDefault', '默认 100ms')}</span>
                             </Space>
                         </div>
                     )}
@@ -894,7 +898,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                     <Alert
                         type="info"
                         showIcon
-                        message="提示：MongoDB 的 system.profile 是一个固定集合 (Capped Collection)，不会无限增长，重启或手动调用即可重置。"
+                        message={t('mongo.status.slowQueries.cappedTip', '提示：MongoDB 的 system.profile 是一个固定集合 (Capped Collection)，不会无限增长，重启或手动调用即可重置。')}
                     />
                 </div>
             </Modal>

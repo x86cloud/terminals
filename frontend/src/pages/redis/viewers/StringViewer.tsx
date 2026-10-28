@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Button, Segmented, Space, Tooltip, Tag, Modal, Input, App } from 'antd'
 import { Sparkles, Minimize2, Copy, Save, Plus, Check, AlertCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -19,6 +20,7 @@ interface Props {
 type ViewFormat = 'text' | 'json' | 'base64'
 
 export default function StringViewer({ session, selected, value, onReload, flash }: Props) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     const rawVal = typeof value.value === 'string' ? value.value : String(value.value ?? '')
     const [content, setContent] = useState(rawVal)
@@ -45,7 +47,7 @@ export default function StringViewer({ session, selected, value, onReload, flash
             JSON.parse(content)
             return { valid: true, error: null }
         } catch (e: any) {
-            return { valid: false, error: e?.message || 'JSON 语法错误' }
+            return { valid: false, error: e?.message || t('viewers.string.syntaxError') }
         }
     })()
 
@@ -54,9 +56,9 @@ export default function StringViewer({ session, selected, value, onReload, flash
             const obj = JSON.parse(content)
             setContent(JSON.stringify(obj, null, 2))
             setFormat('json')
-            message.success('已格式化 JSON')
+            message.success(t('viewers.string.formattedSuccess'))
         } catch {
-            message.warning('当前内容不是合法的 JSON 格式')
+            message.warning(t('viewers.string.notJsonWarn'))
         }
     }
 
@@ -65,9 +67,9 @@ export default function StringViewer({ session, selected, value, onReload, flash
             const obj = JSON.parse(content)
             setContent(JSON.stringify(obj))
             setFormat('json')
-            message.success('已压缩为单行 JSON')
+            message.success(t('viewers.string.compressedSuccess'))
         } catch {
-            message.warning('当前内容不是合法的 JSON 格式')
+            message.warning(t('viewers.string.notJsonWarn'))
         }
     }
 
@@ -76,9 +78,9 @@ export default function StringViewer({ session, selected, value, onReload, flash
             await navigator.clipboard.writeText(content)
             setCopied(true)
             setTimeout(() => setCopied(false), 2000)
-            message.success('已复制到剪贴板')
+            message.success(t('viewers.string.copiedSuccess'))
         } catch {
-            message.error('复制失败')
+            message.error(t('viewers.string.copyFail'))
         }
     }
 
@@ -86,11 +88,11 @@ export default function StringViewer({ session, selected, value, onReload, flash
         setSaving(true)
         try {
             await API.redisSet(session.id, selected, 'string', content, value.ttl)
-            message.success('保存成功')
-            if (flash) flash('已保存')
+            message.success(t('viewers.string.saveSuccess'))
+            if (flash) flash(t('viewers.string.saved'))
             onReload()
         } catch (e: any) {
-            message.error('保存失败: ' + (e?.message || e))
+            message.error(t('viewers.string.saveFail', { error: e?.message || e }))
         } finally {
             setSaving(false)
         }
@@ -100,12 +102,12 @@ export default function StringViewer({ session, selected, value, onReload, flash
         if (!appendVal) return
         try {
             await API.redisStringAppend(session.id, selected, appendVal)
-            message.success('已追加内容')
+            message.success(t('viewers.string.appendSuccess'))
             setAppendModal(false)
             setAppendVal('')
             onReload()
         } catch (e: any) {
-            message.error('追加失败: ' + (e?.message || e))
+            message.error(t('viewers.string.appendFail', { error: e?.message || e }))
         }
     }
 
@@ -114,7 +116,7 @@ export default function StringViewer({ session, selected, value, onReload, flash
         try {
             return stringToBase64(content)
         } catch {
-            return '(无法进行 Base64 编码)'
+            return t('viewers.string.cannotBase64')
         }
     })()
 
@@ -127,48 +129,48 @@ export default function StringViewer({ session, selected, value, onReload, flash
                         value={format}
                         onChange={(v) => setFormat(v as ViewFormat)}
                         options={[
-                            { value: 'text', label: '纯文本' },
+                            { value: 'text', label: t('viewers.string.plainText') },
                             { value: 'json', label: 'JSON' },
                             { value: 'base64', label: 'Base64' },
                         ]}
                     />
                     {jsonStatus && (
-                        <Tooltip title={jsonStatus.valid ? '合法的 JSON' : jsonStatus.error}>
+                        <Tooltip title={jsonStatus.valid ? t('viewers.string.jsonValid') : jsonStatus.error}>
                             <Tag
                                 icon={jsonStatus.valid ? <Check size={11} /> : <AlertCircle size={11} />}
                                 color={jsonStatus.valid ? 'success' : 'error'}
                                 style={{ cursor: 'help' }}
                             >
-                                {jsonStatus.valid ? 'JSON 合法' : 'JSON 格式错误'}
+                                {jsonStatus.valid ? t('viewers.string.jsonValid') : t('viewers.string.jsonInvalid')}
                             </Tag>
                         </Tooltip>
                     )}
-                    {isDirty && <Tag color="warning">未保存修改</Tag>}
+                    {isDirty && <Tag color="warning">{t('viewers.string.unformatted')}</Tag>}
                 </div>
 
                 <div className={s.toolbarRight}>
                     {format === 'json' && (
                         <Space size={4}>
-                            <Tooltip title="美化格式化 JSON">
+                            <Tooltip title={t('viewers.string.beautifyTooltip')}>
                                 <Button size="small" type="text" icon={<Sparkles size={13} />} onClick={beautifyJson}>
-                                    美化
+                                    {t('viewers.string.beautify')}
                                 </Button>
                             </Tooltip>
-                            <Tooltip title="压缩 JSON 为单行">
+                            <Tooltip title={t('viewers.string.compressTooltip')}>
                                 <Button size="small" type="text" icon={<Minimize2 size={13} />} onClick={minifyJson}>
-                                    压缩
+                                    {t('viewers.string.compress')}
                                 </Button>
                             </Tooltip>
                         </Space>
                     )}
-                    <Tooltip title="追加字符串 (APPEND)">
+                    <Tooltip title={t('viewers.string.appendTooltip')}>
                         <Button size="small" icon={<Plus size={13} />} onClick={() => setAppendModal(true)}>
-                            追加
+                            {t('viewers.string.append')}
                         </Button>
                     </Tooltip>
-                    <Tooltip title="复制完整内容">
+                    <Tooltip title={t('viewers.string.copyTooltip')}>
                         <Button size="small" icon={copied ? <Check size={13} /> : <Copy size={13} />} onClick={handleCopy}>
-                            {copied ? '已复制' : '复制'}
+                            {copied ? t('viewers.common.copied') : t('viewers.common.copy')}
                         </Button>
                     </Tooltip>
                     <Button
@@ -179,7 +181,7 @@ export default function StringViewer({ session, selected, value, onReload, flash
                         disabled={!isDirty}
                         onClick={handleSave}
                     >
-                        保存修改
+                        {t('viewers.string.saveChanges')}
                     </Button>
                 </div>
             </div>
@@ -201,35 +203,35 @@ export default function StringViewer({ session, selected, value, onReload, flash
                         lang={format === 'json' ? 'json' : 'plain'}
                         height="100%"
                         lineNumbers
-                        placeholder="输入或粘贴 String 内容..."
+                        placeholder={t('viewers.string.contentPlaceholder')}
                     />
                 )}
             </div>
 
             <div className={s.footerBar}>
                 <span className={s.countBadge}>
-                    长度: {content.length} 字符 | 占用大小: {formatBytes(new Blob([content]).size)}
+                    {t('viewers.string.statHint', { len: content.length, size: formatBytes(new Blob([content]).size) })}
                 </span>
                 <span style={{ color: 'var(--text-dim)' }}>
-                    提示: 可按 Ctrl+S (或点击上方保存) 更新值
+                    {t('viewers.string.shortcutHint')}
                 </span>
             </div>
 
             <Modal
-                title="追加字符串 (APPEND)"
+                title={t('viewers.string.appendTitle')}
                 open={appendModal}
                 onOk={handleAppend}
                 onCancel={() => {
                     setAppendModal(false)
                     setAppendVal('')
                 }}
-                okText="追加"
-                cancelText="取消"
+                okText={t('viewers.string.appendOk')}
+                cancelText={t('viewers.common.cancel')}
             >
                 <div style={{ marginTop: 12 }}>
                     <Input.TextArea
                         rows={4}
-                        placeholder="输入要追加到末尾的字符串内容..."
+                        placeholder={t('viewers.string.appendPlaceholder')}
                         value={appendVal}
                         onChange={(e) => setAppendVal(e.target.value)}
                     />

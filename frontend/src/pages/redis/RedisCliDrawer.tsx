@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { Button, Input, Tooltip } from 'antd'
 import { Terminal, ChevronUp, ChevronDown, Trash2, CornerDownLeft } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { RedisSessionInfo } from '@/types'
 import c from './RedisCliDrawer.module.less'
 
@@ -19,6 +20,7 @@ interface CliLog {
 }
 
 export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
+    const { t } = useTranslation('redis')
     const [expanded, setExpanded] = useState(false)
     const [height, setHeight] = useState(240)
     const [inputVal, setInputVal] = useState('')
@@ -92,7 +94,7 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
                 {
                     id: Math.random().toString(36).slice(2),
                     cmd,
-                    res: res || '(空结果/OK)',
+                    res: res || t('cli.emptyResult', '(空结果/OK)'),
                     time: timeStr,
                     isError: isErr,
                 },
@@ -146,27 +148,27 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
             <div className={c.cliBar} onClick={() => setExpanded(!expanded)}>
                 <div className={c.barLeft}>
                     <Terminal size={14} style={{ color: 'var(--accent)' }} />
-                    <span>Redis 原生命令行 (CLI)</span>
+                    <span>{t('cli.nativeTitle', 'Redis 原生命令行 (CLI)')}</span>
                     <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                         [127.0.0.1:{session.port || 6379} / DB {currentDb}]
                     </span>
                     {!expanded && logs.length > 0 && (
                         <span style={{ fontSize: 11, color: 'var(--text-dim)', marginLeft: 8 }}>
-                            最近命令: {logs[logs.length - 1]?.cmd}
+                            {t('cli.latestCmd', { defaultValue: '最近命令: {{cmd}}', cmd: logs[logs.length - 1]?.cmd })}
                         </span>
                     )}
                 </div>
 
                 <div className={c.barRight} onClick={(e) => e.stopPropagation()}>
                     {expanded && logs.length > 0 && (
-                        <Tooltip title="清空输出记录">
+                        <Tooltip title={t('cli.clearTooltip', '清空输出记录')}>
                             <Button
                                 size="small"
                                 type="text"
                                 icon={<Trash2 size={12} />}
                                 onClick={() => setLogs([])}
                             >
-                                清空
+                                {t('cli.clear', '清空')}
                             </Button>
                         </Tooltip>
                     )}
@@ -176,7 +178,7 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
                         icon={expanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                         onClick={() => setExpanded(!expanded)}
                     >
-                        {expanded ? '收起' : '展开'}
+                        {expanded ? t('cli.collapse', '收起') : t('cli.expand', '展开')}
                     </Button>
                 </div>
             </div>
@@ -187,9 +189,9 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
                     <div className={c.cliOutputArea} ref={outputRef}>
                         {logs.length === 0 ? (
                             <div style={{ color: 'var(--text-dim)', fontStyle: 'italic', padding: '12px 0' }}>
-                                支持输入任何 Redis 原生指令（例如: PING / GET key / HGETALL hash / INFO / CLIENT LIST）
+                                {t('cli.tip1', '支持输入任何 Redis 原生指令（例如: PING / GET key / HGETALL hash / INFO / CLIENT LIST）')}
                                 <br />
-                                按 ↑ / ↓ 键可快速回忆历史命令，按 Enter 键即可执行。
+                                {t('cli.tip2', '按 ↑ / ↓ 键可快速回忆历史命令，按 Enter 键即可执行。')}
                             </div>
                         ) : (
                             logs.map((log) => (
@@ -217,7 +219,7 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
                         <Input
                             size="small"
                             className={c.promptInput}
-                            placeholder="输入 Redis 指令并回车执行 (如: PING, KEYS *, DBSIZE)..."
+                            placeholder={t('cli.inputPlaceholder', '输入 Redis 指令并回车执行 (如: PING, KEYS *, DBSIZE)...')}
                             value={inputVal}
                             onChange={(e) => setInputVal(e.target.value)}
                             onKeyDown={handleKeyDown}
@@ -231,7 +233,7 @@ export default function RedisCliDrawer({ session, currentDb, runRaw }: Props) {
                             loading={executing}
                             onClick={() => handleExecute()}
                         >
-                            执行
+                            {t('cli.execute', '执行')}
                         </Button>
                     </div>
                 </div>

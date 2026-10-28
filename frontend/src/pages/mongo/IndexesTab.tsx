@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Input, InputNumber, Checkbox, Tag, Tooltip, Alert, App } from 'antd'
 import { RotateCw, Plus, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import { MongoSessionInfo, MongoIndexInfo } from '@/types'
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export default function IndexesTab({ session, db, collection }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
@@ -62,19 +64,19 @@ export default function IndexesTab({ session, db, collection }: Props) {
 
     const drop = (idxName: string) => {
         if (idxName === '_id_') {
-            message.error('默认 _id 索引不可删除')
+            message.error(t('mongo.indexes.unremovableDefault', '默认 _id 索引不可删除'))
             return
         }
         setConfirm({
             open: true,
-            title: '删除索引',
+            title: t('mongo.indexes.dropTitle', '删除索引'),
             danger: true,
-            message: `确认删除索引 ${idxName}？`,
+            message: t('mongo.indexes.dropConfirm', { name: idxName, defaultValue: `确认删除索引 ${idxName}？` }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
                     await API.mongoDropIndex(id, db, collection!, idxName)
-                    message.success(`已删除索引 ${idxName}`)
+                    message.success(t('mongo.indexes.dropSuccess', { name: idxName, defaultValue: `已删除索引 ${idxName}` }))
                     await load()
                 } catch (e) {
                     message.error(errorMessage(e))
@@ -88,7 +90,7 @@ export default function IndexesTab({ session, db, collection }: Props) {
         setCreateMsg('')
         try {
             const r = await API.mongoCreateIndex(id, db, collection!, keys, name, unique, sparse, ttl)
-            setCreateMsg(`已创建索引：${r}`)
+            setCreateMsg(t('mongo.indexes.createSuccess', { result: r, defaultValue: `已创建索引：${r}` }))
             setShowCreate(false)
             setKeys('{"field":1}')
             setName('')
@@ -104,52 +106,52 @@ export default function IndexesTab({ session, db, collection }: Props) {
     }
 
     if (!collection) {
-        return <div className={`${sh.mongoEmpty}`}>请选择左侧集合以管理索引</div>
+        return <div className={`${sh.mongoEmpty}`}>{t('mongo.indexes.selectCollHint', '请选择左侧集合以管理索引')}</div>
     }
 
     return (
         <div>
             <div className={sh.mongoToolbar} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
                 <Button size="small" icon={<RotateCw size={13} />} disabled={busy} onClick={load}>
-                    刷新
+                    {t('mongo.indexes.refresh', '刷新')}
                 </Button>
                 <Button type="primary" size="small" icon={<Plus size={12} />} disabled={busy} onClick={() => { setCreateMsg(''); setShowCreate(v => !v) }}>
-                    新建索引
+                    {t('mongo.indexes.newIndex', '新建索引')}
                 </Button>
                 <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
                     {error && <span style={{ color: '#ef4444', fontSize: 12 }}>{error}</span>}
-                    <Tag color="geekblue">{indexes.length} 个索引</Tag>
+                    <Tag color="geekblue">{t('mongo.indexes.indexesCount', { count: indexes.length, defaultValue: `${indexes.length} 个索引` })}</Tag>
                 </span>
             </div>
 
             {showCreate && (
                 <div className={sh.mongoGrid2} style={{ marginBottom: 12, padding: 12, background: 'var(--bg-1)', borderRadius: 6 }}>
                     <label className={sh.mongoField}>
-                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>索引键（JSON，如 {"{"}"field":1,"other":-1{"}"}）</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('mongo.indexes.keysLabel', '索引键（JSON，如 {"field":1,"other":-1}）')}</span>
                         <CodeEditor lang="json" height="72px" value={keys} onChange={setKeys} />
                     </label>
                     <div style={{ display: 'flex', gap: 12 }}>
                         <div style={{ flex: 1 }}>
-                            <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>名称（可选）</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>{t('mongo.indexes.nameOptional', '名称（可选）')}</span>
                             <Input size="small" value={name} onChange={e => setName(e.target.value)} />
                         </div>
                         <div style={{ flex: 1 }}>
-                            <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>TTL 过期秒（0=无）</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-dim)', display: 'block', marginBottom: 4 }}>{t('mongo.indexes.ttlLabel', 'TTL 过期秒（0=无）')}</span>
                             <InputNumber size="small" style={{ width: '100%' }} min={0} value={ttl} onChange={v => setTtl(v ?? 0)} />
                         </div>
                     </div>
                     <div style={{ display: 'flex', gap: 16 }}>
-                        <Checkbox checked={unique} onChange={e => setUnique(e.target.checked)}>唯一 (UNIQUE)</Checkbox>
-                        <Checkbox checked={sparse} onChange={e => setSparse(e.target.checked)}>稀疏 (SPARSE)</Checkbox>
+                        <Checkbox checked={unique} onChange={e => setUnique(e.target.checked)}>{t('mongo.indexes.unique', '唯一 (UNIQUE)')}</Checkbox>
+                        <Checkbox checked={sparse} onChange={e => setSparse(e.target.checked)}>{t('mongo.indexes.sparse', '稀疏 (SPARSE)')}</Checkbox>
                     </div>
                     {createMsg && (
                         <div style={{ marginTop: 8 }}>
-                            <Alert type={createMsg.includes('已创建') ? 'success' : 'error'} showIcon message={createMsg} />
+                            <Alert type={createMsg.includes('已创建') || createMsg.toLowerCase().includes('created') ? 'success' : 'error'} showIcon message={createMsg} />
                         </div>
                     )}
                     <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                        <Button type="primary" size="small" disabled={createBusy} onClick={create}>创建</Button>
-                        <Button size="small" onClick={() => setShowCreate(false)}>取消</Button>
+                        <Button type="primary" size="small" disabled={createBusy} onClick={create}>{t('mongo.indexes.create', '创建')}</Button>
+                        <Button size="small" onClick={() => setShowCreate(false)}>{t('common:cancel', '取消')}</Button>
                     </div>
                 </div>
             )}
@@ -158,12 +160,12 @@ export default function IndexesTab({ session, db, collection }: Props) {
                 <table className={sh.mongoTable}>
                     <thead>
                         <tr>
-                            <th>名称</th>
-                            <th>键</th>
-                            <th>唯一</th>
-                            <th>稀疏</th>
-                            <th>TTL</th>
-                            <th style={{ width: 60, textAlign: 'center' }}>操作</th>
+                            <th>{t('mongo.indexes.colName', '名称')}</th>
+                            <th>{t('mongo.indexes.colKey', '键')}</th>
+                            <th>{t('mongo.indexes.colUnique', '唯一')}</th>
+                            <th>{t('mongo.indexes.colSparse', '稀疏')}</th>
+                            <th>{t('mongo.indexes.colTtl', 'TTL')}</th>
+                            <th style={{ width: 60, textAlign: 'center' }}>{t('mongo.indexes.colAction', '操作')}</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -171,11 +173,11 @@ export default function IndexesTab({ session, db, collection }: Props) {
                             <tr key={ix.name}>
                                 <td>{ix.name}</td>
                                 <td style={{ maxWidth: 360 }}>{ix.key}</td>
-                                <td>{ix.unique ? <Tag color="green">是</Tag> : ''}</td>
-                                <td>{ix.sparse ? <Tag color="blue">是</Tag> : ''}</td>
+                                <td>{ix.unique ? <Tag color="green">{t('mongo.indexes.yes', '是')}</Tag> : ''}</td>
+                                <td>{ix.sparse ? <Tag color="blue">{t('mongo.indexes.yes', '是')}</Tag> : ''}</td>
                                 <td>{ix.expireAfterSeconds ?? ''}</td>
                                 <td style={{ textAlign: 'center' }}>
-                                    <Tooltip title="删除索引">
+                                    <Tooltip title={t('mongo.indexes.dropTooltip', '删除索引')}>
                                         <Button
                                             size="small"
                                             type="text"
@@ -193,10 +195,10 @@ export default function IndexesTab({ session, db, collection }: Props) {
 
             {stats.length > 0 && (
                 <>
-                    <div className={sh.mongoH} style={{ marginTop: 16 }}>索引使用统计（$indexStats）</div>
+                    <div className={sh.mongoH} style={{ marginTop: 16 }}>{t('mongo.indexes.statsTitle', '索引使用统计（$indexStats）')}</div>
                     <div className={sh.mongoGridWrap}>
                         <table className={sh.mongoTable}>
-                            <thead><tr><th style={{ width: 40 }}>#</th><th>统计</th></tr></thead>
+                            <thead><tr><th style={{ width: 40 }}>#</th><th>{t('mongo.indexes.colStats', '统计')}</th></tr></thead>
                             <tbody>
                                 {stats.map((s, i) => (
                                     <tr key={i}><td>{i + 1}</td><td style={{ maxWidth: 520 }}>{s}</td></tr>

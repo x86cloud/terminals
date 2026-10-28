@@ -9,6 +9,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
     dbDefaultLimit: '50',
     globalFontFamily: 'system',
     closeAction: 'ask',
+    language: 'system',
 }
 
 const GLOBAL_FONT_MAP: Record<string, string> = {

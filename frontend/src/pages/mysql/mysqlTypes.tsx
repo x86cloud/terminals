@@ -2,6 +2,7 @@ import { sql, SQLDialect } from '@codemirror/lang-sql'
 import { MysqlQueryResult } from '@/types'
 import my from '@/pages/mysql/mysqlShared.module.less'
 import db from '@/pages/mysql/dbTable.module.less'
+import i18n from '@/i18n'
 
 // ---- 标签页体系 ----
 export type MysqlTabType = 'status' | 'sql' | 'data' | 'users' | 'er'
@@ -101,7 +102,7 @@ export function formatCell(v: any) {
 
 export function Grid({ columns, rows }: { columns: string[]; rows: Record<string, any>[] }) {
     if (!columns.length) {
-        return <div className={db.dbEmpty}>无结果</div>
+        return <div className={db.dbEmpty}>{i18n.t('common:empty')}</div>
     }
     return (
         <div className={my.mysqlGridWrap}>

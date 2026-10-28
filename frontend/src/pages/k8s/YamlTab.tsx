@@ -36,6 +36,7 @@ import {
   Search,
   ExternalLink,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import K8sYamlGenerateModal from './K8sYamlGenerateModal'
 import { API } from '@/api'
@@ -87,6 +88,7 @@ spec:
 `
 
 export default function YamlTab({ serverId, currentNamespace, onNavigateToResource }: Props) {
+  const { t } = useTranslation(['k8s', 'common'])
   const { message } = App.useApp()
   const [records, setRecords] = useState<K8sOrchestrationRecord[]>([])
   const [loading, setLoading] = useState(false)
@@ -123,7 +125,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       const list = await API.k8sListOrchestrationRecords(serverId)
       setRecords(list)
     } catch (err: any) {
-      message.error(`获取本地编排记录失败: ${err.message || String(err)}`)
+      message.error(t('k8s:yaml.fetchFail', { error: err.message || String(err) }))
     } finally {
       setLoading(false)
     }
@@ -156,11 +158,11 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
     const trimmedYaml = formYaml.trim()
 
     if (!trimmedName) {
-      message.warning('请输入编排名称')
+      message.warning(t('k8s:yaml.reqName'))
       return
     }
     if (!trimmedYaml) {
-      message.warning('请输入有效的 Kubernetes YAML 清单内容')
+      message.warning(t('k8s:yaml.reqYaml'))
       return
     }
 
@@ -181,7 +183,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
 
       const results = await API.k8sApplyOrchestration(serverId, payload)
       if (!results || results.length === 0) {
-        message.warning('YAML 未包含可部署的有效 Kubernetes 资源')
+        message.warning(t('k8s:yaml.invalidYaml'))
         return
       }
 
@@ -189,14 +191,14 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       const successes = results.filter((r) => r.action !== 'failed')
 
       if (failures.length === 0) {
-        message.success(`编排 [${trimmedName}] 部署并保存成功！已应用 ${successes.length} 项资源`)
+        message.success(t('k8s:yaml.deploySuccess', { name: trimmedName, count: successes.length }))
       } else if (successes.length === 0) {
-        const detail = failures.map((r) => `${r.kind}/${r.name || '未知'}: ${r.message}`).join('; ')
-        message.error(`部署失败: ${detail}。配置未保存，请修正后重试。`, 6)
+        const detail = failures.map((r) => `${r.kind}/${r.name || t('common.unknown')}: ${r.message}`).join('; ')
+        message.error(t('k8s:yaml.deployFail', { detail }), 6)
         return
       } else {
         message.warning(
-          `部分部署成功 (${successes.length} 成功, ${failures.length} 失败)，已保存当前编排至本地。`,
+          t('k8s:yaml.deployPartial', { successCount: successes.length, failCount: failures.length }),
           5,
         )
       }
@@ -204,7 +206,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       setDrawerOpen(false)
       await fetchRecords()
     } catch (err: any) {
-      message.error(`部署失败: ${err.message || String(err)}。配置未保存，请修正后重试。`, 6)
+      message.error(t('k8s:yaml.deployFail', { detail: err.message || String(err) }), 6)
     } finally {
       setSaving(false)
     }
@@ -219,16 +221,16 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       const successes = results?.filter((r) => r.action !== 'failed') || []
 
       if (failures.length === 0) {
-        message.success(`编排 [${rec.name}] 部署成功！已同步 ${successes.length} 项资源`)
+        message.success(t('k8s:yaml.deploySyncSuccess', { name: rec.name, count: successes.length }))
       } else if (successes.length === 0) {
-        const detail = failures.map((r) => `${r.kind}/${r.name || '未知'}: ${r.message}`).join('; ')
-        message.error(`部署失败: ${detail}`, 6)
+        const detail = failures.map((r) => `${r.kind}/${r.name || t('common.unknown')}: ${r.message}`).join('; ')
+        message.error(t('k8s:yaml.deploySyncFail', { detail }), 6)
       } else {
-        message.warning(`编排 [${rec.name}] 部分同步成功 (${successes.length} 成功, ${failures.length} 失败)`)
+        message.warning(t('k8s:yaml.deploySyncPartial', { name: rec.name, successCount: successes.length, failCount: failures.length }))
       }
       await fetchRecords()
     } catch (err: any) {
-      message.error(`部署执行异常: ${err.message || String(err)}`)
+      message.error(t('k8s:yaml.deployEx', { error: err.message || String(err) }))
     } finally {
       setDeployingId(null)
     }
@@ -259,18 +261,21 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
 
       if (failures.length === 0) {
         message.success(
-          `编排 [${offlineModal.record.name}] 集群资源已下线！${offlineModal.deleteLocal ? '本地记录已删除。' : '本地记录已标记为未部署。'}`,
+          t('k8s:yaml.offlineSuccess', {
+            name: offlineModal.record.name,
+            detail: offlineModal.deleteLocal ? t('k8s:yaml.offlineDetailDeleted') : t('k8s:yaml.offlineDetailMarked'),
+          }),
           4,
         )
       } else {
         const failMsg = failures.map((f) => `${f.kind}/${f.name}: ${f.message}`).join('; ')
-        message.warning(`部分资源下线失败: ${failMsg}`, 5)
+        message.warning(t('k8s:yaml.offlinePartialFail', { failMsg }), 5)
       }
 
       setOfflineModal({ open: false, record: null, deleteLocal: false, loading: false })
       await fetchRecords()
     } catch (err: any) {
-      message.error(`下线资源失败: ${err.message || String(err)}`)
+      message.error(t('k8s:yaml.offlineFail', { error: err.message || String(err) }))
       setOfflineModal((prev) => ({ ...prev, loading: false }))
     }
   }
@@ -279,10 +284,10 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
   const handleDeleteRecordOnly = async (rec: K8sOrchestrationRecord) => {
     try {
       await API.k8sDeleteOrchestrationRecordOnly(rec.id)
-      message.success(`编排本地配置 [${rec.name}] 已删除`)
+      message.success(t('k8s:yaml.deleteLocalSuccess', { name: rec.name }))
       await fetchRecords()
     } catch (err: any) {
-      message.error(`删除本地配置失败: ${err.message || String(err)}`)
+      message.error(t('k8s:yaml.deleteLocalFail', { error: err.message || String(err) }))
     }
   }
 
@@ -326,7 +331,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
 
   const columns: ColumnsType<K8sOrchestrationRecord> = [
     {
-      title: '编排名称',
+      title: t('k8s:yaml.colName'),
       dataIndex: 'name',
       key: 'name',
       width: 200,
@@ -334,7 +339,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontWeight: 600, color: 'var(--text)' }}>{name}</span>
-            <Tooltip title="复制编排名称">
+            <Tooltip title={t('common.copy')}>
               <Button
                 type="text"
                 size="small"
@@ -343,7 +348,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 onClick={async (e) => {
                   e.stopPropagation()
                   if (await copyText(name)) {
-                    message.success('编排名称已复制')
+                    message.success(t('k8s:yaml.copiedRecordName'))
                   }
                 }}
               />
@@ -356,14 +361,14 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       ),
     },
     {
-      title: '默认命名空间',
+      title: t('k8s:yaml.colDefaultNamespace'),
       dataIndex: 'namespace',
       key: 'namespace',
       width: 140,
       render: (ns: string) => <Tag color="blue">{ns || 'default'}</Tag>,
     },
     {
-      title: '集群部署状态',
+      title: t('k8s:yaml.colClusterStatus'),
       dataIndex: 'status',
       key: 'status',
       width: 130,
@@ -372,18 +377,18 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
         return isDeployed ? (
           <Tag color="success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <span className={s.onlineDot} style={{ width: 5, height: 5 }} />
-            <span>已部署</span>
+            <span>{t('k8s:yaml.statusDeployed')}</span>
           </Tag>
         ) : (
           <Tag color="default" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--text-faint)' }} />
-            <span>已下线</span>
+            <span>{t('k8s:yaml.statusOffline')}</span>
           </Tag>
         )
       },
     },
     {
-      title: '包含资源 (点击跳转定位)',
+      title: t('k8s:yaml.colResourcesNav'),
       key: 'resources',
       render: (_, record) => {
         const resList = record.resources || []
@@ -395,7 +400,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             {resList.map((res, idx) => (
               <Tooltip
                 key={`${res.kind}-${res.name}-${idx}`}
-                title={`点击跳转并定位 ${res.kind}: ${res.name} (命名空间: ${res.namespace || record.namespace})`}
+                title={t('k8s:yaml.resTooltip', { kind: res.kind, name: res.name, namespace: res.namespace || record.namespace })}
               >
                 <Tag
                   style={{
@@ -428,18 +433,18 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       },
     },
     {
-      title: '最后更新',
+      title: t('k8s:yaml.colLastUpdated'),
       dataIndex: 'updatedAt',
       key: 'updatedAt',
       width: 170,
-      render: (t: string) => (
+      render: (tVal: string) => (
         <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-          {t ? new Date(t).toLocaleString() : '-'}
+          {tVal ? new Date(tVal).toLocaleString() : '-'}
         </span>
       ),
     },
     {
-      title: '操作',
+      title: t('common.action'),
       key: 'action',
       width: 190,
       render: (_, record) => {
@@ -451,7 +456,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             ? [
                 {
                   key: 'redeploy',
-                  label: '重新应用/同步部署',
+                  label: t('k8s:yaml.redeploy'),
                   icon: <RotateCcw size={13} />,
                   disabled: isDeploying,
                   onClick: () => handleRowDeploy(record),
@@ -460,11 +465,11 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             : []),
           {
             key: 'copy_yaml',
-            label: '复制 YAML 内容',
+            label: t('k8s:yaml.copyYamlContent'),
             icon: <Copy size={13} />,
             onClick: async () => {
               if (await copyText(record.yamlContent)) {
-                message.success('YAML 内容已复制到剪贴板')
+                message.success(t('k8s:yaml.copiedYaml'))
               }
             },
           },
@@ -476,14 +481,14 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             danger: true,
             label: (
               <Popconfirm
-                title="确定仅删除本地编排记录？"
-                description="集群中已运行的实际资源不会受到影响，仅移除此客户端记录。"
-                okText="删除本地记录"
-                cancelText="取消"
+                title={t('k8s:yaml.deleteLocalConfirmTitle')}
+                description={t('k8s:yaml.deleteLocalConfirmDesc')}
+                okText={t('k8s:yaml.deleteLocalConfirmOk')}
+                cancelText={t('common.cancel')}
                 okButtonProps={{ danger: true }}
                 onConfirm={() => handleDeleteRecordOnly(record)}
               >
-                <div style={{ color: 'var(--danger, #ff4d4f)' }}>仅删除本地记录</div>
+                <div style={{ color: 'var(--danger, #ff4d4f)' }}>{t('k8s:yaml.deleteLocalOnly')}</div>
               </Popconfirm>
             ),
             icon: <Trash2 size={13} />,
@@ -493,18 +498,18 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
         return (
           <Space size={6}>
             {isDeployed ? (
-              <Tooltip title="从集群中下线清理相关声明资源">
+              <Tooltip title={t('k8s:yaml.offlineTooltip')}>
                 <Button
                   size="small"
                   danger
                   icon={<Square size={12} />}
                   onClick={() => handleOpenOfflineModal(record)}
                 >
-                  下线
+                  {t('k8s:yaml.offlineBtn')}
                 </Button>
               </Tooltip>
             ) : (
-              <Tooltip title="将当前 YAML 清单部署至集群">
+              <Tooltip title={t('k8s:yaml.deployTooltip')}>
                 <Button
                   type="primary"
                   size="small"
@@ -516,18 +521,18 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                   }}
                   onClick={() => handleRowDeploy(record)}
                 >
-                  部署
+                  {t('k8s:yaml.deployBtn')}
                 </Button>
               </Tooltip>
             )}
 
-            <Tooltip title="编辑 YAML 内容或元信息">
+            <Tooltip title={t('k8s:yaml.editTooltip')}>
               <Button
                 size="small"
                 icon={<Edit3 size={12} />}
                 onClick={() => handleOpenEditDrawer(record)}
               >
-                编辑
+                {t('common.edit')}
               </Button>
             </Tooltip>
 
@@ -550,12 +555,12 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             icon={<Plus size={13} />}
             onClick={handleOpenCreateDrawer}
           >
-            新建编排
+            {t('k8s:yaml.newBtn')}
           </Button>
 
           <Input
             prefix={<Search size={14} color="var(--text-dim)" />}
-            placeholder="搜索编排名称 / 资源类型 / 资源名称..."
+            placeholder={t('k8s:yaml.searchBarPlaceholder')}
             value={searchKw}
             onChange={(e) => setSearchKw(e.target.value)}
             allowClear
@@ -571,18 +576,18 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             buttonStyle="solid"
             size="middle"
           >
-            <Radio.Button value="all">全部 ({records.length})</Radio.Button>
+            <Radio.Button value="all">{t('k8s:yaml.filterAll', { count: records.length })}</Radio.Button>
             <Radio.Button value="deployed">
-              已部署 ({records.filter((r) => r.status === 'deployed').length})
+              {t('k8s:yaml.filterDeployed', { count: records.filter((r) => r.status === 'deployed').length })}
             </Radio.Button>
             <Radio.Button value="not_deployed">
-              已下线 ({records.filter((r) => r.status !== 'deployed').length})
+              {t('k8s:yaml.filterOffline', { count: records.filter((r) => r.status !== 'deployed').length })}
             </Radio.Button>
           </Radio.Group>
         </div>
 
         <div className={s.toolbarRight}>
-          <Tooltip title="刷新编排列表">
+          <Tooltip title={t('k8s:yaml.refreshTooltip')}>
             <Button
               icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
               onClick={fetchRecords}
@@ -608,14 +613,14 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
               setPageSize(ps)
             },
             showSizeChanger: true,
-            showTotal: (total) => `共 ${total} 条编排记录`,
+            showTotal: (total) => t('k8s:yaml.totalRecords', { total }),
           }}
           locale={{
             emptyText: (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <div style={{ color: 'var(--text-dim)', marginBottom: 8 }}>暂无 YAML 资源编排记录</div>
+                  <div style={{ color: 'var(--text-dim)', marginBottom: 8 }}>{t('k8s:yaml.emptyText')}</div>
                 }
               />
             ),
@@ -628,13 +633,13 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <Layers size={16} color="var(--accent)" />
-            <span>{currentRecord ? `编辑资源编排: ${formName || currentRecord.name}` : '新建 Kubernetes 资源编排'}</span>
+            <span>{currentRecord ? t('k8s:yaml.drawerTitleEdit', { name: formName || currentRecord.name }) : t('k8s:yaml.drawerTitleNew')}</span>
             {currentRecord && (
               <Tag
                 color={currentRecord.status === 'deployed' ? 'success' : 'default'}
                 style={{ marginLeft: 4 }}
               >
-                {currentRecord.status === 'deployed' ? '已部署' : '已下线'}
+                {currentRecord.status === 'deployed' ? t('k8s:yaml.statusDeployed') : t('k8s:yaml.statusOffline')}
               </Tag>
             )}
           </div>
@@ -650,36 +655,36 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
               icon={<Sparkles size={13} />}
               onClick={() => setAiModalOpen(true)}
             >
-              AI 生成 YAML
+              {t('k8s:yaml.aiGenerateBtn')}
             </Button>
             <Button
               size="small"
               icon={<RotateCcw size={12} />}
               onClick={() => setFormYaml('')}
             >
-              清空
+              {t('common.clear')}
             </Button>
             <Button
               size="small"
               icon={<Copy size={12} />}
               onClick={async () => {
                 if (!formYaml) {
-                  message.info('当前没有可复制的 YAML 内容')
+                  message.info(t('k8s:yaml.noYamlToCopy'))
                   return
                 }
                 if (await copyText(formYaml)) {
-                  message.success('YAML 内容已复制到剪贴板')
+                  message.success(t('k8s:yaml.copiedYaml'))
                 }
               }}
             >
-              复制
+              {t('common.copy')}
             </Button>
           </Space>
         }
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '6px 0' }}>
             <Button onClick={() => setDrawerOpen(false)} disabled={saving}>
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               type="primary"
@@ -692,10 +697,10 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
               onClick={handleSaveAndApply}
             >
               {saving
-                ? '正在部署验证...'
+                ? t('k8s:yaml.validatingAndDeploying')
                 : currentRecord?.status === 'deployed'
-                  ? '保存并重新部署'
-                  : '保存并部署'}
+                  ? t('k8s:yaml.saveAndRedeploy')
+                  : t('k8s:yaml.saveAndDeploy')}
             </Button>
           </div>
         }
@@ -704,10 +709,10 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
           {/* 元信息表单 */}
           <div>
             <div style={{ marginBottom: 6, fontSize: 13, fontWeight: 500 }}>
-              编排名称 <span style={{ color: 'var(--danger, #ff4d4f)' }}>*</span>
+              {t('k8s:yaml.nameRequired')} <span style={{ color: 'var(--danger, #ff4d4f)' }}>*</span>
             </div>
             <Input
-              placeholder="例如: nginx-web-stack, redis-cluster"
+              placeholder={t('k8s:yaml.nameExamplePlaceholder')}
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
             />
@@ -716,7 +721,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
           {/* YAML 编辑器 */}
           <div style={{ flex: 1, minHeight: 480, display: 'flex', flexDirection: 'column' }}>
             <div style={{ fontSize: 13, fontWeight: 500, marginBottom: 6 }}>
-              编排文件<span style={{ color: 'var(--danger, #ff4d4f)' }}>*</span>
+              {t('k8s:yaml.yamlFileRequired')}<span style={{ color: 'var(--danger, #ff4d4f)' }}>*</span>
             </div>
             <CodeEditor
               value={formYaml}
@@ -725,7 +730,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
               bordered
               height="100%"
               minHeight="480px"
-              placeholder="在此粘贴、编写或使用「AI 生成 YAML」创建 Kubernetes 资源清单 (支持多资源 --- 分隔)..."
+              placeholder={t('k8s:yaml.editorInputPlaceholder')}
             />
           </div>
         </div>
@@ -736,7 +741,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--danger, #ff4d4f)' }}>
             <AlertCircle size={18} />
-            <span>下线集群资源确认</span>
+            <span>{t('k8s:yaml.offlineConfirmTitle')}</span>
           </div>
         }
         open={offlineModal.open}
@@ -750,7 +755,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             onClick={() => setOfflineModal({ open: false, record: null, deleteLocal: false, loading: false })}
             disabled={offlineModal.loading}
           >
-            取消
+            {t('common.cancel')}
           </Button>,
           <Button
             key="confirm"
@@ -759,13 +764,13 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             loading={offlineModal.loading}
             onClick={handleConfirmOffline}
           >
-            确认下线资源
+            {t('k8s:yaml.confirmOfflineBtn')}
           </Button>,
         ]}
       >
         <div style={{ padding: '10px 0' }}>
           <div style={{ marginBottom: 12, fontSize: 13.5, lineHeight: 1.6 }}>
-            确定要下线编排 <strong>[{offlineModal.record?.name}]</strong> 声明的所有集群资源吗？
+            {t('k8s:yaml.offlineConfirmQuestion', { name: offlineModal.record?.name })}
           </div>
 
           <div
@@ -777,7 +782,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
               marginBottom: 16,
             }}
           >
-            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>即将下线删除的资源：</div>
+            <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>{t('k8s:yaml.offlineResourcesListLabel')}</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {offlineModal.record?.resources && offlineModal.record.resources.length > 0 ? (
                 offlineModal.record.resources.map((res, idx) => (
@@ -787,7 +792,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 ))
               ) : (
                 <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>
-                  {offlineModal.record?.resourcesSummary || '未解析出明确资源'}
+                  {offlineModal.record?.resourcesSummary || t('k8s:yaml.noParsedResources')}
                 </span>
               )}
             </div>
@@ -800,10 +805,10 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 setOfflineModal((prev) => ({ ...prev, deleteLocal: e.target.checked }))
               }
             >
-              <span style={{ fontWeight: 500 }}>同时删除本地编排配置文件</span>
+              <span style={{ fontWeight: 500 }}>{t('k8s:yaml.offlineAlsoDeleteLocal')}</span>
             </Checkbox>
             <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 4, marginLeft: 22 }}>
-              未勾选时：仅从 Kubernetes 集群中清理资源，本地编排配置将保留并标记为「未部署/已下线」，方便日后重新部署。
+              {t('k8s:yaml.offlineAlsoDeleteLocalTip')}
             </div>
           </div>
         </div>

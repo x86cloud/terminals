@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, useCallback } from 'react'
 import { Input, Button, Tooltip } from 'antd'
+import { useTranslation } from 'react-i18next'
 import {
     Plug,
     Search,
@@ -8,7 +9,6 @@ import {
     ChevronRight,
     Edit,
     Trash2,
-    Bot,
     BarChart2,
     Link as LinkIcon,
     BookOpen,
@@ -95,13 +95,13 @@ export default function Sidebar({
     onOpenSettings,
     onExportConfig,
     onImportConfig,
-    onOpenAiAgent,
     onOpenApi,
     onOpenDevTools,
     onOpenWiki,
     onFocusSession,
 }: Props) {
-    const { sessions: ctxSessions, activeTarget, openTool, activateTab, aiSidebarOpen, toggleAiSidebar, sidebarOpen } = useSession()
+    const { t } = useTranslation(['sidebar', 'common'])
+    const { sessions: ctxSessions, activeTarget, openTool, activateTab, sidebarOpen } = useSession()
     const [mounted, setMounted] = useState(false)
 
     useEffect(() => {
@@ -237,15 +237,15 @@ export default function Sidebar({
                         const items: MenuItem[] = [
                             {
                                 key: 'connect',
-                                label: '连接',
+                                label: t('common:connect'),
                                 icon: 'plug',
                                 disabled: connectingId === server.id,
                                 onClick: () => onConnect(server),
                             },
-                            { key: 'edit', label: '编辑', icon: 'edit', onClick: () => onEdit(server) },
+                            { key: 'edit', label: t('common:edit'), icon: 'edit', onClick: () => onEdit(server) },
                             {
                                 key: 'move',
-                                label: '移动到分组…',
+                                label: t('sidebar:moveToGroup'),
                                 icon: 'folder',
                                 onClick: () => {
                                     const r = (e.target as HTMLElement).getBoundingClientRect()
@@ -255,7 +255,7 @@ export default function Sidebar({
                             { key: 'd1', label: '', divider: true },
                             {
                                 key: 'delete',
-                                label: '删除',
+                                label: t('common:delete'),
                                 icon: 'trash',
                                 danger: true,
                                 onClick: () => onDelete(server),
@@ -270,7 +270,7 @@ export default function Sidebar({
                     <span className={s.serverText}>
                         <span className={s.serverName}>
                             {kind === 'sqlite'
-                                ? ((server.name || server.sqlitePath || '').split(/[\\/]/).pop() || 'SQLite 文件')
+                                ? ((server.name || server.sqlitePath || '').split(/[\\/]/).pop() || t('sidebar:sqliteFile', 'SQLite 文件'))
                                 : kind === 'docker'
                                     ? server.name || (server.dockerEndpointType === 'ssh' ? `Docker (${server.dockerSshHost || server.host})` : server.dockerEndpointType === 'tcp' ? `Docker (${server.host})` : 'Docker (Local Socket)')
                                     : kind === 'k8s'
@@ -295,14 +295,14 @@ export default function Sidebar({
                     </span>
                     <span className={s.serverActions}>
                         {connectingId === server.id ? (
-                            <span className={s.spinner} title="连接中…">
+                            <span className={s.spinner} title={t('sidebar:connecting')}>
                                 <svg className={s.spinSvg} viewBox="0 0 24 24" fill="none" stroke="currentColor">
                                     <circle cx="12" cy="12" r="9" strokeOpacity="0.22" strokeWidth="2.5" />
                                     <path d="M21 12a9 9 0 0 0-9-9" strokeWidth="2.5" strokeLinecap="round" />
                                 </svg>
                             </span>
                         ) : (
-                            <Tooltip title="连接">
+                            <Tooltip title={t('common:connect')}>
                                 <Button
                                     size="small"
                                     type="text"
@@ -311,7 +311,7 @@ export default function Sidebar({
                                 />
                             </Tooltip>
                         )}
-                        <Tooltip title="编辑">
+                        <Tooltip title={t('common:edit')}>
                             <Button
                                 size="small"
                                 type="text"
@@ -341,12 +341,12 @@ export default function Sidebar({
                                         : kind === 'mongo'
                                             ? `MongoDB ${server.host}:${server.port}`
                                             : kind === 'sqlite'
-                                                ? `SQLite ${((sess as any).title || server.name || server.sqlitePath || '').split(/[\\/]/).pop() || '文件'}`
+                                                ? `SQLite ${((sess as any).title || server.name || server.sqlitePath || '').split(/[\\/]/).pop() || t('sidebar:file', '文件')}`
                                                 : kind === 'k8s'
                                                     ? (sess as any).title || `K8s ${(sess as any).apiServer}`
                                                     : kind === 'docker'
                                                         ? (sess as any).title || `Docker ${(sess as any).serverId || sess.id}`
-                                                        : `会话 ${sess.id.slice(0, 6)}`}
+                                                        : t('sidebar:session', { id: sess.id.slice(0, 6) })}
                         </span>
                     </Button>
                 ))}
@@ -367,12 +367,12 @@ export default function Sidebar({
                         size="small"
                         className={s.sidebarSearchInput}
                         value={keyword}
-                        placeholder="搜索服务器 / 数据库"
+                        placeholder={t('sidebar:searchPlaceholder')}
                         prefix={<Search size={13} style={{ color: 'var(--text-dim)' }} />}
                         allowClear
                         onChange={(e) => setKeyword(e.target.value)}
                     />
-                    <Tooltip title="新建服务器">
+                    <Tooltip title={t('sidebar:newServer')}>
                         <Button
                             size="small"
                             type="text"
@@ -380,7 +380,7 @@ export default function Sidebar({
                             onClick={() => onNew()}
                         />
                     </Tooltip>
-                    <Tooltip title="新建分组">
+                    <Tooltip title={t('sidebar:newGroup')}>
                         <Button
                             size="small"
                             type="text"
@@ -397,26 +397,26 @@ export default function Sidebar({
                         const items: MenuItem[] = [
                             {
                                 key: 'new-server',
-                                label: '新建连接',
+                                label: t('sidebar:newConnection'),
                                 icon: 'plug',
                                 onClick: () => onNew(),
                             },
                             {
                                 key: 'new-group',
-                                label: '新建分组',
+                                label: t('sidebar:newGroup'),
                                 icon: 'newfolder',
                                 onClick: startCreateGroup,
                             },
                             { key: 'd1', label: '', divider: true },
                             {
                                 key: 'import-cfg',
-                                label: '导入配置…',
+                                label: t('sidebar:importConfig'),
                                 icon: 'upload',
                                 onClick: () => onImportConfig?.(),
                             },
                             {
                                 key: 'export-cfg',
-                                label: '导出配置…',
+                                label: t('sidebar:exportConfig'),
                                 icon: 'download',
                                 onClick: () => onExportConfig?.(),
                             },
@@ -442,8 +442,8 @@ export default function Sidebar({
                 >
                     {filtered.length === 0 && (
                         <div className={s.sidebarEmpty}>
-                            还没有服务器
-                            <Button size="small" type="primary" onClick={() => onNew()}>添加一个</Button>
+                            {t('sidebar:noServers')}
+                            <Button size="small" type="primary" onClick={() => onNew()}>{t('sidebar:addOne')}</Button>
                         </div>
                     )}
 
@@ -482,28 +482,28 @@ export default function Sidebar({
                                         const items: MenuItem[] = [
                                             {
                                                 key: 'new-in-group',
-                                                label: '在此分组下新建连接',
+                                                label: t('sidebar:newInGroup'),
                                                 icon: 'plug',
                                                 onClick: () => onNew(grp.id),
                                             },
                                             {
                                                 key: 'rename-group',
-                                                label: '重命名分组',
+                                                label: t('sidebar:renameGroup'),
                                                 icon: 'edit',
                                                 onClick: () => setEditingGroup({ id: grp.id, name: grp.name }),
                                             },
                                             { key: 'd1', label: '', divider: true },
                                             {
                                                 key: 'delete-group',
-                                                label: '删除分组',
+                                                label: t('sidebar:deleteGroup'),
                                                 icon: 'trash',
                                                 danger: true,
                                                 onClick: () => {
                                                     setConfirm({
                                                         open: true,
-                                                        title: '删除分组',
+                                                        title: t('sidebar:deleteGroupTitle'),
                                                         danger: true,
-                                                        message: `删除分组「${grp.name}」？分组下的服务器不会被删除，仅移出分组。`,
+                                                        message: t('sidebar:deleteGroupConfirm', { name: grp.name }),
                                                         onConfirm: () => {
                                                             setConfirm(emptyConfirm)
                                                             onDeleteGroup(grp.id)
@@ -515,7 +515,7 @@ export default function Sidebar({
                                         setMenu({ open: true, x: e.clientX, y: e.clientY, items })
                                     }}
                                 >
-                                    <Tooltip title={isOpen ? '折叠' : '展开'}>
+                                    <Tooltip title={isOpen ? t('sidebar:collapse') : t('sidebar:expand')}>
                                         <Button
                                             size="small"
                                             type="text"
@@ -548,7 +548,7 @@ export default function Sidebar({
                                         </Button>
                                     )}
                                     <span className={s.groupActions}>
-                                        <Tooltip title="重命名分组">
+                                        <Tooltip title={t('sidebar:renameGroup')}>
                                             <Button
                                                 size="small"
                                                 type="text"
@@ -556,7 +556,7 @@ export default function Sidebar({
                                                 onClick={() => setEditingGroup({ id: grp.id, name: grp.name })}
                                             />
                                         </Tooltip>
-                                        <Tooltip title="删除分组">
+                                        <Tooltip title={t('sidebar:deleteGroup')}>
                                             <Button
                                                 size="small"
                                                 type="text"
@@ -565,9 +565,9 @@ export default function Sidebar({
                                                 onClick={() => {
                                                     setConfirm({
                                                         open: true,
-                                                        title: '删除分组',
+                                                        title: t('sidebar:deleteGroupTitle'),
                                                         danger: true,
-                                                        message: `删除分组「${grp.name}」？分组下的服务器不会被删除，仅移出分组。`,
+                                                        message: t('sidebar:deleteGroupConfirm', { name: grp.name }),
                                                         onConfirm: () => {
                                                             setConfirm(emptyConfirm)
                                                             onDeleteGroup(grp.id)
@@ -594,19 +594,11 @@ export default function Sidebar({
                 <div className={s.tools}>
                     <Button
                         type="text"
-                        icon={<Bot size={15} />}
-                        onClick={onOpenAiAgent || toggleAiSidebar}
-                        className={`${s.toolBtn} ${aiSidebarOpen ? s.toolBtnActive : ''}`}
-                    >
-                        AI 智能体
-                    </Button>
-                    <Button
-                        type="text"
                         icon={<BarChart2 size={15} />}
                         onClick={onOpenDevTools || (() => openTool('devtools'))}
                         className={s.toolBtn}
                     >
-                        开发工具
+                        {t('sidebar:tools.devTools')}
                     </Button>
                     <Button
                         type="text"
@@ -614,7 +606,7 @@ export default function Sidebar({
                         onClick={onOpenApi || (() => openTool('api'))}
                         className={s.toolBtn}
                     >
-                        API 调试
+                        {t('sidebar:tools.apiDebug')}
                     </Button>
                     <Button
                         type="text"
@@ -622,7 +614,7 @@ export default function Sidebar({
                         onClick={onOpenWiki || (() => openTool('wiki'))}
                         className={s.toolBtn}
                     >
-                        知识库
+                        {t('sidebar:tools.wiki')}
                     </Button>
                 </div>
             </div>
@@ -635,7 +627,7 @@ export default function Sidebar({
                     style={{ left: moveMenu.x, top: moveMenu.y }}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
-                    <div className={s.movePopTitle}>移动到分组</div>
+                    <div className={s.movePopTitle}>{t('sidebar:moveToGroupTitle')}</div>
                     <Button
                         size="small"
                         type="text"
@@ -645,7 +637,7 @@ export default function Sidebar({
                             setMoveMenu(null)
                         }}
                     >
-                        无分组 (根目录)
+                        {t('sidebar:noGroupRoot')}
                     </Button>
                     {groups.map((grp) => (
                         <Button
@@ -661,7 +653,7 @@ export default function Sidebar({
                             {grp.name}
                         </Button>
                     ))}
-                    {groups.length === 0 && <div className={s.moveEmpty}>暂无分组</div>}
+                    {groups.length === 0 && <div className={s.moveEmpty}>{t('sidebar:noGroups')}</div>}
                 </div>
             )}
             <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />

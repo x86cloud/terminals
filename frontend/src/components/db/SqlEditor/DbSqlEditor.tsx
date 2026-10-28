@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button, Tooltip, Segmented, Space, Table, Tree, App } from 'antd'
 import {
     Play,
@@ -32,13 +33,14 @@ export interface DbSqlEditorProps {
 }
 
 export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const { dialect, placeholder, defaultSql } = adapter
 
     const [tabs, setTabs] = useState<QueryTab[]>([
         {
             id: 'tab_1',
-            title: '查询 1',
+            title: t('db:sql.queryTitle', { index: 1, defaultValue: '查询 1' }),
             sql: initialSql || defaultSql,
             result: null,
             explainResult: null,
@@ -67,7 +69,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
         const id = 'tab_' + Date.now()
         const newTab: QueryTab = {
             id,
-            title: `查询 ${tabs.length + 1}`,
+            title: t('db:sql.queryTitle', { index: tabs.length + 1, defaultValue: `查询 ${tabs.length + 1}` }),
             sql: '',
             result: null,
             explainResult: null,
@@ -115,7 +117,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
     const handleRunSql = async () => {
         const sqlText = activeTab.sql.trim()
         if (!sqlText) {
-            message.warning('请输入要执行的 SQL 语句')
+            message.warning(t('db:sql.inputSqlPlaceholder'))
             return
         }
 
@@ -131,7 +133,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                 resultMode: 'table',
             })
             if (res.error) {
-                message.error(`执行出错: ${res.error}`)
+                message.error(t('db:sql.execError', { error: res.error }))
             }
         } catch (e: any) {
             const durationMs = Math.round(performance.now() - t0)
@@ -142,7 +144,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                 error: errStr,
                 resultMode: 'table',
             })
-            message.error(`执行失败: ${errStr}`)
+            message.error(t('db:sql.execFail', { error: errStr }))
         } finally {
             setRunning(false)
         }
@@ -152,12 +154,12 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
     const handleExplain = async () => {
         const sqlText = activeTab.sql.trim()
         if (!sqlText) {
-            message.warning('请输入要分析的 SQL 语句')
+            message.warning(t('db:sql.inputExplainPlaceholder'))
             return
         }
 
         if (!adapter.explainSql) {
-            message.info('当前数据库方言未实现 EXPLAIN 解析')
+            message.info(t('db:sql.noExplainSupport'))
             return
         }
 
@@ -169,7 +171,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                 resultMode: 'explain',
             })
         } catch (e: any) {
-            message.error(`执行 EXPLAIN 失败: ${e.message || e}`)
+            message.error(t('db:sql.explainFail', { error: e.message || e }))
         } finally {
             setRunning(false)
         }
@@ -178,7 +180,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
     // 导出 CSV
     const handleExportCsv = () => {
         if (!activeTab.result?.rows?.length) {
-            message.info('无结果可导出')
+            message.info(t('db:sql.noResultToExport'))
             return
         }
         const cols = activeTab.result.columns || []
@@ -189,7 +191,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
             ),
         ].join('\n')
         navigator.clipboard.writeText(csv)
-        message.success('已将查询结果作为 CSV 复制到剪贴板')
+        message.success(t('db:sql.copiedCsv'))
     }
 
     const planTreeData = useMemo(() => {
@@ -211,7 +213,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                 size="small"
                 className={s.tabBar}
                 extraRight={
-                    <Tooltip title="新建查询标签">
+                    <Tooltip title={t('db:sql.newQueryTooltip')}>
                         <Button
                             type="text"
                             size="small"
@@ -238,7 +240,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                     bordered={false}
                     height="180px"
                     placeholder={
-                        placeholder || `-- 输入 ${dialect.toUpperCase()} SQL 语句，按 Ctrl+Enter 快速执行`
+                        placeholder || t('db:sql.defaultInputPlaceholder', { dialect: dialect.toUpperCase() })
                     }
                     onChange={(val) => updateActiveTab({ sql: val })}
                     onModEnter={handleRunSql}
@@ -254,7 +256,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                         loading={running}
                         onClick={handleRunSql}
                     >
-                        运行 (Ctrl+Enter)
+                        {t('db:sql.runWithShortcut')}
                     </Button>
                     {adapter.explainSql && (
                         <Button
@@ -262,7 +264,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                             disabled={running}
                             onClick={handleExplain}
                         >
-                            EXPLAIN 分析
+                            {t('db:sql.explainBtn')}
                         </Button>
                     )}
                 </Space>
@@ -274,16 +276,16 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                         onChange={(v) => updateActiveTab({ resultMode: v as any })}
                         options={[
                             {
-                                label: `结果集 (${activeTab.result.rows?.length ?? 0})`,
+                                label: t('db:sql.resultModeTable', { count: activeTab.result.rows?.length ?? 0 }),
                                 value: 'table',
                             },
                             {
-                                label: '执行计划树',
+                                label: t('db:sql.resultModeExplain'),
                                 value: 'explain',
                                 disabled: !activeTab.explainResult,
                             },
                             {
-                                label: 'JSON 视图',
+                                label: t('db:sql.resultModeJson'),
                                 value: 'json',
                                 disabled: !activeTab.result.rows?.length,
                             },
@@ -306,16 +308,15 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                         <div className={s.resultHead}>
                             <Space size={12}>
                                 <span className={s.metaTag}>
-                                    <Clock size={12} /> 耗时: {activeTab.durationMs || 0} ms
+                                    <Clock size={12} /> {t('db:sql.duration', { ms: activeTab.durationMs || 0 })}
                                 </span>
                                 <span className={s.metaTag}>
-                                    <Zap size={12} /> 返回:{' '}
-                                    {activeTab.result.rows?.length ?? activeTab.result.affected ?? 0} 行
+                                    <Zap size={12} /> {t('db:sql.returns', { count: activeTab.result.rows?.length ?? activeTab.result.affected ?? 0 })}
                                 </span>
                             </Space>
 
                             <Button size="small" icon={<Download size={13} />} onClick={handleExportCsv}>
-                                导出 CSV
+                                {t('db:sql.exportCsv')}
                             </Button>
                         </div>
 
@@ -387,7 +388,7 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                 {!activeTab.result && !activeTab.error && !activeTab.explainResult && (
                     <div className={s.emptyTip}>
                         <FileCode size={36} opacity={0.3} />
-                        <span>输入 SQL 语句并点击「运行」查看执行结果</span>
+                        <span>{t('db:sql.emptyHint')}</span>
                     </div>
                 )}
             </div>

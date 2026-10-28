@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Table, Input, Button, Space, Tooltip, Modal, Drawer, Tag, Popconfirm, App } from 'antd'
 import { Search, Plus, Trash2, Edit3, Eye, Copy, CornerDownLeft, CornerDownRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
 import { RedisSessionInfo, RedisValue } from '@/types'
@@ -23,6 +24,7 @@ interface ListRow {
 }
 
 export default function ListViewer({ session, selected, value, onReload, flash }: Props) {
+    const { t } = useTranslation('redis')
     const { message } = App.useApp()
     const [searchText, setSearchText] = useState('')
 
@@ -75,18 +77,18 @@ export default function ListViewer({ session, selected, value, onReload, flash }
 
     const handlePush = async () => {
         if (!pushContent.trim()) {
-            message.warning('推入内容不能为空')
+            message.warning(t('viewers.list.reqPush'))
             return
         }
         setPushing(true)
         try {
             await API.redisListPush(session.id, selected, pushContent, pushDirection === 'left')
-            message.success(pushDirection === 'left' ? '已成功 LPUSH 到列表头部' : '已成功 RPUSH 到列表尾部')
+            message.success(pushDirection === 'left' ? t('viewers.list.pushLeftSuccess') : t('viewers.list.pushRightSuccess'))
             setPushModalOpen(false)
             setPushContent('')
             onReload()
         } catch (e: any) {
-            message.error('推入失败: ' + (e?.message || e))
+            message.error(t('viewers.list.pushFail', { error: e?.message || e }))
         } finally {
             setPushing(false)
         }
@@ -96,18 +98,18 @@ export default function ListViewer({ session, selected, value, onReload, flash }
         try {
             const popped = await API.redisListPop(session.id, selected, left)
             Modal.info({
-                title: left ? 'LPOP (头部弹出) 结果' : 'RPOP (尾部弹出) 结果',
+                title: left ? t('viewers.list.lpopTitle') : t('viewers.list.rpopTitle'),
                 content: (
                     <div style={{ marginTop: 12 }}>
-                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>已从列表中移除该元素：</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>{t('viewers.list.popRemoved')}</div>
                         <CodeEditor value={popped || '(nil)'} onChange={() => {}} lang="plain" readOnly height="120px" />
                     </div>
                 ),
-                okText: '好的',
+                okText: t('viewers.list.popOk'),
             })
             onReload()
         } catch (e: any) {
-            message.error('弹出失败: ' + (e?.message || e))
+            message.error(t('viewers.list.popFail', { error: e?.message || e }))
         }
     }
 
@@ -120,11 +122,11 @@ export default function ListViewer({ session, selected, value, onReload, flash }
             if (res && res.result && String(res.result).startsWith('ERR')) {
                 throw new Error(String(res.result))
             }
-            message.success(`已更新第 [${editIndex}] 项元素`)
+            message.success(t('viewers.list.itemUpdated', { idx: editIndex }))
             setEditModalOpen(false)
             onReload()
         } catch (e: any) {
-            message.error('修改失败: ' + (e?.message || e))
+            message.error(t('viewers.list.editFail', { error: e?.message || e }))
         } finally {
             setEditing(false)
         }
@@ -135,16 +137,16 @@ export default function ListViewer({ session, selected, value, onReload, flash }
             // LREM key 1 value
             const escaped = row.val.replace(/"/g, '\\"')
             await API.redisRaw(session.id, `LREM "${selected}" 1 "${escaped}"`)
-            message.success(`已删除元素`)
+            message.success(t('viewers.list.itemDeleted'))
             onReload()
         } catch (e: any) {
-            message.error('删除失败: ' + (e?.message || e))
+            message.error(t('viewers.list.deleteFail', { error: e?.message || e }))
         }
     }
 
     const columns = [
         {
-            title: '索引 (Index)',
+            title: t('viewers.list.colIndex'),
             dataIndex: 'index',
             key: 'index',
             width: 110,
@@ -155,7 +157,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '元素值 (Value)',
+            title: t('viewers.list.colValue'),
             dataIndex: 'val',
             key: 'val',
             ellipsis: true,
@@ -165,7 +167,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <span
                             className={s.cellValue}
-                            title="点击查看 / 编辑完整值"
+                            title={t('viewers.list.clickInspect')}
                             onClick={() => setInspectDrawer({ open: true, index: row.index, val })}
                         >
                             {val}
@@ -176,7 +178,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
             },
         },
         {
-            title: '大小',
+            title: t('viewers.common.colSize'),
             dataIndex: 'size',
             key: 'size',
             width: 90,
@@ -185,13 +187,13 @@ export default function ListViewer({ session, selected, value, onReload, flash }
             ),
         },
         {
-            title: '操作',
+            title: t('viewers.common.colAction'),
             key: 'actions',
             width: 120,
             align: 'right' as const,
             render: (_: any, row: ListRow) => (
                 <Space size={2}>
-                    <Tooltip title="查看完整详情">
+                    <Tooltip title={t('viewers.common.inspect')}>
                         <Button
                             size="small"
                             type="text"
@@ -199,7 +201,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                             onClick={() => setInspectDrawer({ open: true, index: row.index, val: row.val })}
                         />
                     </Tooltip>
-                    <Tooltip title="编辑元素 (LSET)">
+                    <Tooltip title={t('viewers.list.editLset')}>
                         <Button
                             size="small"
                             type="text"
@@ -212,13 +214,13 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                         />
                     </Tooltip>
                     <Popconfirm
-                        title={`确定从列表中移除该元素吗？(LREM 1)`}
+                        title={t('viewers.list.deleteConfirm')}
                         onConfirm={() => handleDeleteItem(row)}
-                        okText="删除"
-                        cancelText="取消"
+                        okText={t('viewers.common.delete')}
+                        cancelText={t('viewers.common.cancel')}
                         okButtonProps={{ danger: true }}
                     >
-                        <Tooltip title="删除该元素 (LREM)">
+                        <Tooltip title={t('viewers.list.deleteTooltip')}>
                             <Button size="small" type="text" danger icon={<Trash2 size={12} />} />
                         </Tooltip>
                     </Popconfirm>
@@ -234,27 +236,27 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                     <Input
                         size="small"
                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
-                        placeholder="搜索元素内容..."
+                        placeholder={t('viewers.list.searchPlaceholder')}
                         value={searchText}
                         onChange={(e) => setSearchText(e.target.value)}
                         allowClear
                         className={s.searchInput}
                     />
                     <span className={s.countBadge}>
-                        共 {rows.length} 个元素
-                        {searchText && ` (匹配 ${filteredRows.length} 个)`}
+                        {t('viewers.list.totalElements', { count: rows.length })}
+                        {searchText && t('viewers.list.filteredElements', { count: filteredRows.length })}
                     </span>
                 </div>
 
                 <div className={s.toolbarRight}>
-                    <Tooltip title="从左侧 (头部) 弹出并移除一个元素">
+                    <Tooltip title={t('viewers.list.lpopTooltip')}>
                         <Button size="small" disabled={rows.length === 0} onClick={() => handlePop(true)}>
-                            LPOP (头部弹出)
+                            {t('viewers.list.lpopBtn')}
                         </Button>
                     </Tooltip>
-                    <Tooltip title="从右侧 (尾部) 弹出并移除一个元素">
+                    <Tooltip title={t('viewers.list.rpopTooltip')}>
                         <Button size="small" disabled={rows.length === 0} onClick={() => handlePop(false)}>
-                            RPOP (尾部弹出)
+                            {t('viewers.list.rpopBtn')}
                         </Button>
                     </Tooltip>
                     <Button
@@ -266,7 +268,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                             setPushModalOpen(true)
                         }}
                     >
-                        LPUSH (头部插入)
+                        {t('viewers.list.lpushBtn')}
                     </Button>
                     <Button
                         size="small"
@@ -278,7 +280,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                             setPushModalOpen(true)
                         }}
                     >
-                        RPUSH (尾部推入)
+                        {t('viewers.list.rpushBtn')}
                     </Button>
                 </div>
             </div>
@@ -293,13 +295,13 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                         defaultPageSize: 50,
                         pageSizeOptions: ['20', '50', '100', '200'],
                         showSizeChanger: true,
-                        showTotal: (total) => `共 ${total} 条`,
+                        showTotal: (total) => t('viewers.common.totalRecords', { total }),
                         size: 'small',
                     }}
                     locale={{
                         emptyText: (
                             <div className={s.emptyTip}>
-                                <span>当前 List 列表为空</span>
+                                <span>{t('viewers.list.emptyList')}</span>
                                 <Button
                                     size="small"
                                     type="primary"
@@ -309,7 +311,7 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                                         setPushModalOpen(true)
                                     }}
                                 >
-                                    推入第一个元素 (RPUSH)
+                                    {t('viewers.list.pushFirst')}
                                 </Button>
                             </div>
                         ),
@@ -319,41 +321,41 @@ export default function ListViewer({ session, selected, value, onReload, flash }
 
             {/* Push Modal */}
             <Modal
-                title={pushDirection === 'left' ? 'LPUSH 头部推入新元素' : 'RPUSH 尾部推入新元素'}
+                title={pushDirection === 'left' ? t('viewers.list.lpushModalTitle') : t('viewers.list.rpushModalTitle')}
                 open={pushModalOpen}
                 onOk={handlePush}
                 confirmLoading={pushing}
                 onCancel={() => setPushModalOpen(false)}
-                okText="推入入队"
-                cancelText="取消"
+                okText={t('viewers.list.pushEnqueue')}
+                cancelText={t('viewers.common.cancel')}
                 width={540}
             >
                 <div style={{ marginTop: 16 }}>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>元素内容 (Value)</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>{t('viewers.list.elemContentLabel')}</div>
                     <CodeEditor
                         value={pushContent}
                         onChange={setPushContent}
                         lang={/^\s*[[{]/.test(pushContent) ? 'json' : 'plain'}
                         height="180px"
                         bordered
-                        placeholder="输入推入的元素内容，支持普通文本或 JSON..."
+                        placeholder={t('viewers.list.elemContentPlaceholder')}
                     />
                 </div>
             </Modal>
 
             {/* Edit Item Modal */}
             <Modal
-                title={`修改第 [${editIndex}] 项元素值 (LSET)`}
+                title={t('viewers.list.editItemTitle', { idx: editIndex })}
                 open={editModalOpen}
                 onOk={handleSaveEdit}
                 confirmLoading={editing}
                 onCancel={() => setEditModalOpen(false)}
-                okText="更新"
-                cancelText="取消"
+                okText={t('viewers.list.updateBtn')}
+                cancelText={t('viewers.common.cancel')}
                 width={540}
             >
                 <div style={{ marginTop: 16 }}>
-                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>新元素内容</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6 }}>{t('viewers.list.newElemContent')}</div>
                     <CodeEditor
                         value={editContent}
                         onChange={setEditContent}
@@ -366,14 +368,14 @@ export default function ListViewer({ session, selected, value, onReload, flash }
 
             {/* Inspect Drawer */}
             <Drawer
-                title={`查看 List [${inspectDrawer.index}] 元素`}
+                title={t('viewers.list.inspectTitle', { idx: inspectDrawer.index })}
                 open={inspectDrawer.open}
                 onClose={() => setInspectDrawer({ open: false, index: 0, val: '' })}
                 width={600}
                 extra={
                     <Space size={6}>
-                        <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.val)) message.success('已复制值内容') }}>
-                            复制
+                        <Button size="small" icon={<Copy size={12} />} onClick={async () => { if (await copyText(inspectDrawer.val)) message.success(t('viewers.common.copiedVal')) }}>
+                            {t('viewers.common.copy')}
                         </Button>
                         <Button
                             size="small"
@@ -386,14 +388,14 @@ export default function ListViewer({ session, selected, value, onReload, flash }
                                 setEditModalOpen(true)
                             }}
                         >
-                            编辑
+                            {t('viewers.common.edit')}
                         </Button>
                     </Space>
                 }
             >
                 <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                        长度: {inspectDrawer.val.length} 字符 | 大小: {formatBytes(new Blob([inspectDrawer.val]).size)}
+                        {t('viewers.common.lengthAndSize', { length: inspectDrawer.val.length, size: formatBytes(new Blob([inspectDrawer.val]).size) })}
                     </div>
                     <div style={{ flex: 1, minHeight: 0 }}>
                         <CodeEditor

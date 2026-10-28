@@ -12,6 +12,7 @@ import {
 import { API } from '@/api'
 import type { DockerSessionInfo, DockerOverview } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
+import { useTranslation } from 'react-i18next'
 import ClientIcon from '@/components/ClientIcon'
 import OverviewTab from './OverviewTab'
 import ComposeTab from './ComposeTab'
@@ -29,6 +30,7 @@ interface Props {
 type TabKey = 'overview' | 'compose' | 'containers' | 'images' | 'volumes' | 'networks'
 
 export default function DockerClient({ session, onClose }: Props) {
+    const { t } = useTranslation(['docker', 'common'])
     const { message } = App.useApp()
     const { activeTarget } = useSession()
     const isActive = activeTarget?.kind === 'docker' && activeTarget.id === session.id
@@ -49,7 +51,7 @@ export default function DockerClient({ session, onClose }: Props) {
             setOverview(data)
         } catch (err: any) {
             if (!quiet) {
-                message.error(`获取 Docker 状态失败: ${err.message || String(err)}`)
+                message.error(t('client.statusFail', { defaultValue: '获取 Docker 状态失败: {{error}}', error: err.message || String(err) }))
             }
         } finally {
             if (!quiet) setLoading(false)
@@ -77,7 +79,7 @@ export default function DockerClient({ session, onClose }: Props) {
             label: (
                 <Space size={6}>
                     <Activity size={14} />
-                    <span>系统概览</span>
+                    <span>{t('tabs.overview', '系统概览')}</span>
                 </Space>
             ),
         },
@@ -95,7 +97,7 @@ export default function DockerClient({ session, onClose }: Props) {
             label: (
                 <Space size={6}>
                     <Box size={14} />
-                    <span>容器 ({overview?.containersTotal ?? 0})</span>
+                    <span>{t('tabs.containers', '容器')} ({overview?.containersTotal ?? 0})</span>
                 </Space>
             ),
         },
@@ -104,7 +106,7 @@ export default function DockerClient({ session, onClose }: Props) {
             label: (
                 <Space size={6}>
                     <Sliders size={14} />
-                    <span>镜像 ({overview?.imagesTotal ?? 0})</span>
+                    <span>{t('tabs.images', '镜像')} ({overview?.imagesTotal ?? 0})</span>
                 </Space>
             ),
         },
@@ -113,7 +115,7 @@ export default function DockerClient({ session, onClose }: Props) {
             label: (
                 <Space size={6}>
                     <HardDrive size={14} />
-                    <span>数据卷 ({overview?.volumesTotal ?? 0})</span>
+                    <span>{t('tabs.volumes', '数据卷')} ({overview?.volumesTotal ?? 0})</span>
                 </Space>
             ),
         },
@@ -122,7 +124,7 @@ export default function DockerClient({ session, onClose }: Props) {
             label: (
                 <Space size={6}>
                     <Network size={14} />
-                    <span>网络 ({overview?.networksTotal ?? 0})</span>
+                    <span>{t('tabs.networks', '网络')} ({overview?.networksTotal ?? 0})</span>
                 </Space>
             ),
         },
@@ -167,7 +169,7 @@ export default function DockerClient({ session, onClose }: Props) {
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         onClick={() => fetchOverview(false)}
                     >
-                        刷新
+                        {t('common:refresh', '刷新')}
                     </Button>
                 </div>
             </div>

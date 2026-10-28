@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { App } from 'antd'
 import type { MessageInstance } from 'antd/es/message/interface'
+import i18n from '@/i18n'
 import { API } from '@/api'
 
 /**
@@ -19,7 +20,9 @@ export async function checkUpdateSilently(msgApi?: MessageInstance): Promise<voi
                             void API.openBrowser(url)
                         }}
                     >
-                        发现新版本 {res.latestVersion}，点击更新
+                        {i18n.t('settings:about.newVersionFound', '发现新版本 {{version}}，点击更新', {
+                            version: res.latestVersion,
+                        })}
                     </span>
                 ),
                 duration: 8,

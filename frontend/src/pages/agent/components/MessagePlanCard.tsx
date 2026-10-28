@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from 'antd'
 import { FileText, Play, Check } from 'lucide-react'
 import { AgentPlan } from '@/types'
@@ -18,6 +19,7 @@ export const MessagePlanCard: React.FC<MessagePlanCardProps> = ({
     isGenerating = false,
     onApprove,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const [drawerOpen, setDrawerOpen] = useState(false)
     const isApproved = plan.status === 'approved'
     const isExpired = plan.status === 'expired'
@@ -29,27 +31,27 @@ export const MessagePlanCard: React.FC<MessagePlanCardProps> = ({
                 <div
                     className={s.planBarLeft}
                     onClick={() => setDrawerOpen(true)}
-                    title={isExpired ? '方案已过期，点击在抽屉中查看归档方案' : '点击在抽屉中查看完整实施方案'}
+                    title={isExpired ? t('agent:planCard.expiredTooltip', { defaultValue: '方案已过期，点击在抽屉中查看归档方案' }) : t('agent:planCard.viewTooltip', { defaultValue: '点击在抽屉中查看完整实施方案' })}
                 >
                     <FileText size={15} className={`${s.planIcon} ${isExpired ? s.planIconExpired : ''}`} />
                     <span className={`${s.planTitleLink} ${isExpired ? s.planTitleExpired : ''}`}>
                         {isExpired
-                            ? (plan.is_update ? '实施方案 (已过期)' : 'Implementation Plan (已过期)')
-                            : (plan.is_update ? '实施方案 (已根据意见更新)' : 'Implementation Plan')}
+                            ? (plan.is_update ? t('agent:planCard.titleExpired', { defaultValue: '实施方案 (已过期)' }) : t('agent:planCard.titleTechExpired', { defaultValue: 'Implementation Plan (已过期)' }))
+                            : (plan.is_update ? t('agent:planCard.titleUpdated', { defaultValue: '实施方案 (已根据意见更新)' }) : t('agent:planCard.titleTech', { defaultValue: 'Implementation Plan' }))}
                     </span>
                     {plan.objective && (
                         <span className={s.planObjective} title={plan.objective}>
                             · {plan.objective}
                         </span>
                     )}
-                    <span className={s.viewHint}>查看详情 →</span>
+                    <span className={s.viewHint}>{t('agent:planCard.viewDetails', { defaultValue: '查看详情 →' })}</span>
                 </div>
 
                 <div className={s.planBarRight}>
                     {isExpired ? null : isApproved ? (
                         <span className={s.approvedTag}>
                             <Check size={12} color="#52c41a" />
-                            <span>已执行</span>
+                            <span>{t('agent:planCard.executed', { defaultValue: '已执行' })}</span>
                         </span>
                     ) : (
                         <Button
@@ -63,7 +65,7 @@ export const MessagePlanCard: React.FC<MessagePlanCardProps> = ({
                                 onApprove(plan.id)
                             }}
                         >
-                            执行
+                            {t('agent:planCard.execute', { defaultValue: '执行' })}
                         </Button>
                     )}
                 </div>

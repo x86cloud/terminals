@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Tooltip } from 'antd'
 import { PanelLeft, Minimize2, Maximize2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import my from '@/pages/mysql/ErDiagram.module.less'
 import sh from '@/pages/mysql/mysqlShared.module.less'
 import { Schema } from '@/pages/mysql/mysqlTypes'
@@ -12,6 +13,7 @@ export default function ErDiagram({
     schema: Schema
     busy: boolean
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const canvasRef = useRef<HTMLDivElement>(null)
     const [{ scale, pan }, setViewState] = useState<{ scale: number; pan: { x: number; y: number } }>({
         scale: 1,
@@ -190,7 +192,7 @@ export default function ErDiagram({
     return (
         <div className={`${my.erWrap} ${isFullscreen ? my.fullscreen : ''}`}>
             <div className={my.erToolBar} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px' }}>
-                <Tooltip title="缩小">
+                <Tooltip title={t('db:er.zoomOut')}>
                     <Button
                         size="small"
                         style={{ width: 24, padding: 0 }}
@@ -200,7 +202,7 @@ export default function ErDiagram({
                     </Button>
                 </Tooltip>
                 <span className={my.erZoomVal} style={{ fontSize: 12, fontWeight: 500 }}>{Math.round(scale * 100)}%</span>
-                <Tooltip title="放大">
+                <Tooltip title={t('db:er.zoomIn')}>
                     <Button
                         size="small"
                         style={{ width: 24, padding: 0 }}
@@ -209,7 +211,7 @@ export default function ErDiagram({
                         +
                     </Button>
                 </Tooltip>
-                <Tooltip title="1:1 原始比例">
+                <Tooltip title={t('db:er.scale100')}>
                     <Button
                         size="small"
                         onClick={() => setViewState((prev) => ({ ...prev, scale: 1 }))}
@@ -217,36 +219,36 @@ export default function ErDiagram({
                         100%
                     </Button>
                 </Tooltip>
-                <Tooltip title="适应视口居中展示">
+                <Tooltip title={t('db:er.fitCenter')}>
                     <Button
                         size="small"
                         type="primary"
                         icon={<PanelLeft size={12} />}
                         onClick={autoFit}
                     >
-                        适应画布
+                        {t('db:er.fitCanvas')}
                     </Button>
                 </Tooltip>
-                <Tooltip title={isFullscreen ? '退出全屏 (Esc)' : '全屏沉浸展示'}>
+                <Tooltip title={isFullscreen ? t('db:er.fullscreenEsc') : t('db:er.fullscreenEnter')}>
                     <Button
                         size="small"
                         danger={isFullscreen}
                         icon={isFullscreen ? <Minimize2 size={12} /> : <Maximize2 size={12} />}
                         onClick={() => setIsFullscreen((v) => !v)}
                     >
-                        {isFullscreen ? '退出全屏' : '全屏'}
+                        {isFullscreen ? t('db:er.exitFullscreen') : t('db:er.fullscreen')}
                     </Button>
                 </Tooltip>
                 <span style={{ marginLeft: 'auto' }} />
                 <span className={my.erHint} style={{ fontSize: 11, color: 'var(--text-dim)' }}>
                     {isFullscreen
-                        ? '按 Esc 键或点击按钮退出全屏'
-                        : '提示：按住鼠标左键可拖拽平移，鼠标滚轮或上方按钮控制缩放画布'}
+                        ? t('db:er.fullscreenHint')
+                        : t('db:er.panZoomHint')}
                 </span>
             </div>
 
             {schema.tables.length === 0 ? (
-                <div className={`${sh.mysqlEmpty}`}>{busy ? '加载中…' : '该数据库暂无表'}</div>
+                <div className={`${sh.mysqlEmpty}`}>{busy ? t('db:er.loading') : t('db:er.empty')}</div>
             ) : (
                 <div
                     ref={canvasRef}

@@ -1,6 +1,7 @@
 import React from 'react'
 import { Input, Button, Space } from 'antd'
 import { FolderOpen } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import { BasicFields } from './BasicFields'
@@ -12,6 +13,7 @@ export const SqliteForm: React.FC<ServerFormProps> = ({
     groups,
     setError,
 }) => {
+    const { t } = useTranslation(['server', 'common'])
     const handlePickSqlite = async () => {
         try {
             const path = await API.sqliteOpenFile()
@@ -29,15 +31,15 @@ export const SqliteForm: React.FC<ServerFormProps> = ({
             <BasicFields form={form} update={update} groups={groups} />
 
             <div>
-                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>SQLite 文件路径</div>
+                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:sqlite.path')}</div>
                 <Space.Compact style={{ width: '100%' }}>
                     <Input
-                        placeholder="D:/data/app.db"
+                        placeholder={t('server:sqlite.placeholder')}
                         value={form.sqlitePath || ''}
                         onChange={(e) => update({ sqlitePath: e.target.value })}
                     />
                     <Button icon={<FolderOpen size={14} />} onClick={handlePickSqlite}>
-                        浏览
+                        {t('server:browse')}
                     </Button>
                 </Space.Compact>
             </div>

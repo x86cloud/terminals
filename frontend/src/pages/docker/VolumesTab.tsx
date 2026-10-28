@@ -15,6 +15,7 @@ import { Plus, Trash2, RefreshCw, Search, Copy } from 'lucide-react'
 import { API } from '@/api'
 import { copyText } from '@/utils'
 import type { DockerVolumeInfo } from '@/types'
+import { useTranslation } from 'react-i18next'
 import s from './DockerClient.module.less'
 
 interface Props {
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export default function VolumesTab({ serverId }: Props) {
+    const { t } = useTranslation(['docker', 'common'])
     const { message } = App.useApp()
     const [volumes, setVolumes] = useState<DockerVolumeInfo[]>([])
     const [loading, setLoading] = useState(false)
@@ -41,7 +43,7 @@ export default function VolumesTab({ serverId }: Props) {
             const list = await API.dockerListVolumes(serverId)
             setVolumes(list)
         } catch (err: any) {
-            message.error(`获取数据卷列表失败: ${err.message || String(err)}`)
+            message.error(t('volumes.fetchFail', { defaultValue: '获取数据卷列表失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
@@ -53,7 +55,7 @@ export default function VolumesTab({ serverId }: Props) {
 
     const handleCreate = async () => {
         if (!volName.trim()) {
-            message.warning('请输入数据卷名称')
+            message.warning(t('volumes.reqName', '请输入数据卷名称'))
             return
         }
         setCreating(true)
@@ -63,7 +65,7 @@ export default function VolumesTab({ serverId }: Props) {
             setVolName('')
             fetchVolumes()
         } catch (err: any) {
-            message.error(`创建数据卷失败: ${err.message || String(err)}`)
+            message.error(t('volumes.createFail', { defaultValue: '创建数据卷失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setCreating(false)
         }
@@ -74,7 +76,7 @@ export default function VolumesTab({ serverId }: Props) {
             await API.dockerRemoveVolume(serverId, name, true)
             fetchVolumes()
         } catch (err: any) {
-            message.error(`删除数据卷失败: ${err.message || String(err)}`)
+            message.error(t('volumes.deleteFail', { defaultValue: '删除数据卷失败: {{error}}', error: err.message || String(err) }))
         }
     }
 
@@ -90,7 +92,7 @@ export default function VolumesTab({ serverId }: Props) {
 
     const columns: ColumnsType<DockerVolumeInfo> = [
         {
-            title: '卷名称 (Volume Name)',
+            title: t('volumes.colName', '卷名称 (Volume Name)'),
             dataIndex: 'name',
             render: (name: string) => (
                 <div style={{ fontWeight: 600, color: 'var(--text)' }} className={s.monoText}>
@@ -99,13 +101,13 @@ export default function VolumesTab({ serverId }: Props) {
             ),
         },
         {
-            title: '驱动 (Driver)',
+            title: t('volumes.colDriver', '驱动 (Driver)'),
             dataIndex: 'driver',
             width: 120,
             render: (driver: string) => <Tag color="blue">{driver || 'local'}</Tag>,
         },
         {
-            title: '宿主机挂载点 (Mountpoint)',
+            title: t('volumes.colMountpoint', '宿主机挂载点 (Mountpoint)'),
             dataIndex: 'mountpoint',
             ellipsis: true,
             render: (mountpoint: string) => (
@@ -113,14 +115,14 @@ export default function VolumesTab({ serverId }: Props) {
                     <span className={s.monoText} style={{ fontSize: 11.5 }} title={mountpoint}>
                         {mountpoint}
                     </span>
-                    <Tooltip title="复制挂载路径">
+                    <Tooltip title={t('volumes.copyMountpoint', '复制挂载路径')}>
                         <Button
                             size="small"
                             type="text"
                             icon={<Copy size={11} />}
                             onClick={async () => {
                                 if (await copyText(mountpoint)) {
-                                    message.success('已复制挂载路径')
+                                    message.success(t('volumes.copiedMountpoint', '已复制挂载路径'))
                                 }
                             }}
                         />
@@ -129,7 +131,7 @@ export default function VolumesTab({ serverId }: Props) {
             ),
         },
         {
-            title: '创建时间',
+            title: t('volumes.colCreatedAt', '创建时间'),
             dataIndex: 'createdAt',
             width: 200,
             render: (createdAt: string) => (
@@ -137,20 +139,20 @@ export default function VolumesTab({ serverId }: Props) {
             ),
         },
         {
-            title: '操作',
+            title: t('volumes.colActions', '操作'),
             key: 'actions',
             width: 100,
             fixed: 'right',
             render: (_, record) => (
                 <Popconfirm
-                    title="确定要删除此数据卷吗？"
-                    description="若数据卷内有持久化数据，删除将永久丢失"
+                    title={t('volumes.confirmDelete', '确定要删除此数据卷吗？')}
+                    description={t('volumes.deleteDesc', '若数据卷内有持久化数据，删除将永久丢失')}
                     onConfirm={() => handleDelete(record.name)}
-                    okText="删除"
-                    cancelText="取消"
+                    okText={t('volumes.deleteBtn', '删除')}
+                    cancelText={t('volumes.cancelBtn', '取消')}
                     okButtonProps={{ danger: true }}
                 >
-                    <Tooltip title="删除数据卷">
+                    <Tooltip title={t('volumes.deleteTooltip', '删除数据卷')}>
                         <Button size="small" type="text" danger icon={<Trash2 size={13} />} />
                     </Tooltip>
                 </Popconfirm>
@@ -164,7 +166,7 @@ export default function VolumesTab({ serverId }: Props) {
             <div className={s.toolbar}>
                 <div className={s.toolbarLeft}>
                     <Input
-                        placeholder="搜索数据卷名称 / 挂载路径..."
+                        placeholder={t('volumes.searchPlaceholder', '搜索数据卷名称 / 挂载路径...')}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -184,14 +186,14 @@ export default function VolumesTab({ serverId }: Props) {
                         size="small"
                         onClick={() => setCreateModal(true)}
                     >
-                        新建数据卷
+                        {t('volumes.newVolume', '新建数据卷')}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchVolumes}
                     >
-                        刷新
+                        {t('common:refresh', '刷新')}
                     </Button>
                 </div>
             </div>
@@ -209,7 +211,7 @@ export default function VolumesTab({ serverId }: Props) {
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                    showTotal: (total, range) => t('common:pagination.totalRange', { from: range[0], to: range[1], total, defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条` }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -219,30 +221,30 @@ export default function VolumesTab({ serverId }: Props) {
 
             {/* 创建卷模态框 */}
             <AntdModal
-                title="新建 Docker 数据卷"
+                title={t('volumes.createTitle', '新建 Docker 数据卷')}
                 open={createModal}
                 onCancel={() => !creating && setCreateModal(false)}
                 onOk={handleCreate}
                 confirmLoading={creating}
-                okText="创建"
-                cancelText="取消"
+                okText={t('volumes.createBtn', '创建')}
+                cancelText={t('volumes.cancelBtn', '取消')}
                 width={480}
                 centered
             >
                 <Space orientation="vertical" size={12} style={{ width: '100%', padding: '8px 0' }}>
                     <div>
                         <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>
-                            数据卷名称 (Volume Name) <span style={{ color: 'var(--danger)' }}>*</span>
+                            {t('volumes.volNameLabel', '数据卷名称 (Volume Name)')} <span style={{ color: 'var(--danger)' }}>*</span>
                         </div>
                         <Input
-                            placeholder="如: app_data / db_volume"
+                            placeholder={t('volumes.volNamePlaceholder', '如: app_data / db_volume')}
                             value={volName}
                             onChange={(e) => setVolName(e.target.value)}
                             onPressEnter={handleCreate}
                         />
                     </div>
                     <div>
-                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>驱动 (Driver)</div>
+                        <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('volumes.driverLabel', '驱动 (Driver)')}</div>
                         <Input
                             placeholder="local"
                             value={volDriver}

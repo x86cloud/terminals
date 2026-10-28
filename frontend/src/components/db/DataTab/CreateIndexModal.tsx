@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Modal, Form, Input, Select, Switch, App } from 'antd'
 import { KeyRound, Sparkles } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
@@ -22,6 +23,7 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
     onSuccess,
     onCancel,
 }) => {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const [name, setName] = useState('')
     const [isUnique, setIsUnique] = useState(false)
@@ -57,7 +59,7 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
     // 实时预览 SQL
     const previewSql = useMemo(() => {
         if (!name.trim() || selectedCols.length === 0 || !adapter.previewCreateIndexSql) {
-            return '-- 请填写索引名称并至少选择一个包含列'
+            return t('db:modals.createIndex.placeholderTip')
         }
         try {
             return adapter.previewCreateIndexSql({
@@ -66,22 +68,22 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
                 columns: selectedCols,
             })
         } catch (e: any) {
-            return '-- 生成 SQL 失败: ' + (e.message || e)
+            return t('db:modals.createIndex.generateSqlFail', { msg: e.message || e })
         }
-    }, [name, isUnique, selectedCols, adapter])
+    }, [name, isUnique, selectedCols, adapter, t])
 
     const handleOk = async () => {
         const cleanName = name.trim()
         if (!cleanName) {
-            message.warning('请输入索引名称')
+            message.warning(t('db:modals.createIndex.enterIndexName'))
             return
         }
         if (selectedCols.length === 0) {
-            message.warning('请至少选择一个包含列')
+            message.warning(t('db:modals.createIndex.selectAtLeastOneCol'))
             return
         }
         if (!adapter.createIndex) {
-            message.error('当前驱动不支持创建索引')
+            message.error(t('db:modals.createIndex.unsupportedCreateIndex'))
             return
         }
 
@@ -92,10 +94,10 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
                 isUnique,
                 columns: selectedCols,
             })
-            message.success(`索引 [${cleanName}] 创建成功！`)
+            message.success(t('db:modals.createIndex.createIndexSuccess', { name: cleanName }))
             onSuccess()
         } catch (e: any) {
-            message.error('创建索引失败: ' + (e.message || e))
+            message.error(t('db:modals.createIndex.createIndexFail', { msg: e.message || e }))
         } finally {
             setLoading(false)
         }
@@ -107,7 +109,7 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <KeyRound size={17} style={{ color: '#1677ff' }} />
                     <span>
-                        新建索引 - <code style={{ fontSize: 13, color: '#e06c75' }}>{tableName}</code>
+                        {t('db:modals.createIndex.title', { tableName })}
                     </span>
                 </div>
             }
@@ -115,41 +117,49 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
             onCancel={loading ? undefined : onCancel}
             onOk={handleOk}
             confirmLoading={loading}
-            okText="确定创建"
-            cancelText="取消"
+            okText={t('common:ok')}
+            cancelText={t('common:cancel')}
             width={620}
             destroyOnClose
             maskClosable={false}
         >
             <Form layout="vertical" style={{ marginTop: 16 }}>
-                <Form.Item label="包含列 (Columns)" required tooltip="可选择单列或多个列组合成复合索引">
+                <Form.Item
+                    label={t('db:modals.createIndex.columnsLabel')}
+                    required
+                    tooltip={t('db:modals.createIndex.columnsTooltip')}
+                >
                     <Select
                         mode="multiple"
-                        placeholder="请选择要加入索引的列"
+                        placeholder={t('db:modals.createIndex.columnsPlaceholder')}
                         value={selectedCols}
                         onChange={(vals) => setSelectedCols(vals)}
-                        options={columns.map((c) => ({ value: c, label: c }))}
+                        options={columns.map((colName) => ({ value: colName, label: colName }))}
                         style={{ width: '100%' }}
                     />
                 </Form.Item>
 
                 <div style={{ display: 'flex', gap: 16 }}>
                     <Form.Item
-                        label="索引类型 (Unique)"
-                        tooltip="唯一索引保证包含列组合的值在整表中唯一"
+                        label={t('db:modals.createIndex.uniqueType')}
+                        tooltip={t('db:modals.createIndex.uniqueTooltip')}
                         style={{ flex: '0 0 auto' }}
                     >
                         <Switch
                             checked={isUnique}
-                            checkedChildren="UNIQUE 唯一"
-                            unCheckedChildren="NORMAL 普通"
+                            checkedChildren={t('db:modals.createIndex.uniqueChecked')}
+                            unCheckedChildren={t('db:modals.createIndex.normalUnchecked')}
                             onChange={(val) => setIsUnique(val)}
                         />
                     </Form.Item>
 
-                    <Form.Item label="索引名称 (Index Name)" required style={{ flex: 1 }}>
+                    <Form.Item
+                        label={t('db:modals.createIndex.nameLabel')}
+                        required
+                        style={{ flex: 1 }}
+                    >
                         <Input
-                            placeholder="如 idx_user_id"
+                            placeholder={t('db:modals.createIndex.namePlaceholder')}
                             value={name}
                             onChange={(e) => {
                                 setIsCustomName(true)
@@ -157,7 +167,7 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
                             }}
                             suffix={
                                 !isCustomName && selectedCols.length > 0 ? (
-                                    <span title="智能自动命名" style={{ display: 'inline-flex', alignItems: 'center' }}>
+                                    <span title={t('db:modals.createIndex.smartNaming')} style={{ display: 'inline-flex', alignItems: 'center' }}>
                                         <Sparkles size={13} style={{ color: '#fa8c16' }} />
                                     </span>
                                 ) : undefined
@@ -166,7 +176,7 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
                     </Form.Item>
                 </div>
 
-                <Form.Item label="即将执行的 DDL 语句预览">
+                <Form.Item label={t('db:modals.createIndex.ddlPreview')}>
                     <CodeEditor value={previewSql} onChange={() => {}} lang="sql" height="110px" readOnly />
                 </Form.Item>
             </Form>

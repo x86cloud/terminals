@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import { API } from '@/api'
+import { useTranslation } from 'react-i18next'
 import type { K8sSessionInfo, K8sOverview, K8sNamespaceInfo } from '@/types'
 import OverviewTab from './OverviewTab'
 import PodsTab from './PodsTab'
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function K8sClient({ session }: Props) {
+    const { t } = useTranslation(['k8s', 'common'])
     const { message } = App.useApp()
     const [activeTab, setActiveTab] = useState<string>('overview')
     const [overview, setOverview] = useState<K8sOverview | null>(null)
@@ -95,7 +97,7 @@ export default function K8sClient({ session }: Props) {
             const t1 = performance.now()
             setPingMs(Math.round(t1 - t0))
         } catch (err: any) {
-            message.error(`连接 K8s API Server 失败: ${err.message || String(err)}`)
+            message.error(t('client.connectFail', { defaultValue: '连接 K8s API Server 失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setLoading(false)
         }
@@ -104,7 +106,7 @@ export default function K8sClient({ session }: Props) {
     const handleCreateNamespace = async () => {
         const trimmed = newNsName.trim()
         if (!trimmed) {
-            message.warning('请输入命名空间名称')
+            message.warning(t('enterNsName', '请输入命名空间名称'))
             return
         }
         setCreateNsLoading(true)
@@ -115,7 +117,7 @@ export default function K8sClient({ session }: Props) {
             await fetchOverviewAndNs()
             setCurrentNamespace(trimmed)
         } catch (err: any) {
-            message.error(`创建命名空间失败: ${err.message || String(err)}`)
+            message.error(t('client.createNsFail', { defaultValue: '创建命名空间失败: {{error}}', error: err.message || String(err) }))
         } finally {
             setCreateNsLoading(false)
         }
@@ -128,7 +130,7 @@ export default function K8sClient({ session }: Props) {
             setCurrentNamespace('_all')
             await fetchOverviewAndNs()
         } catch (err: any) {
-            message.error(`删除命名空间失败: ${err.message || String(err)}`)
+            message.error(t('client.deleteNsFail', { defaultValue: '删除命名空间失败: {{error}}', error: err.message || String(err) }))
         }
     }
 
@@ -144,7 +146,7 @@ export default function K8sClient({ session }: Props) {
             label: (
                 <Space size={6}>
                     <Activity size={14} />
-                    <span>概览</span>
+                    <span>{t('tabs.overview', '概览')}</span>
                 </Space>
             ),
             value: 'overview',
@@ -171,7 +173,7 @@ export default function K8sClient({ session }: Props) {
             label: (
                 <Space size={6}>
                     <Network size={14} />
-                    <span>服务 & 路由 ({overview?.servicesTotal ?? 0})</span>
+                    <span>{t('tabs.network', '服务 & 路由')} ({overview?.servicesTotal ?? 0})</span>
                 </Space>
             ),
             value: 'network',
@@ -180,7 +182,7 @@ export default function K8sClient({ session }: Props) {
             label: (
                 <Space size={6}>
                     <HardDrive size={14} />
-                    <span>配置 & 存储</span>
+                    <span>{t('tabs.storage', '配置 & 存储')}</span>
                 </Space>
             ),
             value: 'config',
@@ -189,7 +191,7 @@ export default function K8sClient({ session }: Props) {
             label: (
                 <Space size={6}>
                     <Code size={14} />
-                    <span>YAML 编排</span>
+                    <span>{t('tabs.yaml', 'YAML 编排')}</span>
                 </Space>
             ),
             value: 'yaml',
@@ -203,8 +205,8 @@ export default function K8sClient({ session }: Props) {
                 <div className={s.headerLeft}>
                     <div className={s.titleArea} title={session.apiServer || session.title}>
                         <ClientIcon kind="k8s" size={22} />
-                        <span className={s.titleText}>{session.title || session.apiServer || 'Kubernetes 集群'}</span>
-                        <div className={s.statusBadge} title={session.apiServer || '已连接'}>
+                        <span className={s.titleText}>{session.title || session.apiServer || t('client.clusterDefaultTitle', { defaultValue: 'Kubernetes 集群' })}</span>
+                        <div className={s.statusBadge} title={session.apiServer || t('client.connected', { defaultValue: '已连接' })}>
                             <span className={s.onlineDot} />
                             {pingMs !== null && <span>{pingMs}ms</span>}
                         </div>
@@ -218,9 +220,9 @@ export default function K8sClient({ session }: Props) {
                             value={currentNamespace}
                             onChange={(ns) => setCurrentNamespace(ns)}
                             style={{ width: 140 }}
-                            placeholder="选择 Namespace"
+                            placeholder={t('pods.namespace', '选择 Namespace')}
                             options={[
-                                { label: 'All Namespaces (全量)', value: '_all' },
+                                { label: `All Namespaces (${t('allNamespaces', '全量')})`, value: '_all' },
                                 ...namespaces.map((ns) => ({
                                     label: ns.name,
                                     value: ns.name,
@@ -231,7 +233,7 @@ export default function K8sClient({ session }: Props) {
                                 (option?.label ?? '').toString().toLowerCase().includes(input.toLowerCase())
                             }
                         />
-                        <Tooltip title="新建命名空间">
+                        <Tooltip title={t('createNs', '新建命名空间')}>
                             <Button
                                 size="small"
                                 icon={<Plus size={12} />}
@@ -240,14 +242,14 @@ export default function K8sClient({ session }: Props) {
                         </Tooltip>
                         {!isSystemNs(currentNamespace) && (
                             <Popconfirm
-                                title={`确定删除命名空间 [${currentNamespace}] 吗？`}
-                                description="删除命名空间将级联清理该命名空间下的所有 Pod、Deployment、Service 及配置，此操作不可逆！"
-                                okText="确认删除"
-                                cancelText="取消"
+                                title={t('deleteNsConfirm', { name: currentNamespace, defaultValue: `确定删除命名空间 [${currentNamespace}] 吗？` })}
+                                description={t('deleteNsDesc', '删除命名空间将级联清理该命名空间下的所有 Pod、Deployment、Service 及配置，此操作不可逆！')}
+                                okText={t('deleteNsBtn', '确认删除')}
+                                cancelText={t('common.cancel', { defaultValue: '取消' })}
                                 okButtonProps={{ danger: true }}
                                 onConfirm={handleDeleteCurrentNamespace}
                             >
-                                <Tooltip title={`删除命名空间 [${currentNamespace}]`}>
+                                <Tooltip title={`${t('deleteNsBtn', '删除命名空间')} [${currentNamespace}]`}>
                                     <Button
                                         size="small"
                                         danger
@@ -267,7 +269,7 @@ export default function K8sClient({ session }: Props) {
                         options={tabOptions}
                     />
 
-                    <Tooltip title="刷新集群状态与命名空间">
+                    <Tooltip title={t('refreshClusterTip', '刷新集群状态与命名空间')}>
                         <Button
                             icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                             size="small"
@@ -336,7 +338,7 @@ export default function K8sClient({ session }: Props) {
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Layers size={16} color="var(--accent)" />
-                        <span>新建 Kubernetes 命名空间</span>
+                        <span>{t('createNsTitle', '新建 Kubernetes 命名空间')}</span>
                     </div>
                 }
                 open={createNsModalOpen}
@@ -346,21 +348,21 @@ export default function K8sClient({ session }: Props) {
                 }}
                 onOk={handleCreateNamespace}
                 confirmLoading={createNsLoading}
-                okText="创建命名空间"
-                cancelText="取消"
+                okText={t('createNs', '创建命名空间')}
+                cancelText={t('common.cancel', { defaultValue: '取消' })}
                 width={420}
             >
                 <div style={{ padding: '12px 0' }}>
-                    <div style={{ marginBottom: 8, fontSize: 13 }}>命名空间名称 (Namespace Name):</div>
+                    <div style={{ marginBottom: 8, fontSize: 13 }}>{t('nsNameLabel', '命名空间名称 (Namespace Name):')}</div>
                     <Input
-                        placeholder="例如: dev, test, staging-01"
+                        placeholder={t('nsNamePlaceholder', '例如: dev, test, staging-01')}
                         value={newNsName}
                         onChange={(e) => setNewNsName(e.target.value)}
                         onPressEnter={handleCreateNamespace}
                         autoFocus
                     />
                     <div style={{ fontSize: 12, color: 'var(--text-faint)', marginTop: 8 }}>
-                        提示：命名空间名称需符合 RFC 1123 规范（小写字母、数字与中划线 - 组合）。
+                        {t('nsRfcHint', '提示：命名空间名称需符合 RFC 1123 规范（小写字母、数字与中划线 - 组合）。')}
                     </div>
                 </div>
             </Modal>

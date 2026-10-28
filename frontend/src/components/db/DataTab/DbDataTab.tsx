@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
 import {
     Segmented,
     Button,
@@ -62,6 +63,7 @@ export interface DbDataTabProps {
 }
 
 export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const { serverId, dbName, schema, tableName } = adapter
 
@@ -160,7 +162,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             const ddl = await adapter.loadDDL()
             setDdlText(ddl || '')
         } catch (e: any) {
-            setDdlText('-- 获取 DDL 失败: ' + (e.message || e))
+            setDdlText(t('db:dataTab.ddl.fetchFail', { msg: e.message || e, defaultValue: '-- 获取 DDL 失败: ' + (e.message || e) }))
         }
     }
 
@@ -205,7 +207,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 })
         } catch (e: any) {
             if (reqId !== loadDataReqIdRef.current) return
-            message.error('查询数据失败: ' + (e.message || e))
+            message.error(t('db:dataTab.queryFail', { msg: e.message || e, defaultValue: '查询数据失败: ' + (e.message || e) }))
         } finally {
             if (reqId === loadDataReqIdRef.current) {
                 setLoading(false)
@@ -319,7 +321,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             options.push({
                 label: (
                     <span style={{ fontWeight: 600, fontSize: 11, color: '#fa8c16' }}>
-                        自定义 / 现有类型 (Custom Types)
+                        {t('db:dataTab.structure.customTypeGroup')}
                     </span>
                 ),
                 options: Array.from(customTypes).map((ct) => ({
@@ -328,7 +330,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{ct}</span>
                             <span style={{ fontSize: 11, color: 'var(--text-dim, #888)', marginLeft: 8 }}>
-                                现有字段类型
+                                {t('db:dataTab.structure.existingColTypes')}
                             </span>
                         </div>
                     ),
@@ -441,19 +443,19 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
     const handleSaveStructChanges = async () => {
         if (!structDirtyState.isDirty) return
         if (!adapter.generateAlterTableSql) {
-            message.error('当前数据库驱动不支持在线修改表结构')
+            message.error(t('db:dataTab.unsupportedAlter'))
             return
         }
 
         const names = structCols.map((c) => c.name.trim())
         if (names.some((n) => !n)) {
-            message.warning('存在空的列名，请检查后再保存')
+            message.warning(t('db:dataTab.emptyColName'))
             return
         }
         const nameSet = new Set<string>()
         for (const n of names) {
             if (nameSet.has(n.toLowerCase())) {
-                message.warning(`列名 [${n}] 重复，请修改后再保存`)
+                message.warning(t('db:dataTab.duplicateColName', { name: n }))
                 return
             }
             nameSet.add(n.toLowerCase())
@@ -467,7 +469,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             setAlterPlan(plan)
             setAlterModalOpen(true)
         } catch (e: any) {
-            message.error('生成变更 SQL 失败: ' + (e.message || e))
+            message.error(t('db:dataTab.generateSqlFail', { msg: e.message || e }))
         }
     }
 
@@ -476,7 +478,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         setAlterLoading(true)
         try {
             await adapter.executeAlterTable(alterPlan.sqls)
-            message.success('表结构修改已成功应用！')
+            message.success(t('db:dataTab.alterSuccess'))
             setAlterModalOpen(false)
             setAlterPlan(null)
             await Promise.all([loadStructure(), loadDDL()])
@@ -484,7 +486,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 loadData(page, pageSize, activeWhere)
             }
         } catch (e: any) {
-            message.error('执行表结构变更失败: ' + (e.message || e))
+            message.error(t('db:dataTab.alterFail', { msg: e.message || e }))
         } finally {
             setAlterLoading(false)
         }
@@ -492,29 +494,29 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
 
     const handleDropIndex = async (indexName: string) => {
         if (!adapter.dropIndex) {
-            message.error('当前驱动不支持删除索引')
+            message.error(t('db:dataTab.indexes.unsupportedDeleteIndex'))
             return
         }
         try {
             await adapter.dropIndex(indexName)
-            message.success(`索引 [${indexName}] 已成功删除`)
+            message.success(t('db:dataTab.indexes.deleteIndexSuccess', { name: indexName }))
             await Promise.all([loadStructure(), loadDDL()])
         } catch (e: any) {
-            message.error('删除索引失败: ' + (e.message || e))
+            message.error(t('db:dataTab.indexes.deleteIndexFail', { msg: e.message || e }))
         }
     }
 
     const handleDropConstraint = async (c: DbConstraintMeta) => {
         if (!adapter.dropConstraint) {
-            message.error('当前驱动不支持删除约束')
+            message.error(t('db:dataTab.constraints.unsupportedDeleteConstraint'))
             return
         }
         try {
             await adapter.dropConstraint(c)
-            message.success(`约束 [${c.name}] 已成功删除`)
+            message.success(t('db:dataTab.constraints.deleteConstraintSuccess', { name: c.name }))
             await Promise.all([loadStructure(), loadDDL()])
         } catch (e: any) {
-            message.error('删除约束失败: ' + (e.message || e))
+            message.error(t('db:dataTab.constraints.deleteConstraintFail', { msg: e.message || e }))
         }
     }
 
@@ -576,7 +578,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         }
 
         if (pkList.length === 0 && hasDrafts) {
-            message.error('该表未定义主键，无法执行基于主键的精确更新！')
+            message.error(t('db:dataTab.noPkForUpdate'))
             return
         }
 
@@ -593,10 +595,10 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             setNewRows([])
             setEditingCell(null)
             setEditingNewCell(null)
-            message.success('数据已成功保存')
+            message.success(t('db:dataTab.saveSuccess'))
             loadData(page, pageSize, activeWhere)
         } catch (e: any) {
-            message.error('保存失败: ' + (e.message || e))
+            message.error(t('db:dataTab.saveFail', { msg: e.message || e }))
         } finally {
             setSaving(false)
         }
@@ -680,16 +682,16 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
     // 删除单行
     const handleDeleteRow = async (rowIdx: number) => {
         if (pkList.length === 0) {
-            message.error('该表未定义主键，无法执行精准行删除！')
+            message.error(t('db:dataTab.noPkForDelete'))
             return
         }
         const row = rows[rowIdx]
         try {
             await adapter.deleteRow(row, pkList)
-            message.success('已删除数据行')
+            message.success(t('db:dataTab.deleteRowSuccess'))
             loadData(page, pageSize, activeWhere)
         } catch (e: any) {
-            message.error('删除失败: ' + (e.message || e))
+            message.error(t('db:dataTab.deleteRowFail', { msg: e.message || e }))
         }
     }
 
@@ -705,16 +707,16 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
     // 导出文件
     const handleExport = async (mode: 'csv' | 'json') => {
         if (!adapter.exportToFile) {
-            message.info('当前适配器不支持直接导出到文件')
+            message.info(t('db:dataTab.unsupportedExport'))
             return
         }
         try {
             const savedPath = await adapter.exportToFile(mode, 0)
             if (savedPath) {
-                message.success(`已导出到: ${savedPath}`)
+                message.success(t('db:dataTab.exportSuccess', { path: savedPath }))
             }
         } catch (e: any) {
-            message.error(`导出失败: ${e.message || e}`)
+            message.error(t('db:dataTab.exportFail', { msg: e.message || e }))
         }
     }
 
@@ -757,10 +759,10 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             items.push({
                 key: 'copy-cell',
                 icon: <Copy size={13} />,
-                label: `复制单元格值 [${colKey}]`,
+                label: t('db:dataTab.copyCell', { col: colKey }),
                 onClick: async () => {
                     if (await copyText(valStr)) {
-                        message.success('已复制单元格值')
+                        message.success(t('db:dataTab.copyCellSuccess'))
                     }
                 },
             })
@@ -770,7 +772,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         items.push({
             key: 'copy-insert',
             icon: <Code size={13} />,
-            label: '复制整行为 INSERT SQL',
+            label: t('db:dataTab.copyInsert'),
             onClick: async () => {
                 const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                 const sql = buildInsertSql({
@@ -780,7 +782,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                     rowData: fullRow,
                 })
                 if (await copyText(sql)) {
-                    message.success('已复制 INSERT 语句到剪贴板')
+                    message.success(t('db:dataTab.copyInsertSuccess'))
                 }
             },
         })
@@ -790,7 +792,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             items.push({
                 key: 'copy-update',
                 icon: <Code size={13} />,
-                label: '复制整行为 UPDATE SQL',
+                label: t('db:dataTab.copyUpdate'),
                 onClick: async () => {
                     const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                     const sql = buildUpdateSql({
@@ -801,7 +803,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         pkList,
                     })
                     if (await copyText(sql)) {
-                        message.success('已复制 UPDATE 语句到剪贴板')
+                        message.success(t('db:dataTab.copyUpdateSuccess'))
                     }
                 },
             })
@@ -811,12 +813,12 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         items.push({
             key: 'copy-json',
             icon: <Code size={13} />,
-            label: '复制整行为 JSON',
+            label: t('db:dataTab.copyJson'),
             onClick: async () => {
                 const fullRow = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                 const json = JSON.stringify(fullRow, null, 2)
                 if (await copyText(json)) {
-                    message.success('已复制整行 JSON 到剪贴板')
+                    message.success(t('db:dataTab.copyJsonSuccess'))
                 }
             },
         })
@@ -827,14 +829,14 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
         items.push({
             key: 'clone-row',
             icon: <CopyPlus size={13} />,
-            label: '克隆当前行并新增',
+            label: t('db:dataTab.cloneRow'),
             onClick: () => {
                 const cloned: Record<string, any> = { ...targetRow, ...(rowDrafts[rowIdx] || {}) }
                 pkList.forEach((pk) => {
                     cloned[pk] = undefined
                 })
                 setNewRows((prev) => [cloned, ...prev])
-                message.success('已克隆数据并插入到新增行草稿')
+                message.success(t('db:dataTab.cloneRowSuccess'))
             },
         })
 
@@ -843,14 +845,14 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             items.push({
                 key: 'set-null',
                 icon: <Slash size={13} />,
-                label: `设为 NULL`,
+                label: t('db:dataTab.setNull'),
                 onClick: () => {
                     if (isNewRow) {
                         handleCommitNewCell(rowIdx, colKey, '', true)
                     } else {
                         handleCommitCell(rowIdx, colKey, '', true)
                     }
-                    message.info(`已将 [${colKey}] 标记为 NULL`)
+                    message.info(t('db:dataTab.setNullSuccess', { col: colKey }))
                 },
             })
         }
@@ -863,7 +865,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 key: 'delete-row',
                 icon: <Trash2 size={13} />,
                 danger: true,
-                label: '移除该新增行草稿',
+                label: t('db:dataTab.removeDraft'),
                 onClick: () => {
                     setNewRows((prev) => prev.filter((_, i) => i !== rowIdx))
                 },
@@ -874,18 +876,18 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 icon: <Trash2 size={13} />,
                 danger: true,
                 disabled: pkList.length === 0,
-                label: pkList.length === 0 ? '删除该行 (表缺少主键)' : '删除该行',
+                label: pkList.length === 0 ? t('db:dataTab.deleteRowNoPk') : t('db:dataTab.deleteRow'),
                 onClick: () => {
                     if (pkList.length === 0) {
-                        message.warning('该表未定义主键，无法执行精确物理删除')
+                        message.warning(t('db:dataTab.noPkForDeletePhysical'))
                         return
                     }
                     const pkSummary = pkList.map((pk) => `${pk} = ${targetRow[pk]}`).join(', ')
                     Modal.confirm({
-                        title: '确定删除选中的数据行吗？',
-                        content: `定位主键: [ ${pkSummary} ]。物理删除后不可撤销，请确认！`,
-                        okText: '确定删除',
-                        cancelText: '取消',
+                        title: t('db:dataTab.deleteRowConfirmTitle'),
+                        content: t('db:dataTab.deleteRowConfirmContent', { pk: pkSummary }),
+                        okText: t('common:confirmDelete', '确定删除'),
+                        cancelText: t('common:cancel', '取消'),
                         okButtonProps: { danger: true },
                         onOk: async () => {
                             await handleDeleteRow(rowIdx)
@@ -931,12 +933,12 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             onClick={() => handleHeaderSort(c)}
                             title={
                                 isSorted
-                                    ? `当前按 ${c} ${sortOrder === 'ASC' ? '升序' : '降序'}排列 (点击切换)`
-                                    : `点击按 ${c} 排序`
+                                    ? t('db:dataTab.sortAscDesc', { col: c, order: sortOrder === 'ASC' ? t('db:dataTab.asc') : t('db:dataTab.desc') })
+                                    : t('db:dataTab.sortClick', { col: c })
                             }
                         >
                             {isPk ? (
-                                <span className={s.pkBadge} title="主键 (Primary Key)">
+                                <span className={s.pkBadge} title={t('db:dataTab.pkTooltip')}>
                                     {c}
                                 </span>
                             ) : (
@@ -967,18 +969,18 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
             }),
         ]
         return cols
-    }, [columns, pkList, fkList, colWidths, sortCol, sortOrder, filters, rows.length])
+    }, [columns, pkList, fkList, colWidths, sortCol, sortOrder, filters, rows.length, t])
 
     // 导出菜单项
     const exportMenuItems: MenuProps['items'] = [
         {
             key: 'csv',
-            label: '导出为 CSV 文件',
+            label: t('db:dataTab.exportCsv'),
             onClick: () => handleExport('csv'),
         },
         {
             key: 'json',
-            label: '导出为 JSON 文件',
+            label: t('db:dataTab.exportJson'),
             onClick: () => handleExport('json'),
         },
     ]
@@ -1001,11 +1003,11 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                     value={viewMode}
                     onChange={(v) => setViewMode(v as any)}
                     options={[
-                        { label: '数据', value: 'data' },
-                        { label: '结构', value: 'struct' },
-                        { label: '索引', value: 'index' },
-                        { label: '约束', value: 'constraints' },
-                        { label: 'DDL', value: 'ddl' },
+                        { label: t('db:tabs.data'), value: 'data' },
+                        { label: t('db:tabs.struct'), value: 'struct' },
+                        { label: t('db:tabs.index'), value: 'index' },
+                        { label: t('db:tabs.constraints'), value: 'constraints' },
+                        { label: t('db:tabs.ddl'), value: 'ddl' },
                     ]}
                 />
 
@@ -1016,23 +1018,24 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 <Loader2 size={11} className={s.spinning} style={{ color: 'var(--accent)' }} />
                             )}
                             <span>
-                                {rows.length} 行{newRows.length ? ' +' + newRows.length + ' 新增' : ''}
-                                {dirtyCount > 0 ? ' *' + dirtyCount + ' 待保存' : ''}
+                                {t('db:dataTab.rowCount', { count: rows.length })}
+                                {newRows.length ? ' ' + t('db:dataTab.newRows', { count: newRows.length }) : ''}
+                                {dirtyCount > 0 ? ' ' + t('db:dataTab.dirtyRows', { count: dirtyCount }) : ''}
                             </span>
                         </>
                     ) : viewMode === 'struct' ? (
                         <>
-                            <span>{structCols.length} 列</span>
+                            <span>{t('db:dataTab.colCount', { count: structCols.length })}</span>
                             {structDirtyState.isDirty && (
                                 <span style={{ color: '#fa8c16', marginLeft: 4 }}>
-                                    *{structDirtyState.totalDirty} 待保存
+                                    {t('db:dataTab.dirtyRows', { count: structDirtyState.totalDirty })}
                                 </span>
                             )}
                         </>
                     ) : viewMode === 'index' ? (
-                        (structure?.indexes?.length ?? 0) + ' 个索引'
+                        t('db:dataTab.indexCount', { count: structure?.indexes?.length ?? 0 })
                     ) : viewMode === 'constraints' ? (
-                        (structure?.constraints?.length ?? 0) + ' 条约束'
+                        t('db:dataTab.constraintCount', { count: structure?.constraints?.length ?? 0 })
                     ) : (
                         'SQL'
                     )}
@@ -1041,7 +1044,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                 {viewMode === 'data' && activeFilterEntries.length > 0 && (
                     <div className={s.activeFiltersWrap}>
                         <Filter size={12} className={s.activeFilterIcon} />
-                        <span className={s.activeFilterLabel}>已筛选:</span>
+                        <span className={s.activeFilterLabel}>{t('db:dataTab.filtered')}</span>
                         <div className={s.activeFilterTags}>
                             {activeFilterEntries.map(([col, f]) => (
                                 <Tag
@@ -1064,7 +1067,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             className={s.clearAllBtn}
                             onClick={handleClearAllFilters}
                         >
-                            清除全部
+                            {t('db:dataTab.clearAll')}
                         </Button>
                     </div>
                 )}
@@ -1077,10 +1080,10 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 icon={<Plus size={13} />}
                                 onClick={handleAddStructCol}
                             >
-                                添加列
+                                {t('db:dataTab.addColumn')}
                             </Button>
 
-                            <Tooltip title="保存表结构变更 (预览 ALTER 脚本)">
+                            <Tooltip title={t('db:dataTab.saveStructTooltip')}>
                                 <Button
                                     size="small"
                                     type={structDirtyState.isDirty ? 'primary' : 'default'}
@@ -1088,13 +1091,13 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                     disabled={!structDirtyState.isDirty}
                                     onClick={handleSaveStructChanges}
                                 >
-                                    保存修改 {structDirtyState.totalDirty > 0 ? `(${structDirtyState.totalDirty})` : ''}
+                                    {t('db:dataTab.saveChanges')} {structDirtyState.totalDirty > 0 ? `(${structDirtyState.totalDirty})` : ''}
                                 </Button>
                             </Tooltip>
 
                             {structDirtyState.isDirty && (
                                 <Button size="small" onClick={handleDiscardStructChanges}>
-                                    放弃
+                                    {t('db:dataTab.discard')}
                                 </Button>
                             )}
                         </Space>
@@ -1107,7 +1110,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 icon={<Plus size={13} />}
                                 onClick={() => setCreateIndexOpen(true)}
                             >
-                                添加索引
+                                {t('db:dataTab.addIndex')}
                             </Button>
                         </Space>
                     )}
@@ -1119,7 +1122,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 icon={<Plus size={13} />}
                                 onClick={() => setCreateConstraintOpen(true)}
                             >
-                                添加约束
+                                {t('db:dataTab.addConstraint')}
                             </Button>
                         </Space>
                     )}
@@ -1132,10 +1135,10 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                 disabled={loading || saving}
                                 onClick={handleAddNewRow}
                             >
-                                新增行
+                                {t('db:dataTab.addRow')}
                             </Button>
 
-                            <Tooltip title="保存修改 (快捷键: Ctrl+S / ⌘S)">
+                            <Tooltip title={t('db:dataTab.saveTooltip')}>
                                 <Button
                                     size="small"
                                     type={dirtyCount > 0 ? 'primary' : 'default'}
@@ -1144,27 +1147,27 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                     loading={saving}
                                     onClick={() => handleSaveAll()}
                                 >
-                                    保存修改 {dirtyCount > 0 ? '(' + dirtyCount + ')' : ''}
+                                    {t('db:dataTab.saveChanges')} {dirtyCount > 0 ? '(' + dirtyCount + ')' : ''}
                                 </Button>
                             </Tooltip>
 
                             {dirtyCount > 0 && (
                                 <Button size="small" onClick={handleDiscardAll} disabled={saving}>
-                                    放弃
+                                    {t('db:dataTab.discard')}
                                 </Button>
                             )}
 
                             {adapter.exportToFile && (
                                 <Dropdown menu={{ items: exportMenuItems }}>
                                     <Button size="small" icon={<Download size={13} />}>
-                                        导出
+                                        {t('db:dataTab.export')}
                                     </Button>
                                 </Dropdown>
                             )}
                         </Space>
                     )}
 
-                    <Tooltip title="刷新">
+                    <Tooltip title={t('db:dataTab.refresh')}>
                         <Button
                             size="small"
                             icon={<RotateCw size={13} />}
@@ -1179,7 +1182,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                     </Tooltip>
 
                     {onClose && (
-                        <Tooltip title="关闭表">
+                        <Tooltip title={t('db:dataTab.closeTable')}>
                             <Button size="small" type="text" icon={<X size={13} />} onClick={onClose} />
                         </Tooltip>
                     )}
@@ -1221,7 +1224,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                     !isEditing && setEditingNewCell({ rowIdx: nIdx, col: c })
                                                 }
                                                 onContextMenu={(e) => handleCellContextMenu(e, nIdx, c, true)}
-                                                title="点击编辑，右键更多操作"
+                                                title={t('db:dataTab.cellEditTooltip')}
                                             >
                                                 {isEditing ? (
                                                     <CellEditorInline
@@ -1276,7 +1279,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                         !isEditing && setEditingCell({ rowIdx: rIdx, col: c })
                                                     }
                                                     onContextMenu={(e) => handleCellContextMenu(e, rIdx, c, false)}
-                                                    title="点击编辑，右键更多操作"
+                                                    title={t('db:dataTab.cellEditTooltip')}
                                                 >
                                                     {isEditing ? (
                                                         <CellEditorInline
@@ -1307,7 +1310,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             {!rows.length && !newRows.length && (
                                 <tr>
                                     <td colSpan={columns.length + 1} className={s.dbEmpty}>
-                                        {loading ? '加载数据中...' : '暂无数据，可点击「新增行」插入数据'}
+                                        {loading ? t('db:dataTab.loadingData') : t('db:dataTab.emptyData')}
                                     </td>
                                 </tr>
                             )}
@@ -1320,10 +1323,10 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             {countingRows ? (
                                 <>
                                     <Loader2 size={12} className={s.spinning} style={{ color: 'var(--accent)' }} />
-                                    <span>共 {totalRows > 0 ? totalRows + '+' : '...'} 条 (计算中)</span>
+                                    <span>{t('db:dataTab.totalRecordsCalculating', { total: totalRows > 0 ? totalRows : 0 })}</span>
                                 </>
                             ) : (
-                                '共 ' + totalRows + ' 条数据'
+                                t('db:dataTab.totalRecords', { total: totalRows })
                             )}
                         </span>
 
@@ -1357,15 +1360,15 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         <thead>
                             <tr>
                                 <th style={{ width: 44, textAlign: 'center' }}>#</th>
-                                <th style={{ minWidth: 150 }}>列名 (Column)</th>
-                                <th style={{ minWidth: 170 }}>数据类型 (Data Type)</th>
-                                <th style={{ width: 110 }}>长度/精度 (Length)</th>
-                                <th style={{ width: 100, textAlign: 'center' }}>允许为空 (Nullable)</th>
-                                <th style={{ minWidth: 130 }}>默认值 (Default)</th>
-                                <th style={{ width: 55, textAlign: 'center' }}>主键 (PK)</th>
-                                <th style={{ width: 55, textAlign: 'center' }}>外键 (FK)</th>
-                                <th style={{ minWidth: 150 }}>注释 (Comment)</th>
-                                <th style={{ width: 55, textAlign: 'center' }}>操作</th>
+                                <th style={{ minWidth: 150 }}>{t('db:dataTab.structure.colName')}</th>
+                                <th style={{ minWidth: 170 }}>{t('db:dataTab.structure.colType')}</th>
+                                <th style={{ width: 110 }}>{t('db:dataTab.structure.colLength')}</th>
+                                <th style={{ width: 100, textAlign: 'center' }}>{t('db:dataTab.structure.colNullable')}</th>
+                                <th style={{ minWidth: 130 }}>{t('db:dataTab.structure.colDefault')}</th>
+                                <th style={{ width: 55, textAlign: 'center' }}>{t('db:dataTab.structure.colPk')}</th>
+                                <th style={{ width: 55, textAlign: 'center' }}>{t('db:dataTab.structure.colFk')}</th>
+                                <th style={{ minWidth: 150 }}>{t('db:dataTab.structure.colComment')}</th>
+                                <th style={{ width: 55, textAlign: 'center' }}>{t('db:dataTab.structure.colAction')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1392,9 +1395,9 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                     <tr key={col.origName || `col_${idx}`} className={rowClass}>
                                         <td style={{ textAlign: 'center', color: 'var(--text-faint)' }}>
                                             {isNew ? (
-                                                <span className={s.structNewBadge} title="新增列" />
+                                                <span className={s.structNewBadge} title={t('db:dataTab.structure.newColBadge')} />
                                             ) : isModified ? (
-                                                <span className={s.structModifiedBadge} title="已修改" />
+                                                <span className={s.structModifiedBadge} title={t('db:dataTab.structure.modifiedColBadge')} />
                                             ) : null}
                                             {idx + 1}
                                         </td>
@@ -1405,7 +1408,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                 className={s.structColInput}
                                                 value={col.name}
                                                 status={isRenamed ? 'warning' : undefined}
-                                                placeholder="列名"
+                                                placeholder={t('db:dataTab.structure.colNamePlaceholder')}
                                                 onChange={(e) => handleStructColChange(idx, { name: e.target.value })}
                                             />
                                         </td>
@@ -1431,7 +1434,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                 options={allTypeOptions}
                                                 value={baseType}
                                                 status={isBaseTypeChanged ? 'warning' : undefined}
-                                                placeholder="选择数据类型"
+                                                placeholder={t('db:dataTab.structure.colTypePlaceholder')}
                                                 onChange={(val) => handleBaseTypeChange(idx, val)}
                                             />
                                         </td>
@@ -1443,7 +1446,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                 disabled={!supportsLen}
                                                 value={supportsLen ? length : ''}
                                                 status={isLengthChanged ? 'warning' : undefined}
-                                                placeholder={supportsLen ? '如 255 或 10,2' : '-'}
+                                                placeholder={supportsLen ? t('db:dataTab.structure.colLengthPlaceholder') : '-'}
                                                 onChange={(e) => handleLengthChange(idx, e.target.value)}
                                             />
                                         </td>
@@ -1463,7 +1466,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                 className={s.structColInput}
                                                 value={col.defaultVal || ''}
                                                 status={isDefChanged ? 'warning' : undefined}
-                                                placeholder="默认值 (留空为无)"
+                                                placeholder={t('db:dataTab.structure.colDefaultPlaceholder')}
                                                 onChange={(e) => handleStructColChange(idx, { defaultVal: e.target.value })}
                                             />
                                         </td>
@@ -1481,20 +1484,20 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                 value={col.comment || ''}
                                                 disabled={adapter.dialect === 'sqlite'}
                                                 status={isCommentChanged ? 'warning' : undefined}
-                                                placeholder={adapter.dialect === 'sqlite' ? 'SQLite 不支持列注释' : '列注释说明'}
+                                                placeholder={adapter.dialect === 'sqlite' ? t('db:dataTab.structure.colCommentSqlite') : t('db:dataTab.structure.colCommentPlaceholder')}
                                                 onChange={(e) => handleStructColChange(idx, { comment: e.target.value })}
                                             />
                                         </td>
                                         <td style={{ textAlign: 'center' }}>
                                             <Popconfirm
-                                                title="确定删除该列？"
+                                                title={t('db:dataTab.structure.deleteColConfirmTitle')}
                                                 description={
                                                     isNew
-                                                        ? '移除该新增列草稿'
-                                                        : `将生成 DROP COLUMN 并在应用时永久删除列 [${col.name}]`
+                                                        ? t('db:dataTab.structure.deleteColDraft')
+                                                        : t('db:dataTab.structure.deleteColPermanent', { name: col.name })
                                                 }
-                                                okText="删除"
-                                                cancelText="取消"
+                                                okText={t('common:delete', '删除')}
+                                                cancelText={t('common:cancel', '取消')}
                                                 okButtonProps={{ danger: true }}
                                                 onConfirm={() => handleDropStructCol(idx)}
                                             >
@@ -1503,7 +1506,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                     type="text"
                                                     danger
                                                     icon={<Trash2 size={13} />}
-                                                    title="删除此列"
+                                                    title={t('db:dataTab.structure.deleteColTooltip')}
                                                 />
                                             </Popconfirm>
                                         </td>
@@ -1513,7 +1516,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             {structCols.length === 0 && (
                                 <tr>
                                     <td colSpan={10} className={s.dbEmpty}>
-                                        暂无列信息，可点击上方「添加列」进行新增
+                                        {t('db:dataTab.structure.emptyColumns')}
                                     </td>
                                 </tr>
                             )}
@@ -1529,12 +1532,12 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         <thead>
                             <tr>
                                 <th style={{ width: 40, textAlign: 'center' }}>#</th>
-                                <th>索引名称 (Index Name)</th>
-                                <th>类型 (Type)</th>
-                                <th>包含列 (Columns)</th>
-                                <th>占用大小 (Size)</th>
-                                <th>定义 / 详情 (Definition / Comment)</th>
-                                <th style={{ width: 60, textAlign: 'center' }}>操作</th>
+                                <th>{t('db:dataTab.indexes.name')}</th>
+                                <th>{t('db:dataTab.indexes.type')}</th>
+                                <th>{t('db:dataTab.indexes.columns')}</th>
+                                <th>{t('db:dataTab.indexes.size')}</th>
+                                <th>{t('db:dataTab.indexes.definition')}</th>
+                                <th style={{ width: 60, textAlign: 'center' }}>{t('db:dataTab.indexes.action')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1570,15 +1573,15 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                     </td>
                                     <td style={{ textAlign: 'center' }}>
                                         {idx.isPrimary ? (
-                                            <Tooltip title="主键索引不可直接删除，请在表结构中修改主键设置">
+                                            <Tooltip title={t('db:dataTab.indexes.pkIndexTooltip')}>
                                                 <Button size="small" type="text" disabled icon={<Trash2 size={13} />} />
                                             </Tooltip>
                                         ) : (
                                             <Popconfirm
-                                                title="确定删除此索引？"
-                                                description={`将执行删除索引 [${idx.name}]`}
-                                                okText="删除"
-                                                cancelText="取消"
+                                                title={t('db:dataTab.indexes.deleteIndexConfirmTitle')}
+                                                description={t('db:dataTab.indexes.deleteIndexConfirmContent', { name: idx.name })}
+                                                okText={t('common:delete', '删除')}
+                                                cancelText={t('common:cancel', '取消')}
                                                 okButtonProps={{ danger: true }}
                                                 onConfirm={() => handleDropIndex(idx.name)}
                                             >
@@ -1587,7 +1590,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                     type="text"
                                                     danger
                                                     icon={<Trash2 size={13} />}
-                                                    title="删除索引"
+                                                    title={t('db:dataTab.indexes.deleteIndexTooltip')}
                                                 />
                                             </Popconfirm>
                                         )}
@@ -1597,7 +1600,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             {(!structure || structure.indexes.length === 0) && (
                                 <tr>
                                     <td colSpan={7} className={s.dbEmpty}>
-                                        暂无索引
+                                        {t('db:dataTab.indexes.emptyIndexes')}
                                     </td>
                                 </tr>
                             )}
@@ -1613,11 +1616,11 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                         <thead>
                             <tr>
                                 <th style={{ width: 40, textAlign: 'center' }}>#</th>
-                                <th>约束名称 (Constraint Name)</th>
-                                <th>约束类型 (Type)</th>
-                                <th>受约束列 (Column)</th>
-                                <th>定义 / 引用目标 (Definition / References)</th>
-                                <th style={{ width: 60, textAlign: 'center' }}>操作</th>
+                                <th>{t('db:dataTab.constraints.name')}</th>
+                                <th>{t('db:dataTab.constraints.type')}</th>
+                                <th>{t('db:dataTab.constraints.columns')}</th>
+                                <th>{t('db:dataTab.constraints.definition')}</th>
+                                <th style={{ width: 60, textAlign: 'center' }}>{t('db:dataTab.constraints.action')}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1657,19 +1660,19 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                     </td>
                                     <td style={{ textAlign: 'center' }}>
                                         {c.type === 'PRIMARY KEY' ? (
-                                            <Tooltip title="主键约束不可在此删除，请在表结构中修改主键设置">
+                                            <Tooltip title={t('db:dataTab.constraints.pkConstraintTooltip')}>
                                                 <Button size="small" type="text" disabled icon={<Trash2 size={13} />} />
                                             </Tooltip>
                                         ) : (
                                             <Popconfirm
-                                                title="确定删除此约束？"
+                                                title={t('db:dataTab.constraints.deleteConstraintConfirmTitle')}
                                                 description={
                                                     adapter.dialect === 'sqlite'
-                                                        ? `SQLite 删除约束 [${c.name}] 将执行事务安全重建表`
-                                                        : `将执行 DROP CONSTRAINT 删除约束 [${c.name}]`
+                                                        ? t('db:dataTab.constraints.deleteConstraintSqlite', { name: c.name })
+                                                        : t('db:dataTab.constraints.deleteConstraintDefault', { name: c.name })
                                                 }
-                                                okText="删除"
-                                                cancelText="取消"
+                                                okText={t('common:delete', '删除')}
+                                                cancelText={t('common:cancel', '取消')}
                                                 okButtonProps={{ danger: true }}
                                                 onConfirm={() => handleDropConstraint(c)}
                                             >
@@ -1678,7 +1681,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                                                     type="text"
                                                     danger
                                                     icon={<Trash2 size={13} />}
-                                                    title="删除约束"
+                                                    title={t('db:dataTab.constraints.deleteConstraintTooltip')}
                                                 />
                                             </Popconfirm>
                                         )}
@@ -1688,7 +1691,7 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             {(!structure || structure.constraints.length === 0) && (
                                 <tr>
                                     <td colSpan={6} className={s.dbEmpty}>
-                                        暂无约束
+                                        {t('db:dataTab.constraints.emptyConstraints')}
                                     </td>
                                 </tr>
                             )}
@@ -1713,14 +1716,14 @@ export default function DbDataTab({ adapter, onClose }: DbDataTabProps) {
                             icon={<Copy size={13} />}
                             onClick={async () => {
                                 if (await copyText(ddlText)) {
-                                    message.success('已复制 DDL 到剪贴板')
+                                    message.success(t('db:dataTab.ddl.copySuccess'))
                                 }
                             }}
                         >
-                            复制 DDL
+                            {t('db:dataTab.copyDdl')}
                         </Button>
                     </div>
-                    <pre className={s.ddlViewer}>{ddlText || '-- 正在生成 DDL 语句...'}</pre>
+                    <pre className={s.ddlViewer}>{ddlText || t('db:dataTab.ddl.generating')}</pre>
                 </div>
             )}
 

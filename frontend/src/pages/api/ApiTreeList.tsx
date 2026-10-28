@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Input, Button, Tag, Tooltip, Modal, Dropdown, Select, App } from 'antd'
 import type { MenuProps } from 'antd'
+import { useTranslation } from 'react-i18next'
 import Tree, { TreeNodeData, TreeDropInfo } from '@/components/common/Tree'
 import {
     Folder,
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function ApiTreeList({ state }: Props) {
+    const { t } = useTranslation(['api', 'common'])
     const { message } = App.useApp()
     const {
         apiTree,
@@ -91,10 +93,10 @@ export default function ApiTreeList({ state }: Props) {
             ? rawOptions.filter((opt) => opt.value !== moveModal.targetId)
             : rawOptions
         return [
-            { label: '根目录 (最外层)', value: '__root__' },
+            { label: t('api:tree.rootFolder', { defaultValue: '根目录 (最外层)' }), value: '__root__' },
             ...filtered,
         ]
-    }, [apiTree, moveModal])
+    }, [apiTree, moveModal, t])
 
     const handleConfirmMove = () => {
         if (!moveModal.targetId) return
@@ -103,7 +105,7 @@ export default function ApiTreeList({ state }: Props) {
         if (targetParent) {
             setExpandedKeys((prev) => Array.from(new Set([...prev, targetParent])))
         }
-        message.success('已移动')
+        message.success(t('api:tree.movedSuccess', { defaultValue: '已移动' }))
         setMoveModal({ open: false, targetId: '', targetName: '', isFolder: false })
     }
 
@@ -113,11 +115,15 @@ export default function ApiTreeList({ state }: Props) {
         if (isModified) {
             setConfirm({
                 open: true,
-                title: '未保存修改提示',
+                title: t('api:tree.unsavedSwitchTitle', { defaultValue: '未保存修改提示' }),
                 danger: true,
-                confirmText: '放弃修改并切换',
-                cancelText: '留在当前接口',
-                message: `当前接口「${currentApiName || '未命名'}」有未保存的修改，切换到「${item.name || '新接口'}」将丢失这些修改。确定要继续切换吗？`,
+                confirmText: t('api:tree.confirmAbandonSwitch', { defaultValue: '放弃修改并切换' }),
+                cancelText: t('api:tree.stayOnCurrent', { defaultValue: '留在当前接口' }),
+                message: t('api:tree.unsavedSwitchMsg', {
+                    defaultValue: `当前接口「${currentApiName || '未命名'}」有未保存的修改，切换到「${item.name || '新接口'}」将丢失这些修改。确定要继续切换吗？`,
+                    current: currentApiName || t('common:unnamed', { defaultValue: '未命名' }),
+                    target: item.name || t('api:saveModal.newApiFallback', { defaultValue: '新接口' }),
+                }),
                 onConfirm: () => {
                     setConfirm({ open: false, title: '', message: '' })
                     loadSavedApi(item)
@@ -133,11 +139,14 @@ export default function ApiTreeList({ state }: Props) {
         if (isModified) {
             setConfirm({
                 open: true,
-                title: '未保存修改提示',
+                title: t('api:tree.unsavedSwitchTitle', { defaultValue: '未保存修改提示' }),
                 danger: true,
-                confirmText: '放弃修改并新建',
-                cancelText: '留在当前接口',
-                message: `当前接口「${currentApiName || '未命名'}」有未保存的修改，新建接口将丢失这些修改。确定要继续新建吗？`,
+                confirmText: t('api:tree.confirmAbandonCreate', { defaultValue: '放弃修改并新建' }),
+                cancelText: t('api:tree.stayOnCurrent', { defaultValue: '留在当前接口' }),
+                message: t('api:tree.unsavedCreateMsg', {
+                    defaultValue: `当前接口「${currentApiName || '未命名'}」有未保存的修改，新建接口将丢失这些修改。确定要继续新建吗？`,
+                    current: currentApiName || t('common:unnamed', { defaultValue: '未命名' }),
+                }),
                 onConfirm: () => {
                     setConfirm({ open: false, title: '', message: '' })
                     newBlankApi()
@@ -210,18 +219,18 @@ export default function ApiTreeList({ state }: Props) {
                 {
                     key: 'new-api',
                     icon: <Plus size={14} />,
-                    label: '新建接口',
+                    label: t('api:tree.newApi', { defaultValue: '新建接口' }),
                     onClick: safeNewBlankApi,
                 },
                 {
                     key: 'new-subfolder',
                     icon: <FolderPlus size={14} />,
-                    label: '新建子分组',
+                    label: t('api:tree.newSubFolder', { defaultValue: '新建子分组' }),
                     onClick: () => {
                         setNameInputValue('')
                         setNameModal({
                             open: true,
-                            title: `在「${folder.name}」下新建分组`,
+                            title: t('api:tree.newFolderUnder', { defaultValue: `在「${folder.name}」下新建分组`, name: folder.name }),
                             type: 'folder',
                             parentId: folder.id,
                             initialValue: '',
@@ -236,12 +245,12 @@ export default function ApiTreeList({ state }: Props) {
                 {
                     key: 'rename',
                     icon: <Edit2 size={14} />,
-                    label: '重命名',
+                    label: t('api:tree.rename', { defaultValue: '重命名' }),
                     onClick: () => {
                         setNameInputValue(folder.name || '')
                         setNameModal({
                             open: true,
-                            title: '重命名分组',
+                            title: t('api:tree.renameFolder', { defaultValue: '重命名分组' }),
                             type: 'rename',
                             id: folder.id,
                             initialValue: folder.name || '',
@@ -251,13 +260,13 @@ export default function ApiTreeList({ state }: Props) {
                 {
                     key: 'move',
                     icon: <Folder size={14} />,
-                    label: '移动到分组…',
+                    label: t('api:tree.moveToFolder', { defaultValue: '移动到分组…' }),
                     onClick: () => {
                         setTargetFolderSelect('__root__')
                         setMoveModal({
                             open: true,
                             targetId: folder.id,
-                            targetName: folder.name || '未命名分组',
+                            targetName: folder.name || t('api:tree.unnamedFolder', { defaultValue: '未命名分组' }),
                             isFolder: true,
                         })
                     },
@@ -266,13 +275,13 @@ export default function ApiTreeList({ state }: Props) {
                     key: 'delete',
                     icon: <Trash2 size={14} />,
                     danger: true,
-                    label: '删除分组',
+                    label: t('api:tree.deleteFolder', { defaultValue: '删除分组' }),
                     onClick: () => {
                         setConfirm({
                             open: true,
-                            title: '删除分组',
+                            title: t('api:tree.deleteFolder', { defaultValue: '删除分组' }),
                             danger: true,
-                            message: `确定要删除分组「${folder.name || '分组'}」及其下的所有接口吗？`,
+                            message: t('api:tree.deleteFolderMsg', { defaultValue: `确定要删除分组「${folder.name || '分组'}」及其下的所有接口吗？`, name: folder.name || t('api:types.defaultFolder', { defaultValue: '分组' }) }),
                             onConfirm: () => {
                                 setConfirm({ open: false, title: '', message: '' })
                                 deleteTreeNode(folder.id)
@@ -293,7 +302,7 @@ export default function ApiTreeList({ state }: Props) {
                     setNameInputValue(folder.name || '')
                     setNameModal({
                         open: true,
-                        title: '重命名分组',
+                        title: t('api:tree.renameFolder', { defaultValue: '重命名分组' }),
                         type: 'rename',
                         id: folder.id,
                         initialValue: folder.name || '',
@@ -302,8 +311,8 @@ export default function ApiTreeList({ state }: Props) {
             >
                 <div className={a.nodeMain}>
                     <Folder size={15} style={{ color: '#faad14', flexShrink: 0 }} />
-                    <span className={a.nodeText} title={folder.name || '未命名分组'}>
-                        {folder.name || '未命名分组'}
+                    <span className={a.nodeText} title={folder.name || t('api:tree.unnamedFolder', { defaultValue: '未命名分组' })}>
+                        {folder.name || t('api:tree.unnamedFolder', { defaultValue: '未命名分组' })}
                     </span>
                     <Tag style={{ fontSize: 11, padding: '0 6px', marginInlineEnd: 0, lineHeight: '18px', height: 20, borderRadius: 10 }}>
                         {itemCount}
@@ -328,11 +337,11 @@ export default function ApiTreeList({ state }: Props) {
                 {
                     key: 'copy-curl',
                     icon: <Copy size={14} />,
-                    label: '复制为 cURL 命令',
+                    label: t('api:tree.copyCurl', { defaultValue: '复制为 cURL 命令' }),
                     onClick: () => {
                         const cmd = buildCurlCommand(item)
                         navigator.clipboard.writeText(cmd).then(() => {
-                            message.success('已复制 cURL 到剪贴板')
+                            message.success(t('api:tree.copiedCurl', { defaultValue: '已复制 cURL 到剪贴板' }))
                         }).catch(() => {
                             state.copy(cmd)
                         })
@@ -341,12 +350,12 @@ export default function ApiTreeList({ state }: Props) {
                 {
                     key: 'rename',
                     icon: <Edit2 size={14} />,
-                    label: '重命名',
+                    label: t('api:tree.rename', { defaultValue: '重命名' }),
                     onClick: () => {
                         setNameInputValue(item.name || '')
                         setNameModal({
                             open: true,
-                            title: '重命名接口',
+                            title: t('api:tree.renameApi', { defaultValue: '重命名接口' }),
                             type: 'rename',
                             id: item.id,
                             initialValue: item.name || '',
@@ -356,7 +365,7 @@ export default function ApiTreeList({ state }: Props) {
                 {
                     key: 'duplicate',
                     icon: <FileCode size={14} />,
-                    label: '创建副本',
+                    label: t('api:tree.duplicate', { defaultValue: '创建副本' }),
                     onClick: () => {
                         duplicateApiItem(item.id)
                     },
@@ -364,13 +373,13 @@ export default function ApiTreeList({ state }: Props) {
                 {
                     key: 'move',
                     icon: <Folder size={14} />,
-                    label: '移动到分组…',
+                    label: t('api:tree.moveToFolder', { defaultValue: '移动到分组…' }),
                     onClick: () => {
                         setTargetFolderSelect('__root__')
                         setMoveModal({
                             open: true,
                             targetId: item.id,
-                            targetName: item.name || '未命名接口',
+                            targetName: item.name || t('api:tree.unnamedApi', { defaultValue: '未命名接口' }),
                             isFolder: false,
                         })
                     },
@@ -384,13 +393,13 @@ export default function ApiTreeList({ state }: Props) {
                     key: 'delete',
                     icon: <Trash2 size={14} />,
                     danger: true,
-                    label: '删除接口',
+                    label: t('api:tree.deleteApi', { defaultValue: '删除接口' }),
                     onClick: () => {
                         setConfirm({
                             open: true,
-                            title: '删除接口',
+                            title: t('api:tree.deleteApi', { defaultValue: '删除接口' }),
                             danger: true,
-                            message: `确定要删除接口「${item.name || '接口'}」吗？`,
+                            message: t('api:tree.deleteApiMsg', { name: item.name || t('api:tree.unnamedApi', { defaultValue: '接口' }), defaultValue: `确定要删除接口「${item.name || '接口'}」吗？` }),
                             onConfirm: () => {
                                 setConfirm({ open: false, title: '', message: '' })
                                 deleteTreeNode(item.id)
@@ -411,14 +420,14 @@ export default function ApiTreeList({ state }: Props) {
                     setNameInputValue(item.name || '')
                     setNameModal({
                         open: true,
-                        title: '重命名接口',
+                        title: t('api:tree.renameApi', { defaultValue: '重命名接口' }),
                         type: 'rename',
                         id: item.id,
                         initialValue: item.name || '',
                     })
                 }}
             >
-                <div className={a.nodeMain} title={`${item.name || '未命名接口'}\n${item.url || '未填地址'}`}>
+                <div className={a.nodeMain} title={`${item.name || t('api:tree.unnamedApi', { defaultValue: '未命名接口' })}\n${item.url || t('api:tree.noUrl', { defaultValue: '未填地址' })}`}>
                     <Tag
                         color={color}
                         style={{
@@ -435,7 +444,7 @@ export default function ApiTreeList({ state }: Props) {
                         {methodTag}
                     </Tag>
                     <span className={`${a.nodeText} ${isActive ? a.nodeActive : ''}`}>
-                        {item.name || '未命名接口'}
+                        {item.name || t('api:tree.unnamedApi', { defaultValue: '未命名接口' })}
                     </span>
                 </div>
             </div>
@@ -449,7 +458,7 @@ export default function ApiTreeList({ state }: Props) {
             if (node.isFolder) {
                 return {
                     key: node.id,
-                    title: node.name || '未命名分组',
+                    title: node.name || t('api:tree.unnamedFolder', { defaultValue: '未命名分组' }),
                     raw: node,
                     rawNode: node,
                     isLeaf: false,
@@ -458,7 +467,7 @@ export default function ApiTreeList({ state }: Props) {
             }
             return {
                 key: node.id,
-                title: node.name || '未命名接口',
+                title: node.name || t('api:tree.unnamedApi', { defaultValue: '未命名接口' }),
                 raw: node,
                 rawNode: node,
                 isLeaf: true,
@@ -501,7 +510,7 @@ export default function ApiTreeList({ state }: Props) {
     const handleSaveNameModal = () => {
         const val = nameInputValue.trim()
         if (!val) {
-            message.warning('名称不能为空')
+            message.warning(t('api:tree.nameRequired', { defaultValue: '名称不能为空' }))
             return
         }
         if (nameModal.type === 'folder') {
@@ -516,10 +525,10 @@ export default function ApiTreeList({ state }: Props) {
         try {
             const savedPath = await exportApis()
             if (savedPath) {
-                message.success(`接口列表已成功导出至：${savedPath}`)
+                message.success(t('api:tree.exportSuccess', { path: savedPath, defaultValue: `接口列表已成功导出至：${savedPath}` }))
             }
         } catch (e: any) {
-            message.error(`导出失败: ${e.message || String(e)}`)
+            message.error(t('api:tree.exportFail', { error: e.message || String(e), defaultValue: `导出失败: ${e.message || String(e)}` }))
         }
     }
 
@@ -527,10 +536,10 @@ export default function ApiTreeList({ state }: Props) {
         try {
             const res = await importApis()
             if (res) {
-                message.success(`成功导入 ${res.count} 个节点并自动同步至本地文件`)
+                message.success(t('api:tree.importSuccess', { count: res.count, defaultValue: `成功导入 ${res.count} 个节点并自动同步至本地文件` }))
             }
         } catch (e: any) {
-            message.error(`导入失败: ${e.message || String(e)}`)
+            message.error(t('api:tree.importFail', { error: e.message || String(e), defaultValue: `导入失败: ${e.message || String(e)}` }))
         }
     }
 
@@ -540,12 +549,12 @@ export default function ApiTreeList({ state }: Props) {
         {
             key: 'new-folder',
             icon: <FolderPlus size={14} />,
-            label: '新建分组',
+            label: t('api:tree.newFolder', { defaultValue: '新建分组' }),
             onClick: () => {
                 setNameInputValue('')
                 setNameModal({
                     open: true,
-                    title: '新建分组',
+                    title: t('api:tree.newFolder', { defaultValue: '新建分组' }),
                     type: 'folder',
                     parentId: null,
                     initialValue: '',
@@ -558,7 +567,9 @@ export default function ApiTreeList({ state }: Props) {
         {
             key: 'toggle-expand',
             icon: <ChevronsUpDown size={14} />,
-            label: expandedKeys.length > 0 ? '收起全部' : '展开全部',
+            label: expandedKeys.length > 0
+                ? t('api:tree.collapseAll', { defaultValue: '收起全部' })
+                : t('api:tree.expandAll', { defaultValue: '展开全部' }),
             onClick: toggleExpandAll,
         },
         {
@@ -567,13 +578,13 @@ export default function ApiTreeList({ state }: Props) {
         {
             key: 'import-apis',
             icon: <Upload size={14} />,
-            label: '导入接口 JSON',
+            label: t('api:tree.importJson', { defaultValue: '导入接口 JSON' }),
             onClick: handleImport,
         },
         {
             key: 'export-apis',
             icon: <Download size={14} />,
-            label: '导出接口 JSON',
+            label: t('api:tree.exportJson', { defaultValue: '导出接口 JSON' }),
             onClick: handleExport,
         },
     ]
@@ -584,18 +595,18 @@ export default function ApiTreeList({ state }: Props) {
             {
                 key: 'new-api',
                 icon: <Plus size={14} />,
-                label: '新建接口',
+                label: t('api:tree.newApi', { defaultValue: '新建接口' }),
                 onClick: safeNewBlankApi,
             },
             {
                 key: 'new-folder',
                 icon: <FolderPlus size={14} />,
-                label: '新建分组',
+                label: t('api:tree.newFolder', { defaultValue: '新建分组' }),
                 onClick: () => {
                     setNameInputValue('')
                     setNameModal({
                         open: true,
-                        title: '新建分组',
+                        title: t('api:tree.newFolder', { defaultValue: '新建分组' }),
                         type: 'folder',
                         parentId: null,
                         initialValue: '',
@@ -610,7 +621,9 @@ export default function ApiTreeList({ state }: Props) {
             {
                 key: 'toggle-expand',
                 icon: <ChevronsUpDown size={14} />,
-                label: expandedKeys.length > 0 ? '收起全部' : '展开全部',
+                label: expandedKeys.length > 0
+                    ? t('api:tree.collapseAll', { defaultValue: '收起全部' })
+                    : t('api:tree.expandAll', { defaultValue: '展开全部' }),
                 onClick: toggleExpandAll,
             },
             {
@@ -621,13 +634,13 @@ export default function ApiTreeList({ state }: Props) {
             {
                 key: 'import-apis',
                 icon: <Upload size={14} />,
-                label: '导入接口 JSON',
+                label: t('api:tree.importJson', { defaultValue: '导入接口 JSON' }),
                 onClick: handleImport,
             },
             {
                 key: 'export-apis',
                 icon: <Download size={14} />,
-                label: '导出接口 JSON',
+                label: t('api:tree.exportJson', { defaultValue: '导出接口 JSON' }),
                 onClick: handleExport,
             },
         ]
@@ -638,7 +651,7 @@ export default function ApiTreeList({ state }: Props) {
         <aside className={a.treePanel}>
             {/* 顶部标题与快捷操作 */}
             <div className={a.treeHead}>
-                <span className={a.treeTitle}>接口列表</span>
+                <span className={a.treeTitle}>{t('api:tree.apiList', { defaultValue: '接口列表' })}</span>
                 <Tag
                     color="geekblue"
                     style={{
@@ -654,7 +667,7 @@ export default function ApiTreeList({ state }: Props) {
                     {totalApiCount}
                 </Tag>
                 <div className={a.headActions}>
-                    <Tooltip title="新建接口">
+                    <Tooltip title={t('api:tree.newApi', { defaultValue: '新建接口' })}>
                         <Button
                             type="text"
                             className={a.headBtn}
@@ -663,7 +676,7 @@ export default function ApiTreeList({ state }: Props) {
                         />
                     </Tooltip>
                     <Dropdown menu={{ items: moreMenuItems }} trigger={['click']} placement="bottomRight">
-                        <Tooltip title="更多操作">
+                        <Tooltip title={t('api:tree.moreActions', { defaultValue: '更多操作' })}>
                             <Button
                                 type="text"
                                 className={a.headBtn}
@@ -678,7 +691,7 @@ export default function ApiTreeList({ state }: Props) {
             <div className={a.searchBar}>
                 <Input
                     style={{ flex: 1, height: 34, fontSize: 13 }}
-                    placeholder="搜索接口名称 / URL / 方法..."
+                    placeholder={t('api:tree.searchPlaceholder', { defaultValue: '搜索接口名称 / URL / 方法...' })}
                     value={keyword}
                     allowClear
                     prefix={<Search size={14} style={{ color: 'var(--text-faint)' }} />}
@@ -691,7 +704,7 @@ export default function ApiTreeList({ state }: Props) {
                 {treeData.length === 0 ? (
                     <div className={a.emptyTree}>
                         <FileCode size={36} style={{ opacity: 0.4 }} />
-                        <span>{keyword ? '未找到匹配的接口' : '暂无保存的接口'}</span>
+                        <span>{keyword ? t('api:tree.noMatchingApis', { defaultValue: '未找到匹配的接口' }) : t('api:tree.noSavedApis', { defaultValue: '暂无保存的接口' })}</span>
                         {!keyword && (
                             <Button
                                 type="primary"
@@ -699,7 +712,7 @@ export default function ApiTreeList({ state }: Props) {
                                 icon={<Plus size={14} />}
                                 onClick={safeNewBlankApi}
                             >
-                                新建接口
+                                {t('api:tree.newApi', { defaultValue: '新建接口' })}
                             </Button>
                         )}
                     </div>
@@ -733,15 +746,15 @@ export default function ApiTreeList({ state }: Props) {
                 open={nameModal.open}
                 onOk={handleSaveNameModal}
                 onCancel={() => setNameModal({ open: false, title: '', type: 'folder', initialValue: '' })}
-                okText="确定"
-                cancelText="取消"
+                okText={t('common:ok', { defaultValue: '确定' })}
+                cancelText={t('common:cancel', { defaultValue: '取消' })}
                 destroyOnHidden
                 width={400}
             >
                 <div style={{ padding: '12px 0' }}>
                     <Input
                         style={{ height: 34 }}
-                        placeholder="请输入名称"
+                        placeholder={t('api:tree.inputNamePlaceholder', { defaultValue: '请输入名称' })}
                         value={nameInputValue}
                         autoFocus
                         spellCheck={false}
@@ -758,18 +771,18 @@ export default function ApiTreeList({ state }: Props) {
 
             {/* 移动到分组弹窗 */}
             <Modal
-                title={`移动「${moveModal.targetName}」到`}
+                title={t('api:tree.moveTargetTitle', { name: moveModal.targetName, defaultValue: `移动「${moveModal.targetName}」到` })}
                 open={moveModal.open}
                 onOk={handleConfirmMove}
                 onCancel={() => setMoveModal({ open: false, targetId: '', targetName: '', isFolder: false })}
-                okText="确定移动"
-                cancelText="取消"
+                okText={t('api:tree.confirmMove', { defaultValue: '确定移动' })}
+                cancelText={t('common:cancel', { defaultValue: '取消' })}
                 destroyOnHidden
                 width={400}
             >
                 <div style={{ padding: '16px 0 8px' }}>
                     <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 8 }}>
-                        请选择目标分组：
+                        {t('api:tree.selectTargetFolder', { defaultValue: '请选择目标分组：' })}
                     </div>
                     <Select
                         style={{ width: '100%' }}

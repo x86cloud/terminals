@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { Button, Tag, Space, Alert, Tooltip, App } from 'antd'
 import { RotateCw, CheckCircle2, ArrowUpRight, Copy, GitBranch, Calendar, Laptop, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import AppLogo from '@/components/AppLogo'
 import { API } from '@/api'
 import { AppVersionInfo, UpdateCheckResult } from '@/types'
 import ab from './AboutTab.module.less'
 
 export default function AboutTab() {
+    const { t } = useTranslation(['settings', 'common'])
     const { message } = App.useApp()
     const [versionInfo, setVersionInfo] = useState<AppVersionInfo>({
         version: 'v1.0.3',
@@ -39,7 +41,7 @@ export default function AboutTab() {
             const res = await API.checkForUpdates()
             setUpdateResult(res)
             if (res.hasUpdate) {
-                message.info(`发现新版本: ${res.latestVersion}`)
+                message.info(t('settings:about.foundNewVersion', { version: res.latestVersion }))
             }
         } catch (e: any) {
             setUpdateResult({
@@ -49,7 +51,7 @@ export default function AboutTab() {
                 releaseUrl: 'https://github.com/x86cloud/terminals/releases',
                 repoUrl: 'https://github.com/x86cloud/terminals',
                 checkedAt: new Date().toLocaleString(),
-                errorMessage: e?.message || '检查更新失败，请检查网络连接',
+                errorMessage: e?.message || t('settings:about.checkFailedDesc'),
             })
         } finally {
             setChecking(false)
@@ -63,9 +65,9 @@ export default function AboutTab() {
     const copyUrl = async (url: string) => {
         try {
             await navigator.clipboard.writeText(url)
-            message.success('已复制下载发布链接')
+            message.success(t('settings:about.copiedLink'))
         } catch {
-            message.error('复制失败')
+            message.error(t('settings:about.copyFailed'))
         }
     }
 
@@ -84,14 +86,14 @@ export default function AboutTab() {
                     </Tooltip>
                 )}
                 {versionInfo.buildDate && (
-                    <Tooltip title="构建日期">
+                    <Tooltip title={t('settings:about.buildDate')}>
                         <Tag icon={<Calendar size={11} />} color="default">
                             {versionInfo.buildDate}
                         </Tag>
                     </Tooltip>
                 )}
                 {versionInfo.platform && (
-                    <Tooltip title="运行平台">
+                    <Tooltip title={t('settings:about.platform')}>
                         <Tag icon={<Laptop size={11} />} color="default">
                             {versionInfo.platform}
                         </Tag>
@@ -100,7 +102,7 @@ export default function AboutTab() {
             </div>
 
             <div className={ab.appDesc}>
-                一款跨平台的现代 All-in-One 全栈工作台，集 SSH 终端、Docker & Kubernetes 容器云原生编排、全套多数据库协同（MySQL、PostgreSQL、Redis、MongoDB、SQLite）、MQTT 物联网调试、API 测试与自主 AI Agent 智能助手于一体。
+                {t('settings:about.fullDescription')}
             </div>
 
             {/* Check Updates Action Area */}
@@ -111,7 +113,7 @@ export default function AboutTab() {
                     loading={checking}
                     onClick={handleCheckUpdates}
                 >
-                    {checking ? '正在检查更新...' : '检查更新'}
+                    {checking ? t('settings:about.checkingUpdate') : t('settings:about.checkUpdate')}
                 </Button>
 
                 {/* Update Check Results */}
@@ -121,16 +123,16 @@ export default function AboutTab() {
                             <Alert
                                 type="warning"
                                 showIcon
-                                title="检查更新失败"
+                                title={t('settings:about.checkFailed')}
                                 description={
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 4 }}>
                                         <span>{updateResult.errorMessage}</span>
                                         <Space size={8}>
                                             <Button size="small" onClick={handleCheckUpdates}>
-                                                重试
+                                                {t('settings:about.retry')}
                                             </Button>
                                             <Button size="small" type="link" onClick={() => openUrl(updateResult.repoUrl)}>
-                                                直接访问 GitHub 仓库
+                                                {t('settings:about.visitRepo')}
                                             </Button>
                                         </Space>
                                     </div>
@@ -142,12 +144,12 @@ export default function AboutTab() {
                                 <div className={ab.updateCardHead}>
                                     <div className={ab.updateTitle}>
                                         <Sparkles size={16} style={{ color: 'var(--accent)' }} />
-                                        发现新版本: {updateResult.latestVersion}
+                                        {t('settings:about.foundNewVersion', { version: updateResult.latestVersion })}
                                     </div>
-                                    <Tag color="processing">有可用更新</Tag>
+                                    <Tag color="processing">{t('settings:about.availableUpdate')}</Tag>
                                 </div>
                                 <div className={ab.updateDesc}>
-                                    检测到远端已发布新的 Release 版本（当前版本: {versionInfo.version}）。建议下载升级以体验最新特性与体验修复。
+                                    {t('settings:about.newVersionDesc', { current: versionInfo.version })}
                                 </div>
                                 <div className={ab.updateBtns}>
                                     <Button
@@ -156,14 +158,14 @@ export default function AboutTab() {
                                         icon={<ArrowUpRight size={13} />}
                                         onClick={() => openUrl(updateResult.releaseUrl)}
                                     >
-                                        前往 GitHub 查看 / 下载
+                                        {t('settings:about.viewDownload')}
                                     </Button>
                                     <Button
                                         size="small"
                                         icon={<Copy size={13} />}
                                         onClick={() => copyUrl(updateResult.releaseUrl)}
                                     >
-                                        复制链接
+                                        {t('settings:about.copyLink')}
                                     </Button>
                                 </div>
                             </div>
@@ -172,10 +174,10 @@ export default function AboutTab() {
                                 type="success"
                                 showIcon
                                 icon={<CheckCircle2 size={15} style={{ color: 'var(--ok)' }} />}
-                                title={`当前已是最新版本 (${versionInfo.version})`}
+                                title={`${t('settings:about.alreadyLatest')} (${versionInfo.version})`}
                                 description={
                                     <span style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>
-                                        检查时间: {updateResult.checkedAt}
+                                        {t('settings:about.checkTime', { time: updateResult.checkedAt })}
                                     </span>
                                 }
                                 style={{ width: '100%', textAlign: 'left' }}
@@ -188,10 +190,10 @@ export default function AboutTab() {
             {/* System / Repo Footer Info */}
             <div className={ab.sysInfoBox}>
                 <div>
-                    运行驱动: {versionInfo.goVersion || 'Go 1.27'} / Wails v3 Framework
+                    {t('settings:about.runtimeEngine', { go: versionInfo.goVersion || 'Go 1.27' })}
                 </div>
                 <div>
-                    开源仓库:{' '}
+                    {t('settings:about.openSourceRepo')}{' '}
                     <a
                         href="https://github.com/x86cloud/terminals"
                         onClick={(e) => {

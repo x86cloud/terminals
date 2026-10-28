@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Modal, Button, Tag, Spin, Space, App } from 'antd'
+import { useTranslation } from 'react-i18next'
 import { FileText, Save } from 'lucide-react'
 import CodeEditor, { LangKey } from '@/components/CodeEditor'
 import { API } from '@/api'
@@ -14,6 +15,7 @@ interface Props {
 }
 
 export default function FileEditorModal({ open, sessionId, filePath, onClose }: Props) {
+    const { t } = useTranslation(['file', 'common'])
     const { message } = App.useApp()
     const [content, setContent] = useState('')
     const [originalContent, setOriginalContent] = useState('')
@@ -32,7 +34,7 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose }: 
             })
             .catch((err) => {
                 if (!mounted) return
-                message.error(`读取文件失败: ${errorMessage(err)}`)
+                message.error(t('file:editor.readFileFailed', { error: errorMessage(err) }))
                 onClose()
             })
             .finally(() => {
@@ -41,7 +43,7 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose }: 
         return () => {
             mounted = false
         }
-    }, [open, sessionId, filePath, onClose])
+    }, [open, sessionId, filePath, onClose, t, message])
 
     const isModified = content !== originalContent
 
@@ -51,13 +53,13 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose }: 
         try {
             await API.writeRemoteFile(sessionId, filePath, content)
             setOriginalContent(content)
-            message.success(`已保存文件 ${filePath.split('/').pop()}`)
+            message.success(t('file:editor.savedFile', { name: filePath.split('/').pop() }))
         } catch (err) {
-            message.error(`保存文件失败: ${errorMessage(err)}`)
+            message.error(t('file:editor.saveFileFailed', { error: errorMessage(err) }))
         } finally {
             setSaving(false)
         }
-    }, [open, sessionId, filePath, content, saving])
+    }, [open, sessionId, filePath, content, saving, t, message])
 
     const fileName = filePath.split('/').pop() || filePath
     const lang: LangKey = fileName.endsWith('.json') ? 'json' : 'plain'
@@ -75,12 +77,12 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose }: 
                     <span className={m.filePath}>
                         ({filePath})
                     </span>
-                    {isModified && <Tag color="warning">已修改</Tag>}
+                    {isModified && <Tag color="warning">{t('file:editor.modified')}</Tag>}
                 </div>
             }
             footer={
                 <Space style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <Button onClick={onClose}>关闭</Button>
+                    <Button onClick={onClose}>{t('common:close')}</Button>
                     <Button
                         type="primary"
                         icon={<Save size={13} />}
@@ -88,7 +90,7 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose }: 
                         disabled={saving || !isModified}
                         onClick={handleSave}
                     >
-                        保存
+                        {t('common:save')}
                     </Button>
                 </Space>
             }
@@ -96,7 +98,7 @@ export default function FileEditorModal({ open, sessionId, filePath, onClose }: 
             <div className={m.editorContainer}>
                 {loading ? (
                     <div className={m.loadingBox}>
-                        <Spin tip="正在读取远程文件内容..." />
+                        <Spin tip={t('file:editor.readingRemote')} />
                     </div>
                 ) : (
                     <CodeEditor

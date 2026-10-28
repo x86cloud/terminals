@@ -1,5 +1,6 @@
 import { Modal, Input, Switch, Alert } from 'antd'
 import CodeEditor from '@/components/CodeEditor'
+import { useTranslation } from 'react-i18next'
 
 export type ObjModalKind = 'createdb' | 'createtable' | 'dropdb' | 'droptable' | 'truncate' | 'createindex' | 'dropindex'
 
@@ -19,9 +20,15 @@ export default function ObjModal(props: {
     onConfirm: () => void
 }) {
     const { kind, db, placeholder, busy, msg, name, extra, unique = false, onName, onExtra, onUnique, onClose, onConfirm } = props
+    const { t } = useTranslation(['db', 'common'])
     const titleMap: Record<string, string> = {
-        createdb: '新建数据库', dropdb: '删除数据库', createtable: db ? `在 ${db} 中新建表` : '新建表',
-        droptable: '删除表', truncate: '清空表数据', createindex: '新建索引', dropindex: '删除索引',
+        createdb: t('db:objModal.createdb'),
+        dropdb: t('db:objModal.dropdb'),
+        createtable: db ? t('db:objModal.createtableIn', { db }) : t('db:objModal.createtable'),
+        droptable: t('db:objModal.droptable'),
+        truncate: t('db:objModal.truncate'),
+        createindex: t('db:objModal.createindex'),
+        dropindex: t('db:objModal.dropindex'),
     }
     const needName = !['truncate', 'dropindex'].includes(kind)
     const needDef = kind === 'createtable'
@@ -34,19 +41,19 @@ export default function ObjModal(props: {
         <Modal
             closable={false}
             open={true}
-            title={titleMap[kind] || '数据库操作'}
+            title={titleMap[kind] || t('db:objModal.defaultTitle')}
             onCancel={() => !busy && onClose()}
             onOk={onConfirm}
             confirmLoading={busy}
-            okText={needConfirm ? '确认执行' : '确定'}
-            cancelText="取消"
+            okText={needConfirm ? t('db:objModal.confirmExecute') : t('common:confirm')}
+            cancelText={t('common:cancel')}
             okButtonProps={{ danger: needConfirm, disabled: isConfirmDisabled }}
             width={kind === 'createtable' ? 620 : 480}
         >
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>
                 {msg && (
                     <Alert
-                        type={msg.startsWith('失败') ? 'error' : 'success'}
+                        type={msg.includes('失败') || msg.toLowerCase().includes('fail') || msg.toLowerCase().includes('error') ? 'error' : 'success'}
                         showIcon
                         message={msg}
                     />
@@ -56,22 +63,22 @@ export default function ObjModal(props: {
                     <div style={{ fontSize: 13 }}>
                         {kind === 'dropindex' && (
                             <p style={{ margin: 0, color: 'var(--text-color)' }}>
-                                确定要删除索引 <strong>{name}</strong> 吗？此操作不可撤销。
+                                {t('db:objModal.dropIndexConfirm', { name })}
                             </p>
                         )}
                         {kind === 'dropdb' && (
                             <p style={{ margin: 0, color: '#ef4444' }}>
-                                确定要删除数据库 <strong>{name}</strong> 吗？库中所有数据将被永久删除。
+                                {t('db:objModal.dropDbConfirm', { name })}
                             </p>
                         )}
                         {kind === 'droptable' && (
                             <p style={{ margin: 0, color: '#ef4444' }}>
-                                确定要删除表 <strong>{name}</strong> 吗？表中所有数据将被永久删除。
+                                {t('db:objModal.dropTableConfirm', { name })}
                             </p>
                         )}
                         {kind === 'truncate' && (
                             <p style={{ margin: 0, color: '#ef4444' }}>
-                                确定要清空表 <strong>{name}</strong> 的全部数据吗？此操作不可撤销。
+                                {t('db:objModal.truncateConfirm', { name })}
                             </p>
                         )}
                     </div>
@@ -80,12 +87,12 @@ export default function ObjModal(props: {
                 {needName && (
                     <div>
                         <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                            {kind === 'createindex' ? '索引名称' : kind === 'createdb' ? '数据库名' : '表名'}
+                            {kind === 'createindex' ? t('db:objModal.indexName') : kind === 'createdb' ? t('db:objModal.dbName') : t('db:objModal.tableName')}
                         </label>
                         <Input
                             value={name}
                             onChange={(e) => onName(e.target.value)}
-                            placeholder={kind === 'createdb' ? '例如 app_db' : '例如 users'}
+                            placeholder={kind === 'createdb' ? 'app_db' : 'users'}
                         />
                     </div>
                 )}
@@ -93,7 +100,7 @@ export default function ObjModal(props: {
                 {needDef && (
                     <div>
                         <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                            列定义（SQL）
+                            {t('db:objModal.colDef')}
                         </label>
                         <div style={{ border: '1px solid var(--border, #d4dbe6)', borderRadius: '6px', overflow: 'hidden' }}>
                             <CodeEditor
@@ -113,7 +120,7 @@ export default function ObjModal(props: {
                     <>
                         <div>
                             <label style={{ fontSize: 12, color: 'var(--text-dim)', marginBottom: 6, display: 'block' }}>
-                                索引列（逗号分隔）
+                                {t('db:objModal.indexCols')}
                             </label>
                             <Input
                                 value={extra}
@@ -122,7 +129,7 @@ export default function ObjModal(props: {
                             />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 12 }}>唯一索引 (UNIQUE)</span>
+                            <span style={{ fontSize: 12 }}>{t('db:objModal.uniqueIndex')}</span>
                             <Switch checked={unique} onChange={(checked) => onUnique?.(checked)} />
                         </div>
                     </>

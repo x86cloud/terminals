@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import i18n from 'i18next'
 import { API, subscribe } from '@/api'
 import {
     AiMessage,
@@ -88,7 +89,7 @@ export function useAgentEvents({
                         steps.push({
                             id: `think_${Date.now()}_${steps.length}`,
                             type: 'think',
-                            title: hasTools ? '继续思考与推演' : '深度思考过程',
+                            title: hasTools ? i18n.t('agent:events.continueThinking', { defaultValue: '继续思考与推演' }) : i18n.t('agent:events.deepThinking', { defaultValue: '深度思考过程' }),
                             content: reasoningToFlush,
                             status: 'running',
                             timestamp: Date.now(),
@@ -212,7 +213,7 @@ export function useAgentEvents({
                         event.payload?.tool_name ||
                         event.payload?.toolName ||
                         event.payload?.name ||
-                        '工具执行'
+                        i18n.t('agent:events.toolExec', { defaultValue: '工具执行' })
                     const startDetail = event.payload?.detail || ''
                     appendOrUpdateAssistant((last) => {
                         const steps = [...(last.process_steps || [])]
@@ -234,7 +235,7 @@ export function useAgentEvents({
                                 id: startCallId || `tool_${Date.now()}_${steps.length}`,
                                 type: 'tool',
                                 title: startToolName,
-                                summary: startDetail || `正在调用工具 [${startToolName}]...`,
+                                summary: startDetail || i18n.t('agent:events.callingTool', { name: startToolName, defaultValue: `正在调用工具 [${startToolName}]...` }),
                                 content: '',
                                 status: 'running',
                                 timestamp: Date.now(),
@@ -254,7 +255,7 @@ export function useAgentEvents({
                         event.payload?.tool_name ||
                         event.payload?.name ||
                         event.payload?.toolName ||
-                        '工具执行'
+                        i18n.t('agent:events.toolExec', { defaultValue: '工具执行' })
                     const toolInput =
                         event.payload?.input ||
                         event.payload?.args ||
@@ -275,7 +276,7 @@ export function useAgentEvents({
                             targetIdx = steps.findIndex((s) => s.id === callId)
                         }
                         // 2. Match active running tool step
-                        if (targetIdx < 0 && toolName && toolName !== '工具执行') {
+                        if (targetIdx < 0 && toolName && toolName !== '工具执行' && toolName !== i18n.t('agent:events.toolExec', { defaultValue: '工具执行' })) {
                             targetIdx = steps.findIndex(
                                 (s) =>
                                     s.type === 'tool' &&
@@ -289,7 +290,7 @@ export function useAgentEvents({
                             )
                         }
                         // 3. Fallback: match last tool step of same toolName
-                        if (targetIdx < 0 && toolName && toolName !== '工具执行') {
+                        if (targetIdx < 0 && toolName && toolName !== '工具执行' && toolName !== i18n.t('agent:events.toolExec', { defaultValue: '工具执行' })) {
                             for (let i = steps.length - 1; i >= 0; i--) {
                                 if (steps[i].type === 'tool' && (steps[i].title === toolName || steps[i].title?.includes(toolName))) {
                                     targetIdx = i
@@ -308,13 +309,13 @@ export function useAgentEvents({
                                 ...oldStep,
                                 id: callId || oldStep.id,
                                 title:
-                                    toolName && toolName !== '工具执行'
+                                    toolName && toolName !== '工具执行' && toolName !== i18n.t('agent:events.toolExec', { defaultValue: '工具执行' })
                                         ? toolName
                                         : oldStep.title,
                                 summary:
                                     toolInput ||
-                                    (oldStep.summary?.startsWith('正在调用') || oldStep.summary?.startsWith('已授权')
-                                        ? '指令执行完成'
+                                    (oldStep.summary?.startsWith('正在调用') || oldStep.summary?.startsWith('Calling') || oldStep.summary?.startsWith('已授权')
+                                        ? i18n.t('agent:events.commandCompleted', { defaultValue: '指令执行完成' })
                                         : oldStep.summary),
                                 content: toolOutput,
                                 duration_ms: computedDuration || oldStep.duration_ms,
@@ -325,7 +326,7 @@ export function useAgentEvents({
                                 id: callId || `tool_${Date.now()}_${steps.length}`,
                                 type: 'tool',
                                 title: toolName,
-                                summary: toolInput || '指令执行完成',
+                                summary: toolInput || i18n.t('agent:events.commandCompleted', { defaultValue: '指令执行完成' }),
                                 content: toolOutput,
                                 duration_ms: durationMs,
                                 status: 'completed',
@@ -357,10 +358,10 @@ export function useAgentEvents({
                         if (existingIdx >= 0) {
                             steps[existingIdx] = {
                                 ...steps[existingIdx],
-                                title: '交互询问 (ask_user)',
+                                title: i18n.t('agent:events.interactiveAsk', { defaultValue: '交互询问 (ask_user)' }),
                                 summary: event.payload?.question || steps[existingIdx].summary,
                                 content: event.payload?.options
-                                    ? `预设选项: ${event.payload.options.join(', ')}`
+                                    ? i18n.t('agent:askUser.presetOptions', { options: event.payload.options.join(', '), defaultValue: `预设选项: ${event.payload.options.join(', ')}` })
                                     : '',
                                 status: 'running',
                             }
@@ -368,10 +369,10 @@ export function useAgentEvents({
                             steps.push({
                                 id: askId,
                                 type: 'tool',
-                                title: '交互询问 (ask_user)',
-                                summary: event.payload?.question || '等待用户答复...',
+                                title: i18n.t('agent:events.interactiveAsk', { defaultValue: '交互询问 (ask_user)' }),
+                                summary: event.payload?.question || i18n.t('agent:askUser.waitingReply', { defaultValue: '等待用户答复...' }),
                                 content: event.payload?.options
-                                    ? `预设选项: ${event.payload.options.join(', ')}`
+                                    ? i18n.t('agent:askUser.presetOptions', { options: event.payload.options.join(', '), defaultValue: `预设选项: ${event.payload.options.join(', ')}` })
                                     : '',
                                 status: 'running',
                                 timestamp: Date.now(),
@@ -474,9 +475,13 @@ export function useAgentEvents({
                     const doneContent = event.payload?.content || ''
                     const isPlanReport =
                         doneContent.includes('### 🎯 规划执行完成') ||
+                        doneContent.includes('Plan execution completed') ||
                         doneContent.includes('全部规划步骤执行完成') ||
+                        doneContent.includes('All plan steps completed') ||
                         doneContent.includes('执行过程中断') ||
-                        doneContent.includes('规划已被用户手动停止')
+                        doneContent.includes('Execution interrupted') ||
+                        doneContent.includes('规划已被用户手动停止') ||
+                        doneContent.includes('Plan stopped by user')
 
                     let finalMessagesToSave: AiMessage[] | null = null
                     setMessages((curr) => {
@@ -527,7 +532,7 @@ export function useAgentEvents({
                             !newContent &&
                             (event.payload?.reasoning_content || last.reasoning_content)
                         ) {
-                            newContent = '已完成深度推演与相关操作。'
+                            newContent = i18n.t('agent:composer.deepCompleted', { defaultValue: '已完成深度推演与相关操作。' })
                         }
                         const newReasoning =
                             event.payload?.reasoning_content || last.reasoning_content
@@ -557,10 +562,10 @@ export function useAgentEvents({
                     setPendingHitl(null)
                     setPendingAsk(null)
                     const errPayload = String(event.payload || '')
-                    setNoticeText(`❌ 出错: ${errPayload}`)
+                    setNoticeText(i18n.t('agent:events.errorNotice', { error: errPayload, defaultValue: `❌ 出错: ${errPayload}` }))
                     appendOrUpdateAssistant((last) => ({
                         ...last,
-                        content: last.content || `⚠️ 执行遇到错误: ${errPayload}`,
+                        content: last.content || i18n.t('agent:events.execError', { error: errPayload, defaultValue: `⚠️ 执行遇到错误: ${errPayload}` }),
                         process_steps: last.process_steps
                             ? last.process_steps.map((st) =>
                                   st.status === 'running' ? { ...st, status: 'failed' } : st

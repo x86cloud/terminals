@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Card, Input, Slider, Switch, Select, Space, Typography, Tag, Button, Modal, Popconfirm, App } from 'antd'
 import { Bot, Server, Shield, Sparkles, Layers, FolderOpen, BookOpen, Eye, Plus, Edit2, Trash2, Check } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { AppSettings, AgentSkillItem, AiModelItem } from '@/types'
 import { API } from '@/api'
 import MarkdownViewer from '@/components/common/MarkdownViewer'
@@ -54,6 +55,7 @@ export default function AiAgentTab({
     aiSystemPrompt,
     onChange,
 }: Props) {
+    const { t } = useTranslation(['settings', 'common'])
     const { message } = App.useApp()
     const [skills, setSkills] = useState<AgentSkillItem[]>([])
     const [skillsLoading, setSkillsLoading] = useState(false)
@@ -64,7 +66,7 @@ export default function AiAgentTab({
     const currentModels: AiModelItem[] = (aiModels && aiModels.length > 0) ? aiModels : [
         {
             id: 'model_default',
-            name: aiModel || '默认模型',
+            name: aiModel || t('aiAgent.defaultModelName', '默认模型'),
             model: aiModel || 'deepseek-v4-flash',
             baseUrl: aiBaseUrl || 'https://api.deepseek.com',
             apiKey: aiApiKey || '',
@@ -86,7 +88,7 @@ export default function AiAgentTab({
 
     const handleDeleteModel = (id: string) => {
         if (currentModels.length <= 1) {
-            message.warning('至少需要保留一个模型配置')
+            message.warning(t('aiAgent.keepOneModelWarn', '至少需要保留一个模型配置'))
             return
         }
         const nextModels = currentModels.filter((m) => m.id !== id)
@@ -115,7 +117,7 @@ export default function AiAgentTab({
         }
 
         onChange(updates)
-        message.success('已删除模型')
+        message.success(t('aiAgent.modelDeleted', '已删除模型'))
     }
 
     const handleSaveModelItem = (item: AiModelItem) => {
@@ -148,7 +150,7 @@ export default function AiAgentTab({
                   }
                 : {}),
         })
-        message.success(existingIndex >= 0 ? '模型配置已更新' : '已添加新模型')
+        message.success(existingIndex >= 0 ? t('aiAgent.modelUpdated', { defaultValue: '模型配置已更新' }) : t('aiAgent.modelAdded', { defaultValue: '已添加新模型' }))
     }
 
     const loadSkills = async () => {
@@ -170,9 +172,9 @@ export default function AiAgentTab({
     const handleOpenSkillsDir = async () => {
         try {
             await API.agentOpenSkillsDir()
-            message.success('已打开本地技能目录')
+            message.success(t('aiAgent.skillsDirOpened', { defaultValue: '已打开本地技能目录' }))
         } catch (err: any) {
-            message.error(`打开技能目录失败: ${err?.message || err}`)
+            message.error(t('aiAgent.skillsDirOpenFailed', { error: err?.message || err, defaultValue: `打开技能目录失败: ${err?.message || err}` }))
         }
     }
 
@@ -183,10 +185,10 @@ export default function AiAgentTab({
             <div>
                 <div className={s.sectionTitle}>
                     <Bot size={18} />
-                    <span>AI 智能体设置</span>
+                    <span>{t('aiAgent.title', 'AI 智能体设置')}</span>
                 </div>
                 <div className={s.sectionDesc}>
-                    配置大模型 API 接入、多模型管理、上下文窗口、历史长文本压缩方式与安全管控。
+                    {t('aiAgent.desc', '配置大模型 API 接入、多模型管理、上下文窗口、历史长文本压缩方式与安全管控。')}
                 </div>
             </div>
 
@@ -196,7 +198,7 @@ export default function AiAgentTab({
                 title={
                     <Space size={8}>
                         <Server size={15} />
-                        <span>大模型接入管理</span>
+                        <span>{t('aiAgent.modelConfig', '大模型接入管理')}</span>
                     </Space>
                 }
                 extra={
@@ -206,7 +208,7 @@ export default function AiAgentTab({
                         icon={<Plus size={13} />}
                         onClick={handleAddModel}
                     >
-                        添加模型
+                        {t('aiAgent.addModel', '添加模型')}
                     </Button>
                 }
                 style={{ borderRadius: 8 }}
@@ -224,17 +226,17 @@ export default function AiAgentTab({
                                         <span className={s.modelName}>{item.name || item.model}</span>
                                         <Tag color="blue">{item.model}</Tag>
                                         <Tag color="cyan">
-                                            {Math.round((item.contextTokens || 65536) / 1024)}K 上下文
+                                            {Math.round((item.contextTokens || 65536) / 1024)}K {t('aiAgent.contextTokens', '上下文')}
                                         </Tag>
                                         {item.enableMultimodal && (
-                                            <Tag color="purple">多模态</Tag>
+                                            <Tag color="purple">{t('aiAgent.enableMultimodal', '多模态')}</Tag>
                                         )}
                                         {isActive ? (
                                             <Tag
                                                 color="success"
                                                 icon={<Check size={12} style={{ verticalAlign: -1, marginRight: 2 }} />}
                                             >
-                                                当前使用
+                                                {t('aiAgent.activeModel', '当前使用')}
                                             </Tag>
                                         ) : null}
                                     </div>
@@ -249,14 +251,14 @@ export default function AiAgentTab({
                                         icon={<Edit2 size={13} />}
                                         onClick={() => handleEditModel(item)}
                                     >
-                                        编辑
+                                        {t('common:edit', '编辑')}
                                     </Button>
                                     {currentModels.length > 1 && (
                                         <Popconfirm
-                                            title="确定删除此模型配置吗？"
-                                            description={isActive ? '该模型当前正在使用，删除后将自动切换为其他模型。' : undefined}
-                                            okText="确定"
-                                            cancelText="取消"
+                                            title={t('aiAgent.deleteModelConfirm', '确定删除此模型配置吗？')}
+                                            description={isActive ? t('aiAgent.deleteActiveModelDesc', '该模型当前正在使用，删除后将自动切换为其他模型。') : undefined}
+                                            okText={t('common:ok', '确定')}
+                                            cancelText={t('common:cancel', '取消')}
                                             okButtonProps={{ danger: true }}
                                             onConfirm={() => handleDeleteModel(item.id)}
                                         >
@@ -285,12 +287,13 @@ export default function AiAgentTab({
             />
 
             {/* 卡片 2：上下文与长文本管理 */}
+            {/* 卡片 2：上下文与长文本管理 */}
             <Card
                 size="small"
                 title={
                     <Space size={8}>
                         <Layers size={15} />
-                        <span>上下文与长文本管理</span>
+                        <span>{t('aiAgent.contextCardTitle', '上下文与长文本管理')}</span>
                     </Space>
                 }
                 style={{ borderRadius: 8 }}
@@ -298,11 +301,11 @@ export default function AiAgentTab({
                 <Space orientation="vertical" size={14} style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div style={{ flex: 1, marginRight: 16 }}>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>上下文压缩方式 (Compression Strategy)</div>
+                            <div style={{ fontSize: 13, fontWeight: 500 }}>{t('aiAgent.compressionStrategyTitle', '上下文压缩方式 (Compression Strategy)')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                {aiCompressionStrategy === 'summary' && '达到阈值时自动调用模型提炼早期历史关键摘要，保留核心记忆'}
-                                {aiCompressionStrategy === 'sliding' && '达到阈值时直接修剪丢弃最早的历史消息，保留最新的滑动窗口'}
-                                {aiCompressionStrategy === 'none' && '不执行任何历史修剪或摘要压缩，完整保留所有对话记录'}
+                                {aiCompressionStrategy === 'summary' && t('aiAgent.strategySummaryDesc', '达到阈值时自动调用模型提炼早期历史关键摘要，保留核心记忆')}
+                                {aiCompressionStrategy === 'sliding' && t('aiAgent.strategySlidingDesc', '达到阈值时直接修剪丢弃最早的历史消息，保留最新的滑动窗口')}
+                                {aiCompressionStrategy === 'none' && t('aiAgent.strategyNoneDesc', '不执行任何历史修剪或摘要压缩，完整保留所有对话记录')}
                             </Text>
                         </div>
                         <Select
@@ -310,9 +313,9 @@ export default function AiAgentTab({
                             value={aiCompressionStrategy}
                             onChange={(val) => onChange({ aiCompressionStrategy: val })}
                             options={[
-                                { label: 'AI 智能摘要 (推荐)', value: 'summary' },
-                                { label: '滑动窗口截断', value: 'sliding' },
-                                { label: '不压缩', value: 'none' },
+                                { label: t('aiAgent.strategySummaryOpt', 'AI 智能摘要 (推荐)'), value: 'summary' },
+                                { label: t('aiAgent.strategySlidingOpt', '滑动窗口截断'), value: 'sliding' },
+                                { label: t('aiAgent.strategyNoneOpt', '不压缩'), value: 'none' },
                             ]}
                         />
                     </div>
@@ -321,10 +324,15 @@ export default function AiAgentTab({
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <div style={{ flex: 1, marginRight: 16 }}>
                                 <div style={{ fontSize: 13, fontWeight: 500 }}>
-                                    压缩触发使用率阈值 ({aiContextCompressRatio}%)
+                                    {t('aiAgent.compressRatioTitle', { ratio: aiContextCompressRatio, defaultValue: `压缩触发使用率阈值 (${aiContextCompressRatio}%)` })}
                                 </div>
                                 <Text type="secondary" style={{ fontSize: 12 }}>
-                                    当前换算触发阈值：{aiModelContextTokens.toLocaleString()} × {aiContextCompressRatio}% ≈ {calculatedTriggerTokens.toLocaleString()} Tokens
+                                    {t('aiAgent.compressRatioDesc', {
+                                        tokens: aiModelContextTokens.toLocaleString(),
+                                        ratio: aiContextCompressRatio,
+                                        trigger: calculatedTriggerTokens.toLocaleString(),
+                                        defaultValue: `当前换算触发阈值：${aiModelContextTokens.toLocaleString()} × ${aiContextCompressRatio}% ≈ ${calculatedTriggerTokens.toLocaleString()} Tokens`
+                                    })}
                                 </Text>
                             </div>
                             <div style={{ width: 220, flexShrink: 0 }}>
@@ -347,7 +355,7 @@ export default function AiAgentTab({
                 title={
                     <Space size={8}>
                         <Shield size={15} />
-                        <span>权限管控与安全防御</span>
+                        <span>{t('aiAgent.securityCardTitle', '权限管控与安全防御')}</span>
                     </Space>
                 }
                 style={{ borderRadius: 8 }}
@@ -355,9 +363,9 @@ export default function AiAgentTab({
                 <Space orientation="vertical" size={14} style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 500, fontSize: 13 }}>权限防御开关 (Permission Guard)</div>
+                            <div style={{ fontWeight: 500, fontSize: 13 }}>{t('aiAgent.permissionGuardTitle', '权限防御开关 (Permission Guard)')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                针对高危运维命令进行二次确认弹窗
+                                {t('aiAgent.permissionGuardDesc', '针对高危运维命令进行二次确认弹窗')}
                             </Text>
                         </div>
                         <Switch
@@ -368,9 +376,9 @@ export default function AiAgentTab({
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 500, fontSize: 13 }}>自动拦截破坏性指令 (Block Destructive Commands)</div>
+                            <div style={{ fontWeight: 500, fontSize: 13 }}>{t('aiAgent.blockHighRiskTitle', '自动拦截破坏性指令 (Block Destructive Commands)')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                严格拦截 rm -rf /、mkfs、dd 等危险系统指令
+                                {t('aiAgent.blockHighRiskDesc', '严格拦截 rm -rf /、mkfs、dd 等危险系统指令')}
                             </Text>
                         </div>
                         <Switch
@@ -387,7 +395,7 @@ export default function AiAgentTab({
                 title={
                     <Space size={8}>
                         <Sparkles size={15} />
-                        <span>高级特性与思考推理</span>
+                        <span>{t('aiAgent.advancedCardTitle', '高级特性与思考推理')}</span>
                     </Space>
                 }
                 style={{ borderRadius: 8 }}
@@ -395,9 +403,9 @@ export default function AiAgentTab({
                 <Space orientation="vertical" size={14} style={{ width: '100%' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 500, fontSize: 13 }}>启用模型思考过程 (Thinking / Reasoning)</div>
+                            <div style={{ fontWeight: 500, fontSize: 13 }}>{t('aiAgent.thinkingTitle', '启用模型思考过程 (Thinking / Reasoning)')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                展示模型的逐步推导与内心独白
+                                {t('aiAgent.thinkingDesc', '展示模型的逐步推导与内心独白')}
                             </Text>
                         </div>
                         <Switch
@@ -408,9 +416,9 @@ export default function AiAgentTab({
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 500, fontSize: 13 }}>网络搜索支持 (Web Search)</div>
+                            <div style={{ fontWeight: 500, fontSize: 13 }}>{t('aiAgent.searchTitle', '网络搜索支持 (Web Search)')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                允许智能体联网检索实时开发者技术文档
+                                {t('aiAgent.searchDesc', '允许智能体联网检索实时开发者技术文档')}
                             </Text>
                         </div>
                         <Switch
@@ -421,9 +429,9 @@ export default function AiAgentTab({
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                            <div style={{ fontWeight: 500, fontSize: 13 }}>推理深度 (Reasoning Effort)</div>
+                            <div style={{ fontWeight: 500, fontSize: 13 }}>{t('aiAgent.reasoningTitle', '推理深度 (Reasoning Effort)')}</div>
                             <Text type="secondary" style={{ fontSize: 12 }}>
-                                控制推理模型的推演思考层级
+                                {t('aiAgent.reasoningDesc', '控制推理模型的推演思考层级')}
                             </Text>
                         </div>
                         <Select
@@ -431,10 +439,10 @@ export default function AiAgentTab({
                             value={aiReasoningEffort}
                             onChange={(val) => onChange({ aiReasoningEffort: val })}
                             options={[
-                                { label: '未指定 / 关闭 (none)', value: 'none' },
-                                { label: '低 (low)', value: 'low' },
-                                { label: '中 (medium)', value: 'medium' },
-                                { label: '高 (high)', value: 'high' },
+                                { label: t('aiAgent.effortNone', { defaultValue: '未指定 / 关闭 (none)' }), value: 'none' },
+                                { label: t('aiAgent.effortLow', { defaultValue: '低 (low)' }), value: 'low' },
+                                { label: t('aiAgent.effortMedium', { defaultValue: '中 (medium)' }), value: 'medium' },
+                                { label: t('aiAgent.effortHigh', { defaultValue: '高 (high)' }), value: 'high' },
                             ]}
                         />
                     </div>
@@ -447,7 +455,7 @@ export default function AiAgentTab({
                 title={
                     <Space size={8}>
                         <Bot size={15} />
-                        <span>默认系统角色提示词 (System Prompt)</span>
+                        <span>{t('aiAgent.promptCardTitle', '默认系统角色提示词 (System Prompt)')}</span>
                     </Space>
                 }
                 style={{ borderRadius: 8 }}
@@ -456,7 +464,7 @@ export default function AiAgentTab({
                     autoSize={{ minRows: 6, maxRows: 6 }}
                     value={aiSystemPrompt}
                     onChange={(e) => onChange({ aiSystemPrompt: e.target.value })}
-                    placeholder="请输入系统提示词..."
+                    placeholder={t('aiAgent.promptPlaceholder', '请输入系统提示词...')}
                 />
             </Card>
 
@@ -467,8 +475,10 @@ export default function AiAgentTab({
                 title={
                     <Space size={8}>
                         <BookOpen size={15} />
-                        <span>SOP 技能包 (Skills)</span>
-                        <Tag color="blue" style={{ fontSize: 11 }}>已发现 {skills.length} 个</Tag>
+                        <span>{t('aiAgent.skillsCardTitle', 'SOP 技能包 (Skills)')}</span>
+                        <Tag color="blue" style={{ fontSize: 11 }}>
+                            {t('aiAgent.skillsFound', { count: skills.length, defaultValue: `已发现 ${skills.length} 个` })}
+                        </Tag>
                     </Space>
                 }
                 extra={
@@ -477,20 +487,20 @@ export default function AiAgentTab({
                         icon={<FolderOpen size={13} />}
                         onClick={handleOpenSkillsDir}
                     >
-                        打开技能目录
+                        {t('aiAgent.openSkillsDir', '打开技能目录')}
                     </Button>
                 }
                 style={{ borderRadius: 8 }}
             >
                 <div style={{ marginBottom: 10, fontSize: 12, color: 'var(--text-dim, #8c8c8c)' }}>
-                    技能包为 Agent 提供标准操作流程 (SOP)。放置于技能目录下的每个子文件夹中包含 <code>SKILL.md</code> 即可被自动发现并按需加载。
+                    {t('aiAgent.skillsDesc', '技能包为 Agent 提供标准操作流程 (SOP)。放置于技能目录下的每个子文件夹中包含 SKILL.md 即可被自动发现并按需加载。')}
                 </div>
 
                 {skills.length === 0 ? (
                     <div className={s.emptySkills}>
-                        <div>暂未检测到本地技能包</div>
+                        <div>{t('aiAgent.noSkills', '暂未检测到本地技能包')}</div>
                         <Button size="small" type="link" onClick={handleOpenSkillsDir}>
-                            打开技能目录并添加技能
+                            {t('aiAgent.openSkillsAndAdd', '打开技能目录并添加技能')}
                         </Button>
                     </div>
                 ) : (
@@ -507,17 +517,17 @@ export default function AiAgentTab({
                                         <Tag color="cyan" style={{ fontSize: 10, margin: 0 }}>SOP</Tag>
                                     </div>
                                     <div className={s.skillDesc}>
-                                        {sk.description || '暂无描述'}
+                                        {sk.description || t('aiAgent.noDesc', { defaultValue: '暂无描述' })}
                                     </div>
                                 </div>
                                 <div className={s.skillFooter}>
                                     <Space size={4} wrap style={{ maxWidth: '75%' }}>
                                         {sk.tools && sk.tools.length > 0 ? (
-                                            sk.tools.slice(0, 3).map((t) => (
-                                                <Tag key={t} style={{ fontSize: 10, margin: 0 }}>{t}</Tag>
+                                            sk.tools.slice(0, 3).map((tl) => (
+                                                <Tag key={tl} style={{ fontSize: 10, margin: 0 }}>{tl}</Tag>
                                             ))
                                         ) : (
-                                            <span style={{ fontSize: 11, color: '#999' }}>通用</span>
+                                            <span style={{ fontSize: 11, color: '#999' }}>{t('aiAgent.generalSkill', '通用')}</span>
                                         )}
                                         {sk.tools && sk.tools.length > 3 && (
                                             <span style={{ fontSize: 10, color: '#999' }}>+{sk.tools.length - 3}</span>
@@ -533,7 +543,7 @@ export default function AiAgentTab({
                                             setSelectedSkill(sk)
                                         }}
                                     >
-                                        详情
+                                        {t('aiAgent.skillDetail', '详情')}
                                     </Button>
                                 </div>
                             </div>
@@ -548,16 +558,16 @@ export default function AiAgentTab({
                 title={
                     <Space size={8}>
                         <BookOpen size={16} />
-                        <span>技能详情: {selectedSkill?.name}</span>
+                        <span>{t('aiAgent.skillModalTitle', { name: selectedSkill?.name, defaultValue: `技能详情: ${selectedSkill?.name}` })}</span>
                     </Space>
                 }
                 width={680}
                 footer={[
                     <Button key="dir" icon={<FolderOpen size={13} />} onClick={handleOpenSkillsDir}>
-                        打开技能目录
+                        {t('aiAgent.openSkillsDir', '打开技能目录')}
                     </Button>,
                     <Button key="close" type="primary" onClick={() => setSelectedSkill(null)}>
-                        关闭
+                        {t('common:close', '关闭')}
                     </Button>,
                 ]}
                 onCancel={() => setSelectedSkill(null)}
@@ -565,32 +575,32 @@ export default function AiAgentTab({
                 {selectedSkill && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '60vh', overflowY: 'auto' }}>
                         <div>
-                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>描述</div>
+                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{t('aiAgent.skillDescription', '描述')}</div>
                             <div style={{ fontSize: 12, color: 'var(--text-dim, #8c8c8c)' }}>
-                                {selectedSkill.description || '无'}
+                                {selectedSkill.description || t('aiAgent.none', { defaultValue: '无' })}
                             </div>
                         </div>
 
                         {selectedSkill.tools && selectedSkill.tools.length > 0 && (
                             <div>
-                                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>关联工具</div>
+                                <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{t('aiAgent.skillTools', '关联工具')}</div>
                                 <Space size={6} wrap>
-                                    {selectedSkill.tools.map((t) => (
-                                        <Tag key={t} color="blue">{t}</Tag>
+                                    {selectedSkill.tools.map((tl) => (
+                                        <Tag key={tl} color="blue">{tl}</Tag>
                                     ))}
                                 </Space>
                             </div>
                         )}
 
                         <div>
-                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>操作指南与指令 (SKILL.md)</div>
+                            <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>{t('aiAgent.skillGuide', '操作指南与指令 (SKILL.md)')}</div>
                             <div style={{
                                 padding: 12,
                                 background: 'var(--bg-1, #fafafa)',
                                 border: '1px solid var(--border, #f0f0f0)',
                                 borderRadius: 6,
                             }}>
-                                <MarkdownViewer content={selectedSkill.instructions || '*(无指令内容)*'} />
+                                <MarkdownViewer content={selectedSkill.instructions || t('aiAgent.noInstructions', { defaultValue: '*(无指令内容)*' })} />
                             </div>
                         </div>
                     </div>

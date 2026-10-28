@@ -25,6 +25,7 @@ import {
     Download,
     Plus,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import K8sResourceYamlModal from './K8sResourceYamlModal'
 import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
@@ -39,6 +40,7 @@ interface Props {
 }
 
 export default function PodsTab({ serverId, currentNamespace, initialSearchKw }: Props) {
+    const { t } = useTranslation(['k8s', 'common', 'docker'])
     const { message } = App.useApp()
     const [pods, setPods] = useState<K8sPodInfo[]>([])
     const [loading, setLoading] = useState(false)
@@ -92,11 +94,11 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             const list = await API.k8sListPods(serverId, currentNamespace)
             setPods(list || [])
         } catch (err: unknown) {
-            message.error(`获取 Pod 列表失败: ${errorMessage(err)}`)
+            message.error(t('pods.fetchFail', { defaultValue: '获取 Pod 列表失败: {{error}}', error: errorMessage(err) }))
         } finally {
             setLoading(false)
         }
-    }, [serverId, currentNamespace])
+    }, [serverId, currentNamespace, t])
 
     useEffect(() => {
         let active = true
@@ -106,7 +108,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                 if (active) setPods(list || [])
             })
             .catch((err: unknown) => {
-                if (active) message.error(`获取 Pod 列表失败: ${errorMessage(err)}`)
+                if (active) message.error(t('pods.fetchFail', { defaultValue: '获取 Pod 列表失败: {{error}}', error: errorMessage(err) }))
             })
             .finally(() => {
                 if (active) setLoading(false)
@@ -114,7 +116,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
         return () => {
             active = false
         }
-    }, [serverId, currentNamespace])
+    }, [serverId, currentNamespace, t])
 
     const fetchLogs = async (pod: K8sPodInfo, container?: string) => {
         setLogsLoading(true)
@@ -128,10 +130,10 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                 logsTail,
                 logsTimestamps
             )
-            setLogsContent(text || '（暂无容器日志输出）')
+            setLogsContent(text || t('docker.containers.noLogs', { defaultValue: '（暂无容器日志输出）' }))
         } catch (err: any) {
-            message.error(`获取日志失败: ${err.message || String(err)}`)
-            setLogsContent(`错误: ${err.message || String(err)}`)
+            message.error(t('pods.fetchLogsFail', { defaultValue: '获取日志失败: {{error}}', error: err.message || String(err) }))
+            setLogsContent(`${t('common.error', { defaultValue: '错误' })}: ${err.message || String(err)}`)
         } finally {
             setLogsLoading(false)
         }
@@ -162,7 +164,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             await API.k8sDeletePod(serverId, pod.namespace, pod.name)
             fetchPods()
         } catch (err: any) {
-            message.error(`删除 Pod 失败: ${err.message || String(err)}`)
+            message.error(t('pods.deleteFail', { defaultValue: '删除 Pod 失败: {{error}}', error: err.message || String(err) }))
         }
     }
 
@@ -184,17 +186,17 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
 
     const columns: ColumnsType<K8sPodInfo> = [
         {
-            title: 'Pod 名称',
+            title: t('pods.colPodName', { defaultValue: 'Pod 名称' }),
             dataIndex: 'name',
             key: 'name',
-            render: (name: string, record) => (
+            render: (name: string) => (
                 <Space size={8}>
                     <Box size={15} color="var(--accent)" />
                     <div>
                         <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text)' }}>
                             {name}
                         </span>
-                        <Tooltip title="复制 Pod 名称">
+                        <Tooltip title={t('pods.copyPodName', { defaultValue: '复制 Pod 名称' })}>
                             <Button
                                 size="small"
                                 type="text"
@@ -202,7 +204,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                 style={{ marginLeft: 4 }}
                                 onClick={async () => {
                                     if (await copyText(name)) {
-                                        message.success('已复制 Pod 名称')
+                                        message.success(t('pods.copiedPodName', { defaultValue: '已复制 Pod 名称' }))
                                     }
                                 }}
                             />
@@ -212,14 +214,14 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             ),
         },
         {
-            title: '命名空间',
+            title: t('pods.colNamespace', { defaultValue: '命名空间' }),
             dataIndex: 'namespace',
             key: 'namespace',
             width: 140,
             render: (ns: string) => <Tag color="blue">{ns}</Tag>,
         },
         {
-            title: '状态 (Status)',
+            title: t('pods.colStatus', { defaultValue: '状态 (Status)' }),
             dataIndex: 'status',
             key: 'status',
             width: 150,
@@ -243,14 +245,14 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             },
         },
         {
-            title: '就绪容器',
+            title: t('pods.colReady', { defaultValue: '就绪容器' }),
             dataIndex: 'ready',
             key: 'ready',
             width: 100,
             render: (ready: string) => <span className={s.monoText}>{ready}</span>,
         },
         {
-            title: '重启次数',
+            title: t('pods.colRestarts', { defaultValue: '重启次数' }),
             dataIndex: 'restarts',
             key: 'restarts',
             width: 100,
@@ -264,14 +266,14 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             ),
         },
         {
-            title: 'Pod IP',
+            title: t('pods.ip', { defaultValue: 'IP 地址' }),
             dataIndex: 'ip',
             key: 'ip',
             width: 130,
             render: (ip: string) => <span className={s.monoText}>{ip || '-'}</span>,
         },
         {
-            title: '运行主机',
+            title: t('pods.colHost', { defaultValue: '运行主机' }),
             dataIndex: 'nodeName',
             key: 'nodeName',
             width: 160,
@@ -289,7 +291,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             ),
         },
         {
-            title: '存活时间',
+            title: t('pods.colAge', { defaultValue: '存活时间' }),
             dataIndex: 'age',
             key: 'age',
             width: 100,
@@ -300,7 +302,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             ),
         },
         {
-            title: '操作',
+            title: t('pods.colActions', { defaultValue: '操作' }),
             key: 'actions',
             width: 250,
             align: 'right',
@@ -311,20 +313,20 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         icon={<FileText size={12} />}
                         onClick={() => openLogsDrawer(record)}
                     >
-                        日志
+                        {t('pods.logsBtn', { defaultValue: '日志' })}
                     </Button>
                     <Button
                         size="small"
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml(record)}
                     >
-                        编辑
+                        {t('common.edit', { defaultValue: '编辑' })}
                     </Button>
                     <Popconfirm
-                        title={`确定删除 Pod [${record.name}] 吗？`}
-                        description={`所属命名空间: ${record.namespace}。如果是控制器管理的 Pod，集群将自动创建新 Pod 替代。`}
-                        okText="确认删除"
-                        cancelText="取消"
+                        title={t('pods.deleteConfirm', { defaultValue: '确定删除 Pod [{{name}}] 吗？', name: record.name })}
+                        description={t('pods.deleteDesc', { defaultValue: '删除后，如果该 Pod 由 Deployment 或 DaemonSet 管理，控制器将自动创建新的副本。' })}
+                        okText={t('common.confirm', { defaultValue: '确认删除' })}
+                        cancelText={t('common.cancel', { defaultValue: '取消' })}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeletePod(record)}
                     >
@@ -333,7 +335,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                             danger
                             icon={<Trash2 size={12} />}
                         >
-                            删除
+                            {t('pods.deleteBtn', { defaultValue: '删除' })}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -347,7 +349,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
             <div className={s.toolbar}>
                 <div className={s.toolbarLeft}>
                     <Input
-                        placeholder="搜索 Pod 名称 / 命名空间 / IP / 所在节点..."
+                        placeholder={t('pods.searchPlaceholder', { defaultValue: '搜索 Pod 名称 / 镜像 / 节点...' })}
                         prefix={<Search size={13} color="var(--text-dim)" />}
                         value={searchKw}
                         onChange={(e) => {
@@ -368,10 +370,10 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         }}
                         style={{ width: 120 }}
                         options={[
-                            { label: '全部状态', value: 'ALL' },
+                            { label: t('common.allStatus', { defaultValue: '全部状态' }), value: 'ALL' },
                             { label: 'Running', value: 'Running' },
                             { label: 'Pending', value: 'Pending' },
-                            { label: '异常/错误', value: 'Error' },
+                            { label: t('common.errorOrAbnormal', { defaultValue: '异常/错误' }), value: 'Error' },
                         ]}
                     />
                 </div>
@@ -383,14 +385,14 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         size="small"
                         onClick={openCreateYaml}
                     >
-                        新建
+                        {t('common.new', { defaultValue: '新建' })}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchPods}
                     >
-                        刷新
+                        {t('common.refresh', { defaultValue: '刷新' })}
                     </Button>
                 </div>
             </div>
@@ -408,7 +410,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         if (containers.length === 0) {
                             return (
                                 <div style={{ padding: '8px 16px', color: 'var(--text-dim)', fontSize: 12 }}>
-                                    暂无容器详细信息
+                                    {t('common.noData', { defaultValue: '暂无容器详细信息' })}
                                 </div>
                             )
                         }
@@ -417,7 +419,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                 <div className={s.expandedHeader}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                                         <Box size={13} color="var(--accent)" />
-                                        <span>容器列表 ({containers.length})</span>
+                                        <span>Containers ({containers.length})</span>
                                     </div>
                                 </div>
                                 <Table
@@ -427,7 +429,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                     dataSource={containers}
                                     columns={[
                                         {
-                                            title: '容器名称',
+                                            title: t('docker.containers.colName', { defaultValue: '容器名称' }),
                                             dataIndex: 'name',
                                             key: 'name',
                                             width: 200,
@@ -445,7 +447,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             ),
                                         },
                                         {
-                                            title: '容器镜像 (Image)',
+                                            title: t('docker.containers.colImage', { defaultValue: '容器镜像 (Image)' }),
                                             dataIndex: 'image',
                                             key: 'image',
                                             render: (img: string) => (
@@ -453,14 +455,14 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                                     <span className={s.monoText} style={{ fontSize: 11.5, wordBreak: 'break-all' }}>
                                                         {img}
                                                     </span>
-                                                    <Tooltip title="复制镜像名称">
+                                                    <Tooltip title={t('docker.images.copyName', { defaultValue: '复制镜像名称' })}>
                                                         <Button
                                                             size="small"
                                                             type="text"
                                                             icon={<Copy size={11} />}
                                                             onClick={async () => {
                                                                 if (await copyText(img)) {
-                                                                    message.success('已复制镜像名称')
+                                                                    message.success(t('docker.images.copiedName', { defaultValue: '已复制镜像名称' }))
                                                                 }
                                                             }}
                                                         />
@@ -469,7 +471,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             ),
                                         },
                                         {
-                                            title: '状态',
+                                            title: t('docker.containers.colState', { defaultValue: '状态' }),
                                             dataIndex: 'state',
                                             key: 'state',
                                             width: 140,
@@ -481,7 +483,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             },
                                         },
                                         {
-                                            title: '就绪 (Ready)',
+                                            title: t('pods.colReady', { defaultValue: '就绪 (Ready)' }),
                                             dataIndex: 'ready',
                                             key: 'ready',
                                             width: 100,
@@ -492,7 +494,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             ),
                                         },
                                         {
-                                            title: '重启',
+                                            title: t('pods.restarts', { defaultValue: '重启' }),
                                             dataIndex: 'restartCount',
                                             key: 'restartCount',
                                             width: 80,
@@ -506,7 +508,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             ),
                                         },
                                         {
-                                            title: '操作',
+                                            title: t('common.actions', { defaultValue: '操作' }),
                                             key: 'cActions',
                                             width: 160,
                                             align: 'right',
@@ -519,17 +521,17 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                                             disabled={!isRunning}
                                                             icon={<Terminal size={12} />}
                                                             onClick={() => openTerminalModal(record, c)}
-                                                            title={isRunning ? "进入容器交互式终端 (/bin/sh)" : "仅 Running 状态容器支持终端连接"}
+                                                            title={isRunning ? t('pods.enterTermTip', { defaultValue: '进入容器交互式终端 (/bin/sh)' }) : t('pods.runningOnlyTermTip', { defaultValue: '仅 Running 状态容器支持终端连接' })}
                                                         >
-                                                            终端
+                                                            {t('pods.termBtn', { defaultValue: '终端' })}
                                                         </Button>
                                                         <Button
                                                             size="small"
                                                             icon={<FileText size={12} />}
                                                             onClick={() => openLogsDrawer(record, c.name)}
-                                                            title="查看该容器运行日志"
+                                                            title={t('pods.viewLogsTip', { defaultValue: '查看该容器运行日志' })}
                                                         >
-                                                            日志
+                                                            {t('pods.logsBtn', { defaultValue: '日志' })}
                                                         </Button>
                                                     </Space>
                                                 )
@@ -548,7 +550,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`,
+                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -562,7 +564,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                 title={
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                         <FileText size={16} color="var(--accent)" />
-                        <span>Pod 日志: {activePod?.name}</span>
+                        <span>{t('pods.logDrawerTitle', { defaultValue: 'Pod 日志: {{name}}', name: activePod?.name || '' })}</span>
                     </div>
                 }
                 size={820}
@@ -580,7 +582,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                 }}
                                 style={{ width: 160 }}
                                 options={activePod.containers.map((c) => ({
-                                    label: c.isInit ? `[Init] ${c.name}` : `容器: ${c.name}`,
+                                    label: c.isInit ? `[Init] ${c.name}` : `${t('common.container', { defaultValue: '容器' })}: ${c.name}`,
                                     value: c.name,
                                 }))}
                             />
@@ -589,16 +591,16 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         <Select
                             size="small"
                             value={logsTail}
-                            onChange={(t) => {
-                                setLogsTail(t)
+                            onChange={(tVal) => {
+                                setLogsTail(tVal)
                                 if (activePod) fetchLogs(activePod, selectedContainer)
                             }}
                             style={{ width: 110 }}
                             options={[
-                                { label: '最新 100 行', value: 100 },
-                                { label: '最新 200 行', value: 200 },
-                                { label: '最新 500 行', value: 500 },
-                                { label: '最新 1000 行', value: 1000 },
+                                { label: t('pods.logLines100', { defaultValue: '最近 100 行' }), value: 100 },
+                                { label: t('pods.logLines200', { defaultValue: '最近 200 行' }), value: 200 },
+                                { label: t('pods.logLines500', { defaultValue: '最近 500 行' }), value: 500 },
+                                { label: t('pods.logLines1000', { defaultValue: '最近 1000 行' }), value: 1000 },
                             ]}
                         />
 
@@ -611,7 +613,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                     if (activePod) fetchLogs(activePod, selectedContainer)
                                 }}
                             />
-                            <span style={{ fontSize: 12 }}>时间戳</span>
+                            <span style={{ fontSize: 12 }}>{t('pods.timestamps', { defaultValue: '时间戳' })}</span>
                         </div>
 
                         <Button
@@ -619,7 +621,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                             icon={<RefreshCw size={12} className={logsLoading ? 'animate-spin' : ''} />}
                             onClick={() => activePod && fetchLogs(activePod, selectedContainer)}
                         >
-                            刷新
+                            {t('common.refresh', { defaultValue: '刷新' })}
                         </Button>
 
                         <Button
@@ -627,11 +629,11 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                             icon={<Copy size={12} />}
                             onClick={async () => {
                                 if (await copyText(logsContent)) {
-                                    message.success('已复制日志')
+                                    message.success(t('pods.copiedLogs', { defaultValue: '已复制日志' }))
                                 }
                             }}
                         >
-                            复制
+                            {t('pods.copyLogs', { defaultValue: '复制' })}
                         </Button>
 
                         <Button
@@ -641,13 +643,13 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                 downloadText(`${activePod?.name}_${selectedContainer || 'log'}.log`, logsContent)
                             }}
                         >
-                            导出
+                            {t('common.export', { defaultValue: '导出' })}
                         </Button>
                     </Space>
                 }
             >
                 <div className={s.logTerminal} ref={logScrollRef}>
-                    {logsLoading ? '正在加载日志...' : logsContent}
+                    {logsLoading ? t('common.loading', { defaultValue: '正在加载日志...' }) : logsContent}
                 </div>
             </Drawer>
 

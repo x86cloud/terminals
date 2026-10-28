@@ -1,6 +1,7 @@
 import React from 'react'
 import { Tag } from 'antd'
 import { API } from '@/api'
+import i18n from '@/i18n'
 import { buildPgWhereClause } from '@/components/ColumnFilterPopover'
 import {
     DbAdapter,
@@ -19,6 +20,10 @@ import {
 
 function renderPgPlanNode(plan: any): any {
     if (!plan) return null
+    const costText = i18n.t('db:adapters.pgCost', { start: plan['Startup Cost'], total: plan['Total Cost'], rows: plan['Plan Rows'] })
+    const actualText = plan['Actual Total Time'] !== undefined
+        ? i18n.t('db:adapters.pgActual', { time: plan['Actual Total Time'], rows: plan['Actual Rows'] })
+        : ''
     const title = React.createElement(
         'div',
         { style: { display: 'inline-flex', alignItems: 'center', gap: 8, padding: '2px 0' } },
@@ -40,11 +45,7 @@ function renderPgPlanNode(plan: any): any {
         React.createElement(
             'span',
             { style: { color: 'var(--text-secondary)', fontSize: 12 } },
-            `成本: ${plan['Startup Cost']} .. ${plan['Total Cost']} | 行数: ${plan['Plan Rows']}${
-                plan['Actual Total Time'] !== undefined
-                    ? ` | 实际耗时: ${plan['Actual Total Time']}ms (${plan['Actual Rows']} 行)`
-                    : ''
-            }`
+            `${costText}${actualText}`
         )
     )
 
@@ -197,7 +198,7 @@ export function createPostgresAdapter(
 
         async loadDDL(): Promise<string> {
             const ddl = await API.postgresTableDDL(serverId, dbName, schema, tableName)
-            return ddl || '-- 未能获取到 DDL'
+            return ddl || i18n.t('db:adapters.cannotGetDdl')
         },
 
         async exportToFile(mode: 'csv' | 'json', limit = 0): Promise<string> {
@@ -297,7 +298,7 @@ export function createPostgresAdapter(
             return {
                 sqls,
                 isRebuild: false,
-                warning: droppedCols.length > 0 ? `警告：本次修改将永久删除 [${droppedCols.map((c) => c.name).join(', ')}] 列及其所有数据！` : undefined,
+                warning: droppedCols.length > 0 ? i18n.t('db:adapters.warnDropCol', { cols: droppedCols.map((c) => c.name).join(', ') }) : undefined,
             }
         },
 
@@ -378,7 +379,7 @@ export function createPostgresSqlAdapter(
         dbName,
         schema,
         defaultSql: `SELECT * FROM information_schema.tables WHERE table_schema = '${schema}' LIMIT 20;`,
-        placeholder: '-- 输入 PostgreSQL SQL 语句，按 Ctrl+Enter 快速执行',
+        placeholder: i18n.t('db:sql.defaultInputPlaceholder', { dialect: 'PostgreSQL' }),
 
         async runSql(sql: string): Promise<DbQueryResult> {
             const res = await API.postgresRun(serverId, dbName, sql)

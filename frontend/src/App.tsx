@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ConfigProvider, App as AntdApp } from 'antd'
-import zhCN from 'antd/locale/zh_CN'
+import { useTranslation } from 'react-i18next'
+import { getAntdLocale, changeAppLanguage } from '@/i18n'
 import { getAntdTheme } from './theme'
 import { ThemeContext } from '@/contexts/ThemeContext'
 import { DragDropProvider } from '@/contexts/DragDropContext'
@@ -23,7 +24,6 @@ import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import CloseConfirmModal from '@/components/CloseConfirmModal'
 import SessionTabs from '@/components/app/SessionTabs'
 import Stage from '@/components/app/Stage'
-import AiSidebar from '@/components/app/AiSidebar'
 import { API, registerNativeFileDrop, setPendingAsk, subscribe, unregisterNativeFileDrop } from '@/api'
 import {
     ServerConfig,
@@ -49,6 +49,7 @@ interface AppContentProps {
 }
 
 function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentProps) {
+    const { t } = useTranslation(['common', 'sidebar', 'server'])
     const { message } = AntdApp.useApp()
     const {
         activeTarget,
@@ -98,10 +99,10 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     }, [])
 
     const createGroup = useCallback(async (): Promise<ServerGroup> => {
-        const g = await API.saveGroup({ id: '', name: '新建分组' })
+        const g = await API.saveGroup({ id: '', name: t('sidebar:newGroup', '新建分组') })
         await reloadGroups()
         return g
-    }, [reloadGroups])
+    }, [reloadGroups, t])
 
     const renameGroup = useCallback(
         async (g: ServerGroup) => {
@@ -120,9 +121,13 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             const grp = groups.find((g) => g.id === id)
             setConfirm({
                 open: true,
-                title: '删除分组',
+                title: t('sidebar:deleteGroup', '删除分组'),
                 danger: true,
-                message: `确定要删除分组“${grp?.name || '此分组'}”吗？组内服务器将被移动到未分组。`,
+                message: t(
+                    'sidebar:deleteGroupMessage',
+                    '确定要删除分组“{{name}}”吗？组内服务器将被移动到未分组。',
+                    { name: grp?.name || t('sidebar:thisGroup', '此分组') }
+                ),
                 onConfirm: async () => {
                     setConfirm(emptyConfirm)
                     try {
@@ -135,7 +140,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 },
             })
         },
-        [groups, reloadGroups, reloadServers]
+        [groups, reloadGroups, reloadServers, t]
     )
 
     const moveServer = useCallback(
@@ -228,7 +233,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             const attrPath = attrs['data-path']
             const sessionId = attrSessionId || activeIdRef.current
             if (!sessionId) {
-                message.warning('请先连接服务器再拖入文件')
+                message.warning(t('common:dropFileBeforeConnect', '请先连接服务器再拖入文件'))
                 return
             }
             const remoteDir = attrPath || pathsRef.current[sessionId] || '/'
@@ -242,11 +247,18 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                     if (est.isInsufficient) {
                         setConfirm({
                             open: true,
-                            title: '远端存储空间不足',
+                            title: t('common:insufficientStorageTitle', '远端存储空间不足'),
                             danger: true,
-                            message: `上传大小 (${formatSize(est.totalSize)}) 超过远端剩余可用空间 (${formatSize(est.remoteFree)})，是否继续上传？`,
-                            confirmText: '确认上传',
-                            cancelText: '取消',
+                            message: t(
+                                'common:insufficientStorageMsg',
+                                '上传大小 ({{totalSize}}) 超过远端剩余可用空间 ({{remoteFree}})，是否继续上传？',
+                                {
+                                    totalSize: formatSize(est.totalSize),
+                                    remoteFree: formatSize(est.remoteFree),
+                                }
+                            ),
+                            confirmText: t('common:confirmUpload', '确认上传'),
+                            cancelText: t('common:cancel', '取消'),
                             onConfirm: () => {
                                 setConfirm(emptyConfirm)
                                 doUpload()
@@ -264,7 +276,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         return () => {
             if (ok) unregisterNativeFileDrop()
         }
-    }, [])
+    }, [t])
 
     const handlePathChange = useCallback((sessionId: string, p: string) => {
         pathsRef.current[sessionId] = p
@@ -286,9 +298,11 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     const deleteServer = useCallback((cfg: ServerConfig) => {
         setConfirm({
             open: true,
-            title: '删除服务器',
+            title: t('server:deleteTitle', '删除服务器'),
             danger: true,
-            message: `确定要删除“${cfg.name || cfg.host}”的连接配置吗？`,
+            message: t('server:deleteConfirm', '确定要删除“{{name}}”的连接配置吗？', {
+                name: cfg.name || cfg.host,
+            }),
             onConfirm: async () => {
                 setConfirm(emptyConfirm)
                 try {
@@ -299,17 +313,28 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 }
             },
         })
-    }, [reloadServers])
+    }, [reloadServers, t])
 
     const handleExportConfig = useCallback(async () => {
         try {
             const res = await API.exportServersConfig()
             if (!res || res.cancelled) return
-            message.success(res.message || `成功导出 ${res.serversCount} 个连接配置与 ${res.groupsCount} 个分组`)
+            message.success(
+                res.message ||
+                    t(
+                        'sidebar:exportSuccess',
+                        '成功导出 {{serversCount}} 个连接配置与 {{groupsCount}} 个分组',
+                        { serversCount: res.serversCount, groupsCount: res.groupsCount }
+                    )
+            )
         } catch (err: any) {
-            message.error(`导出配置失败: ${errorMessage(err)}`)
+            message.error(
+                t('sidebar:exportFailed', '导出配置失败: {{error}}', {
+                    error: errorMessage(err),
+                })
+            )
         }
-    }, [])
+    }, [t])
 
     const handleImportConfig = useCallback(async () => {
         try {
@@ -317,11 +342,22 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             if (!res || res.cancelled) return
             await reloadGroups()
             await reloadServers()
-            message.success(res.message || `成功导入 ${res.serversCount} 个连接配置与 ${res.groupsCount} 个分组`)
+            message.success(
+                res.message ||
+                    t(
+                        'sidebar:importSuccess',
+                        '成功导入 {{serversCount}} 个连接配置与 {{groupsCount}} 个分组',
+                        { serversCount: res.serversCount, groupsCount: res.groupsCount }
+                    )
+            )
         } catch (err: any) {
-            message.error(`导入配置失败: ${errorMessage(err)}`)
+            message.error(
+                t('sidebar:importFailed', '导入配置失败: {{error}}', {
+                    error: errorMessage(err),
+                })
+            )
         }
-    }, [reloadGroups, reloadServers])
+    }, [reloadGroups, reloadServers, t])
 
     /* ---------------- 连接逻辑统一分发 ---------------- */
 
@@ -335,60 +371,60 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                     case 'redis': {
                         const info = await connectRedisHelper(cfg)
                         addSession('redis', info)
-                        message.success(`已连接 Redis ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Redis ${info.title}` }))
                         break
                     }
                     case 'mysql': {
                         const info = await connectMysqlHelper(cfg)
                         addSession('mysql', info)
-                        message.success(`已连接 MySQL ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MySQL ${info.title}` }))
                         break
                     }
                     case 'postgres': {
                         const info = await connectPostgresHelper(cfg)
                         addSession('postgres', info)
-                        message.success(`已连接 PostgreSQL ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `PostgreSQL ${info.title}` }))
                         break
                     }
                     case 'mqtt': {
                         const info = await connectMqttHelper(cfg)
                         addSession('mqtt', info)
-                        message.success(`已连接 MQTT ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MQTT ${info.title}` }))
                         break
                     }
                     case 'mongo': {
                         const info = await connectMongoHelper(cfg)
                         addSession('mongo', info)
-                        message.success(`已连接 MongoDB ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MongoDB ${info.title}` }))
                         break
                     }
                     case 'sqlite': {
                         const info = await connectSqliteHelper(cfg)
                         if (!info) {
-                            message.info('未选择文件')
+                            message.info(t('common:noFileSelected', '未选择文件'))
                             return
                         }
                         addSession('sqlite', info)
-                        message.success(`已打开 SQLite 文件：${info.title}`)
+                        message.success(t('server:openedSqlite', '已打开 SQLite 文件：{{title}}', { title: info.title }))
                         break
                     }
                     case 'docker': {
                         const info = await connectDockerHelper(cfg)
                         addSession('docker', info)
-                        message.success(`已连接 Docker ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Docker ${info.title}` }))
                         break
                     }
                     case 'k8s': {
                         const info = await connectK8sHelper(cfg)
                         addSession('k8s', info)
-                        message.success(`已连接 Kubernetes ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Kubernetes ${info.title}` }))
                         break
                     }
                     default: {
                         const info = await API.connect(cfg.id, 120, 32)
                         addSession('ssh', info)
                         pathsRef.current[info.id] = info.homeDir || '/'
-                        message.success(`已连接 ${info.title}`)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: info.title }))
                         break
                     }
                 }
@@ -399,7 +435,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 setConnectingId(null)
             }
         },
-        [addSession]
+        [addSession, t]
     )
 
     /* ---------------- UI 渲染 ---------------- */
@@ -411,6 +447,8 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                 themeMode={settings.themeMode}
                 onToggleTheme={onToggleTheme}
                 onRequestClose={handleRequestClose}
+                language={settings.language}
+                onChangeLanguage={(lang) => void onUpdateSettings({ ...settings, language: lang })}
             />
 
             <div className={a.body}>
@@ -438,13 +476,12 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                         <Stage
                             nativeDrop={nativeDrop}
                             settings={settings}
+                            onUpdateSettings={onUpdateSettings}
                             onPathChange={handlePathChange}
                             onNewServer={addServer}
                         />
                     </div>
                 </main>
-
-                <AiSidebar settings={settings} onUpdateSettings={onUpdateSettings} />
             </div>
 
             <ServerDialog
@@ -490,6 +527,7 @@ export default function App() {
         const cached = getCachedSettings()
         applyThemeMode(cached.themeMode)
         applyGlobalFont(cached.fontFamily)
+        void changeAppLanguage(cached.language)
         return cached
     })
 
@@ -498,6 +536,7 @@ export default function App() {
         setSettings(newSettings)
         applyThemeMode(newSettings.themeMode)
         applyGlobalFont(newSettings.fontFamily)
+        void changeAppLanguage(newSettings.language)
         try {
             await API.saveAppSettings(newSettings)
         } catch {
@@ -518,7 +557,7 @@ export default function App() {
     }, [isDark, settings, handleUpdateSettings])
 
     return (
-        <ConfigProvider locale={zhCN} theme={getAntdTheme(settings.themeMode)}>
+        <ConfigProvider locale={getAntdLocale(settings.language)} theme={getAntdTheme(settings.themeMode)}>
             <AntdApp>
                 <ThemeContext.Provider value={{ themeMode: settings.themeMode, isDark, toggleTheme: handleToggleTheme }}>
                     <SessionProvider>

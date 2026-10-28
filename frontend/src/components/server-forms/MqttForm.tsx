@@ -1,6 +1,7 @@
 import React from 'react'
 import { Input, InputNumber, Radio, Space, Switch, Collapse, Select, Button, Tooltip } from 'antd'
 import { Cpu, Dices, FolderOpen, Key, Scroll, ShieldCheck } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { errorMessage } from '@/utils'
 import { ServerConfig } from '@/types'
@@ -13,6 +14,8 @@ export const MqttForm: React.FC<ServerFormProps> = ({
     groups,
     setError,
 }) => {
+    const { t } = useTranslation(['server', 'common'])
+
     const handlePickCert = async (field: keyof ServerConfig) => {
         try {
             const path = await API.selectCertFile()
@@ -32,15 +35,15 @@ export const MqttForm: React.FC<ServerFormProps> = ({
             {/* Host + Port */}
             <div style={{ display: 'grid', gridTemplateColumns: '3fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>主机地址 (Host / IP)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:host')}</div>
                     <Input
-                        placeholder="127.0.0.1 / example.com"
+                        placeholder={t('server:hostPlaceholder')}
                         value={form.host}
                         onChange={(e) => update({ host: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>端口 (Port)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:port')}</div>
                     <InputNumber
                         min={1}
                         max={65535}
@@ -53,13 +56,13 @@ export const MqttForm: React.FC<ServerFormProps> = ({
 
             {/* Client ID */}
             <div>
-                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>客户端 ID (Client ID)</div>
+                <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.clientId')}</div>
                 <Input
-                    placeholder="留空自动随机生成"
+                    placeholder={t('server:mqtt.randomClientPlaceholder')}
                     value={form.clientId || ''}
                     onChange={(e) => update({ clientId: e.target.value })}
                     suffix={
-                        <Tooltip title="随机生成 Client ID">
+                        <Tooltip title={t('server:mqtt.randomClientTooltip')}>
                             <Button
                                 type="text"
                                 size="small"
@@ -75,17 +78,17 @@ export const MqttForm: React.FC<ServerFormProps> = ({
             {/* 用户名与密码 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>用户名 (Username, 可选)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.usernameOptional')}</div>
                     <Input
-                        placeholder="无认证留空"
+                        placeholder={t('server:mqtt.noAuthPlaceholder')}
                         value={form.username || ''}
                         onChange={(e) => update({ username: e.target.value })}
                     />
                 </div>
                 <div>
-                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>密码 (Password, 可选)</div>
+                    <div style={{ fontSize: 13, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.passwordOptional')}</div>
                     <Input.Password
-                        placeholder="无认证留空"
+                        placeholder={t('server:mqtt.noAuthPlaceholder')}
                         value={form.password || ''}
                         onChange={(e) => update({ password: e.target.value })}
                     />
@@ -103,17 +106,17 @@ export const MqttForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <ShieldCheck size={13} color={form.useTLS ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.useTLS ? 600 : 400 }}>
-                                    TLS / SSL 安全与双向认证 (mTLS)
+                                    {t('server:mqtt.tlsTitle')}
                                 </span>
-                                {form.useTLS && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[已启用]</span>}
+                                {form.useTLS && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{t('server:enabled')}]</span>}
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div>
-                                        <div style={{ fontSize: 13, fontWeight: 500 }}>启用 TLS / SSL 加密连接</div>
-                                        <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>支持单向/双向 SSL 证书加密通信</div>
+                                        <div style={{ fontSize: 13, fontWeight: 500 }}>{t('server:mqtt.enableTls')}</div>
+                                        <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{t('server:mqtt.enableTlsDesc')}</div>
                                     </div>
                                     <Switch
                                         checked={!!form.useTLS}
@@ -130,8 +133,8 @@ export const MqttForm: React.FC<ServerFormProps> = ({
                                     <>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 2 }}>
                                             <div>
-                                                <div style={{ fontSize: 13 }}>跳过服务端证书校验 (Insecure)</div>
-                                                <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>自签名证书开发测试时可开启</div>
+                                                <div style={{ fontSize: 13 }}>{t('server:mqtt.insecure')}</div>
+                                                <div style={{ fontSize: 11.5, color: 'var(--text-dim)' }}>{t('server:mqtt.insecureDesc')}</div>
                                             </div>
                                             <Switch
                                                 checked={!!form.mqttInsecure}
@@ -140,43 +143,43 @@ export const MqttForm: React.FC<ServerFormProps> = ({
                                         </div>
 
                                         <div>
-                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>CA 根证书 (CA Certificate, 可选)</div>
+                                            <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.caCert')}</div>
                                             <Space.Compact style={{ width: '100%' }}>
                                                 <Input
-                                                    placeholder="CA 证书文件路径 (.crt/.pem) 或留空使用系统根证书"
+                                                    placeholder={t('server:mqtt.caCertPlaceholder')}
                                                     value={form.mqttCACert || ''}
                                                     onChange={(e) => update({ mqttCACert: e.target.value })}
                                                 />
                                                 <Button icon={<FolderOpen size={14} />} onClick={() => handlePickCert('mqttCACert')}>
-                                                    浏览
+                                                    {t('server:browse')}
                                                 </Button>
                                             </Space.Compact>
                                         </div>
 
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端证书 (Client Cert, 双向认证)</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.clientCert')}</div>
                                                 <Space.Compact style={{ width: '100%' }}>
                                                     <Input
-                                                        placeholder="客户端证书 (.crt/.pem)"
+                                                        placeholder={t('server:mqtt.clientCertPlaceholder')}
                                                         value={form.mqttClientCert || ''}
                                                         onChange={(e) => update({ mqttClientCert: e.target.value })}
                                                     />
                                                     <Button icon={<FolderOpen size={14} />} onClick={() => handlePickCert('mqttClientCert')}>
-                                                        浏览
+                                                        {t('server:browse')}
                                                     </Button>
                                                 </Space.Compact>
                                             </div>
                                             <div>
-                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>客户端私钥 (Client Key)</div>
+                                                <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.clientKey')}</div>
                                                 <Space.Compact style={{ width: '100%' }}>
                                                     <Input
-                                                        placeholder="私钥文件 (.key/.pem)"
+                                                        placeholder={t('server:mqtt.clientKeyPlaceholder')}
                                                         value={form.mqttClientKey || ''}
                                                         onChange={(e) => update({ mqttClientKey: e.target.value })}
                                                     />
                                                     <Button icon={<Key size={14} />} onClick={() => handlePickCert('mqttClientKey')}>
-                                                        浏览
+                                                        {t('server:browse')}
                                                     </Button>
                                                 </Space.Compact>
                                             </div>
@@ -191,27 +194,27 @@ export const MqttForm: React.FC<ServerFormProps> = ({
                         label: (
                             <Space size={6}>
                                 <Cpu size={13} />
-                                <span style={{ fontSize: 13 }}>协议参数与心跳控制 (Protocol & Timings)</span>
+                                <span style={{ fontSize: 13 }}>{t('server:mqtt.protoTiming')}</span>
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>协议版本 (Protocol Version)</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.protoVersion')}</div>
                                         <Select
                                             style={{ width: '100%' }}
                                             value={form.mqttProto || '3.1.1'}
                                             onChange={(v) => update({ mqttProto: v })}
                                             options={[
-                                                { label: 'MQTT 3.1.1 (推荐)', value: '3.1.1' },
+                                                { label: t('server:mqtt.proto311'), value: '3.1.1' },
                                                 { label: 'MQTT 3.1', value: '3.1' },
                                             ]}
                                         />
                                     </div>
                                     <div style={{ display: 'flex', gap: 16, alignItems: 'center', paddingTop: 18 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <span style={{ fontSize: 12.5 }}>清除会话</span>
+                                            <span style={{ fontSize: 12.5 }}>{t('server:mqtt.cleanSession')}</span>
                                             <Switch
                                                 size="small"
                                                 checked={form.mqttCleanSession !== false}
@@ -219,7 +222,7 @@ export const MqttForm: React.FC<ServerFormProps> = ({
                                             />
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <span style={{ fontSize: 12.5 }}>自动重连</span>
+                                            <span style={{ fontSize: 12.5 }}>{t('server:mqtt.autoReconnect')}</span>
                                             <Switch
                                                 size="small"
                                                 checked={form.mqttAutoReconnect !== false}
@@ -231,35 +234,35 @@ export const MqttForm: React.FC<ServerFormProps> = ({
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>心跳间隔 (Keep Alive)</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mqtt.keepAlive')}</div>
                                         <InputNumber
                                             min={5}
                                             max={3600}
                                             style={{ width: '100%' }}
                                             value={form.mqttKeepAlive ?? 30}
-                                            addonAfter="秒"
+                                            addonAfter={t('server:second')}
                                             onChange={(v) => update({ mqttKeepAlive: v ?? 30 })}
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>连接超时 (Timeout)</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mqtt.timeout')}</div>
                                         <InputNumber
                                             min={1}
                                             max={120}
                                             style={{ width: '100%' }}
                                             value={form.mqttConnectTimeout ?? 10}
-                                            addonAfter="秒"
+                                            addonAfter={t('server:second')}
                                             onChange={(v) => update({ mqttConnectTimeout: v ?? 10 })}
                                         />
                                     </div>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>重连间隔 (Interval)</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mqtt.reconnectInterval')}</div>
                                         <InputNumber
                                             min={1}
                                             max={300}
                                             style={{ width: '100%' }}
                                             value={form.mqttReconnectIntvl ?? 5}
-                                            addonAfter="秒"
+                                            addonAfter={t('server:second')}
                                             onChange={(v) => update({ mqttReconnectIntvl: v ?? 5 })}
                                         />
                                     </div>
@@ -273,27 +276,27 @@ export const MqttForm: React.FC<ServerFormProps> = ({
                             <Space size={6}>
                                 <Scroll size={13} color={form.mqttWillTopic ? 'var(--accent)' : undefined} />
                                 <span style={{ fontSize: 13, fontWeight: form.mqttWillTopic ? 600 : 400 }}>
-                                    遗嘱消息 (Last Will and Testament - LWT)
+                                    {t('server:mqtt.lwtTitle')}
                                 </span>
-                                {form.mqttWillTopic && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[已配置]</span>}
+                                {form.mqttWillTopic && <span style={{ fontSize: 11, color: 'var(--accent)', marginLeft: 4 }}>[{t('server:mqtt.configured')}]</span>}
                             </Space>
                         ),
                         children: (
                             <Space orientation="vertical" size={10} style={{ width: '100%' }}>
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>遗嘱主题 (Will Topic)</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.willTopic')}</div>
                                     <Input
-                                        placeholder="例如: status/client/offline"
+                                        placeholder="status/client/offline"
                                         value={form.mqttWillTopic || ''}
                                         onChange={(e) => update({ mqttWillTopic: e.target.value })}
                                     />
                                 </div>
 
                                 <div>
-                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>遗嘱消息内容 (Will Payload)</div>
+                                    <div style={{ fontSize: 12, marginBottom: 4, fontWeight: 500 }}>{t('server:mqtt.willPayload')}</div>
                                     <Input.TextArea
                                         rows={2}
-                                        placeholder="例如: { &quot;status&quot;: &quot;offline&quot;, &quot;time&quot;: 0 }"
+                                        placeholder='{ "status": "offline", "time": 0 }'
                                         value={form.mqttWillPayload || ''}
                                         onChange={(e) => update({ mqttWillPayload: e.target.value })}
                                     />
@@ -301,7 +304,7 @@ export const MqttForm: React.FC<ServerFormProps> = ({
 
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                        <span style={{ fontSize: 12.5, fontWeight: 500 }}>服务质量 (QoS):</span>
+                                        <span style={{ fontSize: 12.5, fontWeight: 500 }}>{t('server:mqtt.willQos')}</span>
                                         <Radio.Group
                                             size="small"
                                             value={form.mqttWillQos ?? 0}
@@ -314,7 +317,7 @@ export const MqttForm: React.FC<ServerFormProps> = ({
                                         </Radio.Group>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        <span style={{ fontSize: 12.5 }}>消息保留 (Retain)</span>
+                                        <span style={{ fontSize: 12.5 }}>{t('server:mqtt.willRetained')}</span>
                                         <Switch
                                             size="small"
                                             checked={!!form.mqttWillRetained}

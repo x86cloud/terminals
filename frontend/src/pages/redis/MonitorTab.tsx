@@ -1,5 +1,6 @@
 import { Button } from 'antd'
 import { RotateCw } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { RedisMonitorInfo } from '@/types'
 import m from '@/pages/redis/MonitorTab.module.less'
 
@@ -19,26 +20,30 @@ export default function MonitorTab({
     monitor: RedisMonitorInfo | null
     refreshMonitor: () => Promise<void>
 }) {
+    const { t } = useTranslation('redis')
+
     return (
         <div className={m.panel}>
             <div style={{ display: 'flex', marginBottom: 12 }}>
-                <Button size="small" icon={<RotateCw size={12} />} onClick={refreshMonitor}>刷新监控指标</Button>
+                <Button size="small" icon={<RotateCw size={12} />} onClick={refreshMonitor}>
+                    {t('monitor.refresh')}
+                </Button>
             </div>
             {monitor && (
                 <div className={m.monitorGrid}>
-                    <Metric label="Redis 版本" value={monitor.version} />
-                    <Metric label="内存开销" value={monitor.memoryUsed} />
-                    <Metric label="在线客户端" value={monitor.connectedClients} />
-                    <Metric label="运行天数" value={monitor.uptimeDays ? `${monitor.uptimeDays} 天` : '-'} />
-                    <Metric label="熔断状态" value={monitor.breaker} />
-                    <Metric label="连接池命中" value={monitor.hits} />
-                    <Metric label="未命中" value={monitor.misses} />
-                    <Metric label="超时" value={monitor.timeouts} />
-                    <Metric label="总连接数" value={monitor.totalConns} />
-                    <Metric label="空闲连接数" value={monitor.idleConns} />
-                    <Metric label="陈旧连接数" value={monitor.staleConns} />
-                    <Metric label="部署模式" value={monitor.mode} />
-                    <Metric label="序列化" value={monitor.serialization} />
+                    <Metric label={t('monitor.version')} value={monitor.version} />
+                    <Metric label={t('monitor.memoryUsed')} value={monitor.memoryUsed} />
+                    <Metric label={t('monitor.connectedClients')} value={monitor.connectedClients} />
+                    <Metric label={t('monitor.uptime')} value={monitor.uptimeDays ? t('monitor.uptimeDays', { days: monitor.uptimeDays }) : '-'} />
+                    <Metric label={t('monitor.breaker')} value={monitor.breaker} />
+                    <Metric label={t('monitor.hits')} value={monitor.hits} />
+                    <Metric label={t('monitor.misses')} value={monitor.misses} />
+                    <Metric label={t('monitor.timeouts')} value={monitor.timeouts} />
+                    <Metric label={t('monitor.totalConns')} value={monitor.totalConns} />
+                    <Metric label={t('monitor.idleConns')} value={monitor.idleConns} />
+                    <Metric label={t('monitor.staleConns')} value={monitor.staleConns} />
+                    <Metric label={t('monitor.mode')} value={monitor.mode} />
+                    <Metric label={t('monitor.serialization')} value={monitor.serialization} />
                 </div>
             )}
         </div>

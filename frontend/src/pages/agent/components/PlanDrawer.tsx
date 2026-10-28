@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Drawer, Button, Tooltip, Tag, App } from 'antd'
 import {
     FileText,
@@ -26,6 +27,7 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
     isGenerating = false,
     onApprove,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const { message } = App.useApp()
     const [copied, setCopied] = useState(false)
     const isApproved = plan.status === 'approved'
@@ -38,24 +40,24 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
         }
         // 兼容旧版 steps 数据的兜底呈现
         if (plan.steps && plan.steps.length > 0) {
-            let md = `### 目标: ${plan.objective}\n\n`
+            let md = t('agent:planDrawer.objective', { objective: plan.objective, defaultValue: `### 目标: ${plan.objective}\n\n` })
             plan.steps.forEach((st, idx) => {
                 md += `${idx + 1}. **${st.description || st.action}** ${st.tool_name ? `(\`${st.tool_name}\`)` : ''}\n`
             })
             return md
         }
-        return `# ${plan.objective}\n\n暂无详细规划内容。`
-    }, [plan.content, plan.objective, plan.steps])
+        return t('agent:planDrawer.emptyContent', { objective: plan.objective, defaultValue: `# ${plan.objective}\n\n暂无详细规划内容。` })
+    }, [plan.content, plan.objective, plan.steps, t])
 
     const handleCopy = (e: React.MouseEvent) => {
         e.stopPropagation()
         if (!markdownContent) return
         navigator.clipboard.writeText(markdownContent).then(() => {
             setCopied(true)
-            message.success('实施方案已复制到剪贴板')
+            message.success(t('agent:planDrawer.copiedSuccess', { defaultValue: '实施方案已复制到剪贴板' }))
             setTimeout(() => setCopied(false), 2000)
         }).catch(() => {
-            message.error('复制失败')
+            message.error(t('agent:planDrawer.copyFailed', { defaultValue: '复制失败' }))
         })
     }
 
@@ -69,8 +71,8 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
                     <FileText size={16} style={{ color: isExpired ? 'var(--text-dim, #8c8c8c)' : 'var(--accent, #1677ff)', flexShrink: 0 }} />
                     <span style={{ fontWeight: 600, fontSize: 14, color: isExpired ? 'var(--text-dim, #8c8c8c)' : 'var(--text)' }}>
                         {isExpired
-                            ? (plan.is_update ? '实施方案 (已过期)' : '技术实施方案 (已过期)')
-                            : (plan.is_update ? '实施方案 (已根据意见更新)' : '技术实施方案 (Implementation Plan)')}
+                            ? (plan.is_update ? t('agent:planDrawer.titleExpired', { defaultValue: '实施方案 (已过期)' }) : t('agent:planDrawer.titleTechExpired', { defaultValue: '技术实施方案 (已过期)' }))
+                            : (plan.is_update ? t('agent:planDrawer.titleUpdated', { defaultValue: '实施方案 (已根据意见更新)' }) : t('agent:planDrawer.titleTech', { defaultValue: '技术实施方案 (Implementation Plan)' }))}
                     </span>
                     {plan.objective && (
                         <span
@@ -93,13 +95,13 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
             extra={
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {plan.file_path && (
-                        <Tooltip title={`落盘路径: ${plan.file_path} (点击复制)`}>
+                        <Tooltip title={t('agent:planDrawer.filePathTooltip', { path: plan.file_path, defaultValue: `落盘路径: ${plan.file_path} (点击复制)` })}>
                             <span
                                 className={s.filePathBadge}
                                 onClick={(e) => {
                                     e.stopPropagation()
                                     navigator.clipboard.writeText(plan.file_path || '')
-                                    message.info('文件路径已复制')
+                                    message.info(t('agent:planDrawer.filePathCopied', { defaultValue: '文件路径已复制' }))
                                 }}
                             >
                                 <Folder size={12} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
@@ -108,7 +110,7 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
                         </Tooltip>
                     )}
 
-                    <Tooltip title={copied ? '已复制' : '复制方案 Markdown'}>
+                    <Tooltip title={copied ? t('agent:copied', { defaultValue: '已复制' }) : t('agent:planDrawer.copyMarkdown', { defaultValue: '复制方案 Markdown' })}>
                         <Button
                             size="small"
                             type="text"
@@ -122,19 +124,19 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 0' }}>
                     <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
                         {isExpired
-                            ? '该方案已被后续更新覆盖，仅供归档查看'
+                            ? t('agent:planDrawer.statusExpiredDesc', { defaultValue: '该方案已被后续更新覆盖，仅供归档查看' })
                             : isApproved
-                                ? '方案已批准，正在对话中自主执行'
-                                : '请审阅技术实施方案，确认无误后点击执行'}
+                                ? t('agent:planDrawer.statusApprovedDesc', { defaultValue: '方案已批准，正在对话中自主执行' })
+                                : t('agent:planDrawer.statusPendingDesc', { defaultValue: '请审阅技术实施方案，确认无误后点击执行' })}
                     </span>
                     <div>
                         {isExpired ? (
                             <Tag color="default">
-                                已过期
+                                {t('agent:planDrawer.badgeExpired', { defaultValue: '已过期' })}
                             </Tag>
                         ) : isApproved ? (
                             <Tag color="success" icon={<Check size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} />}>
-                                已批准执行
+                                {t('agent:planDrawer.badgeApproved', { defaultValue: '已批准执行' })}
                             </Tag>
                         ) : (
                             <Button
@@ -148,7 +150,7 @@ export const PlanDrawer: React.FC<PlanDrawerProps> = ({
                                     onClose()
                                 }}
                             >
-                                批准并执行 (Proceed)
+                                {t('agent:planDrawer.proceedBtn', { defaultValue: '批准并执行 (Proceed)' })}
                             </Button>
                         )}
                     </div>

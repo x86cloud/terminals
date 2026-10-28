@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Table, Button, Tag, Input, Switch, Tooltip, Popconfirm, Space, Segmented, App } from 'antd'
 import { RotateCw, Activity, HardDrive, ShieldCheck, Clock, Search, Copy, Check } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { useSession } from '@/contexts/SessionContext'
 import { PgStatus, PgSession } from './postgresTypes'
@@ -15,6 +16,7 @@ export default function StatusPanel({
     serverId: string
     dbName: string
 }) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const { activeTarget } = useSession()
     const isActive = !sessionId || (activeTarget?.kind === 'postgres' && activeTarget.id === sessionId)
@@ -37,7 +39,7 @@ export default function StatusPanel({
             setStatus(st)
             setSessions(sessList || [])
         } catch (e: any) {
-            console.error('加载监控指标失败:', e)
+            console.error('Failed to load metrics:', e)
         } finally {
             setLoading(false)
         }
@@ -59,13 +61,13 @@ export default function StatusPanel({
         try {
             const ok = await API.postgresKillSession(serverId, dbName, pid, terminate)
             if (ok) {
-                message.success(terminate ? ('已终止会话 (PID: ' + pid + ')') : ('已取消查询 (PID: ' + pid + ')'))
+                message.success(terminate ? t('postgres.status.killTerminated', { pid }) : t('postgres.status.killCanceled', { pid }))
                 loadMetrics()
             } else {
-                message.warning('未能终止会话，可能权限不足或会话已退出')
+                message.warning(t('postgres.status.killWarn'))
             }
         } catch (e: any) {
-            message.error('操作失败: ' + (e.message || e))
+            message.error(t('postgres.status.opFail', { error: e.message || e }))
         }
     }
 
@@ -102,7 +104,7 @@ export default function StatusPanel({
                 <div className={pg.statusCard}>
                     <div className={pg.cardLabel} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Activity size={14} style={{ color: '#1890ff' }} />
-                        活跃连接 / 最大上限
+                        {t('postgres.status.activeMaxConn')}
                     </div>
                     <div className={pg.cardValue}>
                         {status ? (status.activeConnections + ' / ' + status.maxConnections) : '-'}
@@ -112,7 +114,7 @@ export default function StatusPanel({
                 <div className={pg.statusCard}>
                     <div className={pg.cardLabel} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <HardDrive size={14} style={{ color: '#52c41a' }} />
-                        数据库磁盘占用
+                        {t('postgres.status.diskUsage')}
                     </div>
                     <div className={pg.cardValue}>{status?.databaseSize || '-'}</div>
                 </div>
@@ -120,7 +122,7 @@ export default function StatusPanel({
                 <div className={pg.statusCard}>
                     <div className={pg.cardLabel} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <ShieldCheck size={14} style={{ color: '#722ed1' }} />
-                        缓存命中率 (Cache Hit)
+                        {t('postgres.status.cacheHit')}
                     </div>
                     <div className={pg.cardValue}>{status?.cacheHitRatio || '100%'}</div>
                 </div>
@@ -128,7 +130,7 @@ export default function StatusPanel({
                 <div className={pg.statusCard}>
                     <div className={pg.cardLabel} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                         <Clock size={14} style={{ color: '#fa8c16' }} />
-                        运行时间 (Uptime)
+                        {t('postgres.status.uptime')}
                     </div>
                     <div className={pg.cardValue} style={{ fontSize: 16, marginTop: 4 }}>
                         {status?.uptime || '-'}
@@ -140,7 +142,7 @@ export default function StatusPanel({
             <div className={pg.sessionSection}>
                 <div className={pg.sessionHead}>
                     <span className={pg.sectionTitle}>
-                        活跃会话管理 (pg_stat_activity) - 共 {sessions.length} 个
+                        {t('postgres.status.sessionTitle', { count: sessions.length })}
                     </span>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -149,15 +151,15 @@ export default function StatusPanel({
                             value={stateFilter}
                             onChange={(v) => setStateFilter(v as any)}
                             options={[
-                                { label: '全部 (' + sessions.length + ')', value: 'all' },
-                                { label: '活跃 (' + activeCount + ')', value: 'active' },
-                                { label: '空闲 (' + idleCount + ')', value: 'idle' },
+                                { label: t('postgres.status.allCount', { count: sessions.length }), value: 'all' },
+                                { label: t('postgres.status.activeCount', { count: activeCount }), value: 'active' },
+                                { label: t('postgres.status.idleCount', { count: idleCount }), value: 'idle' },
                             ]}
                         />
 
                         <Input
                             size="small"
-                            placeholder="搜索 PID / 用户 / 状态 / SQL..."
+                            placeholder={t('postgres.status.searchPlaceholder')}
                             value={searchUser}
                             allowClear
                             prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
@@ -166,11 +168,11 @@ export default function StatusPanel({
                         />
 
                         <Space size={6}>
-                            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>自动刷新(3s)</span>
+                            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('postgres.status.autoRefresh')}</span>
                             <Switch size="small" checked={autoRefresh} onChange={setAutoRefresh} />
                         </Space>
 
-                        <Tooltip title="手动刷新">
+                        <Tooltip title={t('postgres.status.manualRefresh')}>
                             <Button
                                 size="small"
                                 icon={<RotateCw size={13} />}
@@ -189,46 +191,46 @@ export default function StatusPanel({
                         scroll={{ x: 950 }}
                         pagination={{ pageSize: 20, size: 'small', showSizeChanger: true, pageSizeOptions: ['20', '50', '100'] }}
                         columns={[
-                            { title: 'PID', dataIndex: 'pid', width: 80, fixed: 'left' },
+                            { title: t('postgres.status.colPid'), dataIndex: 'pid', width: 80, fixed: 'left' },
                             {
-                                title: '用户',
+                                title: t('postgres.status.colUser'),
                                 dataIndex: 'user',
                                 width: 100,
-                                render: (t) => <strong>{t}</strong>,
+                                render: (u) => <strong>{u}</strong>,
                             },
                             {
-                                title: '客户端地址',
+                                title: t('postgres.status.colClientAddr'),
                                 width: 140,
-                                render: (_, r: PgSession) => r.clientAddr ? (r.clientAddr + ':' + r.clientPort) : '[本地/内部]',
+                                render: (_, r: PgSession) => r.clientAddr ? (r.clientAddr + ':' + r.clientPort) : t('postgres.status.localInternal'),
                             },
                             {
-                                title: '状态',
+                                title: t('postgres.status.colState'),
                                 dataIndex: 'state',
                                 width: 120,
                                 render: (st) => {
                                     const color =
                                         st === 'active'
                                             ? 'green'
-                                            : st === 'idle in transaction'
+                                             : st === 'idle in transaction'
                                             ? 'orange'
                                             : 'default'
                                     return <Tag color={color}>{st || '-'}</Tag>
                                 },
                             },
                             {
-                                title: '持续时长',
+                                title: t('postgres.status.colDuration'),
                                 dataIndex: 'durationSec',
                                 width: 90,
                                 render: (sec) => (sec > 5 ? <Tag color="error">{sec}s</Tag> : (sec + 's')),
                             },
                             {
-                                title: '等待事件',
+                                title: t('postgres.status.colWaitEvent'),
                                 width: 140,
                                 render: (_, r: PgSession) =>
                                     r.waitEvent ? ((r.waitEventType ? (r.waitEventType + ': ') : '') + r.waitEvent) : '-',
                             },
                             {
-                                title: '当前执行 SQL',
+                                title: t('postgres.status.colQuery'),
                                 dataIndex: 'query',
                                 ellipsis: true,
                                 render: (q, r: PgSession) => (
@@ -237,7 +239,7 @@ export default function StatusPanel({
                                             {q || '-'}
                                         </span>
                                         {q && (
-                                            <Tooltip title="复制 SQL">
+                                            <Tooltip title={t('postgres.status.copySql')}>
                                                 <Button
                                                     size="small"
                                                     type="text"
@@ -251,26 +253,26 @@ export default function StatusPanel({
                                 ),
                             },
                             {
-                                title: '操作',
+                                title: t('postgres.status.colAction'),
                                 width: 120,
                                 fixed: 'right',
                                 render: (_, r: PgSession) => (
                                     <Space size={6}>
                                         <Popconfirm
-                                            title="确定要取消此查询吗？"
+                                            title={t('postgres.status.cancelConfirm')}
                                             onConfirm={() => handleKill(r.pid, false)}
                                         >
                                             <Button size="small" type="link" style={{ padding: 0 }}>
-                                                取消
+                                                {t('postgres.status.cancel')}
                                             </Button>
                                         </Popconfirm>
                                         <Popconfirm
-                                            title="确定要强行终止该会话 (Terminate) 吗？"
+                                            title={t('postgres.status.terminateConfirm')}
                                             okButtonProps={{ danger: true }}
                                             onConfirm={() => handleKill(r.pid, true)}
                                         >
                                             <Button size="small" type="link" danger style={{ padding: 0 }}>
-                                                终止
+                                                {t('postgres.status.terminate')}
                                             </Button>
                                         </Popconfirm>
                                     </Space>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Button } from 'antd'
 import { ArrowLeft, Palette, Bot, Server, Info } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { AppSettings, AiModelItem } from '@/types'
 import { applyThemeMode, applyGlobalFont } from '@/utils/theme'
 import AppearanceTab from '@/pages/setting/AppearanceTab'
@@ -19,10 +20,12 @@ interface Props {
 type SettingsTab = 'appearance' | 'aiAgent' | 'mcp' | 'about'
 
 export default function SettingsModal({ open, settings, onClose, onSave }: Props) {
+    const { t } = useTranslation('settings')
     const [activeTab, setActiveTab] = useState<SettingsTab>('appearance')
     const [themeMode, setThemeMode] = useState<'light' | 'dark' | 'system'>('light')
     const [globalFontFamily, setGlobalFontFamily] = useState('system')
     const [closeAction, setCloseAction] = useState<'ask' | 'minimize' | 'quit'>('ask')
+    const [language, setLanguage] = useState<'system' | 'zh-CN' | 'en-US'>('system')
 
     const [aiBaseUrl, setAiBaseUrl] = useState('https://api.deepseek.com')
     const [aiApiKey, setAiApiKey] = useState('')
@@ -42,7 +45,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const [aiReasoningEffort, setAiReasoningEffort] = useState<'none' | 'low' | 'medium' | 'high'>('none')
     const [aiEnableVerifier, setAiEnableVerifier] = useState(false)
     const [aiMaxParallel, setAiMaxParallel] = useState(4)
-    const [aiSystemPrompt, setAiSystemPrompt] = useState('你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
+    const [aiSystemPrompt, setAiSystemPrompt] = useState('')
     const [aiWorkspaceDir, setAiWorkspaceDir] = useState('')
     const [mcpServerEnabled, setMcpServerEnabled] = useState(false)
     const [mcpServerPort, setMcpServerPort] = useState(4096)
@@ -53,6 +56,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         if (open && !prevOpenRef.current && settings) {
             const modelTokens = settings.aiModelContextTokens || 65536
             const ratio = settings.aiContextCompressRatio || 80
+            setLanguage(settings.language || 'system')
             setThemeMode(settings.themeMode || 'light')
             setGlobalFontFamily(settings.globalFontFamily || 'system')
             setCloseAction(settings.closeAction || 'ask')
@@ -74,7 +78,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             setAiReasoningEffort(settings.aiReasoningEffort || 'medium')
             setAiEnableVerifier(!!settings.aiEnableVerifier)
             setAiMaxParallel(settings.aiMaxParallel || 4)
-            setAiSystemPrompt(settings.aiSystemPrompt || '你是一个有用的 AI 助手，能够回答用户的各种技术与日常问题，并给出精准优雅的解答。')
+            setAiSystemPrompt(settings.aiSystemPrompt || '')
             setAiWorkspaceDir(settings.aiWorkspaceDir || '')
             setMcpServerEnabled(!!settings.mcpServerEnabled)
             setMcpServerPort(settings.mcpServerPort || 4096)
@@ -98,6 +102,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const persistSettings = useCallback((partial: Partial<AppSettings>) => {
         onSave({
             ...settings,
+            language,
             themeMode,
             globalFontFamily,
             aiBaseUrl,
@@ -126,9 +131,14 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             mcpServerHost,
             ...partial,
         })
-    }, [settings, themeMode, globalFontFamily, closeAction, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiModelContextTokens, aiContextCompressRatio, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, mcpServerEnabled, mcpServerPort, mcpServerHost, onSave])
+    }, [settings, language, themeMode, globalFontFamily, closeAction, aiBaseUrl, aiApiKey, aiModel, aiTemperature, aiModelContextTokens, aiContextCompressRatio, aiMaxContextTokens, aiCompressionStrategy, aiEnableMultimodal, aiEnableWebSearch, aiEnablePermissionGuard, aiBlockHighRiskCommands, aiEnableThinking, aiReasoningEffort, aiEnableVerifier, aiMaxParallel, aiSystemPrompt, aiWorkspaceDir, mcpServerEnabled, mcpServerPort, mcpServerHost, onSave])
 
     if (!open) return null
+
+    const handleLanguageChange = (lang: 'system' | 'zh-CN' | 'en-US') => {
+        setLanguage(lang)
+        persistSettings({ language: lang })
+    }
 
     const handleThemeChange = (mode: 'light' | 'dark' | 'system') => {
         setThemeMode(mode)
@@ -203,14 +213,14 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                     type="text"
                     icon={<ArrowLeft size={16} />}
                     onClick={onClose}
-                    title="返回主界面 (Esc)"
+                    title={t('backToMainTip')}
                     style={{ width: '100%', justifyContent: 'flex-start', marginBottom: 12 }}
                 >
-                    返回主界面
+                    {t('backToMain')}
                 </Button>
 
                 <div className={s.sidebarHeader}>
-                    <span className={s.sidebarTitle}>系统设置</span>
+                    <span className={s.sidebarTitle}>{t('title')}</span>
                 </div>
 
                 <div className={s.navList}>
@@ -220,7 +230,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         onClick={() => setActiveTab('appearance')}
                         style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left', height: 36, marginBottom: 4 }}
                     >
-                        外观主题
+                        {t('tabs.appearance')}
                     </Button>
                     <Button
                         type={activeTab === 'aiAgent' ? 'primary' : 'text'}
@@ -228,7 +238,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         onClick={() => setActiveTab('aiAgent')}
                         style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left', height: 36, marginBottom: 4 }}
                     >
-                        AI 智能体
+                        {t('tabs.aiAgent')}
                     </Button>
                     <Button
                         type={activeTab === 'mcp' ? 'primary' : 'text'}
@@ -236,7 +246,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         onClick={() => setActiveTab('mcp')}
                         style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left', height: 36, marginBottom: 4 }}
                     >
-                        MCP 服务
+                        {t('tabs.mcp')}
                     </Button>
                     <Button
                         type={activeTab === 'about' ? 'primary' : 'text'}
@@ -244,7 +254,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         onClick={() => setActiveTab('about')}
                         style={{ width: '100%', justifyContent: 'flex-start', textAlign: 'left', height: 36, marginBottom: 4 }}
                     >
-                        关于应用
+                        {t('tabs.about')}
                     </Button>
                 </div>
             </div>
@@ -256,9 +266,11 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         themeMode={themeMode}
                         globalFontFamily={globalFontFamily}
                         closeAction={closeAction}
+                        language={language}
                         onThemeChange={handleThemeChange}
                         onGlobalFontChange={handleGlobalFontChange}
                         onCloseActionChange={handleCloseActionChange}
+                        onLanguageChange={handleLanguageChange}
                     />
                 )}
 

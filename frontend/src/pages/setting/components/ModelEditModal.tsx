@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Input, InputNumber, Slider, Space, Tag, Switch, App } from 'antd'
 import { Sparkles, Server } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { AiModelItem } from '@/types'
 import s from './ModelEditModal.module.less'
 
@@ -10,6 +11,8 @@ interface Props {
     onSave: (item: AiModelItem) => void
     onClose: () => void
 }
+
+import i18n from 'i18next'
 
 const PRESETS = [
     {
@@ -25,7 +28,7 @@ const PRESETS = [
         },
     },
     {
-        label: 'OpenAI (128K 视觉)',
+        get label() { return i18n.t('aiAgent.presetOpenAi', { defaultValue: 'OpenAI (128K 视觉)' }) },
         color: 'green',
         data: {
             name: 'GPT-4o mini',
@@ -37,10 +40,10 @@ const PRESETS = [
         },
     },
     {
-        label: '通义千问 (128K)',
+        get label() { return i18n.t('aiAgent.presetQwen', { defaultValue: '通义千问 (128K)' }) },
         color: 'orange',
         data: {
-            name: '通义千问 Turbo',
+            get name() { return i18n.t('aiAgent.presetQwenName', { defaultValue: '通义千问 Turbo' }) },
             model: 'qwen-turbo',
             baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
             contextTokens: 131072,
@@ -49,10 +52,10 @@ const PRESETS = [
         },
     },
     {
-        label: 'Ollama 本地 (32K)',
+        get label() { return i18n.t('aiAgent.presetOllama', { defaultValue: 'Ollama 本地 (32K)' }) },
         color: 'purple',
         data: {
-            name: 'Ollama 本地',
+            get name() { return i18n.t('aiAgent.presetOllamaName', { defaultValue: 'Ollama 本地' }) },
             model: 'llama3',
             baseUrl: 'http://localhost:11434/v1',
             contextTokens: 32768,
@@ -68,6 +71,7 @@ export const ModelEditModal: React.FC<Props> = ({
     onSave,
     onClose,
 }) => {
+    const { t } = useTranslation(['settings', 'common'])
     const { message } = App.useApp()
     const [name, setName] = useState('')
     const [model, setModel] = useState('')
@@ -112,20 +116,20 @@ export const ModelEditModal: React.FC<Props> = ({
         if (presetData.enableMultimodal !== undefined) {
             setEnableMultimodal(presetData.enableMultimodal)
         }
-        message.success(`已应用 ${presetData.name} 预设模板`)
+        message.success(t('aiAgent.presetApplied', { name: presetData.name, defaultValue: `已应用 ${presetData.name} 预设模板` }))
     }
 
     const handleSubmit = () => {
         if (!name.trim()) {
-            message.warning('请输入模型显示名称')
+            message.warning(t('aiAgent.enterNameWarn', '请输入模型显示名称'))
             return
         }
         if (!model.trim()) {
-            message.warning('请输入模型标识')
+            message.warning(t('aiAgent.enterModelWarn', '请输入模型标识'))
             return
         }
         if (!baseUrl.trim()) {
-            message.warning('请输入 API 服务地址')
+            message.warning(t('aiAgent.enterBaseUrlWarn', '请输入 API 服务地址'))
             return
         }
 
@@ -150,7 +154,7 @@ export const ModelEditModal: React.FC<Props> = ({
             title={
                 <Space size={8}>
                     <Server size={18} color="var(--accent)" />
-                    <span>{isEdit ? '编辑模型配置' : '添加大模型'}</span>
+                    <span>{isEdit ? t('aiAgent.editModel', '编辑模型配置') : t('aiAgent.addModel', '添加大模型')}</span>
                 </Space>
             }
             width={520}
@@ -158,9 +162,9 @@ export const ModelEditModal: React.FC<Props> = ({
             onCancel={onClose}
             footer={
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
-                    <Button onClick={onClose}>取消</Button>
+                    <Button onClick={onClose}>{t('common:cancel', '取消')}</Button>
                     <Button type="primary" onClick={handleSubmit}>
-                        保存配置
+                        {t('common:save', '保存配置')}
                     </Button>
                 </div>
             }
@@ -170,7 +174,7 @@ export const ModelEditModal: React.FC<Props> = ({
                 <div className={s.presetSection}>
                     <div className={s.presetHeader}>
                         <Sparkles size={13} color="var(--accent)" />
-                        <span>常用厂商快捷预设 (点击一键填入)</span>
+                        <span>{t('aiAgent.quickPresets', '常用厂商快捷预设 (点击一键填入)')}</span>
                     </div>
                     <div className={s.presetButtons}>
                         {PRESETS.map((p) => (
@@ -192,26 +196,26 @@ export const ModelEditModal: React.FC<Props> = ({
                         <div className={s.formItem}>
                             <div className={s.label}>
                                 <span>
-                                    显示名称 <span className={s.required}>*</span>
+                                    {t('aiAgent.displayName', '显示名称')} <span className={s.required}>*</span>
                                 </span>
                             </div>
                             <Input
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
-                                placeholder="例如: DeepSeek Flash"
+                                placeholder={t('aiAgent.displayNamePlaceholder', '例如: DeepSeek Flash')}
                             />
                         </div>
 
                         <div className={s.formItem}>
                             <div className={s.label}>
                                 <span>
-                                    模型标识 <span className={s.required}>*</span>
+                                    {t('aiAgent.modelId', '模型标识')} <span className={s.required}>*</span>
                                 </span>
                             </div>
                             <Input
                                 value={model}
                                 onChange={(e) => setModel(e.target.value)}
-                                placeholder="例如: deepseek-v4-flash"
+                                placeholder={t('aiAgent.modelIdPlaceholder', '例如: deepseek-v4-flash')}
                             />
                         </div>
                     </div>
@@ -219,20 +223,20 @@ export const ModelEditModal: React.FC<Props> = ({
                     <div className={s.formItem}>
                         <div className={s.label}>
                             <span>
-                                API 服务地址 (Base URL) <span className={s.required}>*</span>
+                                {t('aiAgent.baseUrl', 'API 服务地址 (Base URL)')} <span className={s.required}>*</span>
                             </span>
                         </div>
                         <Input
                             value={baseUrl}
                             onChange={(e) => setBaseUrl(e.target.value)}
-                            placeholder="例如: https://api.deepseek.com"
+                            placeholder={t('aiAgent.baseUrlPlaceholder', { defaultValue: '例如: https://api.deepseek.com' })}
                         />
                     </div>
 
                     <div className={s.formItem}>
                         <div className={s.label}>
-                            <span>API 访问密钥 (API Key)</span>
-                            <span className={s.hint}>密钥加密存储于本地</span>
+                            <span>{t('aiAgent.apiKey', 'API 访问密钥 (API Key)')}</span>
+                            <span className={s.hint}>{t('aiAgent.keyEncryptedHint', '密钥加密存储于本地')}</span>
                         </div>
                         <Input.Password
                             value={apiKey}
@@ -245,7 +249,7 @@ export const ModelEditModal: React.FC<Props> = ({
                     <div className={s.rowTwoCols}>
                         <div className={s.formItem}>
                             <div className={s.label}>
-                                <span>上下文上限 (Tokens)</span>
+                                <span>{t('aiAgent.contextTokens', '上下文上限 (Tokens)')}</span>
                             </div>
                             <InputNumber
                                 style={{ width: '100%' }}
@@ -259,7 +263,7 @@ export const ModelEditModal: React.FC<Props> = ({
 
                         <div className={s.formItem}>
                             <div className={s.label}>
-                                <span>多样性 (Temperature: {temperature})</span>
+                                <span>{t('aiAgent.temperature', '多样性')} (Temperature: {temperature})</span>
                             </div>
                             <Slider
                                 min={0}
@@ -273,9 +277,9 @@ export const ModelEditModal: React.FC<Props> = ({
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0', borderTop: '1px dashed var(--border)', marginTop: 4 }}>
                         <div>
-                            <div style={{ fontSize: 13, fontWeight: 500 }}>多模态视觉能力 (Multimodal)</div>
+                            <div style={{ fontSize: 13, fontWeight: 500 }}>{t('aiAgent.multimodalTitle', '多模态视觉能力 (Multimodal)')}</div>
                             <div style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                                允许发送并解析图片附件（如截图、架构图、日志图片）
+                                {t('aiAgent.multimodalDesc', '允许发送并解析图片附件（如截图、架构图、日志图片）')}
                             </div>
                         </div>
                         <Switch

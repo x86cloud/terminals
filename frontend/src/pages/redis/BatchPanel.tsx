@@ -1,4 +1,5 @@
 import { Input, Button } from 'antd'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { RedisPipelineResult, RedisTransactionResult } from '@/types'
 import b from '@/pages/redis/BatchPanel.module.less'
@@ -24,12 +25,14 @@ export default function BatchPanel({
     result: RedisPipelineResult | RedisTransactionResult | null
     showWatch?: boolean
 }) {
+    const { t } = useTranslation('redis')
+
     return (
         <div className={b.panel}>
             <div className={b.subHead}>{title}</div>
             {showWatch && (
                 <div className={b.row} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>WATCH 键(逗号分隔):</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>{t('batch.watchKeys', 'WATCH 键(逗号分隔):')}</span>
                     <Input size="small" style={{ flex: 1 }} value={watch} onChange={(e) => setWatch(e.target.value)} placeholder="key1,key2" />
                 </div>
             )}
@@ -39,14 +42,14 @@ export default function BatchPanel({
                 lang="json"
                 lineNumbers={false}
                 height="168px"
-                placeholder={'每行一条命令，例如：\nSET foo bar\nINCR counter\nHSET h k v'}
+                placeholder={t('batch.placeholder', '每行一条命令，例如：\nSET foo bar\nINCR counter\nHSET h k v')}
             />
             <div style={{ marginTop: 8 }}>
                 <Button size="small" type="primary" onClick={onRun}>{runLabel}</Button>
             </div>
             {result && (
                 <div className={b.msgList}>
-                    {'aborted' in result && result.aborted && <div className={b.redisMsg}>事务被中止（WATCH 冲突）</div>}
+                    {'aborted' in result && result.aborted && <div className={b.redisMsg}>{t('batch.txAborted', '事务被中止（WATCH 冲突）')}</div>}
                     {result.results?.map((r2, i) => (
                         <div key={i} className={b.msgItem}>
                             <span className={b.msgChan}>#{i + 1}</span>
@@ -54,7 +57,7 @@ export default function BatchPanel({
                             {r2.error && <span className={b.msgErr}>{r2.error}</span>}
                         </div>
                     ))}
-                    {result.error && <div className={b.msgErr}>整体错误: {result.error}</div>}
+                    {result.error && <div className={b.msgErr}>{t('batch.overallError', { defaultValue: '整体错误: {{error}}', error: result.error })}</div>}
                 </div>
             )}
         </div>

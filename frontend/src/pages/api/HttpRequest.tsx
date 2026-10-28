@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Select, Input, Button, Segmented, Tag, Checkbox, Tooltip, Alert } from 'antd'
 import { Copy, PanelLeft, Send, Save, Globe, Clock, Database, Download, Edit2, Trash2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { useSession } from '@/contexts/SessionContext'
 import a from '@/pages/api/HttpRequest.module.less'
@@ -18,6 +19,7 @@ const methodColorMap: Record<string, string> = {
 }
 
 export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () => void }) {
+    const { t } = useTranslation(['api', 'common'])
     const { activeTarget } = useSession()
     const isApiActive = activeTarget?.kind === 'api'
 
@@ -78,7 +80,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
 
     return (
         <div className={a.apiToolbar}>
-            <Tooltip title={showApiTree ? '隐藏接口列表' : '显示接口列表'}>
+            <Tooltip title={showApiTree ? t('api:request.hideApiTree', { defaultValue: '隐藏接口列表' }) : t('api:request.showApiTree', { defaultValue: '显示接口列表' })}>
                 <Button
                     type="text"
                     style={{ flexShrink: 0, height: 34, width: 34, padding: 0 }}
@@ -132,7 +134,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
                         autoFocus
                         style={{ flexShrink: 0, width: 140, height: 34, fontSize: 13 }}
                         value={editingNameValue}
-                        placeholder="输入新接口名称"
+                        placeholder={t('api:request.inputApiNamePlaceholder', { defaultValue: '输入新接口名称' })}
                         onChange={(e) => setEditingNameValue(e.target.value)}
                         onBlur={saveEditingName}
                         onKeyDown={(e) => {
@@ -145,7 +147,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
                         }}
                     />
                 ) : (
-                    <Tooltip title="点击修改接口名称">
+                    <Tooltip title={t('api:request.editApiName', { defaultValue: '点击修改接口名称' })}>
                         <Tag
                             color="blue"
                             style={{
@@ -175,7 +177,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
             )}
 
             {/* 保存修改按钮 */}
-            <Tooltip title={currentApiId ? (isModified ? '接口内容已变更，点击保存修改 (Ctrl+S)' : '当前配置已保存 (Ctrl+S)') : '保存为新接口 (Ctrl+S)'}>
+            <Tooltip title={currentApiId ? (isModified ? t('api:request.saveModifiedTip', { defaultValue: '接口内容已变更，点击保存修改 (Ctrl+S)' }) : t('api:request.savedTip', { defaultValue: '当前配置已保存 (Ctrl+S)' })) : t('api:request.saveAsNewTip', { defaultValue: '保存为新接口 (Ctrl+S)' })}>
                 <Button
                     style={{
                         flexShrink: 0,
@@ -189,14 +191,14 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
                     icon={<Save size={14} />}
                     onClick={handleSaveClick}
                 >
-                    {isModified ? '保存*' : '保存'}
+                    {isModified ? t('api:request.saveModified', { defaultValue: '保存*' }) : t('api:request.save', { defaultValue: '保存' })}
                 </Button>
             </Tooltip>
 
             {mode === 'ws' ? (
                 wsStatus === 'open' ? (
                     <Button danger style={{ flexShrink: 0, height: 34, padding: '0 16px' }} onClick={wsDisconnect}>
-                        断开
+                        {t('api:request.disconnect', { defaultValue: '断开' })}
                     </Button>
                 ) : (
                     <Button
@@ -205,7 +207,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
                         loading={wsConnecting}
                         onClick={wsConnect}
                     >
-                        连接
+                        {t('api:request.connect', { defaultValue: '连接' })}
                     </Button>
                 )
             ) : (
@@ -216,7 +218,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
                     loading={sending}
                     onClick={doSend}
                 >
-                    发送
+                    {t('api:request.send', { defaultValue: '发送' })}
                 </Button>
             )}
         </div>
@@ -224,6 +226,7 @@ export function HttpToolbar({ state, onClose }: { state: ApiState; onClose: () =
 }
 
 export function HttpResponseArea({ state }: { state: ApiState }) {
+    const { t } = useTranslation(['api', 'common'])
     const {
         response, respTab, setRespTab, prettyBody, respLang, respHeaders, bodyPretty, setBodyPretty, copy,
     } = state
@@ -264,15 +267,15 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
                         )}
                     </div>
                 ) : (
-                    <span className={a.respPlaceholder}>响应报文 (Response)</span>
+                    <span className={a.respPlaceholder}>{t('api:request.response', { defaultValue: '响应报文 (Response)' })}</span>
                 )}
                 {response && (
                     <Segmented
                         value={respTab}
                         onChange={(v) => setRespTab(v as any)}
                         options={[
-                            { label: `响应体 (${respLang.toUpperCase()})`, value: 'body' },
-                            { label: `响应头 (${respHeaders.length})`, value: 'headers' },
+                            { label: t('api:request.respBody', { defaultValue: `响应体 (${respLang.toUpperCase()})`, lang: respLang.toUpperCase() }), value: 'body' },
+                            { label: t('api:request.respHeaders', { defaultValue: `响应头 (${respHeaders.length})`, count: respHeaders.length }), value: 'headers' },
                         ]}
                     />
                 )}
@@ -282,7 +285,7 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
                 {!response && (
                     <div className={a.emptyStateWrap}>
                         <Globe size={44} style={{ opacity: 0.3 }} />
-                        <div style={{ fontSize: 14, fontWeight: 600 }}>准备就绪</div>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{t('api:request.ready', { defaultValue: '准备就绪' })}</div>
                     </div>
                 )}
 
@@ -293,7 +296,7 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
                                 <Alert
                                     type="error"
                                     showIcon
-                                    message="请求失败"
+                                    message={t('api:request.requestFailed', { defaultValue: '请求失败' })}
                                     description={response.error}
                                 />
                             </div>
@@ -303,33 +306,33 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
                                 checked={bodyPretty}
                                 onChange={(e) => setBodyPretty(e.target.checked)}
                             >
-                                美化 JSON
+                                {t('api:request.prettifyJson', { defaultValue: '美化 JSON' })}
                             </Checkbox>
                             <Button
                                 icon={<Copy size={13} />}
                                 onClick={() => copy(prettyBody)}
                                 disabled={!prettyBody}
                             >
-                                复制
+                                {t('common:copy', { defaultValue: '复制' })}
                             </Button>
                             <Button
                                 icon={<Download size={13} />}
                                 onClick={downloadResponse}
                                 disabled={!response.body}
                             >
-                                下载
+                                {t('common:download', { defaultValue: '下载' })}
                             </Button>
                             <Button
                                 icon={<Trash2 size={13} />}
                                 onClick={state.clearResponse}
                                 disabled={!response}
                             >
-                                清空
+                                {t('api:request.clear', { defaultValue: '清空' })}
                             </Button>
                         </div>
                         <div className={a.respCodeWrap}>
                             <CodeEditor
-                                value={prettyBody || (response.error ? `// 错误: ${response.error}` : '(空响应体)')}
+                                value={prettyBody || (response.error ? t('api:request.errorPrefix', { defaultValue: `// 错误: ${response.error}`, error: response.error }) : t('api:request.emptyBody', { defaultValue: '(空响应体)' }))}
                                 onChange={() => { }}
                                 lang={respLang}
                                 height="100%"
@@ -341,12 +344,12 @@ export function HttpResponseArea({ state }: { state: ApiState }) {
 
                 {response && respTab === 'headers' && (
                     <div className={a.respHeaders}>
-                        {respHeaders.length === 0 && <div className={a.emptyStateWrap}>无响应头</div>}
+                        {respHeaders.length === 0 && <div className={a.emptyStateWrap}>{t('api:request.noHeaders', { defaultValue: '无响应头' })}</div>}
                         {respHeaders.map(([k, v]) => (
                             <div key={k} className={a.respHeaderRow}>
                                 <span className={a.respHeaderKey}>{k}</span>
                                 <span className={a.respHeaderVal}>{v}</span>
-                                <Tooltip title="复制响应头">
+                                <Tooltip title={t('common:copy', { defaultValue: '复制' })}>
                                     <Button
                                         type="text"
                                         style={{ height: 26, width: 26, padding: 0 }}

@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useLayoutEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Bot, History, ArrowDown } from 'lucide-react'
 import { AiMessage } from '@/types'
 import { ChatMessageItem } from './ChatMessageItem'
@@ -29,6 +30,7 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = React.memo(({
     remainingRounds,
     onLoadMore,
 }) => {
+    const { t } = useTranslation(['agent', 'common'])
     const listContainerRef = useRef<HTMLDivElement>(null)
     const prevScrollHeightRef = useRef<number>(0)
     const isLoadingMoreRef = useRef<boolean>(false)
@@ -107,52 +109,52 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = React.memo(({
                     <div
                         className={s.loadMoreBanner}
                         onClick={handleTriggerLoadMore}
-                        title="向上滚动或点击加载更早历史"
+                        title={t('agent:chatList.loadEarlierTitle', { defaultValue: '向上滚动或点击加载更早历史' })}
                     >
                         <History size={12} />
-                        <span>查看更早历史对话 (还有 {remainingRounds} 轮)</span>
+                        <span>{t('agent:chatList.loadEarlierText', { remaining: remainingRounds, defaultValue: `查看更早历史对话 (还有 ${remainingRounds} 轮)` })}</span>
                     </div>
                 )}
 
                 {messages.length === 0 ? (
                     <div className={s.emptyState}>
                         <Bot size={40} className={s.emptyIcon} />
-                        <div className={s.emptyTitle}>智能助手</div>
+                        <div className={s.emptyTitle}>{t('agent:chatList.emptyTitle', { defaultValue: '智能助手' })}</div>
                         <div className={s.emptySub}>
-                            支持全数据库运维、云原生容器诊断与 SSH 交互排查。
+                            {t('agent:chatList.emptyDesc', { defaultValue: '支持全数据库运维、云原生容器诊断与 SSH 交互排查。' })}
                         </div>
                         <div className={s.promptSuggestions}>
                             <div
                                 className={s.sugCard}
                                 onClick={() =>
-                                    onSelectSuggestion('检查当前连通服务器的 CPU、内存负载与异常高消耗进程')
+                                    onSelectSuggestion(t('agent:chatList.suggestion1', { defaultValue: '检查当前连通服务器的 CPU、内存负载与异常高消耗进程' }))
                                 }
                             >
-                                🖥️ 排查当前服务器负载与异常进程
+                                {t('agent:chatList.suggestion1Label', { defaultValue: '🖥️ 排查当前服务器负载与异常进程' })}
                             </div>
                             <div
                                 className={s.sugCard}
                                 onClick={() =>
-                                    onSelectSuggestion('/plan 执行数据库健康巡检并生成结构化诊断报告')
+                                    onSelectSuggestion(t('agent:chatList.suggestion2', { defaultValue: '/plan 执行数据库健康巡检并生成结构化诊断报告' }))
                                 }
                             >
-                                🎯 制定数据库健康巡检执行规划
+                                {t('agent:chatList.suggestion2Label', { defaultValue: '🎯 制定数据库健康巡检执行规划' })}
                             </div>
                             <div
                                 className={s.sugCard}
                                 onClick={() =>
-                                    onSelectSuggestion('查看 Redis 当前慢查询日志并分析潜在瓶颈')
+                                    onSelectSuggestion(t('agent:chatList.suggestion3', { defaultValue: '查看 Redis 当前慢查询日志并分析潜在瓶颈' }))
                                 }
                             >
-                                ⚡ 分析 Redis 慢查询日志
+                                {t('agent:chatList.suggestion3Label', { defaultValue: '⚡ 分析 Redis 慢查询日志' })}
                             </div>
                             <div
                                 className={s.sugCard}
                                 onClick={() =>
-                                    onSelectSuggestion('列出工作区目录下的文件并统计各文件大小')
+                                    onSelectSuggestion(t('agent:chatList.suggestion4', { defaultValue: '列出工作区目录下的文件并统计各文件大小' }))
                                 }
                             >
-                                📂 统计工作目录文件及体积
+                                {t('agent:chatList.suggestion4Label', { defaultValue: '📂 统计工作目录文件及体积' })}
                             </div>
                         </div>
                     </div>
@@ -182,10 +184,10 @@ export const ChatMessageList: React.FC<ChatMessageListProps> = React.memo(({
                     type="button"
                     className={s.scrollToBottomBtn}
                     onClick={handleScrollToBottom}
-                    title="回到底部最新消息"
+                    title={t('agent:chatList.scrollToBottomTitle', { defaultValue: '回到底部最新消息' })}
                 >
                     <ArrowDown size={12} />
-                    <span>回到底部</span>
+                    <span>{t('agent:chatList.scrollToBottomText', { defaultValue: '回到底部' })}</span>
                 </button>
             )}
         </div>

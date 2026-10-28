@@ -15,6 +15,7 @@ import {
     Sliders,
     AlertTriangle,
 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import StatusCard from '@/pages/mysql/StatusCard'
 import { formatSize, errorMessage } from '@/utils'
 import { API } from '@/api'
@@ -31,15 +32,15 @@ interface Props {
     onRefresh: () => void
 }
 
-function formatUptime(seconds: number): string {
+function formatUptime(seconds: number, t: (k: string, opt?: any) => string): string {
     if (!seconds || isNaN(seconds)) return '-'
     const d = Math.floor(seconds / 86400)
     const h = Math.floor((seconds % 86400) / 3600)
     const m = Math.floor((seconds % 3600) / 60)
     const s = Math.floor(seconds % 60)
-    if (d > 0) return `${d}天 ${h}小时 ${m}分`
-    if (h > 0) return `${h}小时 ${m}分 ${s}秒`
-    return `${m}分 ${s}秒`
+    if (d > 0) return `${t('db:mysql.status.time.days', { d })}${t('db:mysql.status.time.hours', { h })}${t('db:mysql.status.time.minutes', { m })}`
+    if (h > 0) return `${t('db:mysql.status.time.hours', { h })}${t('db:mysql.status.time.minutes', { m })}${t('db:mysql.status.time.seconds', { s })}`
+    return `${t('db:mysql.status.time.minutes', { m })}${t('db:mysql.status.time.seconds', { s })}`
 }
 
 export default function StatusPanel({
@@ -51,6 +52,7 @@ export default function StatusPanel({
     busy,
     onRefresh,
 }: Props) {
+    const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const { activeTarget } = useSession()
     const isActive = !sessionId || (activeTarget?.kind === 'mysql' && activeTarget.id === sessionId)
@@ -88,19 +90,19 @@ export default function StatusPanel({
         if (!sessionId) return
         const pid = String(id)
         Modal.confirm({
-            title: '终止会话线程',
-            content: `确定要终止会话线程 #${pid} 吗？`,
-            okText: '确定终止',
+            title: t('db:mysql.status.process.killTitle'),
+            content: t('db:mysql.status.process.killConfirm', { id: pid }),
+            okText: t('db:mysql.status.process.killOk'),
             okType: 'danger',
-            cancelText: '取消',
+            cancelText: t('common:cancel'),
             onOk: async () => {
                 setKillingId(pid)
                 try {
                     await API.mysqlRun(sessionId, '', `KILL ${pid}`)
-                    message.success(`已终止进程 #${pid}`)
+                    message.success(t('db:mysql.status.process.killSuccess', { id: pid }))
                     onRefresh()
                 } catch (e) {
-                    message.error(`终止进程失败: ${errorMessage(e)}`)
+                    message.error(t('db:mysql.status.process.killFailed', { error: errorMessage(e) }))
                 } finally {
                     setKillingId(null)
                 }
@@ -206,32 +208,32 @@ export default function StatusPanel({
             <div className={my.mgmtHead}>
                 <div className={my.headLeft}>
                     <div className={my.headTitle}>
-                        <span>MySQL 状态监控与性能分析</span>
+                        <span>{t('db:mysql.status.title')}</span>
                     </div>
                     {variables['version'] && (
                         <span className={my.versionTag}>MySQL {variables['version']}</span>
                     )}
                     {uptimeSec > 0 && (
-                        <span className={my.uptimeTag} title={`运行时间：${formatUptime(uptimeSec)}`}>
-                            运行 {formatUptime(uptimeSec)}
+                        <span className={my.uptimeTag} title={t('db:mysql.status.uptimeHover', { time: formatUptime(uptimeSec, t) })}>
+                            {t('db:mysql.status.uptime', { time: formatUptime(uptimeSec, t) })}
                         </span>
                     )}
                 </div>
 
                 <div className={my.headRight} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
                     <div className={my.autoRefreshWrap} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                        <span className={my.autoRefreshLabel} style={{ fontSize: 12 }}>自动刷新:</span>
+                        <span className={my.autoRefreshLabel} style={{ fontSize: 12 }}>{t('db:mysql.status.autoRefresh')}</span>
                         <Select
                             size="small"
                             style={{ width: 85 }}
                             value={autoRefreshSec}
                             onChange={(val) => setAutoRefreshSec(val)}
                             options={[
-                                { value: 0, label: '关闭' },
-                                { value: 5, label: '5 秒' },
-                                { value: 10, label: '10 秒' },
-                                { value: 30, label: '30 秒' },
-                                { value: 60, label: '60 秒' },
+                                { value: 0, label: t('db:mysql.status.close') },
+                                { value: 5, label: '5s' },
+                                { value: 10, label: '10s' },
+                                { value: 30, label: '30s' },
+                                { value: 60, label: '60s' },
                             ]}
                         />
                     </div>
@@ -241,9 +243,9 @@ export default function StatusPanel({
                         icon={<RotateCw size={12} className={busy ? my.spin : ''} />}
                         onClick={onRefresh}
                         disabled={busy}
-                        title="立即刷新监控指标"
+                        title={t('db:mysql.status.refreshTooltip')}
                     >
-                        刷新
+                        {t('db:mysql.status.refreshBtn')}
                     </Button>
                 </div>
             </div>
@@ -252,51 +254,51 @@ export default function StatusPanel({
                 {/* 顶部核心指标看板 */}
                 <div className={my.statusGrid}>
                     <StatusCard
-                        title="当前连接数"
+                        title={t('db:mysql.status.cards.connections')}
                         icon={<Activity size={16} />}
                         value={`${threadsConnected} / ${maxConnections}`}
-                        subValue={`正在执行查询: ${threadsRunning}`}
+                        subValue={t('db:mysql.status.cards.executingQuery', { count: threadsRunning })}
                         progress={connProgress}
                         variant={connProgress > 80 ? 'danger' : connProgress > 50 ? 'warning' : 'accent'}
                     />
 
                     <StatusCard
-                        title="总查询量 / QPS"
+                        title={t('db:mysql.status.cards.totalQueries')}
                         icon={<Zap size={16} />}
                         value={questions.toLocaleString()}
-                        subValue={`实时 QPS: ${qps} 次/秒`}
+                        subValue={t('db:mysql.status.cards.realtimeQps', { qps })}
                         variant="default"
                     />
 
                     <StatusCard
-                        title="慢查询累计"
+                        title={t('db:mysql.status.cards.slowQueries')}
                         icon={<Clock size={16} />}
                         value={slowQueries}
-                        subValue={`阈值: ${longQueryTime}s (日志: ${variables['slow_query_log'] || 'OFF'})`}
+                        subValue={t('db:mysql.status.cards.threshold', { time: longQueryTime, log: variables['slow_query_log'] || 'OFF' })}
                         variant={slowQueries > 0 ? 'warning' : 'default'}
                     />
 
                     <StatusCard
-                        title="InnoDB 缓冲池"
+                        title={t('db:mysql.status.cards.innodbBuffer')}
                         icon={<Database size={16} />}
                         value={`${bufferHitRate}%`}
-                        subValue={`总容量: ${bufferPoolSize} (命中率)`}
+                        subValue={t('db:mysql.status.cards.bufferCapacity', { size: bufferPoolSize })}
                         variant="success"
                     />
 
                     <StatusCard
-                        title="表锁与争用"
+                        title={t('db:mysql.status.cards.tableLocks')}
                         icon={<Lock size={16} />}
                         value={tableLocksWaited}
-                        subValue={`即时锁: ${tableLocksImmediate.toLocaleString()}`}
+                        subValue={t('db:mysql.status.cards.immediateLocks', { count: tableLocksImmediate })}
                         variant={tableLocksWaited > 0 ? 'warning' : 'default'}
                     />
 
                     <StatusCard
-                        title="网络总吞吐"
+                        title={t('db:mysql.status.cards.networkThroughput')}
                         icon={<ArrowUpDown size={16} />}
                         value={`↓ ${formatSize(bytesRecv)}`}
-                        subValue={`↑ 发送: ${formatSize(bytesSent)}`}
+                        subValue={t('db:mysql.status.cards.sent', { size: formatSize(bytesSent) })}
                         variant="default"
                     />
                 </div>
@@ -312,7 +314,7 @@ export default function StatusPanel({
                                     label: (
                                         <Space size={6}>
                                             <Zap size={13} style={{ verticalAlign: -2 }} />
-                                            <span>会话与进程</span>
+                                            <span>{t('db:mysql.status.subTabs.process')}</span>
                                             <Badge count={processList.length} color="#1677ff" overflowCount={999} style={{ transform: 'scale(0.85)' }} />
                                         </Space>
                                     ),
@@ -322,7 +324,7 @@ export default function StatusPanel({
                                     label: (
                                         <Space size={6}>
                                             <Clock size={13} style={{ verticalAlign: -2 }} />
-                                            <span>慢查询日志</span>
+                                            <span>{t('db:mysql.status.subTabs.slow')}</span>
                                             <Badge count={slowLog.length} color="#fa8c16" overflowCount={999} style={{ transform: 'scale(0.85)' }} />
                                         </Space>
                                     ),
@@ -332,7 +334,7 @@ export default function StatusPanel({
                                     label: (
                                         <Space size={6}>
                                             <Sliders size={13} style={{ verticalAlign: -2 }} />
-                                            <span>系统变量</span>
+                                            <span>{t('db:mysql.status.subTabs.variables')}</span>
                                             <Badge count={filteredVariables.length} color="#52c41a" overflowCount={999} style={{ transform: 'scale(0.85)' }} />
                                         </Space>
                                     ),
@@ -352,9 +354,9 @@ export default function StatusPanel({
                                         value={procFilter}
                                         onChange={(v) => setProcFilter(v as any)}
                                         options={[
-                                            { label: `全部 (${processList.length})`, value: 'all' },
-                                            { label: `执行中 Query (${runningProcCount})`, value: 'query' },
-                                            { label: `空闲 Sleep (${processList.length - runningProcCount})`, value: 'sleep' },
+                                            { label: t('db:mysql.status.process.filterAll', { count: processList.length }), value: 'all' },
+                                            { label: t('db:mysql.status.process.filterQuery', { count: runningProcCount }), value: 'query' },
+                                            { label: t('db:mysql.status.process.filterSleep', { count: processList.length - runningProcCount }), value: 'sleep' },
                                         ]}
                                     />
 
@@ -363,27 +365,27 @@ export default function StatusPanel({
                                         style={{ maxWidth: 300 }}
                                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
                                         value={procSearch}
-                                        placeholder="搜索用户 / 库名 / 指令 / SQL..."
+                                        placeholder={t('db:mysql.status.process.searchPlaceholder')}
                                         allowClear
                                         onChange={(e) => setProcSearch(e.target.value)}
                                     />
                                 </div>
 
                                 {filteredProcessList.length === 0 ? (
-                                    <div className={my.emptyBox}>未找到匹配的会话进程</div>
+                                    <div className={my.emptyBox}>{t('db:mysql.status.process.empty')}</div>
                                 ) : (
                                     <div className={my.tableResponsive}>
                                         <table className={my.dataTable}>
                                             <thead>
                                                 <tr>
-                                                    <th style={{ width: 70 }}>ID</th>
-                                                    <th style={{ width: 140 }}>用户 @ 主机</th>
-                                                    <th style={{ width: 110 }}>数据库</th>
-                                                    <th style={{ width: 90 }}>指令</th>
-                                                    <th style={{ width: 80 }}>耗时 (s)</th>
-                                                    <th style={{ width: 120 }}>状态</th>
-                                                    <th>执行 SQL / 详情</th>
-                                                    <th style={{ width: 70, textAlign: 'center' }}>操作</th>
+                                                    <th style={{ width: 70 }}>{t('db:mysql.status.process.thId')}</th>
+                                                    <th style={{ width: 140 }}>{t('db:mysql.status.process.thUserHost')}</th>
+                                                    <th style={{ width: 110 }}>{t('db:mysql.status.process.thDb')}</th>
+                                                    <th style={{ width: 90 }}>{t('db:mysql.status.process.thCommand')}</th>
+                                                    <th style={{ width: 80 }}>{t('db:mysql.status.process.thTime')}</th>
+                                                    <th style={{ width: 120 }}>{t('db:mysql.status.process.thState')}</th>
+                                                    <th>{t('db:mysql.status.process.thSql')}</th>
+                                                    <th style={{ width: 70, textAlign: 'center' }}>{t('db:mysql.status.process.thAction')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -407,7 +409,7 @@ export default function StatusPanel({
                                                                 </div>
                                                             </td>
                                                             <td>
-                                                                <Tag>{p['db'] || '(无)'}</Tag>
+                                                                <Tag>{p['db'] || '-'}</Tag>
                                                             </td>
                                                             <td>
                                                                 <Tag color={isQuery ? 'processing' : cmd.toLowerCase() === 'sleep' ? 'default' : 'purple'}>
@@ -430,7 +432,7 @@ export default function StatusPanel({
                                                                         <code className={my.sqlSnippet} title={sqlInfo}>
                                                                             {sqlInfo}
                                                                         </code>
-                                                                        <Tooltip title="复制 SQL 语句">
+                                                                        <Tooltip title={t('db:mysql.status.process.copySql')}>
                                                                             <Button
                                                                                 size="small"
                                                                                 type="text"
@@ -444,7 +446,7 @@ export default function StatusPanel({
                                                                 )}
                                                             </td>
                                                             <td style={{ textAlign: 'center' }}>
-                                                                <Tooltip title={`终止连接 #${pid}`}>
+                                                                <Tooltip title={t('db:mysql.status.process.killTooltip', { id: pid })}>
                                                                     <Button
                                                                         size="small"
                                                                         danger
@@ -476,23 +478,23 @@ export default function StatusPanel({
                                         style={{ maxWidth: 300 }}
                                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
                                         value={slowSearch}
-                                        placeholder="搜索慢查询 SQL / 用户..."
+                                        placeholder={t('db:mysql.status.slow.searchPlaceholder')}
                                         allowClear
                                         onChange={(e) => setSlowSearch(e.target.value)}
                                     />
 
                                     <div className={my.slowHint} style={{ fontSize: 12, color: 'var(--text-dim)' }}>
-                                        <span>慢查询阈值: <strong>{longQueryTime}s</strong></span>
-                                        <span style={{ marginLeft: 10 }}>记录状态: <Tag color={variables['slow_query_log'] === 'ON' ? 'green' : 'default'}>{variables['slow_query_log'] || 'OFF'}</Tag></span>
+                                        <span>{t('db:mysql.status.slow.threshold', { time: longQueryTime })}</span>
+                                        <span style={{ marginLeft: 10 }}>{t('db:mysql.status.slow.status')} <Tag color={variables['slow_query_log'] === 'ON' ? 'green' : 'default'}>{variables['slow_query_log'] || 'OFF'}</Tag></span>
                                     </div>
                                 </div>
 
                                 {filteredSlowLog.length === 0 ? (
                                     <div className={my.slowEmptyGuide}>
                                         <AlertTriangle size={32} />
-                                        <div className={my.emptyGuideTitle}>未查询到慢查询记录</div>
+                                        <div className={my.emptyGuideTitle}>{t('db:mysql.status.slow.emptyTitle')}</div>
                                         <div className={my.emptyGuideSub}>
-                                            若需开启慢查询记录到系统表，可在 SQL 编辑器中执行：
+                                            {t('db:mysql.status.slow.emptySub')}
                                             <pre>
                                                 SET GLOBAL slow_query_log = 'ON';{'\n'}
                                                 SET GLOBAL long_query_time = 1;{'\n'}
@@ -515,20 +517,20 @@ export default function StatusPanel({
                                                         </div>
                                                         <div className={my.slowMetrics}>
                                                             <Tag color="warning">
-                                                                耗时: <strong>{s['query_time']}s</strong>
+                                                                {t('db:mysql.status.slow.cost', { time: s['query_time'] })}
                                                             </Tag>
                                                             <Tag>
-                                                                锁: {s['lock_time']}s
+                                                                {t('db:mysql.status.slow.lock', { time: s['lock_time'] })}
                                                             </Tag>
                                                             <Tag>
-                                                                扫描: {s['rows_examined']} 行
+                                                                {t('db:mysql.status.slow.scan', { count: s['rows_examined'] })}
                                                             </Tag>
                                                             <Button
                                                                 size="small"
                                                                 icon={copiedKey === key ? <Check size={12} /> : <Copy size={12} />}
                                                                 onClick={() => copyText(key, sqlText)}
                                                             >
-                                                                {copiedKey === key ? '已复制' : '复制'}
+                                                                {copiedKey === key ? t('db:mysql.status.slow.copied') : t('db:mysql.status.slow.copy')}
                                                             </Button>
                                                         </div>
                                                     </div>
@@ -550,12 +552,12 @@ export default function StatusPanel({
                                         value={varCategory}
                                         onChange={(v) => setVarCategory(v as any)}
                                         options={[
-                                            { label: '常用核心', value: 'core' },
-                                            { label: '连接与网络', value: 'conn' },
-                                            { label: 'InnoDB 引擎', value: 'innodb' },
-                                            { label: '日志与缓存', value: 'log' },
-                                            { label: '字符集/时区', value: 'charset' },
-                                            { label: `全部 (${Object.keys(variables).length})`, value: 'all' },
+                                            { label: t('db:mysql.status.vars.catCore'), value: 'core' },
+                                            { label: t('db:mysql.status.vars.catConn'), value: 'conn' },
+                                            { label: t('db:mysql.status.vars.catInnodb'), value: 'innodb' },
+                                            { label: t('db:mysql.status.vars.catLog'), value: 'log' },
+                                            { label: t('db:mysql.status.vars.catCharset'), value: 'charset' },
+                                            { label: t('db:mysql.status.vars.catAll', { count: Object.keys(variables).length }), value: 'all' },
                                         ]}
                                     />
 
@@ -564,22 +566,22 @@ export default function StatusPanel({
                                         style={{ maxWidth: 280 }}
                                         prefix={<Search size={12} style={{ color: 'var(--text-dim)' }} />}
                                         value={varSearch}
-                                        placeholder="搜索系统变量名或值..."
+                                        placeholder={t('db:mysql.status.vars.searchPlaceholder')}
                                         allowClear
                                         onChange={(e) => setVarSearch(e.target.value)}
                                     />
                                 </div>
 
                                 {filteredVariables.length === 0 ? (
-                                    <div className={my.emptyBox}>未找到匹配的变量配置</div>
+                                    <div className={my.emptyBox}>{t('db:mysql.status.vars.empty')}</div>
                                 ) : (
                                     <div className={my.tableResponsive}>
                                         <table className={my.dataTable}>
                                             <thead>
                                                 <tr>
-                                                    <th style={{ width: 280 }}>变量名称 (Variable Name)</th>
-                                                    <th>当前配置值 (Value)</th>
-                                                    <th style={{ width: 60, textAlign: 'center' }}>操作</th>
+                                                    <th style={{ width: 280 }}>{t('db:mysql.status.vars.thName')}</th>
+                                                    <th>{t('db:mysql.status.vars.thValue')}</th>
+                                                    <th style={{ width: 60, textAlign: 'center' }}>{t('db:mysql.status.vars.thAction')}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -591,10 +593,10 @@ export default function StatusPanel({
                                                                 <span className={my.varName}>{k}</span>
                                                             </td>
                                                             <td>
-                                                                <span className={my.varValue}>{valStr || '(空)'}</span>
+                                                                <span className={my.varValue}>{valStr || t('db:mysql.status.vars.emptyVal')}</span>
                                                             </td>
                                                             <td style={{ textAlign: 'center' }}>
-                                                                <Tooltip title="复制变量值">
+                                                                <Tooltip title={t('db:mysql.status.vars.copyValue')}>
                                                                     <Button
                                                                         size="small"
                                                                         type="text"

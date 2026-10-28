@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button, Tooltip, Dropdown, App } from 'antd'
 import { FileText, Folder, Trash2, Copy } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { KeyTreeNode, TYPE_COLOR, TYPE_SHORT_LABEL } from './redisTypes'
 import t from './KeyItemTree.module.less'
 
@@ -23,10 +24,11 @@ export default function KeyItemTree({
     onDeleteFolder: (node: KeyTreeNode) => void
     onDeleteKey: (fullKey: string) => void
 }) {
+    const { t: tr } = useTranslation('redis')
     const { message } = App.useApp()
     const handleCopy = (keyName: string) => {
         navigator.clipboard.writeText(keyName)
-        message.success('已复制键名')
+        message.success(tr('keys.copiedKey'))
     }
 
     return (
@@ -40,7 +42,7 @@ export default function KeyItemTree({
                     ? [
                           {
                               key: 'copy',
-                              label: '复制键名',
+                              label: tr('keys.copyKey'),
                               icon: <Copy size={13} />,
                               onClick: () => handleCopy(node.fullKey!),
                           },
@@ -50,7 +52,7 @@ export default function KeyItemTree({
                           {
                               key: 'delete',
                               danger: true,
-                              label: '删除键',
+                              label: tr('keys.deleteKey'),
                               icon: <Trash2 size={13} />,
                               onClick: () => onDeleteKey(node.fullKey!),
                           },
@@ -59,7 +61,7 @@ export default function KeyItemTree({
                           {
                               key: 'deleteFolder',
                               danger: true,
-                              label: `删除文件夹 (${node.count} 个键)`,
+                              label: tr('keys.deleteFolder', { count: node.count }),
                               icon: <Trash2 size={13} />,
                               onClick: () => onDeleteFolder(node),
                           },
@@ -115,7 +117,7 @@ export default function KeyItemTree({
                                 {!node.isLeaf && <span className={t.treeCount}>({node.count})</span>}
 
                                 {!node.isLeaf ? (
-                                    <Tooltip title={`批量删除 ${node.name} 下的 ${node.count} 个 Key`}>
+                                    <Tooltip title={tr('keys.deleteFolderTooltip', { name: node.name, count: node.count })}>
                                         <Button
                                             size="small"
                                             type="text"
@@ -128,7 +130,7 @@ export default function KeyItemTree({
                                         />
                                     </Tooltip>
                                 ) : (
-                                    <Tooltip title={`删除 ${node.fullKey}`}>
+                                    <Tooltip title={tr('keys.deleteKeyTooltip', { key: node.fullKey })}>
                                         <Button
                                             size="small"
                                             type="text"
