@@ -1,0 +1,136 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.apiToolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    height: 52px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+/* 响应区 */
+.responseArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    min-width: 0;
+    background: @bg-1;
+}
+
+.respHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 14px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+    flex-shrink: 0;
+}
+
+.respPlaceholder {
+    color: @text-dim;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.respBody {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+}
+
+.respBodyWrap {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    height: 100%;
+}
+
+.respBodyTools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 14px;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
+    flex-shrink: 0;
+}
+
+/* CodeMirror 填充响应体区域 */
+.respCodeWrap {
+    flex: 1;
+    min-height: 180px;
+    display: flex;
+    flex-direction: column;
+
+    > div {
+        flex: 1;
+        min-height: 180px;
+        display: flex;
+    }
+
+    :global(.cm-editor) {
+        flex: 1;
+        height: 100%;
+        min-height: 180px;
+        border: none;
+        border-radius: 0;
+    }
+}
+
+.respHeaders {
+    padding: 10px 14px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.respHeaderRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
+    border-radius: @radius-sm;
+    margin-bottom: 4px;
+}
+
+.respHeaderKey {
+    flex: 0 0 220px;
+    color: @accent;
+    font-family: @font-mono;
+    font-size: 12px;
+    font-weight: 600;
+    word-break: break-all;
+}
+
+.respHeaderVal {
+    flex: 1;
+    min-width: 0;
+    color: @text;
+    font-family: @font-mono;
+    font-size: 12px;
+    word-break: break-all;
+    user-select: text;
+}
+
+.emptyStateWrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 32px 16px;
+    color: @text-dim;
+    text-align: center;
+}

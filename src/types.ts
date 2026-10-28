@@ -1,0 +1,1603 @@
+export type AuthType = 'password' | 'key'
+export const CONN_TYPES = [
+    'ssh',
+    'redis',
+    'mysql',
+    'mqtt',
+    'mongo',
+    'sqlite',
+    'docker',
+    'k8s',
+    'postgres',
+] as const
+export type ConnType = (typeof CONN_TYPES)[number]
+
+export interface ServerGroup {
+    id: string
+    name: string
+}
+
+export interface ServerConfig {
+    id: string
+    name: string
+    groupId?: string
+    host: string
+    port: number
+    username: string
+    authType: AuthType
+    password: string
+    privateKey: string
+    passphrase: string
+    remark: string
+    type?: ConnType
+    db?: number
+    // Redis 高级配置
+    redisMode?: string
+    redisSentinels?: string
+    redisMasterName?: string
+    redisClusterNodes?: string
+    redisUsername?: string
+    redisSerialization?: string
+    redisPoolSize?: number
+    redisMinIdleConns?: number
+    redisMaxIdleConns?: number
+    redisPoolTimeout?: number
+    redisConnMaxIdleTime?: number
+    redisConnMaxLifetime?: number
+    redisDialTimeout?: number
+    redisReadTimeout?: number
+    redisWriteTimeout?: number
+    redisMaxRetries?: number
+    redisMinRetryBackoff?: number
+    redisMaxRetryBackoff?: number
+    redisBreakerThreshold?: number
+    redisBreakerCooldown?: number
+    database?: string
+    clientId?: string
+    useTLS?: boolean
+    // MQTT 高级配置
+    mqttProto?: string
+    mqttKeepAlive?: number
+    mqttConnectTimeout?: number
+    mqttCleanSession?: boolean
+    mqttAutoReconnect?: boolean
+    mqttReconnectIntvl?: number
+    mqttInsecure?: boolean
+    mqttCACert?: string
+    mqttClientCert?: string
+    mqttClientKey?: string
+    mqttWillTopic?: string
+    mqttWillPayload?: string
+    mqttWillQos?: number
+    mqttWillRetained?: boolean
+    // MySQL 高级配置
+    mysqlMaxOpenConns?: number
+    mysqlMaxIdleConns?: number
+    mysqlConnMaxLifetime?: number
+    mysqlTLS?: string
+    mysqlSSLEnabled?: boolean
+    mysqlSSHEnabled?: boolean
+    mysqlSSHHost?: string
+    mysqlSSHHostPort?: number
+    mysqlSSHUser?: string
+    mysqlSSHKeyPath?: string
+    mysqlSSHKeyData?: string
+    mysqlSSHPassphrase?: string
+    mysqlSSHProxyLocalPort?: number
+    charset?: string
+    sftpHome?: string
+    tls?: boolean
+    // PostgreSQL 高级配置
+    postgresDatabase?: string
+    postgresSchema?: string
+    postgresSSLMode?: 'disable' | 'require' | 'verify-ca' | 'verify-full'
+    postgresMaxOpenConns?: number
+    postgresMinIdleConns?: number
+    postgresConnMaxLifetime?: number
+    postgresConnMaxIdleTime?: number
+    postgresConnectTimeout?: number
+    postgresSSHEnabled?: boolean
+    postgresSSHHost?: string
+    postgresSSHHostPort?: number
+    postgresSSHUser?: string
+    postgresSSHAuthType?: 'password' | 'key'
+    postgresSSHPassword?: string
+    postgresSSHKeyPath?: string
+    postgresSSHKeyData?: string
+    postgresSSHPassphrase?: string
+    // MongoDB 高级配置
+    mongoUri?: string
+    mongoURI?: string
+    mongoAuthMode?: 'scram' | 'uri' | 'none'
+    mongoSrv?: boolean
+    mongoHosts?: string
+    mongoDatabase?: string
+    mongoAuthMech?: string
+    mongoAuthSource?: string
+    mongoReplicaSet?: string
+    mongoReadPreference?: string
+    mongoTlsEnabled?: boolean
+    mongoTlsInsecure?: boolean
+    mongoTlsCaCert?: string
+    mongoTlsClientCert?: string
+    mongoTlsClientKey?: string
+    mongoMaxPoolSize?: number
+    mongoMinPoolSize?: number
+    mongoMaxConnIdleTime?: number
+    mongoConnectTimeout?: number
+    mongoServerSelectTimeout?: number
+    mongoSocketTimeout?: number
+    mongoCompressors?: string
+    mongoAppName?: string
+    // SQLite 本地文件配置
+    sqlitePath?: string
+    // Docker 专用配置
+    dockerEndpointType?: 'unix' | 'tcp' | 'ssh'
+    dockerSocketPath?: string
+    dockerTlsEnabled?: boolean
+    dockerTlsInsecure?: boolean
+    dockerTlsCaCert?: string
+    dockerTlsClientCert?: string
+    dockerTlsClientKey?: string
+    dockerSshHost?: string
+    dockerSshPort?: number
+    dockerSshUser?: string
+    dockerSshAuthType?: AuthType
+    dockerSshPassword?: string
+    dockerSshKeyPath?: string
+    dockerSshKeyData?: string
+    dockerSshPassphrase?: string
+    // Kubernetes (K8s) 专用配置
+    k8sAuthMode?: 'kubeconfig' | 'direct' | string
+    k8sKubeconfigData?: string
+    k8sKubeconfigPath?: string
+    k8sContext?: string
+    k8sApiServer?: string
+    k8sAuthType?: 'token' | 'cert' | 'none' | string
+    k8sBearerToken?: string
+    k8sCaData?: string
+    k8sCertData?: string
+    k8sKeyData?: string
+    k8sInsecureSkipTLS?: boolean
+    k8sNamespace?: string
+    k8sSshEnabled?: boolean
+    k8sSshHost?: string
+    k8sSshPort?: number
+    k8sSshUser?: string
+    k8sSshAuthType?: AuthType
+    k8sSshPassword?: string
+    k8sSshKeyPath?: string
+    k8sSshKeyData?: string
+    k8sSshPassphrase?: string
+    updatedAt: number
+}
+
+export interface SessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    username: string
+    connected: boolean
+    homeDir: string
+}
+
+export interface FileItem {
+    name: string
+    path: string
+    isDir: boolean
+    isLink: boolean
+    size: number
+    mode: string
+    modTime: number
+}
+
+export interface DirListing {
+    path: string
+    parent: string
+    items: FileItem[]
+}
+
+export type TransferStatus = 'running' | 'done' | 'error' | 'canceled'
+
+export interface Transfer {
+    id: string
+    sessionId: string
+    kind: 'upload' | 'download'
+    name: string
+    localPath: string
+    remotePath: string
+    size: number
+    transferred: number
+    status: TransferStatus
+    error: string
+    startedAt: number
+    updatedAt: number
+}
+
+export interface UploadEstimate {
+    totalSize: number
+    fileCount: number
+    folderCount: number
+    remoteFree: number
+    remoteTotal: number
+    isInsufficient: boolean
+    supported: boolean
+}
+
+export function emptyServer(): ServerConfig {
+    return {
+        id: '',
+        name: '',
+        host: '',
+        port: 22,
+        username: 'root',
+        authType: 'password',
+        password: '',
+        privateKey: '',
+        passphrase: '',
+        remark: '',
+        type: 'ssh',
+        db: 0,
+        charset: 'utf8mb4',
+        // Redis 高级参数默认值
+        redisMode: 'single',
+        redisSentinels: '',
+        redisMasterName: 'mymaster',
+        redisClusterNodes: '',
+        redisUsername: '',
+        redisSerialization: 'none',
+        redisPoolSize: 10,
+        redisMinIdleConns: 0,
+        redisMaxIdleConns: 10,
+        redisDialTimeout: 5,
+        redisReadTimeout: 3,
+        redisWriteTimeout: 3,
+        redisMaxRetries: 3,
+        redisBreakerThreshold: 5,
+        redisBreakerCooldown: 10,
+        // MQTT 高级参数默认值
+        mqttProto: '3.1.1',
+        mqttKeepAlive: 30,
+        mqttConnectTimeout: 10,
+        mqttCleanSession: true,
+        mqttAutoReconnect: true,
+        mqttReconnectIntvl: 5,
+        mqttInsecure: false,
+        mqttCACert: '',
+        mqttClientCert: '',
+        mqttClientKey: '',
+        mqttWillTopic: '',
+        mqttWillPayload: '',
+        mqttWillQos: 0,
+        mqttWillRetained: false,
+        // MySQL 高级参数默认值
+        mysqlMaxOpenConns: 10,
+        mysqlMaxIdleConns: 5,
+        mysqlConnMaxLifetime: 3600,
+        mysqlTLS: '',
+        mysqlSSLEnabled: false,
+        mysqlSSHEnabled: false,
+        mysqlSSHHost: '',
+        mysqlSSHHostPort: 22,
+        mysqlSSHUser: '',
+        mysqlSSHKeyPath: '',
+        mysqlSSHKeyData: '',
+        mysqlSSHPassphrase: '',
+        mysqlSSHProxyLocalPort: 13306,
+        // MongoDB 高级参数默认值
+        mongoUri: '',
+        mongoSrv: false,
+        mongoHosts: '',
+        mongoDatabase: '',
+        mongoAuthMech: 'SCRAM-SHA-256',
+        mongoAuthSource: 'admin',
+        mongoReplicaSet: '',
+        mongoReadPreference: 'primary',
+        mongoTlsEnabled: false,
+        mongoTlsInsecure: false,
+        mongoTlsCaCert: '',
+        mongoTlsClientCert: '',
+        mongoTlsClientKey: '',
+        mongoMaxPoolSize: 100,
+        mongoMinPoolSize: 0,
+        mongoMaxConnIdleTime: 0,
+        mongoConnectTimeout: 10,
+        mongoServerSelectTimeout: 10,
+        mongoCompressors: '',
+        mongoAppName: 'xTerminal',
+        // Docker 高级参数默认值
+        dockerEndpointType: 'unix',
+        dockerSocketPath: '',
+        dockerTlsEnabled: false,
+        dockerTlsInsecure: false,
+        dockerTlsCaCert: '',
+        dockerTlsClientCert: '',
+        dockerTlsClientKey: '',
+        dockerSshHost: '',
+        dockerSshPort: 22,
+        dockerSshUser: 'root',
+        dockerSshAuthType: 'password',
+        dockerSshPassword: '',
+        dockerSshKeyPath: '',
+        dockerSshKeyData: '',
+        dockerSshPassphrase: '',
+        updatedAt: 0,
+    }
+}
+
+/* ---------------- Docker ---------------- */
+
+export interface DockerSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    endpointType: 'unix' | 'tcp' | 'ssh'
+    target: string
+    connected: boolean
+}
+
+export interface DockerComposeDeployReq {
+    id?: string
+    projectName: string
+    yamlContent: string
+    envVars: { [_ in string]?: string } | null
+    forcePull: boolean
+    recreate: boolean
+}
+
+export interface DockerComposeServiceInfo {
+    serviceName: string
+    containerId: string
+    shortId: string
+    containerName: string
+    image: string
+    state: string
+    status: string
+    ports: string
+    health: string
+}
+
+export interface DockerComposeStackInfo {
+    uuid?: string
+    name: string
+    status: string
+    runningServices: number
+    totalServices: number
+    services: DockerComposeServiceInfo[] | null
+    configFiles: string
+    yamlContent: string
+    createdAt: string
+}
+
+export interface DockerPortMapping {
+    ip?: string
+    privatePort: number
+    publicPort?: number
+    type: string
+}
+
+export interface DockerContainerInfo {
+    id: string
+    shortId: string
+    names: string[] | null
+    name: string
+    image: string
+    imageId: string
+    command: string
+    created: number
+    state: string
+    status: string
+    ports: DockerPortMapping[] | null
+    portStr: string
+    ipAddress: string
+    sizeRw?: number
+    sizeRootFs?: number
+    labels?: { [_ in string]?: string } | null
+}
+
+export interface DockerCreateContainerReq {
+    name: string
+    image: string
+    cmd?: string[] | null
+    env?: string[] | null
+    ports?: string[] | null
+    volumes?: string[] | null
+    restartPolicy?: string
+    autoRemove?: boolean
+    networkMode?: string
+    memoryLimit?: number
+    cpuShares?: number
+    labels?: { [_ in string]?: string } | null
+}
+
+export interface DockerImageInfo {
+    id: string
+    shortId: string
+    repoTags: string[] | null
+    repository: string
+    tag: string
+    size: number
+    sizeStr: string
+    created: number
+    containers: number
+    labels?: { [_ in string]?: string } | null
+}
+
+export interface DockerNetworkInfo {
+    id: string
+    shortId: string
+    name: string
+    driver: string
+    scope: string
+    internal: boolean
+    enableIPv6: boolean
+    subnet: string
+    gateway: string
+    containers?: { [_ in string]?: string } | null
+    labels?: { [_ in string]?: string } | null
+}
+
+export interface DockerOverview {
+    connected: boolean
+    serverVersion: string
+    apiVersion: string
+    os: string
+    arch: string
+    kernelVersion: string
+    operatingSystem: string
+    ncpu: number
+    memTotal: number
+    containersTotal: number
+    containersRunning: number
+    containersPaused: number
+    containersStopped: number
+    imagesTotal: number
+    composeTotal: number
+    volumesTotal: number
+    networksTotal: number
+    dockerRootDir: string
+    storageDriver: string
+    endpointType: string
+    endpointTarget: string
+}
+
+export interface DockerPruneReport {
+    containersDeleted: string[] | null
+    imagesDeleted: string[] | null
+    volumesDeleted: string[] | null
+    networksDeleted: string[] | null
+    spaceReclaimed: number
+    spaceReclaimedStr: string
+}
+
+export interface DockerVolumeInfo {
+    name: string
+    driver: string
+    scope: string
+    mountpoint: string
+    createdAt: string
+    labels?: { [_ in string]?: string } | null
+    size?: number
+    refCount?: number
+}
+
+export interface DockerComposeRecord {
+    id: string
+    serverId: string
+    projectName: string
+    yamlContent: string
+    envVars: { [_ in string]?: string } | null
+    createdAt: string
+    updatedAt: string
+}
+
+/* ---------------- Kubernetes (K8s) ---------------- */
+
+export interface K8sSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    apiServer: string
+    namespace?: string
+    connected: boolean
+}
+
+export interface K8sConfigMapInfo {
+    name: string
+    namespace: string
+    dataCount: number
+    data?: { [_ in string]?: string } | null
+    createdAt: string
+}
+
+export interface K8sContainerSummary {
+    name: string
+    image: string
+    ready: boolean
+    state: string
+    reason?: string
+    restartCount: number
+    isInit?: boolean
+}
+
+export interface K8sDeploymentInfo {
+    name: string
+    namespace: string
+    replicas: number
+    readyReplicas: number
+    availableReplicas: number
+    updatedReplicas: number
+    images: string[] | null
+    selector?: { [_ in string]?: string } | null
+    createdAt: string
+}
+
+export interface K8sIngressInfo {
+    name: string
+    namespace: string
+    ingressClass: string
+    hosts: string[] | null
+    rules: string[] | null
+    createdAt: string
+}
+
+export interface K8sNamespaceInfo {
+    name: string
+    status: string
+    createdAt: string
+    labels?: { [_ in string]?: string } | null
+}
+
+export interface K8sNodeInfo {
+    name: string
+    status: string
+    roles: string
+    kubeletVersion: string
+    osImage: string
+    kernelVersion: string
+    internalIp: string
+    externalIp: string
+    cpuCapacity: string
+    memCapacity: string
+    podsCapacity: string
+    createdAt: string
+    labels?: { [_ in string]?: string } | null
+}
+
+export interface K8sOverview {
+    connected: boolean
+    apiServer: string
+    gitVersion: string
+    platform: string
+    nodesTotal: number
+    nodesReady: number
+    namespacesTotal: number
+    podsTotal: number
+    podsRunning: number
+    deploymentsTotal: number
+    servicesTotal: number
+}
+
+export interface K8sPVCInfo {
+    name: string
+    namespace: string
+    status: string
+    volumeName: string
+    capacity: string
+    accessModes: string[] | null
+    storageClass: string
+    createdAt: string
+}
+
+export interface K8sPodInfo {
+    name: string
+    namespace: string
+    status: string
+    ready: string
+    restarts: number
+    nodeName: string
+    hostIp?: string
+    ip: string
+    containers: K8sContainerSummary[] | null
+    createdAt: string
+    age: string
+}
+
+export interface K8sSecretInfo {
+    name: string
+    namespace: string
+    type: string
+    dataCount: number
+    keys: string[] | null
+    createdAt: string
+}
+
+export interface K8sServiceInfo {
+    name: string
+    namespace: string
+    type: string
+    clusterIp: string
+    externalIp: string
+    ports: string[] | null
+    selector?: { [_ in string]?: string } | null
+    createdAt: string
+}
+
+/* ---------------- Redis ---------------- */
+
+export type RedisValueType = 'string' | 'list' | 'set' | 'hash' | 'zset' | 'stream'
+
+export interface RedisKeyItem {
+    key: string
+    type: RedisValueType
+    ttl: number
+}
+
+export interface RedisKeysResult {
+    cursor: string
+    keys: (string | RedisKeyItem)[]
+}
+
+export interface RedisValue {
+    key?: string
+    type: RedisValueType
+    value: any
+    ttl: number
+    size?: number
+    rawJson?: any
+}
+
+export interface RedisSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    connected: boolean
+    db: number
+    dbSize: number
+    mode?: string        // single | sentinel | cluster
+    breaker?: string     // closed | open | half-open
+    serialization?: string
+}
+
+export type RedisMode = 'single' | 'sentinel' | 'cluster'
+export type RedisSerialization = 'none' | 'json'
+
+export interface RedisConfig {
+    mode: RedisMode
+    sentinels: string
+    masterName: string
+    clusterNodes: string
+    username: string
+    serialization: RedisSerialization
+    poolSize: number
+    minIdleConns: number
+    maxIdleConns: number
+    poolTimeout: number
+    connMaxIdleTime: number
+    connMaxLifetime: number
+    dialTimeout: number
+    readTimeout: number
+    writeTimeout: number
+    maxRetries: number
+    minRetryBackoff: number
+    maxRetryBackoff: number
+    breakerThreshold: number
+    breakerCooldown: number
+}
+
+export interface RedisCmdResult {
+    result: string
+    error: string
+}
+
+export interface RedisPipelineResult {
+    results: RedisCmdResult[]
+    error: string
+}
+
+export interface RedisTransactionResult {
+    results: RedisCmdResult[]
+    aborted: boolean
+    error: string
+}
+
+export interface RedisPubsubMessage {
+    channel: string
+    pattern: string
+    payload: string
+}
+
+export interface RedisKeyspaceMessage {
+    channel: string
+    key: string
+    event: string
+    payload: string
+}
+
+export interface RedisMonitorInfo {
+    breaker: string
+    hits: number
+    misses: number
+    timeouts: number
+    totalConns: number
+    idleConns: number
+    staleConns: number
+    mode: string
+    serialization: string
+    version?: string
+    memoryUsed?: string
+    uptimeDays?: string
+    connectedClients?: string
+}
+
+export interface RedisSlowLogEntry {
+    id: number
+    timestamp: number
+    duration: number
+    command: string
+    client: string
+}
+
+export interface RedisQueueItem {
+    id: string
+    payload: any
+    empty?: boolean
+}
+
+/* ---------------- MySQL ---------------- */
+
+export interface MysqlSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    connected: boolean
+    database: string
+}
+
+/* ---------------- PostgreSQL ---------------- */
+
+export interface PostgresSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    connected: boolean
+    database: string
+    schema?: string
+}
+
+export interface MqttSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    username: string
+    clientId: string
+    connected: boolean
+}
+
+export interface MqttMessage {
+    id?: string
+    dir: 'in' | 'out'
+    topic: string
+    payload: string
+    qos: number
+    retained: boolean
+    ts: number
+}
+
+export interface MqttSubscription {
+    topic: string
+    qos: number
+}
+
+/* ----------------------------- API 调试工具 ----------------------------- */
+
+export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS'
+
+export interface ApiHeader {
+    name: string
+    value: string
+    enabled: boolean
+}
+
+export interface ApiAuth {
+    type: 'none' | 'basic' | 'bearer'
+    username: string
+    password: string
+    token: string
+}
+
+export interface ApiRequest {
+    method: ApiMethod
+    url: string
+    headers: ApiHeader[]
+    body: string
+    timeoutMs: number
+    insecureTLS: boolean
+    followRedirects: boolean
+    auth: ApiAuth
+}
+
+export interface ApiResponse {
+    status: string
+    statusCode: number
+    proto: string
+    headers: Record<string, string>
+    body: string
+    durationMs: number
+    size: number
+    error: string
+}
+
+export interface SavedApiItem {
+    id: string
+    name: string
+    isFolder?: false
+    mode?: ApiMode
+    method: ApiMethod
+    url: string
+    params?: ApiHeader[]
+    headers?: ApiHeader[]
+    bodyType?: string
+    body?: string
+    auth?: ApiAuth
+    timeoutMs?: number
+    insecureTLS?: boolean
+    followRedirects?: boolean
+    wsProtocols?: string
+    createdAt: number
+    updatedAt: number
+}
+
+export interface ApiFolderNode {
+    id: string
+    name: string
+    isFolder: true
+    children: (ApiFolderNode | SavedApiItem)[]
+    createdAt: number
+    updatedAt: number
+}
+
+export type ApiTreeNode = ApiFolderNode | SavedApiItem
+
+export type ApiMode = 'http' | 'ws'
+
+export type WsStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error'
+
+export interface WsConnectResult {
+    id: string
+    url: string
+    status: string
+    error: string
+}
+
+export interface WsMessage {
+    dir: 'in' | 'out' | 'sys'
+    payload: string
+    type: 'text' | 'binary' | 'system'
+    ts: number
+    error?: string
+}
+
+export interface MysqlQueryResult {
+    columns: string[]
+    rows: Record<string, any>[]
+    rowCount?: number
+    affected: number
+}
+
+export interface MysqlIndexInfo {
+    Table: string
+    Non_unique: number
+    Key_name: string
+    Column_name: string
+    Seq_in_index: number
+    Index_type: string
+}
+
+export interface MysqlUserInfo {
+    User: string
+    Host: string
+    locked: any
+    expired: any
+}
+
+export interface MysqlSchemaTable {
+    name: string
+    columns: { name: string; type: string; key: string }[]
+}
+
+export interface MysqlForeignKey {
+    fromTable: string
+    fromColumn: any
+    toTable: string
+    toColumn: any
+    name: any
+}
+
+export interface MysqlSchema {
+    tables: MysqlSchemaTable[]
+    foreignKeys: MysqlForeignKey[]
+}
+
+/* ---------------- MongoDB ---------------- */
+
+export interface MongoSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    host: string
+    port: number
+    connected: boolean
+    database: string
+    topology: string
+    version: string
+}
+
+// 连接字符串解析结果
+export interface MongoURIInfo {
+    scheme: string
+    hosts: string[]
+    username: string
+    password: string
+    database: string
+    authSource: string
+    authMech: string
+    replicaSet: string
+    tls: boolean
+    srv: boolean
+    options: Record<string, string>
+}
+
+// 健康检查 / 探活
+export interface MongoHealthInfo {
+    ok: boolean
+    latencyMs: number
+    topology?: string
+    version?: string
+    primary?: boolean
+    setName?: string
+    isWritablePrimary?: boolean
+    hosts?: string[]
+    error?: string
+}
+
+// 数据库 / 集合条目
+export interface MongoDatabaseInfo {
+    name: string
+    sizeOnDisk: number
+    empty: boolean
+}
+
+export interface MongoCollectionInfo {
+    name: string
+    type: string
+    hasValidator?: boolean
+    capped?: boolean
+}
+
+export interface MongoCollectionStats {
+    count: number
+    size: number
+    avgObjSize: number
+    storageSize: number
+    totalIndexSize: number
+    nindexes: number
+}
+
+// 查询构建器
+export interface MongoQuerySpec {
+    database: string
+    collection: string
+    filter: string
+    projection: string
+    sort: string
+    limit: number
+    skip: number
+    hint: string
+    collation: string
+}
+
+export interface MongoFindResult {
+    documents: string[]
+    count: number
+    total: number
+    durationMs: number
+}
+
+// 数据模型映射（Schema 推断）
+export interface MongoFieldInfo {
+    field: string
+    type: string
+    types: string[]
+    count: number
+    presence: number
+    required: boolean
+}
+
+// Schema 验证
+export interface MongoValidatorInfo {
+    validator: string
+    validationLevel: string
+    validationAction: string
+}
+
+export interface MongoValidationResult {
+    valid: boolean
+    error?: string
+}
+
+// 索引
+export interface MongoIndexInfo {
+    name: string
+    key: string
+    unique: boolean
+    sparse: boolean
+    expireAfterSeconds?: number
+    partialFilterExpression?: string
+}
+
+// 聚合 / 命令
+export interface MongoAggregateResult {
+    documents: string[]
+    count: number
+    durationMs: number
+}
+
+// 批量写
+export interface MongoBulkOp {
+    type: 'insert' | 'update' | 'updateMany' | 'replace' | 'delete' | 'deleteMany'
+    filter: string
+    document: string
+    upsert: boolean
+}
+
+export interface MongoBulkResult {
+    requested: number
+    inserted: number
+    matched: number
+    modified: number
+    deleted: number
+    upserted: number
+    error?: string
+}
+
+// 事务
+export interface MongoTxOp {
+    type: 'insert' | 'update' | 'updateMany' | 'replace' | 'delete' | 'deleteMany'
+    database: string
+    collection: string
+    filter: string
+    document: string
+    upsert: boolean
+}
+
+export interface MongoTxResult {
+    results: Array<Record<string, any>>
+    committed: boolean
+    durationMs: number
+    error?: string
+}
+
+// 用户与角色管理
+export interface MongoRoleItem {
+    role: string
+    db: string
+}
+
+export interface MongoUserInfo {
+    user: string
+    db: string
+    roles: MongoRoleItem[]
+    customData?: Record<string, any>
+}
+
+export interface MongoCreateUserReq {
+    user: string
+    pwd: string
+    db: string
+    roles: MongoRoleItem[]
+}
+
+export interface MongoUpdateUserReq {
+    user: string
+    db: string
+    pwd?: string
+    roles?: MongoRoleItem[]
+}
+
+// 高级集合创建选项
+export interface MongoCreateCollOptions {
+    name: string
+    capped?: boolean
+    size?: number
+    max?: number
+    isTimeseries?: boolean
+    timeField?: string
+    metaField?: string
+    granularity?: string
+}
+
+// 集合克隆请求
+export interface MongoCloneCollReq {
+    sourceDb: string
+    sourceColl: string
+    targetDb: string
+    targetColl: string
+    copyData: boolean
+}
+
+// 慢查询分析
+export interface MongoSlowQueryItem {
+    ts?: string
+    millis: number
+    op: string
+    ns: string
+    command?: Record<string, any>
+    docsExamined?: number
+    keysExamined?: number
+    nreturned?: number
+    responseLength?: number
+    client?: string
+    raw: string
+}
+
+// 性能监控
+export interface MongoServerStatus {
+    host: string
+    version: string
+    uptime: number
+    process: string
+    connections?: any
+    network?: any
+    opcounters?: any
+    mem?: any
+    globalLock?: any
+    wiredTiger?: any
+    extra_info?: any
+    [key: string]: any
+    client: {
+        ops: number
+        failures: number
+        slowOps: number
+        avgMs: number
+        totalMs: number
+    }
+}
+
+// 变更流事件
+export interface MongoChangeEvent {
+    watchKey: string
+    operation: string
+    ns: string
+    document: string
+    ts: number
+    error?: string
+}
+
+/* ---------------- SQLite ---------------- */
+
+export interface SqliteSessionInfo {
+    id: string
+    serverId: string
+    title: string
+    path: string
+    connected: boolean
+    size: number
+}
+
+// 表/视图条目
+export interface SqliteTableInfo {
+    name: string
+    type: string // table | view
+}
+
+// 列结构
+export interface SqliteColumnInfo {
+    cid: number
+    name: string
+    type: string
+    notnull: number
+    default: any
+    pk: number
+}
+
+// 索引信息
+export interface SqliteIndexInfo {
+    seq: number
+    name: string
+    unique: number
+    origin: string
+    partial: string
+}
+
+export interface SqliteQueryResult {
+    columns: string[]
+    rows: Record<string, any>[]
+    rowCount: number
+    affected: number
+}
+
+export interface SqliteInfo {
+    path: string
+    size: number
+}
+
+export interface SqliteSchemaTable {
+    name: string
+    columns: { name: string; type: string; key: string }[]
+}
+
+export interface SqliteForeignKey {
+    fromTable: string
+    fromColumn: any
+    toTable: string
+    toColumn: any
+    name: any
+}
+
+export interface SqliteSchema {
+    tables: SqliteSchemaTable[]
+    foreignKeys: SqliteForeignKey[]
+}
+
+export interface SSHDiskInfo {
+    mount: string
+    filesystem: string
+    fsType: string
+    total: number
+    used: number
+    available: number
+    usagePercent: number
+    isVirtual: boolean
+}
+
+export interface SSHCPUInfo {
+    usagePercent: number
+    cores: number
+    loadAvg: number[]
+}
+
+export interface SSHMemInfo {
+    total: number
+    used: number
+    free: number
+    available: number
+    usagePercent: number
+    swapTotal: number
+    swapUsed: number
+}
+
+export interface SSHNetInfo {
+    name: string
+    ip: string
+    rxBytes: number
+    txBytes: number
+    isLoopback: boolean
+    isVirtual: boolean
+}
+
+export interface SSHDashboardInfo {
+    hostname: string
+    os: string
+    uptime: string
+    cpu: SSHCPUInfo
+    mem: SSHMemInfo
+    disks: SSHDiskInfo[]
+    nets: SSHNetInfo[]
+}
+
+export interface SSHProcessInfo {
+    pid: number
+    user: string
+    cpu: number
+    mem: number
+    rss: number
+    command: string
+}
+
+export interface SSHServiceInfo {
+    name: string
+    load: string
+    active: string
+    sub: string
+    description: string
+}
+
+export interface SSHCronItem {
+    id: string
+    expression: string
+    command: string
+    enabled: boolean
+    comment: string
+}
+
+export interface AiModelItem {
+    id: string
+    name: string
+    model: string
+    baseUrl: string
+    apiKey: string
+    contextTokens: number
+    temperature?: number
+    enableMultimodal?: boolean
+}
+
+export interface AppSettings {
+    themeMode: 'light' | 'dark' | 'system'
+    fontFamily: string
+    fontSize: string
+    autoConnect: boolean
+    dbDefaultLimit: string
+    globalFontFamily?: string
+    aiBaseUrl?: string
+    aiApiKey?: string
+    aiModel?: string
+    aiModels?: AiModelItem[]
+    activeModelId?: string
+    aiTemperature?: number
+    aiModelContextTokens?: number
+    aiContextCompressRatio?: number
+    aiMaxContextTokens?: number
+    aiCompressionStrategy?: 'none' | 'summary' | 'sliding'
+    aiEnableMultimodal?: boolean
+    aiSystemPrompt?: string
+    aiWorkspaceDir?: string
+    aiEnableWebSearch?: boolean
+    aiEnablePermissionGuard?: boolean
+    aiBlockHighRiskCommands?: boolean
+    aiEnableThinking?: boolean
+    aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
+    aiEnableVerifier?: boolean
+    aiMaxParallel?: number
+    mcpServerEnabled?: boolean
+    mcpServerPort?: number
+    mcpServerHost?: string
+    closeAction?: 'ask' | 'minimize' | 'quit'
+    language?: 'system' | 'zh-CN' | 'en-US'
+}
+
+export interface McpServerStatus {
+    running: boolean
+    host: string
+    port: number
+    endpoint: string
+    toolsCount: number
+    sessionsCount: number
+    uptimeSeconds: number
+}
+
+export interface McpSessionInfo {
+    id: string
+    remoteAddr: string
+    userAgent: string
+    connectedAt: string
+    lastActiveAt: string
+}
+
+export interface McpToolItem {
+    name: string
+    description?: string
+    inputSchema: Record<string, any> | null
+}
+
+export interface ToolCallItem {
+    id: string
+    name: string
+    args: string
+}
+
+export interface ProcessStep {
+    id: string
+    type: 'think' | 'tool'
+    title: string
+    summary?: string
+    content: string
+    timestamp: number
+    duration_ms?: number
+    status?: 'running' | 'completed' | 'failed'
+}
+
+export interface FrontendMessage {
+    role: 'user' | 'assistant' | 'system' | 'tool' | string
+    content: string
+    reasoningContent?: string
+    toolCalls?: any[]
+}
+
+export interface AiMessage {
+    role: 'system' | 'user' | 'assistant' | 'tool'
+    content: string
+    reasoning_content?: string
+    process_steps?: ProcessStep[]
+    images?: string[]
+    tool_calls?: ToolCallItem[]
+    tool_call_id?: string
+    name?: string
+    timestamp?: number
+    plan?: AgentPlan
+    plan_summary?: string
+}
+
+// ===================== xAgent 2.0 Workbench Types =====================
+
+export interface AgentSessionItem {
+    id: string
+    title: string
+    workspace?: string
+    createdAt?: number
+    created_at?: number
+    updatedAt?: number
+    updated_at?: number
+}
+
+
+export interface AgentSkillItem {
+    name: string
+    description: string
+    instructions: string
+    tools?: string[]
+    context?: string
+    path?: string
+}
+
+export interface AgentPlanStep {
+    id: string
+    action: string
+    tool_name?: string
+    args?: any
+    description: string
+    depends_on?: string[]
+    expected_out?: string
+    exempted?: boolean
+    status: 'pending' | 'running' | 'completed' | 'failed' | 'skipped'
+    duration_ms?: number
+    error?: string
+    output?: any
+    verdict?: string
+}
+
+export interface AgentPlan {
+    id: string
+    session_id: string
+    objective: string
+    content: string
+    file_path?: string
+    status?: 'proposed' | 'approved' | 'rejected' | 'expired'
+    is_update?: boolean
+    steps?: AgentPlanStep[]
+    risk_level?: 'low' | 'medium' | 'high'
+    need_confirm?: boolean
+    executing?: boolean
+    summary?: string
+    reasoning_content?: string
+    created_at: number
+}
+
+export interface AgentApprovalRequest {
+    confirm_id: string
+    session_id?: string
+    trace_id?: string
+    tool_name: string
+    action: string
+    description: string
+    arguments: string
+    risk_level: string
+    created_at?: number
+}
+
+export interface AgentAskRequest {
+    ask_id: string
+    session_id: string
+    trace_id?: string
+    question: string
+    options?: string[]
+    created_at?: number
+}
+
+export interface AgentHitlConfirmRequest {
+    confirm_id: string
+    session_id: string
+    trace_id?: string
+    tool_name: string
+    tool_desc: string
+    input: string
+    risk_detail: string
+    created_at?: number
+}
+
+export interface KubeconfigContextInfo {
+    currentContext: string
+    contexts: string[]
+    clusterHost: string
+}
+
+export interface K8sApplyResult {
+    kind: string
+    name: string
+    namespace?: string
+    action: 'created' | 'configured' | 'failed'
+    message?: string
+}
+
+export interface K8sResourceItemSummary {
+    kind: string
+    name: string
+    namespace: string
+}
+
+export interface K8sOrchestrationRecord {
+    id: string
+    serverId: string
+    name: string
+    namespace: string
+    yamlContent: string
+    status: string // 'deployed' | 'not_deployed'
+    resources: K8sResourceItemSummary[] | null
+    resourcesSummary: string
+    createdAt: string
+    updatedAt: string
+}
+
+export interface K8sDeleteResult {
+    kind: string
+    name: string
+    namespace?: string
+    action: 'deleted' | 'not_found' | 'failed' | string
+    message?: string
+}
+
+export interface AppVersionInfo {
+    version: string
+    gitCommit: string
+    buildDate: string
+    goVersion: string
+    platform: string
+}
+
+export interface UpdateCheckResult {
+    currentVersion: string
+    latestVersion: string
+    hasUpdate: boolean
+    releaseUrl: string
+    repoUrl: string
+    checkedAt: string
+    errorMessage?: string
+}
+
+export interface WikiCatalogItem {
+    rel_path: string
+    title: string
+    summary: string
+    updated_at: number
+}
+
+export interface WikiNode {
+    id: string
+    name: string
+    rel_path: string
+    is_folder: boolean
+    size?: number
+    updated_at: number
+    children?: WikiNode[] | null
+}
+
+export interface ConfigIOResult {
+    success: boolean
+    cancelled: boolean
+    filePath: string
+    serversCount: number
+    groupsCount: number
+    message: string
+}
+
+

@@ -1,0 +1,235 @@
+@import (reference) '../styles/variables.less';
+@import (reference) '../styles/mixins.less';
+
+.devPane {
+    flex: 1;
+    .fill();
+    display: flex;
+    min-height: 0;
+}
+
+.devSide {
+    width: 200px;
+    min-width: 160px;
+    border-right: 1px solid @border;
+    background: @bg-1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: auto;
+}
+
+.devSideBtn {
+    justify-content: flex-start;
+    text-align: left;
+}
+
+.devMain {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.devHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-bottom: 1px solid @border;
+}
+
+.devHeaderTitle {
+    font-weight: 600;
+    color: @text;
+    font-size: 15px;
+}
+
+.devBody {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 18px;
+}
+
+/* 右侧工具操作区 */
+.tool {
+    max-width: 720px;
+    margin: 0 auto;
+}
+
+.toolTitle {
+    margin: 0 0 4px;
+    font-size: 16px;
+    color: @text;
+}
+
+.desc {
+    margin: 0 0 16px;
+    font-size: 13px;
+    color: @text-dim;
+}
+
+.label {
+    display: block;
+    margin: 14px 0 6px;
+    font-size: 13px;
+    color: @text-dim;
+}
+
+.textarea,
+.input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid @border;
+    border-radius: @radius;
+    background: @bg-1;
+    color: @text;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+
+    &:focus {
+        border-color: @accent;
+    }
+}
+
+.textarea {
+    resize: vertical;
+    line-height: 1.5;
+}
+
+.optRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.switchInline {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: @text-dim;
+    cursor: pointer;
+}
+
+.resultBox {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border: 1px solid @border;
+    border-radius: @radius;
+    background: @bg-2;
+    overflow: auto;
+}
+
+.resultText {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 13px;
+    color: @text;
+    word-break: break-all;
+    white-space: pre-wrap;
+}
+
+/* 时间戳卡片 */
+.tsRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.tsCard {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    border: 1px solid @border;
+    border-radius: @radius;
+    background: @bg-1;
+}
+
+.tsLabel {
+    font-size: 12px;
+    color: @text-dim;
+}
+
+.tsValue {
+    font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+    font-size: 16px;
+    color: @text;
+    word-break: break-all;
+}
+
+.subWrap {
+    margin-top: 18px;
+}
+
+.subTitle {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: @text;
+}
+
+.inlineRow {
+    display: flex;
+    gap: 8px;
+}
+
+/* JSON 工具 */
+.editorWrap {
+    margin-top: 8px;
+    border: 1px solid @border;
+    border-radius: @radius;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.jsonActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+}
+
+.jsonError {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid @danger;
+    background: @danger-bg;
+    color: @danger;
+    border-radius: @radius;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* 响应式：窄屏改为上下布局 */
+@media (max-width: 640px) {
+    .devPane {
+        flex-direction: column;
+    }
+
+    .devSide {
+        width: 100%;
+        min-width: 0;
+        flex-direction: row;
+        border-right: none;
+        border-bottom: 1px solid @border;
+        overflow-x: auto;
+    }
+
+    .devTab {
+        white-space: nowrap;
+    }
+
+    .devBody {
+        padding: 14px;
+    }
+}

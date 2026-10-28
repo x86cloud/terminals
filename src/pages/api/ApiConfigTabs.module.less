@@ -1,0 +1,112 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.configBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    height: 48px;
+    border-bottom: 1px solid @border;
+    background: @bg-1;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.configBody {
+    padding: 12px 14px;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+/* Query 参数与请求头表格 */
+.headersEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.headerTableHead {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 4px 4px 4px;
+    font-size: 11px;
+    font-weight: 600;
+    color: @text-dim;
+}
+
+.headerRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.emptyHint {
+    color: @text-dim;
+    padding: 8px 0;
+    font-size: 12px;
+}
+
+/* 请求体 */
+.bodyEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bodyTypeRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.label {
+    flex: none;
+    color: @text-dim;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.warnText {
+    color: @warn;
+    font-size: 12px;
+}
+
+/* 鉴权 */
+.authEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 520px;
+}
+
+.authRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 选项 */
+.optionsEditor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.optRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.optCheck {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: @text;
+    font-size: 13px;
+    cursor: pointer;
+}

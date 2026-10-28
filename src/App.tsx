@@ -1,0 +1,546 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ConfigProvider, App as AntdApp } from 'antd'
+import { useTranslation } from 'react-i18next'
+import { getAntdLocale, changeAppLanguage } from '@/i18n'
+import { getAntdTheme } from './theme'
+import { ThemeContext } from '@/contexts/ThemeContext'
+import { DragDropProvider } from '@/contexts/DragDropContext'
+import { SessionProvider, useSession } from '@/contexts/SessionContext'
+import {
+    connectK8sHelper,
+    connectDockerHelper,
+    connectRedisHelper,
+    connectMysqlHelper,
+    connectPostgresHelper,
+    connectMqttHelper,
+    connectMongoHelper,
+    connectSqliteHelper,
+} from '@/contexts/sessionHelpers'
+import Sidebar from '@/components/Sidebar'
+import TitleBar from '@/components/TitleBar'
+import ServerDialog from '@/components/ServerDialog'
+import SettingsModal from '@/pages/setting/SettingsModal'
+import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import CloseConfirmModal from '@/components/CloseConfirmModal'
+import SessionTabs from '@/components/app/SessionTabs'
+import Stage from '@/components/app/Stage'
+import { API, registerNativeFileDrop, subscribe, unregisterNativeFileDrop } from '@/api'
+import {
+    ServerConfig,
+    ServerGroup,
+    AppSettings,
+    emptyServer,
+} from '@/types'
+import { errorMessage, formatSize } from '@/utils'
+import { applyThemeMode, applyGlobalFont, getCachedSettings, setCachedSettings } from '@/utils/theme'
+import { useStartupUpdateCheck } from '@/utils/updater'
+import a from '@/components/App.module.less'
+
+const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
+
+interface AppContentProps {
+    settings: AppSettings
+    onUpdateSettings: (newSettings: AppSettings) => Promise<void>
+    onToggleTheme: () => void
+}
+
+function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentProps) {
+    const { t } = useTranslation(['common', 'sidebar', 'server'])
+    const { message } = AntdApp.useApp()
+    const {
+        activeTarget,
+        addSession,
+        closeSession,
+        sidebarOpen,
+    } = useSession()
+
+    const [servers, setServers] = useState<ServerConfig[]>([])
+    const [groups, setGroups] = useState<ServerGroup[]>([])
+    const [connectingId, setConnectingId] = useState<string | null>(null)
+
+    const [settingsOpen, setSettingsOpen] = useState(false)
+    const [closeModalOpen, setCloseModalOpen] = useState(false)
+    const [dialog, setDialog] = useState<{ open: boolean; initial: ServerConfig | null }>({
+        open: false,
+        initial: null,
+    })
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
+    const [nativeDrop, setNativeDrop] = useState(true)
+
+    const activeIdRef = useRef<string | null>(null)
+    const pathsRef = useRef<Record<string, string>>({})
+    const connectingRef = useRef<Set<string>>(new Set())
+    const pendingCloseActionRef = useRef<'minimize' | null>(null)
+
+    const reloadServers = useCallback(async () => {
+        try {
+            setServers((await API.listServers()) || [])
+        } catch (err) {
+            message.error(errorMessage(err))
+        }
+    }, [])
+
+    const reloadGroups = useCallback(async () => {
+        try {
+            setGroups((await API.listGroups()) || [])
+        } catch (err) {
+            message.error(errorMessage(err))
+        }
+    }, [])
+
+    const createGroup = useCallback(async (): Promise<ServerGroup> => {
+        const g = await API.saveGroup({ id: '', name: t('sidebar:newGroup', '新建分组') })
+        await reloadGroups()
+        return g
+    }, [reloadGroups, t])
+
+    const renameGroup = useCallback(
+        async (g: ServerGroup) => {
+            try {
+                await API.saveGroup(g)
+                await reloadGroups()
+            } catch (err) {
+                message.error(errorMessage(err))
+            }
+        },
+        [reloadGroups]
+    )
+
+    const deleteGroup = useCallback(
+        (id: string) => {
+            const grp = groups.find((g) => g.id === id)
+            setConfirm({
+                open: true,
+                title: t('sidebar:deleteGroup', '删除分组'),
+                danger: true,
+                message: t(
+                    'sidebar:deleteGroupMessage',
+                    '确定要删除分组“{{name}}”吗？组内服务器将被移动到未分组。',
+                    { name: grp?.name || t('sidebar:thisGroup', '此分组') }
+                ),
+                onConfirm: async () => {
+                    setConfirm(emptyConfirm)
+                    try {
+                        await API.deleteGroup(id)
+                        await reloadGroups()
+                        await reloadServers()
+                    } catch (err) {
+                        message.error(errorMessage(err))
+                    }
+                },
+            })
+        },
+        [groups, reloadGroups, reloadServers, t]
+    )
+
+    const moveServer = useCallback(
+        async (serverId: string, groupId: string) => {
+            try {
+                await API.moveServerToGroup(serverId, groupId)
+                await reloadServers()
+            } catch (err) {
+                message.error(errorMessage(err))
+            }
+        },
+        [reloadServers]
+    )
+
+    const handleRequestClose = useCallback(() => {
+        const action = settings.closeAction || 'ask'
+        if (action === 'minimize') {
+            void API.hideWindow()
+        } else if (action === 'quit') {
+            void API.quitApp()
+        } else {
+            setCloseModalOpen(true)
+        }
+    }, [settings.closeAction])
+
+    const handleConfirmClose = useCallback(
+        async (action: 'minimize' | 'quit', remember: boolean) => {
+            setCloseModalOpen(false)
+            if (remember) {
+                const nextSettings: AppSettings = { ...settings, closeAction: action }
+                await onUpdateSettings(nextSettings)
+            }
+            if (action === 'quit') {
+                pendingCloseActionRef.current = null
+                void API.quitApp()
+            } else {
+                pendingCloseActionRef.current = 'minimize'
+            }
+        },
+        [settings, onUpdateSettings]
+    )
+
+    const handleCloseModalAfterClose = useCallback(() => {
+        if (pendingCloseActionRef.current === 'minimize') {
+            pendingCloseActionRef.current = null
+            void API.hideWindow()
+        }
+    }, [])
+
+    useEffect(() => {
+        void reloadServers()
+        void reloadGroups()
+    }, [reloadServers, reloadGroups])
+
+    useStartupUpdateCheck()
+
+    useEffect(() => {
+        const offClosed = subscribe('session:closed', (sessionId: string) => {
+            void closeSession('ssh', sessionId)
+        })
+        const offCloseReq = subscribe('app:request-close', () => {
+            handleRequestClose()
+        })
+
+        return () => {
+            offClosed()
+            offCloseReq()
+        }
+    }, [closeSession, handleRequestClose])
+
+    const activeSshId = activeTarget?.kind === 'ssh' ? (activeTarget.id ?? null) : null
+    useEffect(() => {
+        activeIdRef.current = activeSshId
+    }, [activeSshId])
+
+    useEffect(() => {
+        const ok = registerNativeFileDrop((paths, details) => {
+            const attrs = details?.attributes || {}
+            const attrSessionId = attrs['data-session-id'] || attrs['data-session']
+            const attrPath = attrs['data-path']
+            const sessionId = attrSessionId || activeIdRef.current
+            if (!sessionId) {
+                message.warning(t('common:dropFileBeforeConnect', '请先连接服务器再拖入文件'))
+                return
+            }
+            const remoteDir = attrPath || pathsRef.current[sessionId] || '/'
+            const doUpload = () => {
+                API.uploadPaths(sessionId, remoteDir, paths).catch((err) =>
+                    message.error(errorMessage(err))
+                )
+            }
+            API.estimateUpload(sessionId, remoteDir, paths)
+                .then((est) => {
+                    if (est.isInsufficient) {
+                        setConfirm({
+                            open: true,
+                            title: t('common:insufficientStorageTitle', '远端存储空间不足'),
+                            danger: true,
+                            message: t(
+                                'common:insufficientStorageMsg',
+                                '上传大小 ({{totalSize}}) 超过远端剩余可用空间 ({{remoteFree}})，是否继续上传？',
+                                {
+                                    totalSize: formatSize(est.totalSize),
+                                    remoteFree: formatSize(est.remoteFree),
+                                }
+                            ),
+                            confirmText: t('common:confirmUpload', '确认上传'),
+                            cancelText: t('common:cancel', '取消'),
+                            onConfirm: () => {
+                                setConfirm(emptyConfirm)
+                                doUpload()
+                            },
+                        })
+                        return
+                    }
+                    doUpload()
+                })
+                .catch(() => {
+                    doUpload()
+                })
+        })
+        setNativeDrop(ok)
+        return () => {
+            if (ok) unregisterNativeFileDrop()
+        }
+    }, [t])
+
+    const handlePathChange = useCallback((sessionId: string, p: string) => {
+        pathsRef.current[sessionId] = p
+    }, [])
+
+    const addServer = useCallback((groupId?: string) => {
+        setDialog({
+            open: true,
+            initial: groupId ? ({ ...emptyServer(), groupId } as ServerConfig) : null,
+        })
+    }, [])
+
+    const editServer = useCallback((cfg: ServerConfig) => {
+        setDialog({ open: true, initial: cfg })
+    }, [])
+
+    const deleteServer = useCallback((cfg: ServerConfig) => {
+        setConfirm({
+            open: true,
+            title: t('server:deleteTitle', '删除服务器'),
+            danger: true,
+            message: t('server:deleteConfirm', '确定要删除“{{name}}”的连接配置吗？', {
+                name: cfg.name || cfg.host,
+            }),
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    await API.deleteServer(cfg.id)
+                    await reloadServers()
+                } catch (err) {
+                    message.error(errorMessage(err))
+                }
+            },
+        })
+    }, [reloadServers, t])
+
+    const handleExportConfig = useCallback(async () => {
+        try {
+            const res = await API.exportServersConfig()
+            if (!res || res.cancelled) return
+            message.success(
+                res.message ||
+                    t(
+                        'sidebar:exportSuccess',
+                        '成功导出 {{serversCount}} 个连接配置与 {{groupsCount}} 个分组',
+                        { serversCount: res.serversCount, groupsCount: res.groupsCount }
+                    )
+            )
+        } catch (err: any) {
+            message.error(
+                t('sidebar:exportFailed', '导出配置失败: {{error}}', {
+                    error: errorMessage(err),
+                })
+            )
+        }
+    }, [t])
+
+    const handleImportConfig = useCallback(async () => {
+        try {
+            const res = await API.importServersConfig()
+            if (!res || res.cancelled) return
+            await reloadGroups()
+            await reloadServers()
+            message.success(
+                res.message ||
+                    t(
+                        'sidebar:importSuccess',
+                        '成功导入 {{serversCount}} 个连接配置与 {{groupsCount}} 个分组',
+                        { serversCount: res.serversCount, groupsCount: res.groupsCount }
+                    )
+            )
+        } catch (err: any) {
+            message.error(
+                t('sidebar:importFailed', '导入配置失败: {{error}}', {
+                    error: errorMessage(err),
+                })
+            )
+        }
+    }, [reloadGroups, reloadServers, t])
+
+    const handleConnect = useCallback(
+        async (cfg: ServerConfig) => {
+            if (connectingRef.current.has(cfg.id)) return
+            connectingRef.current.add(cfg.id)
+            setConnectingId(cfg.id)
+            try {
+                switch (cfg.type) {
+                    case 'redis': {
+                        const info = await connectRedisHelper(cfg)
+                        addSession('redis', info)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Redis ${info.title}` }))
+                        break
+                    }
+                    case 'mysql': {
+                        const info = await connectMysqlHelper(cfg)
+                        addSession('mysql', info)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MySQL ${info.title}` }))
+                        break
+                    }
+                    case 'postgres': {
+                        const info = await connectPostgresHelper(cfg)
+                        addSession('postgres', info)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `PostgreSQL ${info.title}` }))
+                        break
+                    }
+                    case 'mqtt': {
+                        const info = await connectMqttHelper(cfg)
+                        addSession('mqtt', info)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MQTT ${info.title}` }))
+                        break
+                    }
+                    case 'mongo': {
+                        const info = await connectMongoHelper(cfg)
+                        addSession('mongo', info)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MongoDB ${info.title}` }))
+                        break
+                    }
+                    case 'sqlite': {
+                        const info = await connectSqliteHelper(cfg)
+                        if (!info) {
+                            message.info(t('common:noFileSelected', '未选择文件'))
+                            return
+                        }
+                        addSession('sqlite', info)
+                        message.success(t('server:openedSqlite', '已打开 SQLite 文件：{{title}}', { title: info.title }))
+                        break
+                    }
+                    case 'docker': {
+                        const info = await connectDockerHelper(cfg)
+                        addSession('docker', info)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Docker ${info.title}` }))
+                        break
+                    }
+                    case 'k8s': {
+                        const info = await connectK8sHelper(cfg)
+                        addSession('k8s', info)
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Kubernetes ${info.title}` }))
+                        break
+                    }
+                    default: {
+                        const info = await API.connect(cfg.id, 120, 32)
+                        addSession('ssh', info)
+                        pathsRef.current[info.id] = info.homeDir || '/'
+                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: info.title }))
+                        break
+                    }
+                }
+            } catch (err) {
+                message.error(errorMessage(err))
+            } finally {
+                connectingRef.current.delete(cfg.id)
+                setConnectingId(null)
+            }
+        },
+        [addSession, t]
+    )
+
+    return (
+        <div className={a.app}>
+            <TitleBar
+                onOpenSettings={() => setSettingsOpen(true)}
+                themeMode={settings.themeMode}
+                onToggleTheme={onToggleTheme}
+                onRequestClose={handleRequestClose}
+                language={settings.language}
+                onChangeLanguage={(lang) => void onUpdateSettings({ ...settings, language: lang })}
+            />
+
+            <div className={a.body}>
+                <Sidebar
+                    servers={servers}
+                    groups={groups}
+                    connectingId={connectingId}
+                    onNew={addServer}
+                    onEdit={editServer}
+                    onDelete={deleteServer}
+                    onConnect={handleConnect}
+                    onCreateGroup={createGroup}
+                    onRenameGroup={renameGroup}
+                    onDeleteGroup={deleteGroup}
+                    onMoveServer={moveServer}
+                    onOpenSettings={() => setSettingsOpen(true)}
+                    onExportConfig={handleExportConfig}
+                    onImportConfig={handleImportConfig}
+                />
+
+                <main className={a.main}>
+                    <div className={`${a.mainCard} ${!sidebarOpen ? a.standalone : ''}`}>
+                        <SessionTabs />
+
+                        <Stage
+                            nativeDrop={nativeDrop}
+                            settings={settings}
+                            onUpdateSettings={onUpdateSettings}
+                            onPathChange={handlePathChange}
+                            onNewServer={addServer}
+                        />
+                    </div>
+                </main>
+            </div>
+
+            <ServerDialog
+                open={dialog.open}
+                initial={dialog.initial}
+                groups={groups}
+                onClose={() => setDialog({ open: false, initial: null })}
+                onSaved={reloadServers}
+                onSaveAndConnect={async (cfg: ServerConfig) => {
+                    await reloadServers()
+                    void handleConnect(cfg)
+                }}
+            />
+
+            <SettingsModal
+                open={settingsOpen}
+                settings={settings}
+                onClose={() => setSettingsOpen(false)}
+                onSave={onUpdateSettings}
+            />
+
+            <CloseConfirmModal
+                open={closeModalOpen}
+                onConfirm={handleConfirmClose}
+                onCancel={() => {
+                    pendingCloseActionRef.current = null
+                    setCloseModalOpen(false)
+                }}
+                afterClose={handleCloseModalAfterClose}
+            />
+
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
+        </div>
+    )
+}
+
+export default function App() {
+    const [settings, setSettings] = useState<AppSettings>(() => {
+        const cached = getCachedSettings()
+        applyThemeMode(cached.themeMode)
+        applyGlobalFont(cached.fontFamily)
+        void changeAppLanguage(cached.language)
+        return cached
+    })
+
+    const handleUpdateSettings = useCallback(async (newSettings: AppSettings) => {
+        setCachedSettings(newSettings)
+        setSettings(newSettings)
+        applyThemeMode(newSettings.themeMode)
+        applyGlobalFont(newSettings.fontFamily)
+        void changeAppLanguage(newSettings.language)
+        try {
+            await API.saveAppSettings(newSettings)
+        } catch {
+            /* 忽略保存失败 */
+        }
+    }, [])
+
+    const prefersDark =
+        typeof window !== 'undefined' &&
+        window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+    const isDark = settings.themeMode === 'dark' || (settings.themeMode === 'system' && !!prefersDark)
+
+    const handleToggleTheme = useCallback(() => {
+        const nextMode: 'light' | 'dark' = isDark ? 'light' : 'dark'
+        const nextSettings: AppSettings = { ...settings, themeMode: nextMode }
+        void handleUpdateSettings(nextSettings)
+    }, [isDark, settings, handleUpdateSettings])
+
+    return (
+        <ConfigProvider locale={getAntdLocale(settings.language)} theme={getAntdTheme(settings.themeMode)}>
+            <AntdApp>
+                <ThemeContext.Provider value={{ themeMode: settings.themeMode, isDark, toggleTheme: handleToggleTheme }}>
+                    <SessionProvider>
+                        <DragDropProvider>
+                            <AppContent
+                                settings={settings}
+                                onUpdateSettings={handleUpdateSettings}
+                                onToggleTheme={handleToggleTheme}
+                            />
+                        </DragDropProvider>
+                    </SessionProvider>
+                </ThemeContext.Provider>
+            </AntdApp>
+        </ConfigProvider>
+    )
+}

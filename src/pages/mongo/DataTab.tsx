@@ -1,0 +1,1241 @@
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+    Button,
+    Space,
+    Tooltip,
+    Pagination,
+    Tag,
+    Modal,
+    Alert,
+    App,
+    Segmented,
+    Dropdown,
+    MenuProps,
+    Popconfirm,
+} from 'antd'
+import {
+    Search,
+    Plus,
+    RotateCw,
+    Download,
+    Trash2,
+    Edit,
+    Copy,
+    Code,
+    Table as TableIcon,
+    ChevronDown,
+    ChevronRight,
+    FileText,
+    BarChart2,
+    Layers,
+    Activity,
+    SlidersHorizontal,
+    CopyPlus,
+} from 'lucide-react'
+import { API } from '@/api'
+import { errorMessage, copyText } from '@/utils'
+import { MongoSessionInfo, MongoQuerySpec, MongoFindResult, MongoCollectionStats } from '@/types'
+import CodeEditor from '@/components/CodeEditor'
+import ResizableTable, { ColDef, calcColWidthFromName } from '@/components/ResizableTable'
+import ColumnFilterPopover, { ColumnFilterState } from '@/components/ColumnFilterPopover'
+import { ConfirmModal, ConfirmState } from '@/components/Modal'
+import IndexesTab from './IndexesTab'
+import SchemaTab from './SchemaTab'
+import ChangeStreamTab from './ChangeStreamTab'
+import IoModal from './IoModal'
+import d from './DataTab.module.less'
+
+interface Props {
+    session: MongoSessionInfo
+    db: string
+    collection: string
+    initialSubTab?: 'documents' | 'indexes' | 'schema' | 'stream'
+    onClose?: () => void
+}
+
+const DEFAULT_LIMIT = 50
+
+export default function DataTab({ session, db, collection, initialSubTab = 'documents', onClose }: Props) {
+    const { t } = useTranslation(['db', 'common'])
+    const { message } = App.useApp()
+    const id = session.id
+    const [subTab, setSubTab] = useState<'documents' | 'indexes' | 'schema' | 'stream'>(initialSubTab)
+    const [viewMode, setViewMode] = useState<'table' | 'json'>('table')
+
+    // 数据状态
+    const [docs, setDocs] = useState<string[]>([])
+    const [total, setTotal] = useState(0)
+    const [duration, setDuration] = useState(0)
+    const [page, setPage] = useState(1)
+    const [pageSize, setPageSize] = useState(DEFAULT_LIMIT)
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState('')
+    const [selectedIdx, setSelectedIdx] = useState<number | null>(null)
+
+    // 列宽与筛选
+    const [colWidths, setColWidths] = useState<Record<string, number>>({})
+    const [filters, setFilters] = useState<Record<string, ColumnFilterState>>({})
+
+    // 查询构建器状态
+    const [showBuilder, setShowBuilder] = useState(false)
+    const [filterText, setFilterText] = useState('{}')
+    const [projectionText, setProjectionText] = useState('')
+    const [sortText, setSortText] = useState('{}')
+    const [skip, setSkip] = useState(0)
+    const runQueryReqIdRef = useRef(0)
+
+    // 右键上下文菜单状态
+    const [contextMenu, setContextMenu] = useState<{
+        open: boolean
+        x: number
+        y: number
+        rowIdx: number
+        col?: string
+    } | null>(null)
+
+    // 增改弹窗状态
+    const [editOpen, setEditOpen] = useState<{ mode: 'insert' | 'update' | 'replace'; raw?: string } | null>(null)
+    const [editorText, setEditorText] = useState('')
+    const [editorBusy, setEditorBusy] = useState(false)
+    const [editorError, setEditorError] = useState('')
+
+    // 单元格对象/数组详情与在线编辑弹窗状态
+    const [cellModal, setCellModal] = useState<{
+        open: boolean
+        colKey: string
+        docId: any
+        rawRow: any
+        text: string
+    } | null>(null)
+    const [cellModalBusy, setCellModalBusy] = useState(false)
+    const [cellModalError, setCellModalError] = useState('')
+
+    // 导出弹窗与统计弹窗
+    const [ioExportOpen, setIoExportOpen] = useState(false)
+    const [statsModalOpen, setStatsModalOpen] = useState(false)
+    const [stats, setStats] = useState<MongoCollectionStats | null>(null)
+    const [statsBusy, setStatsBusy] = useState(false)
+
+    const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
+    const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
+
+    // 将列头筛选转化为 MongoDB 查询条件
+    const buildMongoFilterFromColumnFilters = useCallback((): Record<string, any> => {
+        const conds: Record<string, any> = {}
+        const entries = Object.entries(filters)
+        if (!entries.length) return conds
+
+        for (const [col, filter] of entries) {
+            if (!filter) continue
+            const val = filter.value?.trim() ?? ''
+            switch (filter.op) {
+                case 'equals': {
+                    if (val === 'true') conds[col] = true
+                    else if (val === 'false') conds[col] = false
+                    else if (val !== '' && !isNaN(Number(val))) {
+                        conds[col] = { $in: [val, Number(val)] }
+                    } else {
+                        conds[col] = val
+                    }
+                    break
+                }
+                case 'not_equals': {
+                    conds[col] = { $ne: val !== '' && !isNaN(Number(val)) ? Number(val) : val }
+                    break
+                }
+                case 'contains': {
+                    conds[col] = { $regex: val, $options: 'i' }
+                    break
+                }
+                case 'not_contains': {
+                    conds[col] = { $not: { $regex: val, $options: 'i' } }
+                    break
+                }
+                case 'starts_with': {
+                    conds[col] = { $regex: `^${val}`, $options: 'i' }
+                    break
+                }
+                case 'ends_with': {
+                    conds[col] = { $regex: `${val}$`, $options: 'i' }
+                    break
+                }
+                case 'gt': {
+                    conds[col] = { $gt: isNaN(Number(val)) ? val : Number(val) }
+                    break
+                }
+                case 'gte': {
+                    conds[col] = { $gte: isNaN(Number(val)) ? val : Number(val) }
+                    break
+                }
+                case 'lt': {
+                    conds[col] = { $lt: isNaN(Number(val)) ? val : Number(val) }
+                    break
+                }
+                case 'lte': {
+                    conds[col] = { $lte: isNaN(Number(val)) ? val : Number(val) }
+                    break
+                }
+                case 'is_null': {
+                    conds[col] = null
+                    break
+                }
+                case 'is_not_null': {
+                    conds[col] = { $ne: null }
+                    break
+                }
+                default:
+                    break
+            }
+        }
+        return conds
+    }, [filters])
+
+    // 合并文本过滤条件与列头筛选条件
+    const combinedFilterJSON = useMemo(() => {
+        const colConds = buildMongoFilterFromColumnFilters()
+        let baseObj: Record<string, any> = {}
+        try {
+            if (filterText.trim() && filterText.trim() !== '{}') {
+                baseObj = JSON.parse(filterText)
+            }
+        } catch {
+            baseObj = {}
+        }
+
+        const hasColConds = Object.keys(colConds).length > 0
+        const hasBaseConds = Object.keys(baseObj).length > 0
+
+        if (hasColConds && hasBaseConds) {
+            return JSON.stringify({ $and: [baseObj, colConds] })
+        }
+        if (hasColConds) {
+            return JSON.stringify(colConds)
+        }
+        return filterText.trim() || '{}'
+    }, [buildMongoFilterFromColumnFilters, filterText])
+
+    // 查询执行
+    const runQuery = useCallback(
+        async (targetPage = 1, currentLimit = pageSize) => {
+            if (!collection || !db) return
+            const reqId = ++runQueryReqIdRef.current
+            setBusy(true)
+            setError('')
+            try {
+                const spec: MongoQuerySpec = {
+                    database: db,
+                    collection,
+                    filter: combinedFilterJSON,
+                    projection: projectionText.trim() || '',
+                    sort: sortText.trim() || '',
+                    limit: currentLimit,
+                    skip: (targetPage - 1) * currentLimit + (skip || 0),
+                    hint: '',
+                    collation: '',
+                }
+                const res: MongoFindResult = await API.mongoFind(id, spec)
+                if (reqId !== runQueryReqIdRef.current) return
+                setDocs(res.documents || [])
+                setTotal(res.total ?? 0)
+                setDuration(res.durationMs ?? 0)
+                setPage(targetPage)
+            } catch (e) {
+                if (reqId !== runQueryReqIdRef.current) return
+                setError(errorMessage(e))
+            } finally {
+                if (reqId === runQueryReqIdRef.current) {
+                    setBusy(false)
+                }
+            }
+        },
+        [collection, combinedFilterJSON, db, id, pageSize, projectionText, skip, sortText]
+    )
+
+    useEffect(() => {
+        if (!collection || !db) return
+        const timer = setTimeout(() => {
+            void runQuery(1, pageSize)
+        }, 300)
+        return () => clearTimeout(timer)
+    }, [collection, db, combinedFilterJSON])
+
+    // 解析当前页文档为行对象
+    const parsedRows = useMemo((): Array<Record<string, any> & { __idx: number; __raw: string }> => {
+        return docs.map((raw, idx) => {
+            let obj: Record<string, any> = {}
+            try {
+                obj = JSON.parse(raw)
+            } catch {
+                obj = { _raw: raw }
+            }
+            return {
+                ...obj,
+                __idx: idx,
+                __raw: raw,
+            }
+        })
+    }, [docs])
+
+    // 动态提取字段列
+    const dynamicColumns = useMemo(() => {
+        const keySet = new Set<string>()
+        parsedRows.forEach((row) => {
+            Object.keys(row).forEach((k) => {
+                if (k !== '__idx' && k !== '__raw') {
+                    keySet.add(k)
+                }
+            })
+        })
+        const keys = Array.from(keySet)
+        // 保证 _id 在最前
+        const idIdx = keys.indexOf('_id')
+        if (idIdx > -1) {
+            keys.splice(idIdx, 1)
+            keys.unshift('_id')
+        } else if (keys.length === 0) {
+            keys.unshift('_id')
+        }
+        return keys
+    }, [parsedRows])
+
+    // 计算列宽与 ColDef 表头
+    const dataCols: ColDef[] = useMemo(() => {
+        const indexCol: ColDef = {
+            key: '__index',
+            label: '#',
+            width: 48,
+            minWidth: 44,
+            resizable: false,
+            align: 'center',
+        }
+
+        const cols: ColDef[] = dynamicColumns.map((colKey) => {
+            const isPk = colKey === '_id'
+            const activeFilter = filters[colKey]
+            const minW = calcColWidthFromName(colKey, { isPk, hasFilter: true, minWidth: 95 })
+            const currentW = colWidths[colKey] ? Math.max(minW, colWidths[colKey]) : minW
+
+            return {
+                key: colKey,
+                width: currentW,
+                minWidth: minW,
+                resizable: true,
+                isPk,
+                hasFilter: true,
+                label: (
+                    <div className={d.headerCol}>
+                        {isPk && <span className={d.pkBadge}>_id</span>}
+                        <span className={d.headerColText} title={colKey}>
+                            {colKey}
+                        </span>
+                        <ColumnFilterPopover
+                            col={colKey}
+                            activeFilter={activeFilter}
+                            onApply={(newFilter) => {
+                                setFilters((prev) => {
+                                    const next = { ...prev }
+                                    if (!newFilter) {
+                                        delete next[colKey]
+                                    } else {
+                                        next[colKey] = newFilter
+                                    }
+                                    return next
+                                })
+                            }}
+                        />
+                    </div>
+                ),
+            }
+        })
+
+        return [indexCol, ...cols]
+    }, [colWidths, dynamicColumns, filters])
+
+    // 单元格格式化与渲染
+    const renderCellContent = (val: any, row?: any, colKey?: string) => {
+        if (val === null || val === undefined) {
+            return <span className={d.nullCell}>null</span>
+        }
+        if (typeof val === 'boolean') {
+            return <Tag color={val ? 'green' : 'default'}>{String(val)}</Tag>
+        }
+        if (typeof val === 'number') {
+            return <span className={d.cellText} style={{ color: '#0ea5e9' }}>{String(val)}</span>
+        }
+        if (typeof val === 'object') {
+            const isArr = Array.isArray(val)
+            let fullStr = ''
+            try {
+                fullStr = JSON.stringify(val, null, 2)
+            } catch {
+                fullStr = isArr ? '[Array]' : '[Object]'
+            }
+
+            // 固定 150 字符截断，结尾追加提示，避免 Tooltip 撑爆或溢出
+            let preview = fullStr
+            if (preview.length > 150) {
+                preview = preview.slice(0, 150) + t('mongo.data.actions.inspectFull', '\n... 点击查看完整内容与编辑')
+            }
+
+            const label = isArr ? `Array(${val.length})` : Object.keys(val).length ? '{ ... }' : '{}'
+
+            return (
+                <Tooltip
+                    title={
+                        <pre
+                            style={{
+                                margin: 0,
+                                maxHeight: 180,
+                                maxWidth: 420,
+                                overflow: 'hidden',
+                                whiteSpace: 'pre-wrap',
+                                wordBreak: 'break-all',
+                                fontSize: 11.5,
+                                fontFamily: 'monospace',
+                            }}
+                        >
+                            {preview}
+                        </pre>
+                    }
+                    mouseEnterDelay={0.25}
+                >
+                    <span
+                        className={d.jsonCell}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            if (row && colKey) {
+                                setCellModal({
+                                    open: true,
+                                    colKey,
+                                    docId: row._id,
+                                    rawRow: row,
+                                    text: fullStr,
+                                })
+                                setCellModalError('')
+                            }
+                        }}
+                    >
+                        {label}
+                    </span>
+                </Tooltip>
+            )
+        }
+        return <span className={d.cellText}>{String(val)}</span>
+    }
+
+    // 保存单元格字段在线修改 ($set)
+    const handleSaveCellModal = async () => {
+        if (!cellModal) return
+        setCellModalBusy(true)
+        setCellModalError('')
+        try {
+            let parsedVal: any = undefined
+            try {
+                parsedVal = JSON.parse(cellModal.text)
+            } catch (err: any) {
+                setCellModalError(t('mongo.data.actions.jsonParseFail', { error: err?.message || 'Syntax Error', defaultValue: `JSON 语法解析失败: ${err?.message || '请检查语法格式'}` }))
+                setCellModalBusy(false)
+                return
+            }
+
+            let filterSpec = '{}'
+            if (cellModal.docId !== undefined) {
+                filterSpec = JSON.stringify({ _id: cellModal.docId })
+            } else if (cellModal.rawRow) {
+                try {
+                    const obj = JSON.parse(cellModal.rawRow.__raw || '{}')
+                    if (obj._id !== undefined) {
+                        filterSpec = JSON.stringify({ _id: obj._id })
+                    } else {
+                        filterSpec = cellModal.rawRow.__raw
+                    }
+                } catch {
+                    filterSpec = '{}'
+                }
+            }
+
+            const updateDoc = {
+                $set: {
+                    [cellModal.colKey]: parsedVal,
+                },
+            }
+            const updateSpec = JSON.stringify(updateDoc)
+
+            const res = await API.mongoUpdateOne(id, db, collection, filterSpec, updateSpec, false)
+            message.success(
+                t('mongo.data.actions.updatedField', {
+                    col: cellModal.colKey,
+                    matched: res.matchedCount ?? 1,
+                    modified: res.modifiedCount ?? 1,
+                    defaultValue: `已更新字段 ${cellModal.colKey}（匹配 ${res.matchedCount ?? 1} 条，更新 ${res.modifiedCount ?? 1} 条）`,
+                })
+            )
+            setCellModal(null)
+            void runQuery(page, pageSize)
+        } catch (e) {
+            setCellModalError(errorMessage(e))
+        } finally {
+            setCellModalBusy(false)
+        }
+    }
+
+    // 增删改操作
+    const deleteDoc = (raw: string) => {
+        let idVal: any = undefined
+        try {
+            const obj = JSON.parse(raw)
+            if (obj._id !== undefined) idVal = obj._id
+        } catch {
+            /* fallback */
+        }
+
+        const idStr = idVal !== undefined ? JSON.stringify(idVal) : ''
+        setConfirm({
+            open: true,
+            title: t('mongo.data.actions.deleteDocTitle', '删除文档'),
+            message: idStr
+                ? t('mongo.data.actions.deleteDocConfirmId', { id: idStr, defaultValue: `确定要删除 _id 为 ${idStr} 的文档吗？` })
+                : t('mongo.data.actions.deleteDocConfirm', '确定要删除选中的文档吗？'),
+            danger: true,
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    const filterSpec = idStr ? `{"_id":${idStr}}` : raw
+                    const deletedCount = await API.mongoDeleteOne(id, db, collection, filterSpec)
+                    message.success(t('mongo.data.actions.deletedCount', { count: deletedCount, defaultValue: `已删除 ${deletedCount} 条文档` }))
+                    void runQuery(page, pageSize)
+                } catch (e) {
+                    message.error(errorMessage(e))
+                }
+            },
+        })
+    }
+
+    const openInsert = () => {
+        setEditorText('{\n  \n}')
+        setEditorError('')
+        setEditOpen({ mode: 'insert' })
+    }
+
+    const openUpdate = (raw: string) => {
+        try {
+            const obj = JSON.parse(raw)
+            delete obj._id
+            setEditorText(JSON.stringify({ $set: obj }, null, 2))
+        } catch {
+            setEditorText('{\n  "$set": {}\n}')
+        }
+        setEditorError('')
+        setEditOpen({ mode: 'update', raw })
+    }
+
+    const openReplace = (raw: string) => {
+        try {
+            const obj = JSON.parse(raw)
+            delete obj._id
+            setEditorText(JSON.stringify(obj, null, 2))
+        } catch {
+            setEditorText(raw)
+        }
+        setEditorError('')
+        setEditOpen({ mode: 'replace', raw })
+    }
+
+    const handleSaveDocModal = async () => {
+        setEditorBusy(true)
+        setEditorError('')
+        try {
+            if (editOpen?.mode === 'insert') {
+                await API.mongoInsertOne(id, db, collection, editorText)
+                message.success(t('mongo.data.actions.insertSuccess', '文档插入成功'))
+            } else if (editOpen?.mode === 'update') {
+                let filterSpec = '{}'
+                if (editOpen.raw) {
+                    try {
+                        const obj = JSON.parse(editOpen.raw)
+                        if (obj._id !== undefined) filterSpec = JSON.stringify({ _id: obj._id })
+                    } catch {
+                        /* fallback */
+                    }
+                }
+                const res = await API.mongoUpdateOne(id, db, collection, filterSpec, editorText, false)
+                message.success(t('mongo.data.actions.updateSuccess', { matched: res.matchedCount ?? 1, defaultValue: `已更新文档（匹配 ${res.matchedCount ?? 1} 条）` }))
+            } else if (editOpen?.mode === 'replace') {
+                let filterSpec = '{}'
+                if (editOpen.raw) {
+                    try {
+                        const obj = JSON.parse(editOpen.raw)
+                        if (obj._id !== undefined) filterSpec = JSON.stringify({ _id: obj._id })
+                    } catch {
+                        /* fallback */
+                    }
+                }
+                const res = await API.mongoReplaceOne(id, db, collection, filterSpec, editorText, false)
+                message.success(t('mongo.data.actions.replaceSuccess', { matched: res.matchedCount ?? 1, defaultValue: `已替换文档（匹配 ${res.matchedCount ?? 1} 条）` }))
+            }
+            setEditOpen(null)
+            void runQuery(page, pageSize)
+        } catch (e) {
+            setEditorError(errorMessage(e))
+        } finally {
+            setEditorBusy(false)
+        }
+    }
+
+    // 清空集合（Truncate）
+    const truncateCollection = () => {
+        setConfirm({
+            open: true,
+            title: t('mongo.data.actions.truncateTitle', '清空集合'),
+            danger: true,
+            message: t('mongo.data.actions.truncateConfirm', { coll: collection, defaultValue: `确定要清空集合 ${collection} 的全部文档吗？此操作不可逆！` }),
+            onConfirm: async () => {
+                setConfirm(emptyConfirm)
+                try {
+                    const count = await API.mongoDeleteMany(id, db, collection, '{}')
+                    message.success(t('mongo.data.actions.truncatedCount', { count, defaultValue: `已清空 ${count} 条文档` }))
+                    void runQuery(1, pageSize)
+                } catch (e) {
+                    message.error(errorMessage(e))
+                }
+            },
+        })
+    }
+
+    // 统计弹窗
+    const openStats = async () => {
+        setStatsBusy(true)
+        setStatsModalOpen(true)
+        try {
+            const st = await API.mongoCollectionStats(id, db, collection)
+            setStats(st)
+        } catch (e) {
+            message.error(errorMessage(e))
+            setStats(null)
+        } finally {
+            setStatsBusy(false)
+        }
+    }
+
+    // 右键上下文菜单项
+    const getContextMenuItems = (): MenuProps['items'] => {
+        if (!contextMenu) return []
+        const row = parsedRows[contextMenu.rowIdx]
+        if (!row) return []
+        const raw = row.__raw
+        let idStr = ''
+        try {
+            if (row._id !== undefined) idStr = JSON.stringify(row._id)
+        } catch {
+            /* ignore */
+        }
+
+        const items: MenuProps['items'] = [
+            {
+                key: 'edit',
+                icon: <Edit size={13} />,
+                label: t('mongo.data.actions.editDocSet', '编辑文档 ($set)'),
+                onClick: () => openUpdate(raw),
+            },
+            {
+                key: 'replace',
+                icon: <FileText size={13} />,
+                label: t('mongo.data.actions.replaceWholeDoc', '替换整个文档'),
+                onClick: () => openReplace(raw),
+            },
+            { type: 'divider' },
+            {
+                key: 'copy-cell',
+                icon: <Copy size={13} />,
+                label: t('mongo.data.actions.copyCellVal', '复制当前单元格值'),
+                onClick: async () => {
+                    const col = contextMenu.col
+                    if (col && row[col] !== undefined) {
+                        const cellText = typeof row[col] === 'object' ? JSON.stringify(row[col]) : String(row[col])
+                        if (await copyText(cellText)) message.success(t('mongo.data.actions.copiedCellVal', '已复制单元格内容'))
+                    }
+                },
+            },
+            {
+                key: 'copy-json',
+                icon: <Code size={13} />,
+                label: t('mongo.data.actions.copyDocJson', '复制完整文档 JSON'),
+                onClick: async () => {
+                    let target = raw
+                    try {
+                        target = JSON.stringify(JSON.parse(raw), null, 2)
+                    } catch {
+                        target = raw
+                    }
+                    if (await copyText(target)) message.success(t('mongo.data.actions.copiedDocJson', '已复制文档 JSON'))
+                },
+            },
+            ...(idStr
+                ? [
+                    {
+                        key: 'copy-id',
+                        icon: <Copy size={13} />,
+                        label: t('mongo.data.actions.copyDocId', { id: idStr, defaultValue: `复制 _id (${idStr})` }),
+                        onClick: async () => { if (await copyText(idStr)) message.success(t('mongo.data.actions.copiedDocId', '已复制 _id 到剪贴板')) },
+                    },
+                ]
+                : []),
+            {
+                key: 'clone-doc',
+                icon: <CopyPlus size={13} />,
+                label: t('mongo.data.actions.cloneDoc', '克隆并插入新文档'),
+                onClick: async () => {
+                    try {
+                        const cloned = JSON.parse(raw)
+                        delete cloned._id
+                        await API.mongoInsertOne(id, db, collection, JSON.stringify(cloned))
+                        message.success(t('mongo.data.actions.cloneSuccess', '已克隆文档并保存'))
+                        void runQuery(1, pageSize)
+                    } catch (e) {
+                        message.error(errorMessage(e))
+                    }
+                },
+            },
+            { type: 'divider' },
+            {
+                key: 'delete',
+                icon: <Trash2 size={13} />,
+                danger: true,
+                label: t('mongo.data.actions.deleteDoc', '删除此文档'),
+                onClick: () => deleteDoc(raw),
+            },
+        ]
+        return items
+    }
+
+    return (
+        <div className={d.dataWrap}>
+            {/* 顶部工具栏 */}
+            <div className={d.tableHead}>
+                <div className={d.tableNameWrap}>
+                    <span className={d.dbTag}>{db}</span>
+                    <span className={d.collName} title={collection}>
+                        {collection}
+                    </span>
+                    <span className={d.countBadge}>
+                        <Tag color="blue">{t('mongo.data.actions.totalDocs', { count: total, defaultValue: `${total} 文档` })}</Tag>
+                        {duration > 0 && <span style={{ color: 'var(--text-faint)' }}>{duration}ms</span>}
+                    </span>
+                </div>
+
+                {/* 集合子功能切换 */}
+                <Segmented
+                    size="small"
+                    value={subTab}
+                    onChange={(v) => setSubTab(v as any)}
+                    options={[
+                        { label: t('mongo.data.subTabs.documents', '文档数据'), value: 'documents', icon: <TableIcon size={12} /> },
+                        { label: t('mongo.data.subTabs.indexes', '索引管理'), value: 'indexes', icon: <Layers size={12} /> },
+                        { label: t('mongo.data.subTabs.schema', '结构校验'), value: 'schema', icon: <SlidersHorizontal size={12} /> },
+                        { label: t('mongo.data.subTabs.stream', '变更流'), value: 'stream', icon: <Activity size={12} /> },
+                    ]}
+                />
+
+                {/* 右侧动作工具栏 */}
+                <div className={d.crudActions}>
+                    {subTab === 'documents' && (
+                        <>
+                            <Segmented
+                                size="small"
+                                value={viewMode}
+                                onChange={(v) => setViewMode(v as any)}
+                                options={[
+                                    { label: t('mongo.data.actions.viewTable', '表格'), value: 'table', icon: <TableIcon size={12} /> },
+                                    { label: t('mongo.data.actions.viewJson', 'JSON'), value: 'json', icon: <Code size={12} /> },
+                                ]}
+                            />
+                            <Button
+                                size="small"
+                                type="primary"
+                                icon={<Plus size={12} />}
+                                onClick={openInsert}
+                            >
+                                {t('mongo.data.actions.insertDoc', '添加文档')}
+                            </Button>
+                            <Button
+                                size="small"
+                                icon={showBuilder ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                onClick={() => setShowBuilder((v) => !v)}
+                            >
+                                {t('mongo.data.actions.queryFilter', '查询过滤')}
+                            </Button>
+                            <Button
+                                size="small"
+                                icon={<Download size={12} />}
+                                onClick={() => setIoExportOpen(true)}
+                            >
+                                {t('mongo.data.actions.export', '导出')}
+                            </Button>
+                            <Button
+                                size="small"
+                                icon={<BarChart2 size={12} />}
+                                onClick={openStats}
+                            >
+                                {t('mongo.data.actions.stats', '统计')}
+                            </Button>
+                            <Popconfirm
+                                title={t('mongo.data.actions.truncatePopConfirm', '确定要清空该集合中的所有文档吗？')}
+                                okText={t('mongo.data.actions.confirmTruncate', '确定清空')}
+                                cancelText={t('common.cancel', '取消')}
+                                okButtonProps={{ danger: true }}
+                                onConfirm={truncateCollection}
+                            >
+                                <Button size="small" danger icon={<Trash2 size={12} />}>
+                                    {t('mongo.data.actions.truncate', '清空')}
+                                </Button>
+                            </Popconfirm>
+                        </>
+                    )}
+
+                    <Tooltip title={t('mongo.data.actions.refresh', '刷新')}>
+                        <Button
+                            size="small"
+                            icon={<RotateCw size={12} />}
+                            loading={busy}
+                            onClick={() => runQuery(page, pageSize)}
+                        />
+                    </Tooltip>
+                </div>
+            </div>
+
+            {/* 查询构建器抽屉/展开区 */}
+            {subTab === 'documents' && showBuilder && (
+                <div className={d.filterBuilder}>
+                    <div className={d.filterGrid}>
+                        <div className={d.filterField}>
+                            <span className={d.filterLabel}>{t('mongo.data.filter.queryFilter', '过滤条件 Filter (JSON)')}</span>
+                            <CodeEditor
+                                lang="json"
+                                height="65px"
+                                value={filterText}
+                                onChange={setFilterText}
+                                onModEnter={() => runQuery(1, pageSize)}
+                                placeholder='{"status": "active"}'
+                            />
+                        </div>
+                        <div className={d.filterField}>
+                            <span className={d.filterLabel}>{t('mongo.data.filter.projection', '投影 Projection (可选)')}</span>
+                            <CodeEditor
+                                lang="json"
+                                height="65px"
+                                value={projectionText}
+                                onChange={setProjectionText}
+                                onModEnter={() => runQuery(1, pageSize)}
+                                placeholder='{"name": 1, "_id": 0}'
+                            />
+                        </div>
+                        <div className={d.filterField}>
+                            <span className={d.filterLabel}>{t('mongo.data.filter.sort', '排序 Sort (可选)')}</span>
+                            <CodeEditor
+                                lang="json"
+                                height="65px"
+                                value={sortText}
+                                onChange={setSortText}
+                                onModEnter={() => runQuery(1, pageSize)}
+                                placeholder='{"createdAt": -1}'
+                            />
+                        </div>
+                        <div className={d.filterActions}>
+                            <span className={d.filterLabelPlaceholder}>&nbsp;</span>
+                            <div className={d.actionButtonGroup}>
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    icon={<Search size={12} />}
+                                    loading={busy}
+                                    onClick={() => runQuery(1, pageSize)}
+                                    className={d.queryBtn}
+                                >
+                                    {t('mongo.data.filter.run', '执行查询')}
+                                </Button>
+                                <Button
+                                    size="small"
+                                    onClick={() => {
+                                        setFilterText('{}')
+                                        setProjectionText('')
+                                        setSortText('{}')
+                                        setFilters({})
+                                        setSkip(0)
+                                    }}
+                                    className={d.resetBtn}
+                                >
+                                    {t('mongo.data.filter.reset', '重置全部')}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* 主内容区域 */}
+            <div className={d.viewArea}>
+                {subTab === 'indexes' && (
+                    <IndexesTab session={session} db={db} collection={collection} />
+                )}
+                {subTab === 'schema' && (
+                    <SchemaTab session={session} db={db} collection={collection} />
+                )}
+                {subTab === 'stream' && (
+                    <ChangeStreamTab session={session} db={db} collection={collection} />
+                )}
+
+                {subTab === 'documents' && (
+                    <>
+                        {error && (
+                            <div style={{ padding: '8px 12px' }}>
+                                <Alert type="error" showIcon message={error} />
+                            </div>
+                        )}
+
+                        {viewMode === 'table' && (
+                            parsedRows.length === 0 && !busy ? (
+                                <div style={{ textAlign: 'center', padding: '60px 0', color: 'var(--text-faint)', fontSize: 13 }}>
+                                    {t('mongo.data.actions.emptyDocsMatch', '暂无文档（或当前过滤条件无匹配数据）')}
+                                </div>
+                            ) : (
+                                <ResizableTable
+                                    cols={dataCols}
+                                    data={parsedRows}
+                                    onColResize={(colKey, newW) =>
+                                        setColWidths((prev) => ({ ...prev, [colKey]: newW }))
+                                    }
+                                >
+                                    <tbody>
+                                        {parsedRows.map((row, rIdx) => {
+                                            const isSelected = selectedIdx === rIdx
+                                            return (
+                                                <tr
+                                                    key={rIdx}
+                                                    style={{
+                                                        background: isSelected ? 'var(--bg-active, rgba(59,130,246,0.08))' : undefined,
+                                                        cursor: 'pointer',
+                                                    }}
+                                                    onClick={() => setSelectedIdx(rIdx)}
+                                                    onDoubleClick={() => openUpdate(row.__raw)}
+                                                    onContextMenu={(e) => {
+                                                        e.preventDefault()
+                                                        setSelectedIdx(rIdx)
+                                                        setContextMenu({
+                                                            open: true,
+                                                            x: e.clientX,
+                                                            y: e.clientY,
+                                                            rowIdx: rIdx,
+                                                        })
+                                                    }}
+                                                >
+                                                    {/* 序号列 */}
+                                                    <td
+                                                        style={{
+                                                            textAlign: 'center',
+                                                            color: 'var(--text-faint)',
+                                                            fontSize: 11,
+                                                            userSelect: 'none',
+                                                        }}
+                                                    >
+                                                        {(page - 1) * pageSize + rIdx + 1}
+                                                    </td>
+                                                    {/* 动态字段数据列 */}
+                                                    {dynamicColumns.map((colKey) => {
+                                                        const cellVal = row[colKey]
+                                                        return (
+                                                            <td
+                                                                key={colKey}
+                                                                onContextMenu={(e) => {
+                                                                    e.preventDefault()
+                                                                    e.stopPropagation()
+                                                                    setSelectedIdx(rIdx)
+                                                                    setContextMenu({
+                                                                        open: true,
+                                                                        x: e.clientX,
+                                                                        y: e.clientY,
+                                                                        rowIdx: rIdx,
+                                                                        col: colKey,
+                                                                    })
+                                                                }}
+                                                            >
+                                                                {renderCellContent(cellVal, row, colKey)}
+                                                            </td>
+                                                        )
+                                                    })}
+                                                </tr>
+                                            )
+                                        })}
+                                    </tbody>
+                                </ResizableTable>
+                            ))}
+
+                        {viewMode === 'json' && (
+                            <div className={d.jsonViewWrap}>
+                                {parsedRows.map((row, rIdx) => {
+                                    const idVal = row._id !== undefined ? JSON.stringify(row._id) : `#${rIdx + 1}`
+                                    let pretty = ''
+                                    try {
+                                        pretty = JSON.stringify(JSON.parse(row.__raw), null, 2)
+                                    } catch {
+                                        pretty = row.__raw
+                                    }
+                                    return (
+                                        <div key={rIdx} className={d.jsonCard}>
+                                            <div className={d.jsonCardHead}>
+                                                <Space size={8}>
+                                                    <Tag color="blue">{(page - 1) * pageSize + rIdx + 1}</Tag>
+                                                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>
+                                                        _id: {idVal}
+                                                    </span>
+                                                </Space>
+                                                <Space size={4}>
+                                                    <Tooltip title={t('mongo.data.actions.editDoc', '编辑')}>
+                                                        <Button
+                                                            size="small"
+                                                            type="text"
+                                                            icon={<Edit size={12} />}
+                                                            onClick={() => openUpdate(row.__raw)}
+                                                        />
+                                                    </Tooltip>
+                                                    <Tooltip title={t('mongo.data.actions.copyDocJson', '复制 JSON')}>
+                                                        <Button
+                                                            size="small"
+                                                            type="text"
+                                                            icon={<Copy size={12} />}
+                                                            onClick={async () => { if (await copyText(pretty)) message.success(t('mongo.data.actions.copiedDocJson', '已复制文档 JSON')) }}
+                                                        />
+                                                    </Tooltip>
+                                                    <Tooltip title={t('mongo.data.actions.deleteDoc', '删除文档')}>
+                                                        <Button
+                                                            size="small"
+                                                            type="text"
+                                                            danger
+                                                            icon={<Trash2 size={12} />}
+                                                            onClick={() => deleteDoc(row.__raw)}
+                                                        />
+                                                    </Tooltip>
+                                                </Space>
+                                            </div>
+                                            <pre className={d.jsonCardCode}>{pretty}</pre>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+
+                        {/* 分页控制栏 */}
+                        <div className={d.paginationFooter}>
+                            <span style={{ fontSize: 12, color: 'var(--text-dim)' }}>
+                                {t('mongo.data.actions.pageFooter', { total, pageSize, defaultValue: `共 ${total} 条文档 · 每页 ${pageSize} 条` })}
+                            </span>
+                            <Pagination
+                                size="small"
+                                current={page}
+                                pageSize={pageSize}
+                                total={total}
+                                disabled={busy}
+                                showSizeChanger
+                                pageSizeOptions={['10', '20', '50', '100', '200']}
+                                onChange={(p, size) => {
+                                    setPageSize(size)
+                                    runQuery(p, size)
+                                }}
+                            />
+                        </div>
+                    </>
+                )}
+            </div>
+
+            {/* 右键上下文菜单 */}
+            {contextMenu && (
+                <Dropdown
+                    menu={{ items: getContextMenuItems() }}
+                    open={contextMenu.open}
+                    onOpenChange={(v) => !v && setContextMenu(null)}
+                >
+                    <span
+                        style={{
+                            position: 'fixed',
+                            left: contextMenu.x,
+                            top: contextMenu.y,
+                            width: 1,
+                            height: 1,
+                            pointerEvents: 'none',
+                        }}
+                    />
+                </Dropdown>
+            )}
+
+            {/* 增改文档模态框 */}
+            {editOpen && (
+                <Modal
+                    open={true}
+                    title={
+                        editOpen.mode === 'insert'
+                            ? t('mongo.data.actions.insertTitle', '添加新文档')
+                            : editOpen.mode === 'replace'
+                                ? t('mongo.data.actions.replaceTitle', '替换完整文档')
+                                : t('mongo.data.actions.updateTitle', '更新文档（支持 $set 等修改器）')
+                    }
+                    onCancel={() => setEditOpen(null)}
+                    onOk={handleSaveDocModal}
+                    confirmLoading={editorBusy}
+                    okText={editOpen.mode === 'insert' ? t('mongo.data.actions.insertBtn', '插入') : t('mongo.data.actions.saveUpdate', '保存更新')}
+                    cancelText={t('common.cancel', '取消')}
+                    width={600}
+                >
+                    <div style={{ marginTop: 8 }}>
+                        <CodeEditor lang="json" height="280px" value={editorText} onChange={setEditorText} />
+                    </div>
+                    {editorError && (
+                        <div style={{ marginTop: 8 }}>
+                            <Alert type="error" showIcon message={editorError} />
+                        </div>
+                    )}
+                </Modal>
+            )}
+
+            {/* 集合统计模态框 */}
+            {statsModalOpen && (
+                <Modal
+                    open={true}
+                    title={t('mongo.data.actions.collStatsTitle', { coll: collection, defaultValue: `${collection} 集合统计` })}
+                    onCancel={() => setStatsModalOpen(false)}
+                    footer={[
+                        <Button key="close" type="primary" onClick={() => setStatsModalOpen(false)}>
+                            {t('mongo.data.actions.close', '关闭')}
+                        </Button>,
+                    ]}
+                    width={440}
+                >
+                    {statsBusy ? (
+                        <div style={{ textAlign: 'center', padding: 24, color: 'var(--text-dim)' }}>
+                            {t('mongo.data.actions.loading', '加载中…')}
+                        </div>
+                    ) : stats ? (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 8 }}>
+                            <tbody>
+                                {[
+                                    [t('mongo.data.actions.docCount', '文档总数'), String(stats.count)],
+                                    [t('mongo.data.actions.dataSize', '数据大小'), String(stats.size)],
+                                    [t('mongo.data.actions.avgObjSize', '平均文档大小'), String(stats.avgObjSize)],
+                                    [t('mongo.data.actions.storageSize', '存储占用大小'), String(stats.storageSize)],
+                                    [t('mongo.data.actions.totalIndexSize', '索引总大小'), String(stats.totalIndexSize)],
+                                    [t('mongo.data.actions.indexCount', '索引数量'), String(stats.nindexes)],
+                                ].map(([label, val]) => (
+                                    <tr key={label} style={{ borderBottom: '1px solid var(--border)' }}>
+                                        <th style={{ textAlign: 'left', padding: '8px 4px', color: 'var(--text-dim)', fontSize: 12 }}>
+                                            {label}
+                                        </th>
+                                        <td style={{ textAlign: 'right', padding: '8px 4px', fontWeight: 600, fontSize: 12 }}>
+                                            {val}
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div style={{ color: 'var(--text-dim)', padding: 12 }}>{t('mongo.data.actions.noStats', '无法获取统计信息')}</div>
+                    )}
+                </Modal>
+            )}
+
+            {/* 导出模态框 */}
+            {ioExportOpen && (
+                <IoModal
+                    sessionId={id}
+                    db={db}
+                    coll={collection}
+                    currentDocs={docs}
+                    filter={combinedFilterJSON}
+                    onClose={() => setIoExportOpen(false)}
+                />
+            )}
+
+            {/* 单元格对象/数组详情与在线编辑弹窗 */}
+            {cellModal && (
+                <Modal
+                    title={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span>{t('mongo.data.actions.cellModalTitle', '字段详情与在线编辑')}</span>
+                            <Tag color="blue" style={{ fontFamily: 'monospace', fontSize: 12 }}>
+                                {cellModal.colKey}
+                            </Tag>
+                            {cellModal.docId !== undefined && (
+                                <Tag color="default" style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+                                    _id: {JSON.stringify(cellModal.docId)}
+                                </Tag>
+                            )}
+                        </div>
+                    }
+                    open={cellModal.open}
+                    width={760}
+                    destroyOnHidden
+                    onCancel={() => setCellModal(null)}
+                    footer={[
+                        <Button
+                            key="copy"
+                            icon={<Copy size={13} />}
+                            onClick={async () => {
+                                if (await copyText(cellModal.text)) message.success(t('mongo.data.actions.copiedCellContent', '已复制完整字段内容'))
+                            }}
+                        >
+                            {t('mongo.data.actions.copyContent', '复制内容')}
+                        </Button>,
+                        <Button
+                            key="format"
+                            onClick={() => {
+                                try {
+                                    const parsed = JSON.parse(cellModal.text)
+                                    setCellModal((prev) =>
+                                        prev ? { ...prev, text: JSON.stringify(parsed, null, 2) } : null
+                                    )
+                                    setCellModalError('')
+                                    message.success(t('mongo.data.actions.jsonFormatted', 'JSON 已格式化'))
+                                } catch (e: any) {
+                                    setCellModalError(t('mongo.data.actions.formatFail', { error: e?.message, defaultValue: `格式化失败: ${e?.message}` }))
+                                }
+                            }}
+                        >
+                            {t('mongo.data.actions.formatJson', '格式化 JSON')}
+                        </Button>,
+                        <Button key="cancel" onClick={() => setCellModal(null)}>
+                            {t('common.cancel', '取消')}
+                        </Button>,
+                        <Button
+                            key="save"
+                            type="primary"
+                            loading={cellModalBusy}
+                            onClick={handleSaveCellModal}
+                        >
+                            {t('mongo.data.actions.saveChangesSet', '保存修改 ($set)')}
+                        </Button>,
+                    ]}
+                >
+                    {cellModalError && (
+                        <Alert
+                            type="error"
+                            showIcon
+                            message={cellModalError}
+                            style={{ marginBottom: 10 }}
+                        />
+                    )}
+
+                    <CodeEditor
+                        lang="json"
+                        height="380px"
+                        value={cellModal.text}
+                        onChange={(v) =>
+                            setCellModal((prev) => (prev ? { ...prev, text: v } : null))
+                        }
+                        onModEnter={handleSaveCellModal}
+                    />
+                </Modal>
+            )}
+
+            {/* 二次确认模态框 */}
+            <ConfirmModal state={confirm} onCancel={() => setConfirm(emptyConfirm)} />
+        </div>
+    )
+}

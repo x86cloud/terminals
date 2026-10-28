@@ -1,0 +1,100 @@
+@import (reference) '../../../styles/variables.less';
+@import (reference) '../../../styles/mixins.less';
+
+.processPanel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: @bg-2;
+    color: @text;
+    font-size: 13px;
+    user-select: none;
+}
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 10px;
+    padding: 8px 12px;
+    background: @bg-1;
+    border-bottom: 1px solid @border;
+    flex: none;
+
+    .toolbarTitle {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-weight: 600;
+        color: @text;
+        font-size: 13px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .searchWrap {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex: 1 1 140px;
+        min-width: 110px;
+        max-width: 260px;
+        background: @bg-2;
+        border: 1px solid @border;
+        border-radius: @radius-md;
+        padding: 4px 8px;
+        color: @text-dim;
+        transition: all 0.15s ease;
+
+        &:focus-within {
+            border-color: @accent;
+            background: @bg-1;
+            box-shadow: 0 0 0 2px @accent-dim-2;
+        }
+
+        svg {
+            flex-shrink: 0;
+        }
+
+        input {
+            width: 100%;
+            min-width: 0;
+            border: none;
+            background: transparent;
+            color: @text;
+            outline: none;
+            font-size: 12px;
+        }
+    }
+
+    .toolbarActions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    .lastUpdate {
+        font-size: 11px;
+        color: @text-dim;
+        white-space: nowrap;
+    }
+}
+
+.searchInput {
+    flex: 1;
+    max-width: 300px;
+}
+
+.tableWrap {
+    flex: 1;
+    overflow: auto;
+    padding: 0 12px 12px;
+}
+
+.alertBox {
+    margin: 0 12px 8px;
+}

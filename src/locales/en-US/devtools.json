@@ -1,0 +1,50 @@
+{
+  "tabs": {
+    "md5": "MD5 Hash",
+    "timestamp": "Timestamp",
+    "base64": "Base64",
+    "json": "JSON Formatter"
+  },
+  "copy": "Copy",
+  "copied": "Copied",
+  "download": "Download",
+  "md5": {
+    "title": "MD5 Hash Calculation",
+    "desc": "Calculate 32-bit MD5 checksum in real-time (supports uppercase/lowercase).",
+    "label": "Text",
+    "placeholder": "Enter text to compute hash...",
+    "uppercase": "Uppercase output"
+  },
+  "timestamp": {
+    "title": "Timestamp Converter",
+    "desc": "Real-time display of current timestamp, with bidirectional conversion between timestamp and datetime.",
+    "secLabel": "Seconds (s)",
+    "msLabel": "Milliseconds (ms)",
+    "subTitleTsToDate": "Timestamp → Date",
+    "tsPlaceholder": "Enter timestamp, e.g. 1764528000",
+    "subTitleDateToTs": "Date → Timestamp",
+    "correspSecTs": "Corresponding seconds timestamp",
+    "invalidTs": "Invalid timestamp"
+  },
+  "base64": {
+    "title": "Base64 Encode / Decode",
+    "desc": "Bidirectional real-time conversion between plain text and Base64 string.",
+    "modeEncode": "Encode",
+    "modeDecode": "Decode",
+    "rawText": "Raw Text",
+    "base64Str": "Base64 String",
+    "encodePlaceholder": "Enter text to encode...",
+    "decodePlaceholder": "Enter Base64 to decode...",
+    "encodeResult": "Encoded Result",
+    "decodeResult": "Decoded Result",
+    "decodeError": "Decoding failed: Not valid Base64"
+  },
+  "json": {
+    "title": "JSON Formatter",
+    "desc": "Format or minify in-place. Automatically validates syntax and locates error lines/columns, with large file support.",
+    "placeholder": "Paste / edit JSON string here...",
+    "format": "Format",
+    "compress": "Minify",
+    "syntaxErrorDetail": "{{msg}} (Position {{pos}}, Line {{line}} Column {{col}})"
+  }
+}

@@ -1,0 +1,57 @@
+[package]
+name = "terminal_v4"
+version = "1.1.1"
+description = "xTerminal - Multi-protocol terminal and database client"
+authors = ["xTerminal"]
+edition = "2021"
+
+[lib]
+name = "terminal_v4_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "image-png"] }
+tauri-plugin-opener = "2"
+tauri-plugin-single-instance = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+base64 = "0.22"
+aes-gcm = "0.10"
+rand = "0.8"
+dirs = "5"
+rfd = "0.15"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls", "multipart", "stream"] }
+tokio-tungstenite = { version = "0.24", features = ["rustls-tls-webpki-roots"] }
+futures-util = "0.3"
+url = "2"
+russh = "0.45"
+russh-keys = "0.45"
+russh-sftp = "2.0"
+async-trait = "0.1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+mysql_async = { version = "0.34", default-features = false, features = ["default-rustls"] }
+tokio-postgres = { version = "0.7", features = ["with-chrono-0_4", "with-serde_json-1"] }
+redis = { version = "0.27", features = ["tokio-comp", "tokio-rustls-comp", "cluster-async"] }
+mongodb = "3.1"
+rumqttc = { version = "0.24", features = ["use-rustls"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+rustls-pemfile = "2"
+tokio-rustls = "0.26"
+bollard = "0.18"
+sha2 = "0.10"
+hex = "0.4"
+regex = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

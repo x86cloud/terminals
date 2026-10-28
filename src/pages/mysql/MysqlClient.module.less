@@ -1,0 +1,184 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+.client {
+    display: flex;
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.sideTree {
+    width: 320px;
+    min-width: 260px;
+    max-width: 520px;
+    border-right: 1px solid @border;
+    background: @bg-2;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.sideHead {
+    height: 36px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid @border;
+    background: @bg-2;
+    flex-shrink: 0;
+    box-sizing: border-box;
+}
+
+.sideTitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: @text;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    line-height: 1;
+}
+
+.treeWrap {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 6px 4px;
+    min-height: 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+.mainArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+    background: @bg-1;
+}
+
+.tabBar {
+    height: 36px;
+    min-height: 36px;
+    background: @bg-2;
+    border-bottom: 1px solid @border;
+    display: flex;
+    align-items: stretch;
+    padding: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex-shrink: 0;
+    gap: 0;
+    box-sizing: border-box;
+
+    &::-webkit-scrollbar {
+        height: 3px;
+    }
+}
+
+.tabItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: @text-dim;
+    background: transparent;
+    border: none;
+    border-right: 1px solid color-mix(in srgb, @border 70%, transparent);
+    border-radius: 0;
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    height: 100%;
+    box-sizing: border-box;
+
+    &:hover {
+        color: @text;
+        background: color-mix(in srgb, @bg-1 55%, transparent);
+    }
+
+    &.active {
+        color: @accent;
+        background: @bg-1;
+        font-weight: 600;
+        box-shadow: 0 -2px 0 @accent inset;
+    }
+}
+
+.tabContent {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    min-height: 0;
+    background: @bg-1;
+}
+
+.statusBar {
+    height: 28px;
+    padding: 0 12px;
+    background: @bg-2;
+    border-top: 1px solid @border;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    color: @text-dim;
+    flex-shrink: 0;
+}
+
+.nodeTitleWrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    min-width: 0;
+    padding: 2px 4px;
+    border-radius: @radius-sm;
+    user-select: none;
+    overflow: hidden;
+}
+
+.nodeMain {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+    min-width: 0;
+    flex: 1;
+}
+
+.nodeText {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+    flex: 1;
+    display: inline-block;
+}
+
+.nodeMeta {
+    font-size: 11px;
+    color: @text-faint;
+    font-variant-numeric: tabular-nums;
+    margin-left: 6px;
+    flex-shrink: 0;
+}

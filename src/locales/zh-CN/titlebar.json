@@ -1,0 +1,24 @@
+{
+  "collapseSidebar": "收起主侧边栏",
+  "expandSidebar": "展开主侧边栏",
+  "collapseAi": "收起 AI 智能体",
+  "expandAi": "展开 AI 智能体",
+  "switchToLight": "切换至浅色模式",
+  "switchToDark": "切换至暗色模式",
+  "unpinWindow": "取消窗口置顶",
+  "pinWindow": "窗口置顶",
+  "settings": "系统设置",
+  "switchLanguage": "切换语言",
+  "minimise": "最小化",
+  "restore": "向下还原",
+  "maximise": "最大化",
+  "close": "关闭",
+  "closeConfirm": {
+    "minimize": "最小化到系统托盘，后台继续运行 (推荐)",
+    "quit": "直接退出程序",
+    "remember": "记住我的选择，不再提醒（可在设置中随时更改）"
+  },
+  "langSystem": "跟随系统",
+  "langZh": "简体中文",
+  "langEn": "English"
+}

@@ -1,0 +1,193 @@
+@import (reference) '../../styles/variables.less';
+@import (reference) '../../styles/mixins.less';
+
+/* 跨子组件共享的 MongoDB 通用样式 */
+
+.mongoNull {
+    color: @text-dim;
+    font-style: italic;
+}
+
+.mongoDim {
+    color: @text-dim;
+}
+
+.mongoEmpty {
+    color: @text-dim;
+    font-size: 13px;
+    padding: 12px;
+    text-align: center;
+
+    &.small {
+        padding: 6px;
+        font-size: 12px;
+    }
+}
+
+.mongoGridWrap {
+    min-width: 0;
+    overflow: auto;
+}
+
+.mongoTable {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+    font-family: @font-mono;
+
+    th, td {
+        border: 1px solid @border;
+        padding: 5px 9px;
+        text-align: left;
+        white-space: nowrap;
+        max-width: 420px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    th {
+        background: @bg-1;
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        color: @text-dim;
+        .sticky-divider();
+    }
+
+    tbody tr:nth-child(even) {
+        background: @bg-1;
+    }
+
+    tbody tr:hover {
+        background: @bg-2;
+    }
+
+    tbody tr.selected {
+        background: @select-bg;
+    }
+}
+
+.mongoJson {
+    font-family: @font-mono;
+    font-size: 12px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: @bg-1;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 8px 10px;
+    color: @text;
+    max-height: 360px;
+    overflow: auto;
+}
+
+.mongoToolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid @border;
+    flex-wrap: wrap;
+}
+
+.toolbarRight {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.builderGrid {
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: @bg-1;
+    border-radius: @radius-md;
+}
+
+.paginationFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+}
+
+.docActionSpace {
+    justify-content: center;
+    width: 100%;
+}
+
+.errorText {
+    color: @danger;
+    font-size: 12px;
+}
+
+.mongoField {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: @space-md;
+
+    > span {
+        font-size: 12px;
+        color: @text-dim;
+    }
+}
+
+.mongoGrid2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: @space-md;
+
+    @media (max-width: 880px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.mongoRow {
+    .row();
+    flex-wrap: wrap;
+}
+
+.mongoStatCard {
+    .card-border();
+    background: @bg-1;
+    padding: 10px 12px;
+
+    .k {
+        font-size: 11px;
+        color: @text-dim;
+    }
+
+    .v {
+        font-size: 18px;
+        font-weight: 600;
+        margin-top: 2px;
+    }
+}
+
+.mongoKV {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+
+    th, td {
+        border: 1px solid @border;
+        padding: 4px 8px;
+        text-align: left;
+        vertical-align: top;
+    }
+
+    th {
+        background: @bg-2;
+        width: 180px;
+        color: @text-dim;
+        font-weight: 500;
+    }
+}
+
+.mongoH {
+    font-size: 13px;
+    font-weight: 600;
+    margin: @space-lg 0 @space-sm;
+    color: @text;
+}
