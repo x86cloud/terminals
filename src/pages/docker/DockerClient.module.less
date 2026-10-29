@@ -10,17 +10,17 @@
     height: 100%;
     min-width: 0;
     min-height: 0;
-    background: @bg-1;
+    background: @stage-bg;
     color: @text;
     overflow: hidden;
 
     :global {
         .ant-table {
-            background: @bg-1;
+            background: @stage-bg;
             color: @text;
         }
         .ant-table-thead > tr > th {
-            background: @bg-2;
+            background: @stage-bg;
             color: @text-dim;
             font-weight: 600;
             border-bottom: 1px solid @border;
@@ -30,13 +30,13 @@
             color: @text;
         }
         .ant-table-tbody > tr:hover > td {
-            background: @bg-2 !important;
+            background: color-mix(in srgb, @accent 6%, @stage-bg) !important;
         }
         .ant-pagination {
             margin-top: 14px !important;
         }
         .ant-card {
-            background: @bg-1;
+            background: @stage-bg;
             border-color: @border;
         }
     }
@@ -50,7 +50,7 @@
     row-gap: 8px;
     column-gap: 12px;
     padding: 8px 16px;
-    background: @bg-1;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
     flex-shrink: 0;
     min-width: 0;
@@ -318,7 +318,7 @@
 }
 
 .inspectJsonViewer {
-    background: @bg-2;
+    background: @stage-bg;
     color: @text;
     font-family: @font-mono;
     font-size: 12px;

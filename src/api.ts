@@ -317,7 +317,7 @@ export const API = {
 
     // MySQL
     mysqlConnect: (serverId: string): Promise<boolean> =>
-        invoke<boolean>('mysql_connect', { serverId }),
+        invoke<any>('mysql_connect', { serverId }).then((r) => !!r),
     mysqlClose: (serverId: string): Promise<void> =>
         invoke<void>('mysql_close', { serverId }),
     mysqlDatabases: (serverId: string): Promise<string[]> =>
@@ -424,7 +424,7 @@ export const API = {
     ): Promise<string> =>
         invoke<string>('mysql_import_from_file', { serverId, dbName, mode, table }),
     mysqlConnectEx: (serverId: string): Promise<boolean> =>
-        invoke<boolean>('mysql_connect', { serverId }),
+        invoke<any>('mysql_connect', { serverId }).then((r) => !!r),
     mysqlTestConnection: (cfg: ServerConfig): Promise<{ connected: boolean; pingMs: number }> =>
         invoke<{ connected: boolean; pingMs: number }>('mysql_test_connection', { cfg }).then(
             (r) => r || { connected: true, pingMs: 0 }
@@ -463,7 +463,9 @@ export const API = {
     mysqlUsers: (serverId: string): Promise<Array<Record<string, any>>> =>
         invoke<Array<Record<string, any>>>('mysql_users', { serverId }).then((r) => r || []),
     mysqlGrants: (serverId: string, user: string, host: string): Promise<string> =>
-        invoke<string>('mysql_grants', { serverId, user, host }),
+        invoke<string | string[]>('mysql_grants', { serverId, user, host }).then((r) =>
+            Array.isArray(r) ? r.join('\n') : (r || '')
+        ),
     mysqlCreateUser: (
         serverId: string,
         user: string,

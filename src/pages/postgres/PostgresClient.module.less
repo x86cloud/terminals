@@ -6,7 +6,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .sideTree {
@@ -14,7 +14,7 @@
     min-width: 260px;
     max-width: 520px;
     border-right: 1px solid @border;
-    background: @bg-2;
+    background: @stage-bg;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -28,7 +28,7 @@
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid @border;
-    background: @bg-2;
+    background: @stage-bg;
     flex-shrink: 0;
     box-sizing: border-box;
 }
@@ -64,13 +64,13 @@
     height: 100%;
     min-width: 0;
     overflow: hidden;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .tabBar {
     height: 36px;
     min-height: 36px;
-    background: @bg-2;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
     display: flex;
     align-items: stretch;
@@ -107,12 +107,12 @@
 
     &:hover {
         color: @text;
-        background: color-mix(in srgb, @bg-1 55%, transparent);
+        background: color-mix(in srgb, @accent 6%, transparent);
     }
 
     &.active {
         color: @accent;
-        background: @bg-1;
+        background: @stage-bg;
         font-weight: 600;
         box-shadow: 0 -2px 0 @accent inset;
     }
@@ -123,13 +123,13 @@
     overflow: hidden;
     position: relative;
     min-height: 0;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .statusBar {
     height: 28px;
     padding: 0 12px;
-    background: @bg-2;
+    background: @stage-bg;
     border-top: 1px solid @border;
     display: flex;
     align-items: center;

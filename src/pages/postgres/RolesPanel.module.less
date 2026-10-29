@@ -8,7 +8,7 @@
     width: 100%;
     overflow: auto;
     padding: 16px;
-    background: @bg-1;
+    background: @stage-bg;
     gap: 16px;
 }
 
@@ -16,14 +16,14 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: @bg-1;
+    background: @stage-bg;
     border: 1px solid color-mix(in srgb, @border 60%, transparent);
     border-radius: @radius-lg;
     padding: 12px 16px;
 }
 
 .tableSection {
-    background: @bg-1;
+    background: @stage-bg;
     border: 1px solid color-mix(in srgb, @border 60%, transparent);
     border-radius: @radius-lg;
     padding: 16px;
@@ -31,11 +31,11 @@
 
     :global {
         .ant-table-thead > tr > th {
-            background: @bg-1-solid !important;
+            background: @stage-bg !important;
             border-bottom: 1px solid @border;
         }
         .ant-table-tbody > tr:hover > td {
-            background: color-mix(in srgb, @accent 6%, @bg-1) !important;
+            background: color-mix(in srgb, @accent 6%, @stage-bg) !important;
         }
     }
 }

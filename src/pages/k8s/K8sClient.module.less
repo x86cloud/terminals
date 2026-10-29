@@ -10,33 +10,38 @@
     height: 100%;
     min-width: 0;
     min-height: 0;
-    background: @bg-1;
+    background: @stage-bg;
     color: @text;
     overflow: hidden;
 
     :global {
         .ant-table {
-            background: @bg-1;
+            background: @stage-bg;
             color: @text;
         }
-        .ant-table-thead > tr > th {
-            background: @bg-2;
+
+        .ant-table-thead>tr>th {
+            background: @stage-bg;
             color: @text-dim;
             font-weight: 600;
             border-bottom: 1px solid @border;
         }
-        .ant-table-tbody > tr > td {
+
+        .ant-table-tbody>tr>td {
             border-bottom: 1px solid color-mix(in srgb, @border 60%, transparent);
             color: @text;
         }
-        .ant-table-tbody > tr:hover > td {
-            background: @bg-2 !important;
+
+        .ant-table-tbody>tr:hover>td {
+            background: color-mix(in srgb, @accent 6%, @stage-bg) !important;
         }
+
         .ant-pagination {
             margin-top: 14px !important;
         }
+
         .ant-card {
-            background: @bg-1;
+            background: @stage-bg;
             border-color: @border;
         }
     }
@@ -50,7 +55,7 @@
     row-gap: 8px;
     column-gap: 12px;
     padding: 8px 16px;
-    background: @bg-1;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
     flex-shrink: 0;
     min-width: 0;
@@ -58,6 +63,7 @@
     :global {
         .ant-segmented {
             max-width: 100%;
+
             .ant-segmented-group {
                 flex-wrap: wrap;
             }
@@ -258,10 +264,12 @@
         opacity: 1;
         transform: scale(1);
     }
+
     50% {
         opacity: 0.4;
         transform: scale(0.85);
     }
+
     100% {
         opacity: 1;
         transform: scale(1);
@@ -289,7 +297,7 @@
 }
 
 .yamlViewer {
-    background: @bg-2;
+    background: @stage-bg;
     color: @text;
     font-family: @font-mono;
     font-size: 12px;
@@ -304,7 +312,7 @@
 
 .expandedContainerBox {
     padding: 12px 14px;
-    background: color-mix(in srgb, @bg-2 85%, transparent);
+    background: @stage-bg;
     border-radius: @radius-md;
     border: 1px dashed color-mix(in srgb, @border 80%, transparent);
     margin: 4px 0;
@@ -319,4 +327,3 @@
     font-weight: 600;
     color: @text-dim;
 }
-

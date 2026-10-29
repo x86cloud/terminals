@@ -41,7 +41,7 @@
     }
 
     th {
-        background: @bg-1-solid;
+        background: @stage-bg;
         position: sticky;
         top: 0;
         z-index: 10;
@@ -53,15 +53,15 @@
     }
 
     tbody tr {
-        background: @bg-1;
+        background: @stage-bg;
         transition: background 0.12s ease;
 
         &:nth-child(even) {
-            background: @bg-1;
+            background: @stage-bg;
         }
 
         &:hover {
-            background: color-mix(in srgb, @accent 6%, @bg-1);
+            background: color-mix(in srgb, @accent 6%, @stage-bg);
         }
     }
 }

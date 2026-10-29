@@ -128,42 +128,46 @@ pub async fn mysql_truncate_table(
 pub async fn mysql_table_status(
     state: State<'_, AppState>,
     server_id: String,
-    database: String,
-    table: String,
-) -> Result<Map<String, Value>, String> {
-    state.mysql.table_status(&server_id, &database, &table).await
+    db_name: String,
+    table: Option<String>,
+) -> Result<Vec<Map<String, Value>>, String> {
+    let sql = match table.as_deref().filter(|t| !t.trim().is_empty()) {
+        Some(t) => format!("SHOW TABLE STATUS LIKE {}", quote_ident(t)),
+        None => "SHOW TABLE STATUS".to_string(),
+    };
+    let (_cols, rows) = state.mysql.query_ex(&server_id, &db_name, &sql).await?;
+    Ok(rows)
 }
 
 #[tauri::command]
 pub async fn mysql_indexes(
     state: State<'_, AppState>,
     server_id: String,
-    database: String,
+    db_name: String,
     table: String,
 ) -> Result<Vec<Map<String, Value>>, String> {
-    state.mysql.indexes(&server_id, &database, &table).await
+    state.mysql.indexes(&server_id, &db_name, &table).await
 }
 
 #[tauri::command]
 pub async fn mysql_create_index(
     state: State<'_, AppState>,
     server_id: String,
-    database: String,
+    db_name: String,
     table: String,
-    index_name: String,
-    columns: Vec<String>,
-    index_type: String,
+    name: String,
+    cols_csv: String,
+    unique: bool,
 ) -> Result<(), String> {
+    let cols: Vec<String> = cols_csv
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    let idx_type = if unique { "UNIQUE" } else { "INDEX" };
     state
         .mysql
-        .create_index(
-            &server_id,
-            &database,
-            &table,
-            &index_name,
-            &columns,
-            &index_type,
-        )
+        .create_index(&server_id, &db_name, &table, &name, &cols, idx_type)
         .await
 }
 
@@ -171,13 +175,13 @@ pub async fn mysql_create_index(
 pub async fn mysql_drop_index(
     state: State<'_, AppState>,
     server_id: String,
-    database: String,
+    db_name: String,
     table: String,
-    index_name: String,
+    name: String,
 ) -> Result<(), String> {
     state
         .mysql
-        .drop_index(&server_id, &database, &table, &index_name)
+        .drop_index(&server_id, &db_name, &table, &name)
         .await
 }
 
@@ -206,10 +210,19 @@ pub async fn mysql_create_user(
     user: String,
     host: String,
     password: String,
+    auth_plugin: Option<String>,
+    lock: Option<bool>,
 ) -> Result<(), String> {
     state
         .mysql
-        .create_user(&server_id, &user, &host, &password)
+        .create_user(
+            &server_id,
+            &user,
+            &host,
+            &password,
+            auth_plugin.as_deref(),
+            lock.unwrap_or(false),
+        )
         .await
 }
 
@@ -257,14 +270,21 @@ pub async fn mysql_grant_privileges(
     server_id: String,
     user: String,
     host: String,
-    privileges: Vec<String>,
-    database: String,
+    db_name: String,
     table: String,
+    privs: Vec<String>,
+    with_grant_option: Option<bool>,
 ) -> Result<(), String> {
     state
         .mysql
         .grant_privileges(
-            &server_id, &user, &host, &privileges, &database, &table,
+            &server_id,
+            &user,
+            &host,
+            &privs,
+            &db_name,
+            &table,
+            with_grant_option.unwrap_or(false),
         )
         .await
 }
@@ -275,15 +295,13 @@ pub async fn mysql_revoke_privileges(
     server_id: String,
     user: String,
     host: String,
-    privileges: Vec<String>,
-    database: String,
+    db_name: String,
     table: String,
+    privs: Vec<String>,
 ) -> Result<(), String> {
     state
         .mysql
-        .revoke_privileges(
-            &server_id, &user, &host, &privileges, &database, &table,
-        )
+        .revoke_privileges(&server_id, &user, &host, &privs, &db_name, &table)
         .await
 }
 
@@ -304,7 +322,7 @@ pub async fn mysql_revoke_all_privileges(
 pub async fn mysql_status(
     state: State<'_, AppState>,
     server_id: String,
-) -> Result<Vec<Map<String, Value>>, String> {
+) -> Result<Map<String, Value>, String> {
     state.mysql.status(&server_id).await
 }
 
@@ -312,7 +330,7 @@ pub async fn mysql_status(
 pub async fn mysql_variables(
     state: State<'_, AppState>,
     server_id: String,
-) -> Result<Vec<Map<String, Value>>, String> {
+) -> Result<Map<String, Value>, String> {
     state.mysql.variables(&server_id).await
 }
 
@@ -328,15 +346,16 @@ pub async fn mysql_process_list(
 pub async fn mysql_slow_log(
     state: State<'_, AppState>,
     server_id: String,
+    limit: Option<i64>,
 ) -> Result<Vec<Map<String, Value>>, String> {
-    state.mysql.slow_log(&server_id).await
+    state.mysql.slow_log(&server_id, limit).await
 }
 
 #[tauri::command]
 pub async fn mysql_schema(
     state: State<'_, AppState>,
     server_id: String,
-    database: String,
+    db_name: String,
 ) -> Result<Value, String> {
-    state.mysql.schema(&server_id, &database).await
+    state.mysql.schema(&server_id, &db_name).await
 }

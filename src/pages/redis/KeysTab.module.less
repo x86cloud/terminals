@@ -8,7 +8,7 @@
     min-height: 0;
     overflow: hidden;
     position: relative;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .keysContent {
@@ -22,7 +22,7 @@
     border-right: 1px solid @border;
     display: flex;
     flex-direction: column;
-    background: @bg-2;
+    background: @stage-bg;
     flex-shrink: 0;
     user-select: none;
     overflow: hidden;
@@ -51,7 +51,7 @@
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid @border;
-    background: @bg-2;
+    background: @stage-bg;
     flex-shrink: 0;
     box-sizing: border-box;
 }
@@ -90,7 +90,7 @@
     align-items: center;
     gap: 6px;
     border-bottom: 1px solid @border;
-    background: @bg-2;
+    background: @stage-bg;
     flex-shrink: 0;
 }
 
@@ -105,7 +105,7 @@
     overflow-x: hidden;
     padding: 4px;
     min-height: 0;
-    background: @bg-2;
+    background: @stage-bg;
 }
 
 .redisKey {
@@ -121,7 +121,7 @@
     user-select: none;
 
     &:hover {
-        background: color-mix(in srgb, @bg-1 70%, transparent);
+        background: color-mix(in srgb, @text 6%, transparent);
 
         .keyDelBtn {
             opacity: 1;
@@ -196,7 +196,7 @@
     flex-direction: column;
     padding: 0;
     gap: 0;
-    background: @bg-1;
+    background: @stage-bg;
     overflow: hidden;
 }
 
@@ -206,7 +206,7 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: @bg-1;
+    background: @stage-bg;
     border: none;
     gap: 12px;
     color: @text-dim;

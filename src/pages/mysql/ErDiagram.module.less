@@ -27,7 +27,7 @@
     gap: 6px;
     padding: 6px 12px;
     border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
-    background: @bg-1;
+    background: @stage-bg;
     flex-shrink: 0;
 }
 
@@ -74,7 +74,7 @@
     padding: 0;
     cursor: grab;
     user-select: none;
-    background: @bg-solid;
+    background: @stage-bg;
 
     &.dragging {
         cursor: grabbing !important;
@@ -126,4 +126,12 @@
     stroke-width: 1.5;
     fill: none;
     opacity: 0.7;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        stroke: #2563eb;
+        stroke-width: 2.5;
+        opacity: 1;
+    }
 }

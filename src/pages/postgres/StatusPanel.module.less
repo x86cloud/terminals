@@ -9,7 +9,7 @@
     overflow-y: auto;
     overflow-x: hidden;
     padding: 16px;
-    background: @bg-1;
+    background: @stage-bg;
     gap: 16px;
     box-sizing: border-box;
 }
@@ -55,7 +55,7 @@
     display: flex;
     flex-direction: column;
     gap: 12px;
-    background: @bg-1;
+    background: @stage-bg;
     border: 1px solid color-mix(in srgb, @border 60%, transparent);
     border-radius: @radius-lg;
     padding: 14px;
@@ -88,7 +88,7 @@
     min-width: 0;
     width: 100%;
     overflow: auto;
-    background: @bg-1;
+    background: @stage-bg;
     border: 1px solid color-mix(in srgb, @border 60%, transparent);
     border-radius: @radius-md;
 
@@ -101,7 +101,7 @@
             background: transparent;
         }
         .ant-table-thead > tr > th {
-            background: @bg-1-solid !important;
+            background: @stage-bg !important;
             font-size: 12px;
             font-weight: 600;
             color: @text-dim;
@@ -118,7 +118,7 @@
             background: transparent;
         }
         .ant-table-tbody > tr:hover > td {
-            background: color-mix(in srgb, @accent 6%, @bg-1) !important;
+            background: color-mix(in srgb, @accent 6%, @stage-bg) !important;
         }
         .ant-table-pagination {
             padding: 0 10px;

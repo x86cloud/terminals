@@ -872,13 +872,23 @@ impl MysqlManager {
         user: &str,
         host: &str,
         password: &str,
+        auth_plugin: Option<&str>,
+        lock: bool,
     ) -> Result<(), String> {
         let target = quote_user_host(user, host);
-        let sql = if password.is_empty() {
-            format!("CREATE USER {}", target)
-        } else {
-            format!("CREATE USER {} IDENTIFIED BY {}", target, quote_literal(password))
-        };
+        let mut sql = format!("CREATE USER {}", target);
+        if let Some(plugin) = auth_plugin.filter(|p| !p.trim().is_empty()) {
+            if password.is_empty() {
+                sql.push_str(&format!(" IDENTIFIED WITH {}", plugin));
+            } else {
+                sql.push_str(&format!(" IDENTIFIED WITH {} BY {}", plugin, quote_literal(password)));
+            }
+        } else if !password.is_empty() {
+            sql.push_str(&format!(" IDENTIFIED BY {}", quote_literal(password)));
+        }
+        if lock {
+            sql.push_str(" ACCOUNT LOCK");
+        }
         self.run(id, "", &sql).await?;
         self.run(id, "", "FLUSH PRIVILEGES").await?;
         Ok(())
@@ -933,6 +943,7 @@ impl MysqlManager {
         privileges: &[String],
         db_name: &str,
         table: &str,
+        with_grant_option: bool,
     ) -> Result<(), String> {
         let target = quote_user_host(user, host);
         let priv_str = if privileges.is_empty() {
@@ -945,7 +956,8 @@ impl MysqlManager {
             (d, "") | (d, "*") => format!("{}.*", quote_ident(d)),
             (d, t) => format!("{}.{}", quote_ident(d), quote_ident(t)),
         };
-        let sql = format!("GRANT {} ON {} TO {}", priv_str, scope, target);
+        let with_grant = if with_grant_option { " WITH GRANT OPTION" } else { "" };
+        let sql = format!("GRANT {} ON {} TO {}{}", priv_str, scope, target, with_grant);
         self.run(id, "", &sql).await?;
         self.run(id, "", "FLUSH PRIVILEGES").await?;
         Ok(())
@@ -990,14 +1002,36 @@ impl MysqlManager {
         Ok(())
     }
 
-    pub async fn status(&self, id: &str) -> Result<Vec<Map<String, Value>>, String> {
+    pub async fn status(&self, id: &str) -> Result<Map<String, Value>, String> {
         let (_cols, rows) = self.query_ex(id, "", "SHOW GLOBAL STATUS").await?;
-        Ok(rows)
+        let mut map = Map::new();
+        for row in rows {
+            let key = row
+                .get("Variable_name")
+                .or_else(|| row.get("VARIABLE_NAME"))
+                .and_then(|v| v.as_str());
+            let val = row.get("Value").or_else(|| row.get("VALUE"));
+            if let (Some(k), Some(v)) = (key, val) {
+                map.insert(k.to_string(), v.clone());
+            }
+        }
+        Ok(map)
     }
 
-    pub async fn variables(&self, id: &str) -> Result<Vec<Map<String, Value>>, String> {
+    pub async fn variables(&self, id: &str) -> Result<Map<String, Value>, String> {
         let (_cols, rows) = self.query_ex(id, "", "SHOW GLOBAL VARIABLES").await?;
-        Ok(rows)
+        let mut map = Map::new();
+        for row in rows {
+            let key = row
+                .get("Variable_name")
+                .or_else(|| row.get("VARIABLE_NAME"))
+                .and_then(|v| v.as_str());
+            let val = row.get("Value").or_else(|| row.get("VALUE"));
+            if let (Some(k), Some(v)) = (key, val) {
+                map.insert(k.to_string(), v.clone());
+            }
+        }
+        Ok(map)
     }
 
     pub async fn process_list(&self, id: &str) -> Result<Vec<Map<String, Value>>, String> {
@@ -1005,9 +1039,10 @@ impl MysqlManager {
         Ok(rows)
     }
 
-    pub async fn slow_log(&self, id: &str) -> Result<Vec<Map<String, Value>>, String> {
-        let sql = "SELECT * FROM mysql.slow_log ORDER BY start_time DESC LIMIT 100";
-        match self.query_ex(id, "", sql).await {
+    pub async fn slow_log(&self, id: &str, limit: Option<i64>) -> Result<Vec<Map<String, Value>>, String> {
+        let lim = limit.unwrap_or(100).max(1);
+        let sql = format!("SELECT * FROM mysql.slow_log ORDER BY start_time DESC LIMIT {}", lim);
+        match self.query_ex(id, "", &sql).await {
             Ok((_cols, rows)) => Ok(rows),
             Err(e) => {
                 if e.contains("doesn't exist") || e.contains("denied") {

@@ -4,7 +4,7 @@
 .cliDock {
     display: flex;
     flex-direction: column;
-    background: @bg-1;
+    background: @stage-bg;
     border-top: 1px solid @border;
     transition: height 0.15s ease;
     position: relative;
@@ -31,7 +31,7 @@
     justify-content: space-between;
     height: 32px;
     padding: 0 12px;
-    background: @bg-2;
+    background: @stage-bg;
     cursor: pointer;
     user-select: none;
     font-size: 12px;
@@ -39,7 +39,7 @@
     color: @text;
 
     &:hover {
-        background: color-mix(in srgb, @bg-1 50%, transparent);
+        background: color-mix(in srgb, @accent 6%, transparent);
     }
 }
 
@@ -62,13 +62,13 @@
     flex-direction: column;
     padding: 8px 12px;
     gap: 8px;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .cliOutputArea {
     flex: 1;
     min-height: 0;
-    background: @bg-2;
+    background: @term-bg;
     border: 1px solid color-mix(in srgb, @border 75%, transparent);
     border-radius: @radius-sm;
     padding: 8px 12px;

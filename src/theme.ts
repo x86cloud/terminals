@@ -18,7 +18,7 @@ export function getAntdTheme(themeMode: 'dark' | 'light' | 'system' = 'dark'): T
             borderRadiusLG: 16,
             borderRadiusXS: 4,
             fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif',
-            colorBgBase: isDark ? '#141619' : '#ffffff',
+            colorBgBase: isDark ? '#0a0b0e' : '#ffffff',
             colorBgContainer: isDark ? '#1b1e23' : '#ffffff',
             colorBgElevated: isDark ? '#22262d' : '#ffffff',
             colorBorder: isDark ? '#2d333b' : '#e2e8f0',
@@ -120,7 +120,7 @@ export function getAntdTheme(themeMode: 'dark' | 'light' | 'system' = 'dark'): T
 }
 
 export const LIGHT_TERM_THEME: ITheme = {
-    background: '#fcfdfd',
+    background: '#ffffff',
     foreground: '#1f2733',
     cursor: '#255cd8',
     selectionBackground: '#dbeafe',
@@ -143,11 +143,11 @@ export const LIGHT_TERM_THEME: ITheme = {
 }
 
 export const DARK_TERM_THEME: ITheme = {
-    background: '#141619',
+    background: '#0a0b0e',
     foreground: '#e1e4ea',
     cursor: '#29b6f6',
     selectionBackground: '#304d6d',
-    black: '#141619',
+    black: '#0a0b0e',
     red: '#ef5350',
     green: '#66bb6a',
     yellow: '#ffa726',

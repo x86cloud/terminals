@@ -11,7 +11,7 @@ const baseTheme = EditorView.theme(
     {
         '&': {
             color: 'var(--text, #1f2733)',
-            backgroundColor: 'var(--bg-1, #ffffff)',
+            backgroundColor: 'var(--stage-bg, #ffffff)',
             fontSize: '13px',
         },
         '&.cm-focused': {
@@ -30,7 +30,7 @@ const baseTheme = EditorView.theme(
                 backgroundColor: 'var(--accent-dim-2, rgba(51, 112, 255, 0.18))',
             },
         '.cm-gutters': {
-            backgroundColor: 'var(--bg-1, #ffffff)',
+            backgroundColor: 'var(--stage-bg, #ffffff)',
             color: 'var(--text-dim, #6b7686)',
             border: 'none',
             borderRight: '1px solid var(--border, #d4dbe6)',

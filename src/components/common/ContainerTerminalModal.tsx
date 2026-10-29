@@ -285,8 +285,8 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                                         status === 'connected'
                                             ? 'var(--ok, #52c41a)'
                                             : status === 'connecting'
-                                            ? 'var(--warn, #faad14)'
-                                            : 'var(--danger, #f5222d)',
+                                                ? 'var(--warn, #faad14)'
+                                                : 'var(--danger, #f5222d)',
                                     boxShadow:
                                         status === 'connected'
                                             ? '0 0 6px var(--ok, #52c41a)'
@@ -332,7 +332,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                 body: {
                     padding: 0,
                     height: '75vh',
-                    backgroundColor: isDark ? '#141619' : '#ffffff',
+                    backgroundColor: isDark ? '#0a0b0e' : '#ffffff',
                     overflow: 'hidden',
                 },
             }}

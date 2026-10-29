@@ -111,6 +111,7 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
 
     // ER 图缓存
     const [schemaMap, setSchemaMap] = useState<Record<string, Schema>>({})
+    const [erBusyMap, setErBusyMap] = useState<Record<string, boolean>>({})
 
     // 加载指定数据库下的表与视图
     const loadTables = useCallback(async (dbName: string) => {
@@ -195,6 +196,7 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
 
         // 异步预加载 ER 图数据
         if (!schemaMap[dbName]) {
+            setErBusyMap((prev) => ({ ...prev, [dbName]: true }))
             try {
                 const s = await API.mysqlSchema(serverId, dbName)
                 if (s) {
@@ -202,6 +204,8 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
                 }
             } catch (e) {
                 console.warn(t('db:mysql.loadErFailed'), e)
+            } finally {
+                setErBusyMap((prev) => ({ ...prev, [dbName]: false }))
             }
         }
 
@@ -919,7 +923,7 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
                                 <ErDiagram
                                     key={tabItem.key}
                                     schema={schemaMap[tabItem.dbName] || { tables: [], foreignKeys: [] }}
-                                    busy={false}
+                                    busy={!!erBusyMap[tabItem.dbName]}
                                 />
                             )
                         }

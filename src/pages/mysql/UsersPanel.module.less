@@ -9,7 +9,7 @@
     min-width: 0;
     display: flex;
     flex-direction: column;
-    background: @bg-1;
+    background: @stage-bg;
     border: none;
     overflow: hidden;
 }
@@ -22,7 +22,7 @@
     font-weight: 600;
     font-size: 13px;
     border-bottom: 1px solid color-mix(in srgb, @border 50%, transparent);
-    background: @bg-1;
+    background: @stage-bg;
     flex-shrink: 0;
 
     .headTitle {
@@ -54,7 +54,7 @@
     max-width: 300px;
     height: 100%;
     border-right: 1px solid color-mix(in srgb, @border 60%, transparent);
-    background: @bg-2;
+    background: @stage-bg;
     overflow-y: auto;
     overflow-x: hidden;
     padding: 8px;
@@ -93,7 +93,7 @@
     }
 
     &.active {
-        background: @bg-1;
+        background: color-mix(in srgb, @accent 10%, @stage-bg);
         border-color: color-mix(in srgb, @accent 30%, transparent);
         color: @accent;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
@@ -159,7 +159,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .grantsInner {

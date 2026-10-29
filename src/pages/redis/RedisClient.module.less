@@ -8,13 +8,13 @@
     width: 100%;
     min-height: 0;
     overflow: hidden;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .tabBar {
     height: 36px;
     min-height: 36px;
-    background: @bg-2;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
     display: flex;
     align-items: stretch;
@@ -59,12 +59,12 @@
 
     &:hover {
         color: @text;
-        background: color-mix(in srgb, @bg-1 55%, transparent);
+        background: color-mix(in srgb, @accent 6%, transparent);
     }
 
     &.active {
         color: @accent;
-        background: @bg-1;
+        background: @stage-bg;
         font-weight: 600;
         box-shadow: 0 -2px 0 @accent inset;
     }
@@ -98,7 +98,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .redisMsg {

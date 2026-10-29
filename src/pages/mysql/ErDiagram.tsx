@@ -267,20 +267,74 @@ export default function ErDiagram({
                             transformOrigin: '0 0',
                         }}
                     >
+                        <defs>
+                            <marker
+                                id="fk-arrow"
+                                viewBox="0 0 10 10"
+                                refX="8"
+                                refY="5"
+                                markerWidth="6"
+                                markerHeight="6"
+                                orient="auto-start-reverse"
+                            >
+                                <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#5b9bff" />
+                            </marker>
+                        </defs>
                         {schema.foreignKeys.map((fk, i) => {
                             const from = ER.positions[fk.fromTable]
                             const to = ER.positions[fk.toTable]
                             if (!from || !to) return null
-                            const x1 = from.x + ER.tblW
-                            const y1 = from.y + from.h / 2
-                            const x2 = to.x
-                            const y2 = to.y + to.h / 2
+
+                            let x1: number
+                            let y1: number
+                            let x2: number
+                            let y2: number
+                            let cx1: number
+                            let cy1: number
+                            let cx2: number
+                            let cy2: number
+
+                            if (from.x + ER.tblW <= to.x) {
+                                x1 = from.x + ER.tblW
+                                y1 = from.y + Math.min(from.h / 2, 40)
+                                x2 = to.x
+                                y2 = to.y + Math.min(to.h / 2, 40)
+                                const mx = (x1 + x2) / 2
+                                cx1 = mx
+                                cy1 = y1
+                                cx2 = mx
+                                cy2 = y2
+                            } else if (to.x + ER.tblW <= from.x) {
+                                x1 = from.x
+                                y1 = from.y + Math.min(from.h / 2, 40)
+                                x2 = to.x + ER.tblW
+                                y2 = to.y + Math.min(to.h / 2, 40)
+                                const mx = (x1 + x2) / 2
+                                cx1 = mx
+                                cy1 = y1
+                                cx2 = mx
+                                cy2 = y2
+                            } else {
+                                x1 = from.x + ER.tblW
+                                y1 = from.y + Math.min(from.h / 2, 40)
+                                x2 = to.x + ER.tblW
+                                y2 = to.y + Math.min(to.h / 2, 40)
+                                const arcOffset = 45
+                                cx1 = Math.max(x1, x2) + arcOffset
+                                cy1 = y1
+                                cx2 = Math.max(x1, x2) + arcOffset
+                                cy2 = y2
+                            }
+
                             return (
                                 <path
                                     key={i}
-                                    d={`M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}`}
+                                    d={`M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`}
                                     className={my.fkPath}
-                                />
+                                    markerEnd="url(#fk-arrow)"
+                                >
+                                    <title>{`${fk.fromTable}.${fk.fromColumn} → ${fk.toTable}.${fk.toColumn}`}</title>
+                                </path>
                             )
                         })}
                         {schema.tables.map((t) => {
@@ -307,7 +361,7 @@ export default function ErDiagram({
                                         const availChars = maxChars - (isPri ? 2 : 0)
                                         const colDisplay = fullLabel.length > availChars ? `${fullLabel.slice(0, availChars - 1)}…` : fullLabel
                                         return (
-                                            <text key={ci} x={8} y={22 + 14 + ci * 18} className={my.erCol}>
+                                            <text key={ci} x={8} y={22 + 14 + ci * 20} className={my.erCol}>
                                                 <title>{`${priIcon}${fullLabel}`}</title>
                                                 {priIcon}
                                                 {colDisplay}

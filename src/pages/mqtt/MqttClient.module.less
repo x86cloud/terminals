@@ -7,7 +7,7 @@
     display: flex;
     width: 100%;
     height: 100%;
-    background: @bg-1;
+    background: @stage-bg;
     color: @text;
     overflow: hidden;
     user-select: none;
@@ -21,14 +21,14 @@
     border-right: 1px solid @border;
     display: flex;
     flex-direction: column;
-    background: @bg-2;
+    background: @stage-bg;
     flex-shrink: 0;
     height: 100%;
 }
 
 .connCard {
     padding: 10px 12px;
-    background: @bg-1;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
     display: flex;
     flex-direction: column;
@@ -119,14 +119,14 @@
     justify-content: space-between;
     padding: 8px 12px;
     border-bottom: 1px solid @border;
-    background: @bg-1;
+    background: @stage-bg;
     font-size: 12.5px;
     font-weight: 600;
 }
 
 .subAddInline {
     padding: 8px 10px;
-    background: @bg-1;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
     display: flex;
     flex-direction: column;
@@ -148,7 +148,7 @@
     justify-content: space-between;
     gap: 6px;
     padding: 6px 8px;
-    background: @bg-1;
+    background: @stage-bg;
     border: 1px solid @border;
     border-radius: 6px;
     transition: all 0.15s ease;
@@ -156,7 +156,7 @@
 
     &:hover {
         border-color: @accent;
-        background: @bg-2;
+        background: color-mix(in srgb, @accent 6%, @stage-bg);
 
         .subActions {
             opacity: 1;
@@ -209,7 +209,7 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: @bg-1;
+    background: @stage-bg;
     height: 100%;
     overflow: hidden;
 }
@@ -219,7 +219,7 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 14px;
-    background: @bg-1;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
     gap: 10px;
     flex-wrap: wrap;
@@ -262,7 +262,7 @@
     flex-direction: column;
     gap: 10px;
     min-height: 0;
-    background: @bg-1;
+    background: @stage-bg;
 }
 
 .emptyStream {
@@ -387,7 +387,7 @@
 
 /* ==================== PUBLISH WORKSHOP ==================== */
 .publishDock {
-    background: @bg-1;
+    background: @stage-bg;
     border-top: 1px solid @border;
     display: flex;
     flex-direction: column;
@@ -400,12 +400,12 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background: @bg-2;
+    background: @stage-bg;
     border-bottom: 1px solid @border;
 }
 
 .publishEditorWrapper {
-    background: @bg-1;
+    background: @stage-bg;
     overflow: hidden;
     transition: height 0.2s ease;
 }

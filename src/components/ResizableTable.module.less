@@ -9,7 +9,7 @@
     overflow: auto;
     border: 1px solid @border;
     border-radius: 0;
-    background: @bg-1-solid;
+    background: @stage-bg;
     position: relative;
 
     &.isResizing {
@@ -44,7 +44,7 @@
     }
 
     th {
-        background: @bg-1-solid;
+        background: @stage-bg;
         color: @text-dim;
         font-weight: 600;
         font-size: 12px;
@@ -57,7 +57,7 @@
         border-bottom: none;
 
         &.thResizing {
-            background: @bg-2-solid;
+            background: color-mix(in srgb, @accent 8%, @stage-bg);
             color: @accent;
         }
     }
@@ -79,11 +79,11 @@
     }
 
     tbody tr:nth-child(even) {
-        background: @bg-1-solid;
+        background: @stage-bg;
     }
 
     tbody tr:hover {
-        background: @bg-2-solid;
+        background: color-mix(in srgb, @accent 6%, @stage-bg);
     }
 }
 

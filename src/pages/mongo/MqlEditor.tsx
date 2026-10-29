@@ -339,6 +339,7 @@ export default function MqlEditor({ session, databases, currentDb, onChangeDb, c
             {/* 编辑区 */}
             <div className={e.editorPane}>
                 <CodeEditor
+                    lineNumbers={false}
                     bordered={false}
                     lang="json"
                     value={code}
