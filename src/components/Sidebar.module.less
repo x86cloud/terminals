@@ -210,9 +210,29 @@
     transition: background 0.15s ease, outline 0.15s ease;
 
     &.dropActive {
-        outline: 1px dashed @accent;
+        outline: 2px dashed @accent;
         outline-offset: -2px;
         background: @accent-soft;
+
+        * {
+            pointer-events: none;
+        }
+    }
+}
+
+.ungroupedSection {
+    min-height: 32px;
+    border-radius: @radius-md;
+    transition: background 0.15s ease, outline 0.15s ease;
+
+    &.dropActive {
+        outline: 2px dashed @accent;
+        outline-offset: -2px;
+        background: @accent-soft;
+
+        * {
+            pointer-events: none;
+        }
     }
 }
 
@@ -396,6 +416,11 @@
             opacity: 1;
             pointer-events: auto;
         }
+    }
+
+    &.dragging {
+        opacity: 0.45;
+        cursor: grabbing;
     }
 }
 

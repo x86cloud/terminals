@@ -100,7 +100,7 @@ export default function K8sResourceYamlModal({
                 onSuccess?.()
                 onClose()
             } else if (successes.length === 0) {
-                const detail = failures.map((r) => `${r.kind}/${r.name || t('common.unknown')}: ${r.message}`).join('; ')
+                const detail = failures.map((r) => `${r.kind}/${r.name || t('common:unknown')}: ${r.message}`).join('; ')
                 message.error(t('k8s:yamlModal.applyFail', { detail }), 5)
             } else {
                 const succSummary = successes.map((r) => `${r.kind}/${r.name}`).join('、')
@@ -156,7 +156,7 @@ export default function K8sResourceYamlModal({
                     {t('k8s:yamlModal.copyYaml')}
                 </Button>,
                 <Button key="cancel" onClick={onClose} disabled={saving}>
-                    {t('common.close')}
+                    {t('common:close')}
                 </Button>,
                 mode !== 'view' && (
                     <Button

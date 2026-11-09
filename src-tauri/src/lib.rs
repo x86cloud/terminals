@@ -1,3 +1,4 @@
+pub mod agent;
 pub mod core;
 pub mod db;
 pub use db::mongo;
@@ -31,6 +32,7 @@ pub struct AppState {
     pub sqlite: Arc<sqlite::SqliteManager>,
     pub docker: Arc<docker::DockerManager>,
     pub k8s: Arc<k8s::K8sManager>,
+    pub agent: Arc<agent::AgentRuntime>,
 }
 
 fn restore_main_window(app: &tauri::AppHandle) {
@@ -48,6 +50,7 @@ pub fn run() {
     storage::log_info("xTerminal v4 (Rust/Tauri) starting up...");
 
     let store = Arc::new(core::Store::new().expect("failed to initialize config store"));
+    let initial_settings = store.get_settings();
     let app_state = AppState {
         store: store.clone(),
         ssh: Arc::new(ssh_sftp::SshManager::new()),
@@ -59,6 +62,7 @@ pub fn run() {
         sqlite: Arc::new(sqlite::SqliteManager::new()),
         docker: Arc::new(docker::DockerManager::new()),
         k8s: Arc::new(k8s::K8sManager::new()),
+        agent: Arc::new(agent::AgentRuntime::new(initial_settings)),
     };
 
     tauri::Builder::default()
@@ -493,6 +497,10 @@ pub fn run() {
             k8s::k8s_apply_orchestration,
             k8s::k8s_offline_orchestration,
             k8s::k8s_delete_orchestration_record_only,
+            // 11. AI Agent (ReAct Orchestration)
+            agent::agent_get_status,
+            agent::agent_run_react,
+            agent::agent_stop_react,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -57,29 +57,16 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
     const [loadingDbs, setLoadingDbs] = useState<Record<string, boolean>>({})
 
     // 工作区多标签栏管理
-    const [tabs, setTabs] = useState<MongoTabItem[]>([
+    const initialTabs: MongoTabItem[] = [
         {
             key: 'status',
             label: t('mongo.client.statusTab', '性能监控'),
             type: 'status',
-            dbName: currentDb,
+            dbName: session.database || '',
             closable: false,
         },
-        {
-            key: 'users',
-            label: t('mongo.client.usersTab', '用户与权限'),
-            type: 'users',
-            dbName: currentDb,
-            closable: false,
-        },
-        {
-            key: 'mql_1',
-            label: t('mongo.client.mqlTab', 'MQL 编辑器'),
-            type: 'query',
-            dbName: currentDb,
-            closable: false,
-        },
-    ])
+    ]
+    const [tabs, setTabs] = useState<MongoTabItem[]>(initialTabs)
     const [activeTabKey, setActiveTabKey] = useState<string>('status')
 
     // 对象弹窗状态
@@ -121,23 +108,26 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
             const dbNames = (dbs || []).map((d) => d.name)
             setDatabases(dbNames)
 
-            const targetDb =
-                initialDbRef.current && dbNames.includes(initialDbRef.current)
-                    ? initialDbRef.current
-                    : dbNames[0] || 'admin'
-            setCurrentDb(targetDb)
-
-            // 自动加载默认库下的集合并展开
-            if (targetDb) {
-                await loadCollections(targetDb)
-                setExpandedKeys([`db_${targetDb}`])
+            if (initialDbRef.current) {
+                if (dbNames.includes(initialDbRef.current)) {
+                    setCurrentDb(initialDbRef.current)
+                    await loadCollections(initialDbRef.current)
+                    setExpandedKeys([`db_${initialDbRef.current}`])
+                } else {
+                    message.warning(t('mongo.client.dbNotFound', { db: initialDbRef.current, defaultValue: `未找到指定的默认数据库: ${initialDbRef.current}` }))
+                    setCurrentDb('')
+                    setExpandedKeys([])
+                }
+            } else {
+                setCurrentDb('')
+                setExpandedKeys([])
             }
         } catch (e: any) {
             message.error(t('mongo.client.connectFail', { error: e.message || e, defaultValue: `连接 MongoDB 失败: ${e.message || e}` }))
         } finally {
             setLoadingTree(false)
         }
-    }, [id, loadCollections, t])
+    }, [id, loadCollections, t, message])
 
     useEffect(() => {
         void initConnection()
@@ -171,14 +161,15 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
     }
 
     // 新增 MQL 编辑器 Tab
-    const handleNewMqlTab = () => {
+    const handleNewMqlTab = (dbName?: string) => {
+        const target = dbName !== undefined ? dbName : currentDb
         const nextId = tabs.filter((t) => t.type === 'query').length + 1
-        const key = `mql_${Date.now()}`
+        const key = `mql_${Date.now()}_${nextId}`
         const newTab: MongoTabItem = {
             key,
-            label: `MQL ${nextId}`,
+            label: target ? `${target} (MQL)` : `MQL ${nextId}`,
             type: 'query',
-            dbName: currentDb,
+            dbName: target,
             closable: true,
         }
         setTabs((prev) => [...prev, newTab])
@@ -351,6 +342,15 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
 
     // 数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
+        {
+            key: 'new-mql',
+            icon: <Play size={13} />,
+            label: t('mongo.client.newMql', '新建 MQL 查询'),
+            onClick: () => {
+                setCurrentDb(dbName)
+                handleNewMqlTab(dbName)
+            },
+        },
         {
             key: 'new-coll',
             icon: <Plus size={13} />,
@@ -539,7 +539,7 @@ export default function MongoClient({ session, onClose, onChange }: Props) {
                                 size="small"
                                 type="text"
                                 icon={<Play size={13} />}
-                                onClick={handleNewMqlTab}
+                                onClick={() => handleNewMqlTab()}
                             />
                         </Tooltip>
                         <Tooltip title={t('mongo.client.refreshTree', '刷新数据库列表')}>

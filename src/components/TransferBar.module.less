@@ -1,75 +1,161 @@
 @import (reference) '../styles/variables.less';
 @import (reference) '../styles/mixins.less';
 
-.transferBar {
-    border-top: 1px solid @border;
-    background: @bg-1;
-    flex: none;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.transferHead {
-    display: flex;
+.capsuleWrapper {
+    position: relative;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 5px 10px;
-    cursor: pointer;
-    color: @text-dim;
-    font-size: 11.5px;
-    user-select: none;
-
-    &:hover {
-        color: @text;
-        background: @bg-2;
-    }
 }
 
-.badge {
-    padding: 0 6px;
-    background: @bg-3;
-    border-radius: 10px;
-    font-size: 10.5px;
-    white-space: nowrap;
-}
-
-.headProgress {
+.capsuleBtn {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    margin-left: 2px;
-    min-width: 0;
-    flex: 1;
+    padding: 2px 8px;
+    height: 22px;
+    border-radius: @radius-pill;
+    background: color-mix(in srgb, @accent 12%, transparent);
+    color: @accent;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    user-select: none;
+    transition: all 0.15s ease;
+    border: none;
+    outline: none;
+
+    &:hover {
+        background: color-mix(in srgb, @accent 20%, transparent);
+        color: @accent-dim;
+    }
+
+    &.hasRunning {
+        background: color-mix(in srgb, @accent 16%, transparent);
+        box-shadow: 0 0 0 1px color-mix(in srgb, @accent 30%, transparent);
+    }
 }
 
-.headProgressText {
+.capsuleIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinIcon {
+    animation: spin 1.5s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.capsuleLabel {
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.capsuleProgress {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.percentNum {
     font-size: 10.5px;
+    font-family: @font-mono;
+    font-weight: 600;
+    color: @accent;
+}
+
+.chevron {
+    font-size: 10px;
+    opacity: 0.7;
+    margin-left: 1px;
+}
+
+/* 浮动传输抽屉面板 (浮现在状态栏正上方，不撕裂底部边框) */
+.transferDrawer {
+    position: absolute;
+    bottom: 28px;
+    right: 0;
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    background: @stage-bg;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.18);
+    z-index: 100;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.drawerHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    border-bottom: 1px solid @border;
+    background: @stage-bg;
+    gap: 8px;
+}
+
+.drawerTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    color: @text;
+    min-width: 0;
+}
+
+.drawerBadge {
+    padding: 1px 6px;
+    background: @bg-3;
+    border-radius: 10px;
+    font-size: 10.5px;
+    font-weight: normal;
     color: @text-dim;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+}
+
+.drawerMeta {
+    font-size: 11px;
+    color: @text-dim;
+    font-weight: normal;
+    font-family: @font-mono;
+    white-space: nowrap;
+}
+
+.drawerActions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
 }
 
 .transferList {
-    max-height: 160px;
+    max-height: 190px;
     overflow-y: auto;
     overflow-x: hidden;
-    padding: 2px 6px 6px;
-    border-top: 1px solid @border;
-    background: @bg;
+    padding: 4px 6px;
+    background: @stage-bg;
 }
 
 .transferItem {
     display: grid;
-    grid-template-columns: 16px minmax(60px, 1.2fr) minmax(80px, 1.4fr) auto auto;
+    grid-template-columns: 16px minmax(80px, 1.2fr) minmax(90px, 1.4fr) auto auto;
     align-items: center;
-    gap: 6px;
-    padding: 4px 6px;
-    border-radius: 4px;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: @radius-sm;
     min-width: 0;
+    transition: background 0.12s ease;
 
     &:hover {
-        background: @bg-2;
+        background: color-mix(in srgb, @text 4%, @stage-bg);
     }
 
     &.done .tBarInner {
@@ -100,6 +186,7 @@
     white-space: nowrap;
     min-width: 0;
     font-size: 11.5px;
+    color: @text;
 }
 
 .tProgress {
@@ -129,6 +216,7 @@
     color: @text-dim;
     white-space: nowrap;
     flex-shrink: 0;
+    font-family: @font-mono;
 }
 
 .tStatus {
@@ -143,10 +231,4 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-}
-
-.chevron {
-    font-size: 11px;
-    color: @text-faint;
-    margin-left: 2px;
 }

@@ -100,24 +100,45 @@ export function createMysqlAdapter(
         buildWhereClause: buildMysqlWhereClause,
 
         async loadStructure(): Promise<DbTableStructure> {
-            const [descRes, idxList] = await Promise.all([
-                API.mysqlDescribe(serverId, dbName, tableName),
-                API.mysqlIndexes(serverId, dbName, tableName).catch(() => []),
-            ])
-
-            // 加载约束/外键
-            let constraintRows: any[] = []
+            let descRows: any[] = []
             try {
-                const sql = `SELECT CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
-                             FROM information_schema.KEY_COLUMN_USAGE
-                             WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_NAME = '${tableName}'`
-                const res = await API.mysqlRun(serverId, dbName, sql)
-                if (res && res.rows) {
-                    constraintRows = res.rows
+                // 优先使用 SHOW FULL COLUMNS 以获取完整的字段注释 (Comment) 与属性
+                const fullColRes = await API.mysqlRun(serverId, dbName, `SHOW FULL COLUMNS FROM ${quoteIdent(tableName)}`)
+                if (fullColRes && Array.isArray(fullColRes.rows) && fullColRes.rows.length > 0) {
+                    descRows = fullColRes.rows
                 }
             } catch (e) {
-                console.warn('获取 MySQL 约束信息失败:', e)
+                console.warn('SHOW FULL COLUMNS 失败，尝试 fallback 到 mysqlDescribe:', e)
             }
+
+            if (descRows.length === 0) {
+                try {
+                    const descRes = await API.mysqlDescribe(serverId, dbName, tableName)
+                    descRows = Array.isArray(descRes)
+                        ? descRes
+                        : Array.isArray((descRes as any)?.rows)
+                            ? (descRes as any).rows
+                            : []
+                } catch (e) {
+                    console.error('获取 MySQL 表结构失败:', e)
+                }
+            }
+
+            const [idxList, constraintRows] = await Promise.all([
+                API.mysqlIndexes(serverId, dbName, tableName).catch(() => []),
+                (async () => {
+                    try {
+                        const sql = `SELECT CONSTRAINT_NAME, COLUMN_NAME, REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+                                     FROM information_schema.KEY_COLUMN_USAGE
+                                     WHERE TABLE_SCHEMA = '${dbName}' AND TABLE_NAME = '${tableName}'`
+                        const res = await API.mysqlRun(serverId, dbName, sql)
+                        return res && res.rows ? res.rows : []
+                    } catch (e) {
+                        console.warn('获取 MySQL 约束信息失败:', e)
+                        return []
+                    }
+                })(),
+            ])
 
             const fkColMap = new Set<string>()
             const constraints: DbConstraintMeta[] = constraintRows.map((r: any) => {
@@ -132,8 +153,8 @@ export function createMysqlAdapter(
                     type: refTable
                         ? 'FOREIGN KEY'
                         : r.CONSTRAINT_NAME === 'PRIMARY'
-                        ? 'PRIMARY KEY'
-                        : 'UNIQUE / KEY',
+                            ? 'PRIMARY KEY'
+                            : 'UNIQUE / KEY',
                     column: col,
                     foreignTable: refTable,
                     foreignColumn: refCol,
@@ -143,8 +164,8 @@ export function createMysqlAdapter(
             const columns: DbColumnMeta[] = []
             const primaryKeys: Record<string, boolean> = {}
 
-            if (descRes && descRes.rows) {
-                descRes.rows.forEach((r: any) => {
+            if (descRows.length > 0) {
+                descRows.forEach((r: any) => {
                     const field = String(r.Field || r.COLUMN_NAME || '')
                     const typ = String(r.Type || r.COLUMN_TYPE || '')
                     const isNull = (r.Null || r.IS_NULLABLE) === 'YES'
@@ -434,8 +455,19 @@ export function createMysqlAdapter(
         },
 
         async listTableColumns(targetTable: string): Promise<string[]> {
-            const res = await API.mysqlDescribe(serverId, dbName, targetTable)
-            return (res?.rows || []).map((r: any) => String(r.Field || r.COLUMN_NAME || ''))
+            try {
+                const fullColRes = await API.mysqlRun(serverId, dbName, `SHOW COLUMNS FROM ${quoteIdent(targetTable)}`)
+                if (fullColRes && Array.isArray(fullColRes.rows) && fullColRes.rows.length > 0) {
+                    return fullColRes.rows.map((r: any) => String(r.Field || r.COLUMN_NAME || ''))
+                }
+            } catch { }
+            try {
+                const res = await API.mysqlDescribe(serverId, dbName, targetTable)
+                const rows = Array.isArray(res) ? res : Array.isArray((res as any)?.rows) ? (res as any).rows : []
+                return rows.map((r: any) => String(r.Field || r.COLUMN_NAME || ''))
+            } catch {
+                return []
+            }
         },
     }
 }

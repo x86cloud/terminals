@@ -146,7 +146,13 @@ export function createSqliteAdapter(
                 }
             })
 
-            const columns: DbColumnMeta[] = (colsData || []).map((c: any) => {
+            const rawCols: any[] = Array.isArray(colsData)
+                ? colsData
+                : Array.isArray((colsData as any)?.rows)
+                ? (colsData as any).rows
+                : []
+
+            const columns: DbColumnMeta[] = rawCols.map((c: any) => {
                 const isPk = Number(c.pk) > 0
                 return {
                     name: c.name,
@@ -164,14 +170,30 @@ export function createSqliteAdapter(
                 if (c.isPrimaryKey) primaryKeys[c.name] = true
             })
 
-            const indexes: DbIndexMeta[] = (idxData || []).map((ix: any) => ({
-                name: ix.name,
-                table: tableName,
-                isUnique: Number(ix.unique) === 1,
-                isPrimary: ix.origin === 'pk',
-                type: ix.partial ? 'PARTIAL' : 'INDEX',
-                def: ix.origin ? `Origin: ${ix.origin}` : undefined,
-            }))
+            const rawIndexes: any[] = Array.isArray(idxData) ? idxData : (idxData as any)?.rows || []
+            const indexes: DbIndexMeta[] = await Promise.all(
+                rawIndexes.map(async (ix: any) => {
+                    let cols: string[] = []
+                    try {
+                        const infoRes = await API.sqliteRun(
+                            sessionId,
+                            `PRAGMA index_info("${String(ix.name).replace(/"/g, '""')}")`
+                        )
+                        if (infoRes && Array.isArray(infoRes.rows)) {
+                            cols = infoRes.rows.map((r: any) => String(r.name || ''))
+                        }
+                    } catch {}
+                    return {
+                        name: ix.name,
+                        table: tableName,
+                        columns: cols,
+                        isUnique: Number(ix.unique) === 1,
+                        isPrimary: ix.origin === 'pk',
+                        type: ix.partial ? 'PARTIAL' : 'INDEX',
+                        def: ix.origin ? `Origin: ${ix.origin}` : undefined,
+                    }
+                })
+            )
 
             return {
                 columns,
@@ -639,7 +661,8 @@ export function createSqliteAdapter(
 
         async listTableColumns(targetTable: string): Promise<string[]> {
             const cols = await API.sqliteDescribe(sessionId, targetTable)
-            return (cols || []).map((c: any) => String(c.name || ''))
+            const raw = Array.isArray(cols) ? cols : (cols as any)?.rows || []
+            return raw.map((c: any) => String(c.name || ''))
         },
     }
 }

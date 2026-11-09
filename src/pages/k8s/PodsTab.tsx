@@ -130,10 +130,10 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                 logsTail,
                 logsTimestamps
             )
-            setLogsContent(text || t('docker.containers.noLogs', { defaultValue: '（暂无容器日志输出）' }))
+            setLogsContent(text || t('docker:containers.noLogs', { defaultValue: '（暂无容器日志输出）' }))
         } catch (err: any) {
             message.error(t('pods.fetchLogsFail', { defaultValue: '获取日志失败: {{error}}', error: err.message || String(err) }))
-            setLogsContent(`${t('common.error', { defaultValue: '错误' })}: ${err.message || String(err)}`)
+            setLogsContent(`${t('common:error', { defaultValue: '错误' })}: ${err.message || String(err)}`)
         } finally {
             setLogsLoading(false)
         }
@@ -320,13 +320,13 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml(record)}
                     >
-                        {t('common.edit', { defaultValue: '编辑' })}
+                        {t('common:edit', { defaultValue: '编辑' })}
                     </Button>
                     <Popconfirm
                         title={t('pods.deleteConfirm', { defaultValue: '确定删除 Pod [{{name}}] 吗？', name: record.name })}
                         description={t('pods.deleteDesc', { defaultValue: '删除后，如果该 Pod 由 Deployment 或 DaemonSet 管理，控制器将自动创建新的副本。' })}
-                        okText={t('common.confirm', { defaultValue: '确认删除' })}
-                        cancelText={t('common.cancel', { defaultValue: '取消' })}
+                        okText={t('common:confirm', { defaultValue: '确认删除' })}
+                        cancelText={t('common:cancel', { defaultValue: '取消' })}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeletePod(record)}
                     >
@@ -370,10 +370,10 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         }}
                         style={{ width: 120 }}
                         options={[
-                            { label: t('common.allStatus', { defaultValue: '全部状态' }), value: 'ALL' },
+                            { label: t('common:allStatus', { defaultValue: '全部状态' }), value: 'ALL' },
                             { label: 'Running', value: 'Running' },
                             { label: 'Pending', value: 'Pending' },
-                            { label: t('common.errorOrAbnormal', { defaultValue: '异常/错误' }), value: 'Error' },
+                            { label: t('common:errorOrAbnormal', { defaultValue: '异常/错误' }), value: 'Error' },
                         ]}
                     />
                 </div>
@@ -385,14 +385,14 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         size="small"
                         onClick={openCreateYaml}
                     >
-                        {t('common.new', { defaultValue: '新建' })}
+                        {t('common:create', { defaultValue: '新建' })}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchPods}
                     >
-                        {t('common.refresh', { defaultValue: '刷新' })}
+                        {t('common:refresh', { defaultValue: '刷新' })}
                     </Button>
                 </div>
             </div>
@@ -410,7 +410,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                         if (containers.length === 0) {
                             return (
                                 <div style={{ padding: '8px 16px', color: 'var(--text-dim)', fontSize: 12 }}>
-                                    {t('common.noData', { defaultValue: '暂无容器详细信息' })}
+                                    {t('common:noData', { defaultValue: '暂无容器详细信息' })}
                                 </div>
                             )
                         }
@@ -429,7 +429,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                     dataSource={containers}
                                     columns={[
                                         {
-                                            title: t('docker.containers.colName', { defaultValue: '容器名称' }),
+                                            title: t('docker:containers.colName', { defaultValue: '容器名称' }),
                                             dataIndex: 'name',
                                             key: 'name',
                                             width: 200,
@@ -447,7 +447,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             ),
                                         },
                                         {
-                                            title: t('docker.containers.colImage', { defaultValue: '容器镜像 (Image)' }),
+                                            title: t('docker:containers.colImage', { defaultValue: '容器镜像 (Image)' }),
                                             dataIndex: 'image',
                                             key: 'image',
                                             render: (img: string) => (
@@ -455,14 +455,14 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                                     <span className={s.monoText} style={{ fontSize: 11.5, wordBreak: 'break-all' }}>
                                                         {img}
                                                     </span>
-                                                    <Tooltip title={t('docker.images.copyName', { defaultValue: '复制镜像名称' })}>
+                                                    <Tooltip title={t('docker:images.copyName', { defaultValue: '复制镜像名称' })} >
                                                         <Button
                                                             size="small"
                                                             type="text"
                                                             icon={<Copy size={11} />}
                                                             onClick={async () => {
                                                                 if (await copyText(img)) {
-                                                                    message.success(t('docker.images.copiedName', { defaultValue: '已复制镜像名称' }))
+                                                                    message.success(t('docker:images.copiedName', { defaultValue: '已复制镜像名称' }))
                                                                 }
                                                             }}
                                                         />
@@ -471,7 +471,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             ),
                                         },
                                         {
-                                            title: t('docker.containers.colState', { defaultValue: '状态' }),
+                                            title: t('docker:containers.colState', { defaultValue: '状态' }),
                                             dataIndex: 'state',
                                             key: 'state',
                                             width: 140,
@@ -508,7 +508,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                             ),
                                         },
                                         {
-                                            title: t('common.actions', { defaultValue: '操作' }),
+                                            title: t('common:action', { defaultValue: '操作' }),
                                             key: 'cActions',
                                             width: 160,
                                             align: 'right',
@@ -550,7 +550,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                    showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -582,7 +582,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                 }}
                                 style={{ width: 160 }}
                                 options={activePod.containers.map((c) => ({
-                                    label: c.isInit ? `[Init] ${c.name}` : `${t('common.container', { defaultValue: '容器' })}: ${c.name}`,
+                                    label: c.isInit ? `[Init] ${c.name}` : `${t('common:container', { defaultValue: '容器' })}: ${c.name}`,
                                     value: c.name,
                                 }))}
                             />
@@ -621,7 +621,7 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                             icon={<RefreshCw size={12} className={logsLoading ? 'animate-spin' : ''} />}
                             onClick={() => activePod && fetchLogs(activePod, selectedContainer)}
                         >
-                            {t('common.refresh', { defaultValue: '刷新' })}
+                            {t('common:refresh', { defaultValue: '刷新' })}
                         </Button>
 
                         <Button
@@ -643,13 +643,13 @@ export default function PodsTab({ serverId, currentNamespace, initialSearchKw }:
                                 downloadText(`${activePod?.name}_${selectedContainer || 'log'}.log`, logsContent)
                             }}
                         >
-                            {t('common.export', { defaultValue: '导出' })}
+                            {t('common:export', { defaultValue: '导出' })}
                         </Button>
                     </Space>
                 }
             >
                 <div className={s.logTerminal} ref={logScrollRef}>
-                    {logsLoading ? t('common.loading', { defaultValue: '正在加载日志...' }) : logsContent}
+                    {logsLoading ? t('common:loading', { defaultValue: '正在加载日志...' }) : logsContent}
                 </div>
             </Drawer>
 

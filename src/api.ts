@@ -72,6 +72,9 @@ import type {
     AppVersionInfo,
     UpdateCheckResult,
     ConfigIOResult,
+    AgentStatusInfo,
+    ReActRunResult,
+    AiMessage,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -334,8 +337,8 @@ export const API = {
         invoke<MysqlQueryResult>('mysql_select', { serverId, dbName, table, limit, offset }),
     mysqlCount: (serverId: string, dbName: string, table: string): Promise<number> =>
         invoke<number>('mysql_count', { serverId, dbName, table }),
-    mysqlDescribe: (serverId: string, dbName: string, table: string): Promise<MysqlQueryResult> =>
-        invoke<MysqlQueryResult>('mysql_describe', { serverId, dbName, table }),
+    mysqlDescribe: (serverId: string, dbName: string, table: string): Promise<Array<Record<string, any>>> =>
+        invoke<Array<Record<string, any>>>('mysql_describe', { serverId, dbName, table }),
     mysqlRun: (serverId: string, dbName: string, sqlText: string): Promise<MysqlQueryResult> =>
         invoke<MysqlQueryResult>('mysql_run', { serverId, dbName, sqlText }),
     mysqlInsert: (
@@ -1538,6 +1541,22 @@ export const API = {
         }).then((r) => r || []),
     k8sDeleteOrchestrationRecordOnly: (recordId: string): Promise<void> =>
         invoke<void>('k8s_delete_orchestration_record_only', { recordId }),
+
+    // 11. AI Agent (ReAct Orchestration)
+    agentGetStatus: (): Promise<AgentStatusInfo> =>
+        invoke<AgentStatusInfo>('agent_get_status'),
+    agentRunReact: (
+        sessionId: string,
+        messages: AiMessage[],
+        maxTurns?: number
+    ): Promise<ReActRunResult> =>
+        invoke<ReActRunResult>('agent_run_react', {
+            sessionId,
+            messages,
+            maxTurns,
+        }),
+    agentStopReact: (sessionId: string): Promise<void> =>
+        invoke<void>('agent_stop_react', { sessionId }),
 }
 
 /* ------------------------------------------------------------------ */
@@ -1643,7 +1662,8 @@ export function registerNativeFileDrop(
         unsubEvent()
         if (unsubWindowDrop) unsubWindowDrop()
     }
-    return true
+    // Tauri 原生 dragDropEnabled 已关闭以解禁 DOM HTML5 拖拽，返回 false 启用应用内及文件面板的 HTML5 拖拽处理
+    return false
 }
 
 export function unregisterNativeFileDrop(): void {

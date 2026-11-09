@@ -190,7 +190,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       if (failures.length === 0) {
         message.success(t('k8s:yaml.deploySuccess', { name: trimmedName, count: successes.length }))
       } else if (successes.length === 0) {
-        const detail = failures.map((r) => `${r.kind}/${r.name || t('common.unknown')}: ${r.message}`).join('; ')
+        const detail = failures.map((r) => `${r.kind}/${r.name || t('common:unknown')}: ${r.message}`).join('; ')
         message.error(t('k8s:yaml.deployFail', { detail }), 6)
         return
       } else {
@@ -220,7 +220,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       if (failures.length === 0) {
         message.success(t('k8s:yaml.deploySyncSuccess', { name: rec.name, count: successes.length }))
       } else if (successes.length === 0) {
-        const detail = failures.map((r) => `${r.kind}/${r.name || t('common.unknown')}: ${r.message}`).join('; ')
+        const detail = failures.map((r) => `${r.kind}/${r.name || t('common:unknown')}: ${r.message}`).join('; ')
         message.error(t('k8s:yaml.deploySyncFail', { detail }), 6)
       } else {
         message.warning(t('k8s:yaml.deploySyncPartial', { name: rec.name, successCount: successes.length, failCount: failures.length }))
@@ -336,7 +336,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontWeight: 600, color: 'var(--text)' }}>{name}</span>
-            <Tooltip title={t('common.copy')}>
+            <Tooltip title={t('common:copy')}>
               <Button
                 type="text"
                 size="small"
@@ -441,7 +441,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
       ),
     },
     {
-      title: t('common.action'),
+      title: t('common:action'),
       key: 'action',
       width: 190,
       render: (_, record) => {
@@ -481,7 +481,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 title={t('k8s:yaml.deleteLocalConfirmTitle')}
                 description={t('k8s:yaml.deleteLocalConfirmDesc')}
                 okText={t('k8s:yaml.deleteLocalConfirmOk')}
-                cancelText={t('common.cancel')}
+                cancelText={t('common:cancel')}
                 okButtonProps={{ danger: true }}
                 onConfirm={() => handleDeleteRecordOnly(record)}
               >
@@ -529,7 +529,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 icon={<Edit3 size={12} />}
                 onClick={() => handleOpenEditDrawer(record)}
               >
-                {t('common.edit')}
+                {t('common:edit')}
               </Button>
             </Tooltip>
 
@@ -651,7 +651,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
               icon={<RotateCcw size={12} />}
               onClick={() => setFormYaml('')}
             >
-              {t('common.clear')}
+              {t('common:clear')}
             </Button>
             <Button
               size="small"
@@ -666,14 +666,14 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
                 }
               }}
             >
-              {t('common.copy')}
+              {t('common:copy')}
             </Button>
           </Space>
         }
         footer={
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '6px 0' }}>
             <Button onClick={() => setDrawerOpen(false)} disabled={saving}>
-              {t('common.cancel')}
+              {t('common:cancel')}
             </Button>
             <Button
               type="primary"
@@ -744,7 +744,7 @@ export default function YamlTab({ serverId, currentNamespace, onNavigateToResour
             onClick={() => setOfflineModal({ open: false, record: null, deleteLocal: false, loading: false })}
             disabled={offlineModal.loading}
           >
-            {t('common.cancel')}
+            {t('common:cancel')}
           </Button>,
           <Button
             key="confirm"

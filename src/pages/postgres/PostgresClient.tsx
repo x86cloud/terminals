@@ -44,7 +44,7 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
     const { t } = useTranslation(['db', 'common'])
     const { message } = App.useApp()
     const serverId = session.serverId
-    const [currentDb, setCurrentDb] = useState<string>(session.database || 'postgres')
+    const [currentDb, setCurrentDb] = useState<string>(session.database || '')
     const [currentSchema, setCurrentSchema] = useState<string>(session.schema || 'public')
 
     // 树与元数据状态
@@ -57,22 +57,16 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
     const [loadingSchemas, setLoadingSchemas] = useState<Record<string, boolean>>({})
 
     // 工作区标签栏管理
-    const [tabs, setTabs] = useState<PostgresTabItem[]>([
+    const initialTabs: PostgresTabItem[] = [
         {
             key: 'status',
             label: t('postgres.tabStatus'),
             type: 'status',
-            dbName: currentDb,
+            dbName: session.database || '',
             closable: false,
         },
-        {
-            key: 'sql_1',
-            label: t('postgres.tabSql'),
-            type: 'sql',
-            dbName: currentDb,
-            closable: false,
-        },
-    ])
+    ]
+    const [tabs, setTabs] = useState<PostgresTabItem[]>(initialTabs)
     const [activeTabKey, setActiveTabKey] = useState<string>('status')
 
     // 弹窗状态
@@ -118,11 +112,20 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
             await API.postgresConnect(serverId)
             const dbs = await API.postgresDatabases(serverId)
             setDatabases(dbs || [])
-            if (dbs && dbs.length > 0) {
-                const targetDb = session.database || dbs[0].name
-                setCurrentDb(targetDb)
-                await loadSchemas(targetDb)
-                setExpandedKeys([`db_${targetDb}`, `schema_${targetDb}_public`])
+            if (session.database) {
+                const found = dbs?.some((d) => d.name === session.database)
+                if (found) {
+                    setCurrentDb(session.database)
+                    await loadSchemas(session.database)
+                    setExpandedKeys([`db_${session.database}`, `schema_${session.database}_public`])
+                } else {
+                    message.warning(t('db:postgres.dbNotFound', { db: session.database, defaultValue: `未找到指定的默认数据库: ${session.database}` }))
+                    setCurrentDb('')
+                    setExpandedKeys([])
+                }
+            } else {
+                setCurrentDb('')
+                setExpandedKeys([])
             }
         } catch (e: any) {
             message.error(t('postgres.connectFailed', { error: e.message || e }))
@@ -216,6 +219,22 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
         setActiveTabKey(tabKey)
     }
 
+    // 打开或新建 SQL 查询 Tab
+    const openSqlTab = (dbName?: string) => {
+        const target = dbName !== undefined ? dbName : currentDb
+        const sqlCount = tabs.filter((t) => t.type === 'sql').length + 1
+        const tabKey = `sql_${Date.now()}_${sqlCount}`
+        const newTab: PostgresTabItem = {
+            key: tabKey,
+            label: target ? `${target} (SQL)` : t('postgres.tabSql'),
+            type: 'sql',
+            dbName: target,
+            closable: true,
+        }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabKey(tabKey)
+    }
+
     const tabItems: TabItem[] = useMemo(() => {
         return tabs.map((tItem) => {
             let icon: React.ReactNode = null
@@ -226,7 +245,9 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
                 label = t('postgres.tabStatus')
             } else if (tItem.type === 'sql') {
                 icon = <Play size={13} />
-                if (tItem.label === 'SQL 编辑器' || tItem.label === 'SQL Editor') {
+                if (tItem.dbName) {
+                    label = `${tItem.dbName} (SQL)`
+                } else if (tItem.label === 'SQL 编辑器' || tItem.label === 'SQL Editor') {
                     label = t('postgres.tabSql')
                 }
             } else if (tItem.type === 'data') {
@@ -399,6 +420,15 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
     // 渲染数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
         {
+            key: 'new-query',
+            icon: <Play size={14} />,
+            label: t('postgres.menu.newQuery', { defaultValue: '新建查询' }),
+            onClick: () => {
+                setCurrentDb(dbName)
+                openSqlTab(dbName)
+            },
+        },
+        {
             key: 'new-schema',
             icon: <Plus size={14} />,
             label: t('postgres.menu.newSchema'),
@@ -532,6 +562,14 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
                         PostgreSQL
                     </span>
                     <Space size={4}>
+                        <Tooltip title={t('postgres.menu.newQuery', { defaultValue: '新建查询' })}>
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<Play size={14} />}
+                                onClick={() => openSqlTab(currentDb)}
+                            />
+                        </Tooltip>
                         <Tooltip title={t('postgres.menu.newDb')}>
                             <Button
                                 size="small"

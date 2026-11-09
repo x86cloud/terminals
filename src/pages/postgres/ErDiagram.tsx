@@ -41,8 +41,8 @@ export default function ErDiagram({
                     const desc = await API.postgresDescribe(serverId, dbName, schema, tbl.name)
                     return {
                         name: tbl.name,
-                        columns: (desc.columns || []) as PgColumn[],
-                        constraints: (desc.constraints || []) as PgConstraint[],
+                        columns: (desc?.columns || []) as PgColumn[],
+                        constraints: (desc?.constraints || []) as PgConstraint[],
                     }
                 })
             const metas = await Promise.all(metaPromises)

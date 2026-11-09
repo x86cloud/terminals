@@ -9,6 +9,7 @@ export interface ColDef {
     minWidth?: number
     maxWidth?: number
     resizable?: boolean
+    autoExpand?: boolean // 是否参与未占满 100% 时的自动等额放大，默认为 true（排除特殊固定列）
     align?: 'left' | 'center' | 'right'
     isPk?: boolean
     isFk?: boolean
@@ -27,6 +28,7 @@ interface Props {
     className?: string
     wrapperClassName?: string
     style?: React.CSSProperties
+    fillContainer?: boolean // 未占满 100% 时是否平均扩大各数据列铺满容器，默认为 true
 }
 
 const DEFAULT_GLOBAL_MIN_W = 70
@@ -62,7 +64,6 @@ function measureCellTextWidth(text: string, font = '12.5px Consolas, -apple-syst
 function extractCellValueString(val: any): string {
     if (val === null || val === undefined) return 'NULL'
     if (typeof val === 'object') {
-        // e.g. { value: 'abc', isNull: false } in MySQL editable cell
         if ('value' in val && typeof val.value !== 'object') {
             return val.isNull ? 'NULL' : String(val.value ?? '')
         }
@@ -76,7 +77,17 @@ function extractCellValueString(val: any): string {
 }
 
 /**
- * 根据列名文本长度及表头必要修饰元素（PK角标/FK标签/排序图标/列筛选搜索按钮/单元格内边距）自动计算列宽
+ * 判断列是否可参与 100% 自动均分扩展
+ */
+export function isExpandableCol(col: ColDef): boolean {
+    if (col.autoExpand === false) return false
+    if (col.resizable === false) return false
+    if (col.key === '__rownum__' || col.key === '__rowact__' || col.key === '__act__') return false
+    return true
+}
+
+/**
+ * 根据列名文本长度及表头必要修饰元素自动计算列宽
  */
 export function calcColWidthFromName(
     colName: string,
@@ -93,32 +104,15 @@ export function calcColWidthFromName(
 
     if (!colName) return minW
 
-    // 测量表头文本实际像素宽度（使用与表头一致的 12px 粗体无衬线字体）
     const textW = measureCellTextWidth(
         colName,
         '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
     )
 
-    // 表头基础必需空间：
-    // th 左右 padding 20px (10px * 2)
-    // 排序按钮宽度与间隙 16px (12px + 4px)
-    // 拖拽手柄与子像素渲染安全冗余 14px
     let extraBuffer = 50
-
-    // 若为主键列，pkBadge 左右内边距额外占据 10px (5px * 2)
-    if (options?.isPk) {
-        extraBuffer += 10
-    }
-
-    // 若为外键列，fkBadge 占据约 27px (margin 4px + "FK" 文本约 15px + padding 8px)
-    if (options?.isFk) {
-        extraBuffer += 27
-    }
-
-    // 若包含列筛选/搜索按钮，额外占据 26px (按钮 18px + 间距 4px + 边距与防挤压冗余 4px)
-    if (options?.hasFilter) {
-        extraBuffer += 26
-    }
+    if (options?.isPk) extraBuffer += 10
+    if (options?.isFk) extraBuffer += 27
+    if (options?.hasFilter) extraBuffer += 26
 
     const calculatedW = Math.ceil(textW + extraBuffer)
     return Math.min(maxW, Math.max(minW, calculatedW))
@@ -141,7 +135,6 @@ export function calculateColumnOptimalWidth(
     const minW = col.minWidth ?? (col.hasFilter ? 95 : defaultMinW)
     const maxW = col.maxWidth ?? defaultMaxW
 
-    // 1. 基于列名长度自动计算表头宽度
     let maxWFound = 0
     let labelStr = ''
     if (typeof col.label === 'string') {
@@ -160,9 +153,7 @@ export function calculateColumnOptimalWidth(
         maxWFound = Math.max(maxWFound, headerW)
     }
 
-    // 2. 如果包含行数据，采样行数据文本自适应拓宽
     if (rows && rows.length > 0) {
-        // Sample up to first 200 rows for high performance
         const sampleCount = Math.min(rows.length, 200)
         for (let i = 0; i < sampleCount; i++) {
             const row = rows[i]
@@ -170,7 +161,6 @@ export function calculateColumnOptimalWidth(
             const rawVal = row[col.key]
             const strVal = extractCellValueString(rawVal)
             if (strVal) {
-                // Short-circuit sample length to avoid measuring massive strings
                 const sampleLength = Math.min(strVal.length, 120)
                 const textW = measureCellTextWidth(strVal.slice(0, sampleLength)) + CELL_HORIZONTAL_PADDING
                 if (textW > maxWFound) {
@@ -184,7 +174,6 @@ export function calculateColumnOptimalWidth(
         }
     }
 
-    // Fallback to col.width if provided and greater than 0, but bound by [minW, maxW]
     if (maxWFound === 0 && col.width && col.width > 0) {
         maxWFound = col.width
     }
@@ -204,6 +193,7 @@ export default function ResizableTable({
     className,
     wrapperClassName,
     style,
+    fillContainer = true,
 }: Props) {
     const { t } = useTranslation('common')
     const wrapperRef = useRef<HTMLDivElement>(null)
@@ -261,38 +251,120 @@ export default function ResizableTable({
         const el = wrapperRef.current
         setWrapperWidth(el.clientWidth)
 
-        const ro = new ResizeObserver((entries) => {
-            for (const entry of entries) {
-                setWrapperWidth(entry.contentRect.width)
+        const ro = new ResizeObserver(() => {
+            if (wrapperRef.current) {
+                setWrapperWidth(wrapperRef.current.clientWidth)
             }
         })
         ro.observe(el)
         return () => ro.disconnect()
     }, [])
 
-    const getColRenderWidth = useCallback(
+    const getBaseWidth = useCallback(
         (c: ColDef): number => {
             const colMin = c.minWidth ?? (c.hasFilter ? 95 : defaultMinWidth)
+            const colMax = c.maxWidth ?? defaultMaxWidth
             if (resizingCol && resizingCol.key === c.key) {
-                return Math.max(colMin, resizingCol.width)
+                return Math.min(colMax, Math.max(colMin, resizingCol.width))
+            }
+            if (manualWidthsRef.current[c.key] !== undefined) {
+                return Math.min(colMax, Math.max(colMin, manualWidthsRef.current[c.key]))
             }
             if (computedWidths[c.key] !== undefined) {
-                return Math.max(colMin, computedWidths[c.key])
+                return Math.min(colMax, Math.max(colMin, computedWidths[c.key]))
             }
             if (c.width && c.width > 0) {
-                return Math.max(colMin, c.width)
+                return Math.min(colMax, Math.max(colMin, c.width))
             }
             return colMin
         },
-        [resizingCol, computedWidths, defaultMinWidth]
+        [resizingCol, computedWidths, defaultMinWidth, defaultMaxWidth]
     )
+
+    const renderWidths = useMemo<Record<string, number>>(() => {
+        const baseMap: Record<string, number> = {}
+        let totalBase = 0
+        for (const col of cols) {
+            const bw = getBaseWidth(col)
+            baseMap[col.key] = bw
+            totalBase += bw
+        }
+
+        if (!fillContainer || !wrapperWidth || totalBase >= wrapperWidth) {
+            return baseMap
+        }
+
+        const remaining = wrapperWidth - totalBase
+        const expandable = cols.filter(isExpandableCol)
+        if (expandable.length === 0) {
+            return baseMap
+        }
+
+        // 联动吸收模式（正在拖拽某一列时）
+        if (resizingCol) {
+            const resizingKey = resizingCol.key
+            const targetCol = cols.find((c) => c.key === resizingKey)
+            const isResizingExpandable = targetCol && isExpandableCol(targetCol)
+
+            if (isResizingExpandable) {
+                const targetW = baseMap[resizingKey]
+                const fixedTotal = cols
+                    .filter((c) => !isExpandableCol(c))
+                    .reduce((sum, c) => sum + baseMap[c.key], 0)
+
+                const otherExpandable = expandable.filter((c) => c.key !== resizingKey)
+                if (otherExpandable.length > 0) {
+                    const remainingForOthers = wrapperWidth - fixedTotal - targetW
+                    const minOthers = otherExpandable.reduce(
+                        (sum, c) => sum + (c.minWidth ?? (c.hasFilter ? 95 : defaultMinWidth)),
+                        0
+                    )
+
+                    const result: Record<string, number> = { ...baseMap }
+                    result[resizingKey] = targetW
+
+                    if (remainingForOthers >= minOthers) {
+                        const extraPool = remainingForOthers - minOthers
+                        const perCol = Math.floor(extraPool / otherExpandable.length)
+                        const remainder = extraPool % otherExpandable.length
+
+                        otherExpandable.forEach((col, idx) => {
+                            const minW = col.minWidth ?? (col.hasFilter ? 95 : defaultMinWidth)
+                            const extra = perCol + (idx === otherExpandable.length - 1 ? remainder : 0)
+                            result[col.key] = minW + extra
+                        })
+                        return result
+                    } else {
+                        otherExpandable.forEach((col) => {
+                            result[col.key] = col.minWidth ?? (col.hasFilter ? 95 : defaultMinWidth)
+                        })
+                        return result
+                    }
+                }
+            }
+        }
+
+        // 常态展示：所有可扩展列均摊剩余空间
+        const perCol = Math.floor(remaining / expandable.length)
+        const remainder = remaining % expandable.length
+
+        const result: Record<string, number> = { ...baseMap }
+        expandable.forEach((col, idx) => {
+            const extra = perCol + (idx === expandable.length - 1 ? remainder : 0)
+            result[col.key] = baseMap[col.key] + extra
+        })
+        return result
+    }, [cols, getBaseWidth, fillContainer, wrapperWidth, resizingCol, defaultMinWidth])
+
+    const latestRenderWidthsRef = useRef(renderWidths)
+    latestRenderWidthsRef.current = renderWidths
 
     const startResize = useCallback(
         (e: React.MouseEvent, col: ColDef) => {
             e.preventDefault()
             e.stopPropagation()
 
-            const currentW = getColRenderWidth(col)
+            const currentW = renderWidths[col.key] ?? getBaseWidth(col)
             const minW = col.minWidth ?? (col.hasFilter ? 95 : defaultMinWidth)
             const maxW = col.maxWidth ?? defaultMaxWidth
             const onMove = (me: MouseEvent) => {
@@ -310,10 +382,7 @@ export default function ResizableTable({
                 dragRef.current.rafId = requestAnimationFrame(() => {
                     if (dragRef.current) {
                         const targetKey = dragRef.current.key
-                        manualWidthsRef.current[targetKey] = newW
                         setResizingCol({ key: targetKey, width: newW })
-                        setComputedWidths((prev) => ({ ...prev, [targetKey]: newW }))
-                        onColResize?.(targetKey, newW)
                     }
                 })
             }
@@ -326,6 +395,21 @@ export default function ResizableTable({
             const onUp = () => {
                 if (dragRef.current?.rafId) {
                     cancelAnimationFrame(dragRef.current.rafId)
+                }
+                if (dragRef.current) {
+                    const targetKey = dragRef.current.key
+                    const finalRenderWidths = latestRenderWidthsRef.current
+                    const targetCol = cols.find((c) => c.key === targetKey)
+                    for (const c of cols) {
+                        if (isExpandableCol(c) && finalRenderWidths[c.key] !== undefined) {
+                            manualWidthsRef.current[c.key] = finalRenderWidths[c.key]
+                        }
+                    }
+                    if (targetCol && !isExpandableCol(targetCol)) {
+                        manualWidthsRef.current[targetKey] = finalRenderWidths[targetKey]
+                    }
+                    setComputedWidths((prev) => ({ ...prev, ...finalRenderWidths }))
+                    onColResize?.(targetKey, finalRenderWidths[targetKey])
                 }
                 dragRef.current = null
                 setResizingCol(null)
@@ -350,12 +434,11 @@ export default function ResizableTable({
             document.addEventListener('mousemove', onMove)
             document.addEventListener('mouseup', onUp)
         },
-        [getColRenderWidth, defaultMinWidth, defaultMaxWidth, onColResize]
+        [renderWidths, getBaseWidth, cols, defaultMinWidth, defaultMaxWidth, onColResize]
     )
 
     const handleDoubleClick = useCallback(
         (col: ColDef) => {
-            // 双击重置为基于当前数据内容自动计算的最佳宽度
             delete manualWidthsRef.current[col.key]
             const optimalW = calculateColumnOptimalWidth(col, effectiveRows, defaultMinWidth, defaultMaxWidth)
             setComputedWidths((prev) => ({ ...prev, [col.key]: optimalW }))
@@ -364,14 +447,16 @@ export default function ResizableTable({
         [effectiveRows, defaultMinWidth, defaultMaxWidth, onColResize]
     )
 
-    const totalWidth = cols.reduce((sum, c) => sum + getColRenderWidth(c), 0)
-    const tableWidth = Math.max(totalWidth, wrapperWidth || 0, 1)
+    const totalRenderWidth = cols.reduce((sum, c) => sum + (renderWidths[c.key] ?? getBaseWidth(c)), 0)
+    const tableWidth = Math.max(totalRenderWidth, wrapperWidth || 0, 1)
+    const showFiller = !fillContainer && totalRenderWidth < (wrapperWidth || 0)
 
     return (
         <div
             ref={wrapperRef}
-            className={`${s.tableWrapper}${resizingCol ? ' ' + s.isResizing : ''}${wrapperClassName ? ' ' + wrapperClassName : ''
-                }`}
+            className={`${s.tableWrapper}${resizingCol ? ' ' + s.isResizing : ''}${
+                wrapperClassName ? ' ' + wrapperClassName : ''
+            }`}
             style={style}
         >
             <table
@@ -380,10 +465,10 @@ export default function ResizableTable({
             >
                 <colgroup>
                     {cols.map((col) => {
-                        const w = getColRenderWidth(col)
+                        const w = renderWidths[col.key] ?? getBaseWidth(col)
                         return <col key={col.key} style={{ width: w }} />
                     })}
-                    <col style={{ width: 'auto' }} />
+                    {showFiller && <col style={{ width: 'auto' }} />}
                 </colgroup>
                 <thead>
                     <tr>
@@ -391,7 +476,7 @@ export default function ResizableTable({
                             const isLast = idx === cols.length - 1
                             const isResizable = col.resizable !== false && col.key !== '__act__' && col.key !== '__rowact__'
                             const isResizingThis = resizingCol?.key === col.key
-                            const currentW = getColRenderWidth(col)
+                            const currentW = renderWidths[col.key] ?? getBaseWidth(col)
 
                             return (
                                 <th
@@ -420,7 +505,7 @@ export default function ResizableTable({
                                 </th>
                             )
                         })}
-                        <th className={s.thFiller} />
+                        {showFiller && <th className={s.thFiller} />}
                     </tr>
                     {extraHead}
                 </thead>

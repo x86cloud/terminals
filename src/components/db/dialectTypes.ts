@@ -155,13 +155,17 @@ export const SQLITE_DATA_TYPES = getDialectTypeCategories('sqlite')
 export function splitDataType(fullType: string): { baseType: string; length: string } {
     if (!fullType) return { baseType: '', length: '' }
     const trimmed = fullType.trim()
-    const match = trimmed.match(/^([^(]+)(?:\((.*)\))?$/)
+    const match = trimmed.match(/^([^(]+)(?:\(([^)]+)\))?(.*)$/)
     if (!match) {
         return { baseType: trimmed, length: '' }
     }
+    const pre = match[1].trim()
+    const len = match[2] ? match[2].trim() : ''
+    const post = match[3] ? match[3].trim() : ''
+    const base = post ? `${pre} ${post}` : pre
     return {
-        baseType: match[1].trim(),
-        length: match[2] ? match[2].trim() : '',
+        baseType: base,
+        length: len,
     }
 }
 
@@ -173,6 +177,10 @@ export function combineDataType(baseType: string, length?: string): string {
     const cleanLen = (length || '').trim()
     if (!cleanBase) return ''
     if (cleanLen) {
+        if (/unsigned$/i.test(cleanBase)) {
+            const prefix = cleanBase.replace(/\s*unsigned$/i, '').trim()
+            return `${prefix}(${cleanLen}) unsigned`
+        }
         return `${cleanBase}(${cleanLen})`
     }
     return cleanBase
@@ -182,7 +190,7 @@ export function combineDataType(baseType: string, length?: string): string {
  * 判断指定方言下的基础类型是否支持/需要长度与精度输入
  */
 export function isLengthSupported(dialect: DbDialect, baseType: string): boolean {
-    const cleanBase = (baseType || '').trim().toLowerCase()
+    const cleanBase = (baseType || '').trim().toLowerCase().replace(/\s*unsigned$/i, '').trim()
     const categories = getDialectTypeCategories(dialect)
     for (const cat of categories) {
         for (const opt of cat.options) {

@@ -137,6 +137,8 @@
     "pullProgress": "拉取进度日志:",
     "copiedJson": "已复制 JSON",
     "copyJson": "复制 JSON",
+    "copyName": "复制镜像名称",
+    "copiedName": "已复制镜像名称",
     "close": "关闭",
     "colRepo": "仓库名称 / 镜像 (Repository)",
     "colTag": "标签 (Tag)",

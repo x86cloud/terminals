@@ -162,7 +162,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
         {
             title: t('common:actions'),
             key: 'action',
-            width: 60,
+            width: 90,
             render: (_, record) => (
                 <Tooltip title={`${t('ssh:process.kill')} (PID: ${record.pid})`}>
                     <Button

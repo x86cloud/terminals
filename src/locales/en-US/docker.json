@@ -137,6 +137,8 @@
     "pullProgress": "Pull Progress Log:",
     "copiedJson": "JSON copied",
     "copyJson": "Copy JSON",
+    "copyName": "Copy Image Name",
+    "copiedName": "Image name copied to clipboard",
     "close": "Close",
     "colRepo": "Repository",
     "colTag": "Tag",

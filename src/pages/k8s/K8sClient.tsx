@@ -245,7 +245,7 @@ export default function K8sClient({ session }: Props) {
                                 title={t('deleteNsConfirm', { name: currentNamespace, defaultValue: `确定删除命名空间 [${currentNamespace}] 吗？` })}
                                 description={t('deleteNsDesc', '删除命名空间将级联清理该命名空间下的所有 Pod、Deployment、Service 及配置，此操作不可逆！')}
                                 okText={t('deleteNsBtn', '确认删除')}
-                                cancelText={t('common.cancel', { defaultValue: '取消' })}
+                                cancelText={t('common:cancel', { defaultValue: '取消' })}
                                 okButtonProps={{ danger: true }}
                                 onConfirm={handleDeleteCurrentNamespace}
                             >
@@ -349,7 +349,7 @@ export default function K8sClient({ session }: Props) {
                 onOk={handleCreateNamespace}
                 confirmLoading={createNsLoading}
                 okText={t('createNs', '创建命名空间')}
-                cancelText={t('common.cancel', { defaultValue: '取消' })}
+                cancelText={t('common:cancel', { defaultValue: '取消' })}
                 width={420}
             >
                 <div style={{ padding: '12px 0' }}>

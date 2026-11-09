@@ -1,15 +1,15 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Input, Checkbox, Tooltip, App } from 'antd'
+import { Button, Input, Checkbox, Tooltip, Dropdown, App } from 'antd'
 import { useTranslation } from 'react-i18next'
-import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload } from 'lucide-react'
+import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload, Search, SlidersHorizontal } from 'lucide-react'
 import ContextMenu, { closedMenu, MenuItem, MenuState } from '@/components/ContextMenu'
 import { ConfirmModal, ConfirmState, PromptModal, PromptState } from '@/components/Modal'
 import FileEditorModal from '@/pages/ssh/file/FileEditorModal'
 import TransferBar from '@/components/TransferBar'
+import ResizableTable, { ColDef } from '@/components/ResizableTable'
 import { API, subscribe } from '@/api'
 import { FileItem, Transfer } from '@/types'
 import { bytesToBase64, copyText, errorMessage, formatSize, formatTime, parentRemote } from '@/utils'
-import g from '@/styles/global.module.less'
 import fp from '@/pages/ssh/file/FilePanel.module.less'
 import { useFileDropActive } from '@/contexts/DragDropContext'
 
@@ -41,15 +41,42 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
     const [editFilePath, setEditFilePath] = useState('')
     const [dragOver, setDragOver] = useState(false)
     const isNativeDropActive = useFileDropActive(sessionId)
-    const isDropActive = nativeDrop ? isNativeDropActive : dragOver
+    const isDropActive = nativeDrop ? isNativeDropActive : (dragOver || isNativeDropActive)
     const lastIndexRef = useRef<number>(-1)
 
-    const gridCols = useMemo(() => {
-        let cols = 'minmax(0, 1fr) 78px'
-        if (showTime) cols += ' 116px'
-        if (showMode) cols += ' 96px'
-        return cols
-    }, [showTime, showMode])
+    const cols = useMemo<ColDef[]>(() => {
+        const list: ColDef[] = [
+            {
+                key: 'name',
+                label: t('common:name'),
+                minWidth: 160,
+            },
+            {
+                key: 'size',
+                label: t('common:size'),
+                width: 86,
+                minWidth: 70,
+                align: 'right',
+            },
+        ]
+        if (showTime) {
+            list.push({
+                key: 'modTime',
+                label: t('file:modTime'),
+                width: 140,
+                minWidth: 110,
+            })
+        }
+        if (showMode) {
+            list.push({
+                key: 'mode',
+                label: t('file:permissions'),
+                width: 96,
+                minWidth: 80,
+            })
+        }
+        return list
+    }, [showTime, showMode, t])
 
     const onPathChangeRef = useRef(onPathChange)
     onPathChangeRef.current = onPathChange
@@ -133,6 +160,14 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         })
     }, [items, showHidden, filter])
 
+    const selectedSizeText = useMemo(() => {
+        if (selected.length === 0) return ''
+        const selItems = items.filter((it) => selected.includes(it.path) && !it.isDir)
+        if (selItems.length === 0) return ''
+        const totalBytes = selItems.reduce((acc, it) => acc + (it.size || 0), 0)
+        return formatSize(totalBytes)
+    }, [items, selected])
+
     /* ---------------- 交互 ---------------- */
 
     const onRowClick = (e: React.MouseEvent, item: FileItem, index: number) => {
@@ -180,7 +215,10 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                     open: true,
                     title: t('file:insufficientSpaceTitle'),
                     danger: true,
-                    message: t('file:insufficientSpaceDesc', { totalSize: formatSize(est.totalSize), remoteFree: formatSize(est.remoteFree) }),
+                    message: t('file:insufficientSpaceDesc', {
+                        totalSize: formatSize(est.totalSize),
+                        remoteFree: formatSize(est.remoteFree),
+                    }),
                     confirmText: t('file:confirmUpload'),
                     cancelText: t('common:cancel'),
                     onConfirm: async () => {
@@ -252,6 +290,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
             onConfirm: async (value) => {
                 setPrompt(emptyPrompt)
                 try {
+                    const fullPath = path.endsWith('/') ? `${path}${value}` : `${path}/${value}`
                     await API.makeDir(sessionId, path, value)
                     await load(path, true)
                 } catch (err) {
@@ -342,7 +381,10 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                         open: true,
                         title: t('file:insufficientSpaceTitle'),
                         danger: true,
-                        message: t('file:insufficientSpaceDesc', { totalSize: formatSize(est.totalSize), remoteFree: formatSize(est.remoteFree) }),
+                        message: t('file:insufficientSpaceDesc', {
+                            totalSize: formatSize(est.totalSize),
+                            remoteFree: formatSize(est.remoteFree),
+                        }),
                         confirmText: t('file:confirmUpload'),
                         cancelText: t('common:cancel'),
                         onConfirm: async () => {
@@ -366,6 +408,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                 }
             }
         }
+        void load(path, true)
     }
 
     return (
@@ -377,142 +420,219 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
             onDragOver={(e) => {
                 if (nativeDrop) return
                 e.preventDefault()
+                e.dataTransfer.dropEffect = 'copy'
                 setDragOver(true)
             }}
-            onDragLeave={() => !nativeDrop && setDragOver(false)}
+            onDragLeave={(e) => {
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return
+                if (!nativeDrop) setDragOver(false)
+            }}
             onDrop={onDrop}
         >
-            <div className={fp.fileToolbar} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                <Tooltip title={t('file:parentDir')}>
-                    <Button
-                        size="small"
-                        type="text"
-                        icon={<ChevronUp size={15} />}
-                        onClick={() => load(parentRemote(path))}
-                    />
-                </Tooltip>
-                <Tooltip title={t('file:homeDir')}>
-                    <Button
-                        size="small"
-                        type="text"
-                        icon={<Home size={15} />}
-                        onClick={() => load(homeDir || '/')}
-                    />
-                </Tooltip>
-                <Tooltip title={t('common:refresh')}>
-                    <Button
-                        size="small"
-                        type="text"
-                        icon={<RotateCw size={15} />}
-                        onClick={() => load(path)}
-                    />
-                </Tooltip>
-                <Input
-                    size="small"
-                    className={fp.pathInput}
-                    value={pathInput}
-                    onChange={(e) => setPathInput(e.target.value)}
-                    onPressEnter={() => void load(pathInput)}
-                    spellCheck={false}
-                />
-            </div>
+            {/* 单行一体化紧凑工具栏 */}
+            <div className={fp.fileToolbar}>
+                <div className={fp.navActions}>
+                    <Tooltip title={t('file:parentDir')}>
+                        <Button
+                            size="small"
+                            type="text"
+                            className={fp.iconBtn}
+                            icon={<ChevronUp size={15} />}
+                            onClick={() => load(parentRemote(path))}
+                        />
+                    </Tooltip>
+                    <Tooltip title={t('file:homeDir')}>
+                        <Button
+                            size="small"
+                            type="text"
+                            className={fp.iconBtn}
+                            icon={<Home size={14} />}
+                            onClick={() => load(homeDir || '/')}
+                        />
+                    </Tooltip>
+                    <Tooltip title={t('common:refresh')}>
+                        <Button
+                            size="small"
+                            type="text"
+                            className={fp.iconBtn}
+                            icon={<RotateCw size={14} />}
+                            onClick={() => load(path)}
+                        />
+                    </Tooltip>
+                </div>
 
-            <div className={fp.fileSubbar}>
-                <Input
-                    size="small"
-                    className={fp.filterInput}
-                    value={filter}
-                    placeholder={t('file:filterPlaceholder')}
-                    allowClear
-                    onChange={(e) => setFilter(e.target.value)}
-                />
-                <div className={fp.rightOptions}>
-                    <Checkbox
-                        checked={showHidden}
-                        onChange={(e) => setShowHidden(e.target.checked)}
+                <div className={fp.pathWrap}>
+                    <Input
+                        size="small"
+                        className={fp.pathInput}
+                        value={pathInput}
+                        onChange={(e) => setPathInput(e.target.value)}
+                        onPressEnter={() => void load(pathInput)}
+                        spellCheck={false}
+                    />
+                </div>
+
+                <div className={fp.rightTools}>
+                    <Input
+                        size="small"
+                        className={fp.filterInput}
+                        prefix={<Search size={13} className={fp.searchIcon} />}
+                        value={filter}
+                        placeholder={t('file:filterPlaceholder')}
+                        allowClear
+                        onChange={(e) => setFilter(e.target.value)}
+                    />
+                    <Dropdown
+                        trigger={['click']}
+                        placement="bottomRight"
+                        dropdownRender={() => (
+                            <div className={fp.viewDropdownCard}>
+                                <Checkbox
+                                    checked={showHidden}
+                                    onChange={(e) => setShowHidden(e.target.checked)}
+                                >
+                                    {t('file:showHidden')}
+                                </Checkbox>
+                                <Checkbox
+                                    checked={showTime}
+                                    onChange={(e) => setShowTime(e.target.checked)}
+                                >
+                                    {t('file:modTime')}
+                                </Checkbox>
+                                <Checkbox
+                                    checked={showMode}
+                                    onChange={(e) => setShowMode(e.target.checked)}
+                                >
+                                    {t('file:permissions')}
+                                </Checkbox>
+                            </div>
+                        )}
                     >
-                        {t('file:showHidden')}
-                    </Checkbox>
-                    <Checkbox
-                        checked={showTime}
-                        onChange={(e) => setShowTime(e.target.checked)}
-                    >
-                        {t('file:modTime')}
-                    </Checkbox>
-                    <Checkbox
-                        checked={showMode}
-                        onChange={(e) => setShowMode(e.target.checked)}
-                    >
-                        {t('file:permissions')}
-                    </Checkbox>
+                        <Tooltip title={t('file:viewOptions', { defaultValue: '视图设置' })}>
+                            <Button
+                                size="small"
+                                type="text"
+                                className={`${fp.iconBtn}${showHidden || showTime || showMode ? ' ' + fp.activeIconBtn : ''}`}
+                                icon={<SlidersHorizontal size={14} />}
+                            />
+                        </Tooltip>
+                    </Dropdown>
                 </div>
             </div>
 
+            {/* 可拖宽文件列表区，消除外框与行间横线 */}
             <div
-                className={fp.fileList}
+                className={fp.tableContainer}
                 onContextMenu={(e) => {
+                    if ((e.target as HTMLElement).closest(`.${fp.fileTr}`)) return
                     e.preventDefault()
                     setSelected([])
                     setMenu({ open: true, x: e.clientX, y: e.clientY, items: blankMenu() })
                 }}
                 onMouseDown={(e) => {
-                    if (e.target === e.currentTarget) setSelected([])
+                    const el = e.target as HTMLElement
+                    if (
+                        el.closest('th') ||
+                        el.closest(`.${fp.fileTr}`) ||
+                        el.closest('[role="menu"]') ||
+                        el.closest('button') ||
+                        el.closest('input')
+                    ) {
+                        return
+                    }
+                    setSelected([])
                 }}
             >
-                <div className={`${fp.fileRow} ${fp.head}`} style={{ gridTemplateColumns: gridCols }}>
-                    <span className={fp.colName}>{t('common:name')}</span>
-                    <span className={fp.colSize}>{t('common:size')}</span>
-                    {showTime && <span className={fp.colTime}>{t('file:modTime')}</span>}
-                    {showMode && <span className={fp.colMode}>{t('file:permissions')}</span>}
+                <ResizableTable
+                    cols={cols}
+                    wrapperClassName={fp.sftpTableWrapper}
+                    className={fp.sftpTable}
+                >
+                    <tbody>
+                        {loading && (
+                            <tr>
+                                <td colSpan={cols.length} className={fp.fileEmpty}>
+                                    {t('common:loading')}
+                                </td>
+                            </tr>
+                        )}
+                        {!loading && visible.length === 0 && (
+                            <tr>
+                                <td colSpan={cols.length} className={fp.fileEmpty}>
+                                    {t('file:emptyDir')}
+                                </td>
+                            </tr>
+                        )}
+                        {!loading &&
+                            visible.map((item, index) => {
+                                const isSelected = selected.includes(item.path)
+                                return (
+                                    <tr
+                                        key={item.path}
+                                        className={`${fp.fileTr}${isSelected ? ' ' + fp.selected : ''}`}
+                                        onClick={(e) => onRowClick(e, item, index)}
+                                        onDoubleClick={() => open(item)}
+                                        onContextMenu={(e) => {
+                                            e.preventDefault()
+                                            e.stopPropagation()
+                                            const targets = selected.includes(item.path) ? selected : [item.path]
+                                            if (!selected.includes(item.path)) setSelected([item.path])
+                                            setMenu({ open: true, x: e.clientX, y: e.clientY, items: itemMenu(item, targets) })
+                                        }}
+                                    >
+                                        <td>
+                                            <div className={fp.cellName}>
+                                                <span className={`${fp.fileIcon}${item.isDir ? ' ' + fp.dir : ''}`}>
+                                                    {item.isLink ? <LinkIcon size={16} /> : item.isDir ? <Folder size={16} /> : <FileText size={16} />}
+                                                </span>
+                                                <span className={fp.fileName} title={item.path}>
+                                                    {item.name}
+                                                </span>
+                                            </div>
+                                        </td>
+                                        <td className={fp.cellSize}>
+                                            {item.isDir ? '-' : formatSize(item.size)}
+                                        </td>
+                                        {showTime && (
+                                            <td className={fp.cellTime}>
+                                                {formatTime(item.modTime)}
+                                            </td>
+                                        )}
+                                        {showMode && (
+                                            <td className={fp.cellMode}>
+                                                {item.mode}
+                                            </td>
+                                        )}
+                                    </tr>
+                                )
+                            })}
+                    </tbody>
+                </ResizableTable>
+            </div>
+
+            {/* 底部一体化状态栏（左侧统计与选中信息，右侧吸附胶囊传输按钮） */}
+            <div className={fp.fileStatus}>
+                <div className={fp.statusLeft}>
+                    <span>{t('file:itemsCount', { count: visible.length, defaultValue: `${visible.length} 项` })}</span>
+                    {selected.length > 0 && (
+                        <span className={fp.statusSelected}>
+                            {t('file:selectedCount', { count: selected.length, defaultValue: `已选 ${selected.length} 项` })}
+                            {selectedSizeText ? ` (${selectedSizeText})` : ''}
+                        </span>
+                    )}
                 </div>
 
-                {loading && <div className={fp.fileEmpty}>{t('common:loading')}</div>}
-                {!loading && visible.length === 0 && <div className={fp.fileEmpty}>{t('file:emptyDir')}</div>}
-
-                {!loading &&
-                    visible.map((item, index) => (
-                        <div
-                            key={item.path}
-                            className={`${fp.fileRow}${selected.includes(item.path) ? ' ' + fp.selected : ''}`}
-                            style={{ gridTemplateColumns: gridCols }}
-                            onClick={(e) => onRowClick(e, item, index)}
-                            onDoubleClick={() => open(item)}
-                            onContextMenu={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                const targets = selected.includes(item.path) ? selected : [item.path]
-                                if (!selected.includes(item.path)) setSelected([item.path])
-                                setMenu({ open: true, x: e.clientX, y: e.clientY, items: itemMenu(item, targets) })
-                            }}
-                        >
-                            <span className={fp.colName}>
-                                <span className={`${fp.fileIcon}${item.isDir ? ' ' + fp.dir : ''}`}>
-                                    {item.isLink ? <LinkIcon size={16} /> : item.isDir ? <Folder size={16} /> : <FileText size={16} />}
-                                </span>
-                                <span className={fp.fileName} title={item.path}>{item.name}</span>
-                            </span>
-                            <span className={fp.colSize}>{item.isDir ? '-' : formatSize(item.size)}</span>
-                            {showTime && <span className={fp.colTime}>{formatTime(item.modTime)}</span>}
-                            {showMode && <span className={fp.colMode}>{item.mode}</span>}
-                        </div>
-                    ))}
+                <TransferBar
+                    transfers={transfers}
+                    onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
+                    onClear={() => {
+                        API.clearFinishedTransfers()
+                            .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
+                            .catch(() => undefined)
+                    }}
+                />
             </div>
 
-
-
-            <TransferBar
-                transfers={transfers}
-                onCancel={(id) => API.cancelTransfer(id).catch(() => undefined)}
-                onClear={() => {
-                    API.clearFinishedTransfers()
-                        .then(() => setTransfers((prev) => prev.filter((t) => t.status === 'running')))
-                        .catch(() => undefined)
-                }}
-            />
-            <div className={fp.fileStatus}>
-                <span>{t('file:itemsCount', { count: visible.length, defaultValue: `${visible.length} 项` })}</span>
-                <span className={g.spacer} />
-            </div>
             {isDropActive && (
                 <div className={fp.dropHint}>
                     <Upload size={28} />

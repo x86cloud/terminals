@@ -65,7 +65,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         initial: null,
     })
     const [confirm, setConfirm] = useState<ConfirmState>(emptyConfirm)
-    const [nativeDrop, setNativeDrop] = useState(true)
+    const [nativeDrop, setNativeDrop] = useState(false)
 
     const activeIdRef = useRef<string | null>(null)
     const pathsRef = useRef<Record<string, string>>({})

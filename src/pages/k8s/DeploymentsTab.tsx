@@ -240,7 +240,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                         title={t('k8s:deployments.restartConfirm', { name: record.name })}
                         description={t('k8s:deployments.restartDesc')}
                         okText={t('k8s:deployments.confirmRestart')}
-                        cancelText={t('common.cancel')}
+                        cancelText={t('common:cancel')}
                         onConfirm={() => handleRestart(record)}
                     >
                         <Button size="small" icon={<RotateCw size={12} />}>
@@ -252,18 +252,18 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml(record)}
                     >
-                        {t('common.edit')}
+                        {t('common:edit')}
                     </Button>
                     <Popconfirm
                         title={t('k8s:deployments.deleteConfirm', { name: record.name })}
                         description={t('k8s:deployments.deleteDescDetail', { namespace: record.namespace, defaultValue: `所属命名空间: ${record.namespace}。删除后该应用所属的所有 Pod 副本也将被同时销毁，此操作不可逆。` })}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
+                        okText={t('common:confirm')}
+                        cancelText={t('common:cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteDeployment(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            {t('common.delete')}
+                            {t('common:delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -297,14 +297,14 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                         size="small"
                         onClick={openCreateYaml}
                     >
-                        {t('common.create')}
+                        {t('common:create')}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchDeployments}
                     >
-                        {t('common.refresh')}
+                        {t('common:refresh')}
                     </Button>
                 </div>
             </div>
@@ -322,7 +322,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                    showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -345,7 +345,7 @@ export default function DeploymentsTab({ serverId, currentNamespace, initialSear
                 onOk={handleScale}
                 confirmLoading={scaleLoading}
                 okText={t('k8s:deployments.scaleSubmit')}
-                cancelText={t('common.cancel')}
+                cancelText={t('common:cancel')}
             >
                 <div style={{ padding: '12px 0' }}>
                     <div style={{ fontSize: 13, marginBottom: 8, color: 'var(--text-dim)' }}>

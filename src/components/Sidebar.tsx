@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { Input, Button, Tooltip } from 'antd'
 import { useTranslation } from 'react-i18next'
 import {
@@ -111,6 +111,8 @@ export default function Sidebar({
     const [menu, setMenu] = useState<MenuState>(closedMenu)
     // 默认所有分组为折叠状态（未显式展开即为折叠）
     const [userExpanded, setUserExpanded] = useState<Record<string, boolean>>({})
+    const dragIdRef = useRef<string | null>(null)
+    const dragSourceGroupRef = useRef<string | null>(null)
     const [dragId, setDragId] = useState<string | null>(null)
     const [dropGroup, setDropGroup] = useState<string | null>(null)
     const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
@@ -212,14 +214,20 @@ export default function Sidebar({
         return (
             <div key={server.id} className={s.serverGroup}>
                 <div
-                    className={`${s.serverItem}${connectingId === server.id ? ' ' + s.connecting : ''}`}
+                    className={`${s.serverItem}${connectingId === server.id ? ' ' + s.connecting : ''}${dragId === server.id ? ' ' + s.dragging : ''}`}
                     draggable
                     onDragStart={(e) => {
+                        dragIdRef.current = server.id
+                        dragSourceGroupRef.current = server.groupId || ''
                         setDragId(server.id)
-                        e.dataTransfer.effectAllowed = 'move'
-                        e.dataTransfer.setData('text/plain', server.id)
+                        if (e.dataTransfer) {
+                            e.dataTransfer.effectAllowed = 'move'
+                            e.dataTransfer.setData('text/plain', server.id)
+                        }
                     }}
                     onDragEnd={() => {
+                        dragIdRef.current = null
+                        dragSourceGroupRef.current = null
                         setDragId(null)
                         setDropGroup(null)
                     }}
@@ -420,9 +428,12 @@ export default function Sidebar({
                         setMenu({ open: true, x: e.clientX, y: e.clientY, items })
                     }}
                     onDragOver={(e) => {
-                        if (!dragId) return
+                        if (!dragIdRef.current) return
                         e.preventDefault()
-                        setDropGroup((prev) => (prev === '__none__' ? prev : '__none__'))
+                        if (e.dataTransfer) {
+                            e.dataTransfer.dropEffect = 'move'
+                        }
+                        setDropGroup((prev) => (prev && prev !== '__none__' ? prev : '__none__'))
                     }}
                     onDragLeave={(e) => {
                         if (e.currentTarget && e.relatedTarget && (e.currentTarget as Node).contains(e.relatedTarget as Node)) return
@@ -430,8 +441,13 @@ export default function Sidebar({
                     }}
                     onDrop={(e) => {
                         e.preventDefault()
-                        const id = dragId || e.dataTransfer.getData('text/plain')
-                        if (id) onMoveServer(id, '')
+                        const id = dragIdRef.current || e.dataTransfer.getData('text/plain')
+                        const srcGroup = dragSourceGroupRef.current
+                        if (id && srcGroup !== '') {
+                            onMoveServer(id, '')
+                        }
+                        dragIdRef.current = null
+                        dragSourceGroupRef.current = null
                         setDragId(null)
                         setDropGroup(null)
                     }}
@@ -452,9 +468,12 @@ export default function Sidebar({
                                 key={grp.id}
                                 className={`${s.groupBlock}${dropGroup === grp.id ? ' ' + s.dropActive : ''}`}
                                 onDragOver={(e) => {
-                                    if (!dragId) return
+                                    if (!dragIdRef.current) return
                                     e.preventDefault()
                                     e.stopPropagation()
+                                    if (e.dataTransfer) {
+                                        e.dataTransfer.dropEffect = 'move'
+                                    }
                                     setDropGroup((prev) => (prev === grp.id ? prev : grp.id))
                                 }}
                                 onDragLeave={(e) => {
@@ -464,8 +483,15 @@ export default function Sidebar({
                                 onDrop={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    const id = dragId || e.dataTransfer.getData('text/plain')
-                                    if (id) onMoveServer(id, grp.id)
+                                    const id = dragIdRef.current || e.dataTransfer.getData('text/plain')
+                                    const srcGroup = dragSourceGroupRef.current
+                                    if (id && grp.id !== srcGroup) {
+                                        onMoveServer(id, grp.id)
+                                        // 自动展开目标分组以呈现新移入的卡片
+                                        setUserExpanded((prev) => ({ ...prev, [grp.id]: true }))
+                                    }
+                                    dragIdRef.current = null
+                                    dragSourceGroupRef.current = null
                                     setDropGroup(null)
                                     setDragId(null)
                                 }}
@@ -584,7 +610,37 @@ export default function Sidebar({
                         )
                     })}
 
-                    {ungrouped.map((server) => renderServer(server))}
+                    <div
+                        className={`${s.ungroupedSection}${dropGroup === '__none__' ? ' ' + s.dropActive : ''}`}
+                        onDragOver={(e) => {
+                            if (!dragIdRef.current) return
+                            e.preventDefault()
+                            e.stopPropagation()
+                            if (e.dataTransfer) {
+                                e.dataTransfer.dropEffect = 'move'
+                            }
+                            setDropGroup('__none__')
+                        }}
+                        onDragLeave={(e) => {
+                            if (e.currentTarget && e.relatedTarget && (e.currentTarget as Node).contains(e.relatedTarget as Node)) return
+                            setDropGroup((p) => (p === '__none__' ? null : p))
+                        }}
+                        onDrop={(e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const id = dragIdRef.current || e.dataTransfer.getData('text/plain')
+                            const srcGroup = dragSourceGroupRef.current
+                            if (id && srcGroup !== '') {
+                                onMoveServer(id, '')
+                            }
+                            dragIdRef.current = null
+                            dragSourceGroupRef.current = null
+                            setDropGroup(null)
+                            setDragId(null)
+                        }}
+                    >
+                        {ungrouped.map((server) => renderServer(server))}
+                    </div>
                 </div>
 
                 <div className={s.tools}>

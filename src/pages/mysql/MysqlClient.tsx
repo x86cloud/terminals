@@ -63,22 +63,16 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
     const [isReady, setIsReady] = useState(false)
 
     // 工作区标签栏管理
-    const [tabs, setTabs] = useState<MysqlTabItem[]>([
+    const initialTabs: MysqlTabItem[] = [
         {
             key: 'status',
             label: 'dashboard',
             type: 'status',
-            dbName: currentDb,
+            dbName: session.database || '',
             closable: false,
         },
-        {
-            key: 'sql_1',
-            label: 'sqlEditor',
-            type: 'sql',
-            dbName: currentDb,
-            closable: false,
-        },
-    ])
+    ]
+    const [tabs, setTabs] = useState<MysqlTabItem[]>(initialTabs)
     const [activeTabKey, setActiveTabKey] = useState<string>('status')
 
     // 状态监控数据
@@ -146,11 +140,19 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
             await API.mysqlConnect(serverId)
             const dbs = await API.mysqlDatabases(serverId)
             setDatabases(dbs || [])
-            if (dbs && dbs.length > 0) {
-                const targetDb = session.database && dbs.includes(session.database) ? session.database : dbs[0]
-                setCurrentDb(targetDb)
-                await loadTables(targetDb)
-                setExpandedKeys([`db_${targetDb}`, `tbls_${targetDb}`])
+            if (session.database) {
+                if (dbs && dbs.includes(session.database)) {
+                    setCurrentDb(session.database)
+                    await loadTables(session.database)
+                    setExpandedKeys([`db_${session.database}`, `tbls_${session.database}`])
+                } else {
+                    message.warning(t('db:mysql.dbNotFound', { db: session.database, defaultValue: `未找到指定的默认数据库: ${session.database}` }))
+                    setCurrentDb('')
+                    setExpandedKeys([])
+                }
+            } else {
+                setCurrentDb('')
+                setExpandedKeys([])
             }
             setIsReady(true)
         } catch (e: any) {
@@ -239,9 +241,25 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
         setActiveTabKey(tabKey)
     }
 
+    // 打开或新建 SQL 查询 Tab
+    const openSqlTab = (dbName?: string) => {
+        const target = dbName !== undefined ? dbName : currentDb
+        const sqlCount = tabs.filter((t) => t.type === 'sql').length + 1
+        const tabKey = `sql_${Date.now()}_${sqlCount}`
+        const newTab: MysqlTabItem = {
+            key: tabKey,
+            label: target ? `${target} (SQL)` : t('db:mysql.sqlEditor'),
+            type: 'sql',
+            dbName: target,
+            closable: true,
+        }
+        setTabs((prev) => [...prev, newTab])
+        setActiveTabKey(tabKey)
+    }
+
     const getTabLabel = (item: MysqlTabItem) => {
         if (item.type === 'status') return t('db:mysql.dashboard')
-        if (item.type === 'sql') return t('db:mysql.sqlEditor')
+        if (item.type === 'sql') return item.dbName ? `${item.dbName} (SQL)` : t('db:mysql.sqlEditor')
         if (item.type === 'users') return t('db:mysql.usersGrants')
         if (item.type === 'er') return t('db:mysql.erDiagram', { dbName: item.dbName })
         return item.label
@@ -568,6 +586,15 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
     // 数据库右键菜单
     const getDbMenuItems = (dbName: string): MenuProps['items'] => [
         {
+            key: 'new-query',
+            icon: <Play size={14} />,
+            label: t('db:mysql.menu.newQuery', { defaultValue: '新建查询' }),
+            onClick: () => {
+                setCurrentDb(dbName)
+                openSqlTab(dbName)
+            },
+        },
+        {
             key: 'new-table',
             icon: <Plus size={14} />,
             label: t('db:mysql.menu.newTable'),
@@ -686,6 +713,14 @@ export default function MysqlClient({ session, onClose: _onClose, onChange }: Pr
                         MySQL
                     </span>
                     <Space size={4}>
+                        <Tooltip title={t('db:mysql.menu.newQuery', { defaultValue: '新建查询' })}>
+                            <Button
+                                size="small"
+                                type="text"
+                                icon={<Play size={14} />}
+                                onClick={() => openSqlTab(currentDb)}
+                            />
+                        </Tooltip>
                         <Tooltip title={t('db:mysql.menu.newDb')}>
                             <Button
                                 size="small"

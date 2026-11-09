@@ -82,6 +82,20 @@ impl Store {
         srv.postgres_ssh_key_data = self.box_cipher.encrypt(&srv.postgres_ssh_key_data);
     }
 
+    fn decrypt_settings(&self, settings: &mut AppSettings) {
+        settings.ai_api_key = self.box_cipher.decrypt(&settings.ai_api_key);
+        for m in &mut settings.ai_models {
+            m.api_key = self.box_cipher.decrypt(&m.api_key);
+        }
+    }
+
+    fn encrypt_settings(&self, settings: &mut AppSettings) {
+        settings.ai_api_key = self.box_cipher.encrypt(&settings.ai_api_key);
+        for m in &mut settings.ai_models {
+            m.api_key = self.box_cipher.encrypt(&m.api_key);
+        }
+    }
+
     fn load(&self) -> Result<(), String> {
         let mut guard = self.inner.write().map_err(|e| e.to_string())?;
         if let Ok(data) = fs::read(&self.file) {
@@ -89,6 +103,7 @@ impl Store {
                 for s in &mut wrapper.servers {
                     self.decrypt_server(s);
                 }
+                self.decrypt_settings(&mut wrapper.settings);
                 guard.servers = wrapper.servers;
                 guard.groups = wrapper.groups;
                 if wrapper.settings.theme_mode.is_empty() {
@@ -121,10 +136,12 @@ impl Store {
         for s in &mut out {
             self.encrypt_server(s);
         }
+        let mut encrypted_settings = guard.settings.clone();
+        self.encrypt_settings(&mut encrypted_settings);
         let wrapper = ServersFileWrapper {
             servers: out,
             groups: guard.groups.clone(),
-            settings: guard.settings.clone(),
+            settings: encrypted_settings,
         };
         storage::write_json_atomic(&self.file, &wrapper)
     }

@@ -265,18 +265,18 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('Service', record.namespace, record.name)}
                     >
-                        {t('common.edit')}
+                        {t('common:edit')}
                     </Button>
                     <Popconfirm
                         title={t('k8s:network.deleteConfirm', { name: record.name })}
                         description={t('k8s:network.deleteDesc', { namespace: record.namespace })}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
+                        okText={t('common:confirm')}
+                        cancelText={t('common:cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteService(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            {t('common.delete')}
+                            {t('common:delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -371,18 +371,18 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('Ingress', record.namespace, record.name)}
                     >
-                        {t('common.edit')}
+                        {t('common:edit')}
                     </Button>
                     <Popconfirm
                         title={t('k8s:network.deleteIngressConfirm', { name: record.name })}
                         description={t('k8s:network.deleteIngressDesc', { namespace: record.namespace })}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
+                        okText={t('common:confirm')}
+                        cancelText={t('common:cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteIngress(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            {t('common.delete')}
+                            {t('common:delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -445,14 +445,14 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         size="small"
                         onClick={() => openCreateYaml(subTab === 'service' ? 'Service' : 'Ingress')}
                     >
-                        {`${t('common.create')} ${subTab === 'service' ? 'Service' : 'Ingress'}`}
+                        {`${t('common:create')} ${subTab === 'service' ? 'Service' : 'Ingress'}`}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchData}
                     >
-                        {t('common.refresh')}
+                        {t('common:refresh')}
                     </Button>
                 </div>
             </div>
@@ -471,7 +471,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         total: filteredServices.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                        showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)
@@ -491,7 +491,7 @@ export default function NetworkTab({ serverId, currentNamespace, initialSearchKw
                         total: filteredIngresses.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                        showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)

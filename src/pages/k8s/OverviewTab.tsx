@@ -185,7 +185,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     <div className={s.statCardValue}>
                         {overview?.nodesReady ?? 0}
                         <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 400, marginLeft: 6 }}>
-                            / {overview?.nodesTotal ?? 0} {t('common.ready', { defaultValue: '就绪' })}
+                            / {overview?.nodesTotal ?? 0} {t('common:ready', { defaultValue: '就绪' })}
                         </span>
                     </div>
                     <div className={s.statCardFooter}>
@@ -213,7 +213,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     <div className={s.statCardValue}>
                         {overview?.podsRunning ?? 0}
                         <span style={{ fontSize: 14, color: 'var(--text-dim)', fontWeight: 400, marginLeft: 6 }}>
-                            / {overview?.podsTotal ?? 0} {t('common.running', { defaultValue: '运行中' })}
+                            / {overview?.podsTotal ?? 0} {t('common:running', { defaultValue: '运行中' })}
                         </span>
                     </div>
                     <div className={s.statCardFooter}>
@@ -273,7 +273,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                             fetchNodes()
                         }}
                     >
-                        {t('common.refresh', { defaultValue: '刷新' })}
+                        {t('common:refresh', { defaultValue: '刷新' })}
                     </Button>
                 </div>
             </div>
@@ -291,7 +291,7 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                    showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)

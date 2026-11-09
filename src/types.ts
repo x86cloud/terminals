@@ -1339,6 +1339,7 @@ export interface AppSettings {
     autoConnect: boolean
     dbDefaultLimit: string
     globalFontFamily?: string
+    aiEnabled?: boolean
     aiBaseUrl?: string
     aiApiKey?: string
     aiModel?: string
@@ -1599,5 +1600,34 @@ export interface ConfigIOResult {
     groupsCount: number
     message: string
 }
+
+export interface AgentStatusInfo {
+    enabled: boolean
+    orchestrationMode: string
+    activeModelId: string
+    activeModelName: string
+    activeModel: string
+    hasApiKey: boolean
+}
+
+export interface ReActStepRecord {
+    id: string
+    turn: number
+    stepType: 'think' | 'action' | 'observation' | string
+    title: string
+    content: string
+    status: 'running' | 'completed' | 'failed' | string
+    durationMs: number
+    timestamp: number
+}
+
+export interface ReActRunResult {
+    sessionId: string
+    content: string
+    reasoningContent: string
+    steps: ReActStepRecord[]
+    turnsUsed: number
+}
+
 
 

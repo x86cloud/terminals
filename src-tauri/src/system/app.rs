@@ -198,6 +198,8 @@ pub async fn save_app_settings(
     state: State<'_, AppState>,
     settings: AppSettings,
 ) -> Result<AppSettings, String> {
-    state.store.save_settings(settings)
+    let saved = state.store.save_settings(settings)?;
+    state.agent.update_settings(saved.clone());
+    Ok(saved)
 }
 

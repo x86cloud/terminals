@@ -11,103 +11,285 @@
     height: 100%;
     flex: 1;
     min-height: 0;
+    background: @stage-bg;
 }
 
-.fileToolbar,
-.fileSubbar {
+/* ==================== 单行一体化紧凑工具栏 ==================== */
+.fileToolbar {
     display: flex;
     align-items: center;
     gap: 6px;
-    padding: 7px 8px;
+    padding: 0 8px;
+    height: 36px;
+    min-height: 36px;
     border-bottom: 1px solid @border;
+    background: @stage-bg;
+    box-sizing: border-box;
+    flex-shrink: 0;
 }
 
-.fileSubbar {
-    justify-content: space-between;
-    gap: @space-md;
-}
-
-.rightOptions {
+.navActions {
     display: flex;
     align-items: center;
-    gap: @space-md;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.iconBtn {
+    width: 26px !important;
+    height: 26px !important;
+    min-width: 26px !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: @text-dim !important;
+    border: none !important;
+    background: transparent !important;
+    border-radius: @radius-sm !important;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    &:hover {
+        color: @text !important;
+        background: color-mix(in srgb, @text 6%, transparent) !important;
+    }
+
+    &:active {
+        color: @accent !important;
+    }
+
+    &.activeIconBtn {
+        color: @accent !important;
+        background: color-mix(in srgb, @accent 10%, transparent) !important;
+    }
+}
+
+.pathWrap {
+    flex: 1;
+    min-width: 100px;
+    display: flex;
+    align-items: center;
 }
 
 .pathInput {
-    flex: 1;
+    width: 100%;
+    border: none !important;
+    background: color-mix(in srgb, @text 4%, transparent) !important;
+    color: @text !important;
+    border-radius: @radius-sm !important;
+    padding: 3px 8px !important;
+    font-size: 12px !important;
+    font-family: @font-mono !important;
+    box-shadow: none !important;
+    outline: none !important;
+    height: 26px !important;
+    line-height: 20px !important;
+    transition: all 0.15s ease !important;
+
+    &:hover,
+    &:focus,
+    &:focus-within {
+        background: color-mix(in srgb, @text 7%, transparent) !important;
+        box-shadow: 0 0 0 1px color-mix(in srgb, @accent 35%, transparent) !important;
+    }
+
+    :global(input) {
+        border: none !important;
+        background: transparent !important;
+        color: inherit !important;
+        font-family: inherit !important;
+        font-size: inherit !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
+}
+
+.rightTools {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
 }
 
 .filterInput {
-    flex: 0 1 140px;
+    width: 110px;
+    border: none !important;
+    background: color-mix(in srgb, @text 4%, transparent) !important;
+    border-radius: @radius-sm !important;
+    padding: 2px 6px !important;
+    font-size: 11.5px !important;
+    height: 26px !important;
+    box-shadow: none !important;
+    outline: none !important;
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1) !important;
+
+    &:hover,
+    &:focus,
+    &:focus-within {
+        width: 145px;
+        background: color-mix(in srgb, @text 7%, transparent) !important;
+        box-shadow: 0 0 0 1px color-mix(in srgb, @accent 35%, transparent) !important;
+    }
+
+    :global(input) {
+        border: none !important;
+        background: transparent !important;
+        font-size: inherit !important;
+        box-shadow: none !important;
+        outline: none !important;
+    }
 }
 
-.fileList {
+.searchIcon {
+    color: @text-dim;
+    opacity: 0.7;
+}
+
+.viewDropdownCard {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 14px;
+    background: @stage-bg;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+    min-width: 130px;
+    user-select: none;
+
+    :global(.ant-checkbox-wrapper) {
+        font-size: 12px;
+        color: @text;
+        margin: 0;
+        cursor: pointer;
+
+        &:hover {
+            color: @accent;
+        }
+    }
+}
+
+/* ==================== 表格容器 & 可拖宽表格 ==================== */
+.tableContainer {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+}
+
+.sftpTableWrapper {
     flex: 1;
     min-height: 0;
     overflow: auto;
-    .fill();
+    border: none !important;
+    border-radius: 0 !important;
+    background: @stage-bg !important;
+    position: relative;
 }
 
-.fileRow {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 78px 116px 96px;
-    align-items: center;
-    gap: 6px;
-    padding: 3px 10px;
-    user-select: none;
-    cursor: default;
-    border-radius: @radius-sm;
+.sftpTable {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 12px;
+    min-width: 100%;
+    background: @stage-bg;
 
-    &.head {
-        position: sticky;
+    th {
+        background: @stage-bg !important;
+        color: @text-dim !important;
+        font-weight: 600 !important;
+        font-size: 11.5px !important;
+        position: sticky !important;
         top: 0;
-        z-index: 1;
-        background: @bg-2;
-        color: @text-dim;
-        font-size: 11.5px;
-        border-bottom: 1px solid @border;
-        border-radius: 0;
-        margin-bottom: 6px;
+        z-index: 5;
+        border-bottom: 1px solid @border !important;
+        border-right: 1px solid color-mix(in srgb, @border 45%, transparent) !important;
+        user-select: none;
+        padding: 5px 10px !important;
+        box-shadow: none !important;
+        box-sizing: border-box;
+
+        &:last-child {
+            border-right: none !important;
+        }
     }
 
-    &:not(.head) {
-        margin: 3px 6px;
-    }
+    td {
+        border-right: 1px solid color-mix(in srgb, @border 30%, transparent) !important;
+        border-bottom: none !important;
+        padding: 4px 10px !important;
+        height: 28px !important;
+        line-height: 20px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+        box-sizing: border-box;
 
-    &:not(.head):hover {
-        background: @bg-3;
+        &:last-child {
+            border-right: none !important;
+        }
+    }
+}
+
+.fileTr {
+    background: @stage-bg;
+    transition: background 0.1s ease;
+    cursor: default;
+    user-select: none;
+
+    &:hover {
+        background: color-mix(in srgb, @text 4%, @stage-bg) !important;
     }
 
     &.selected {
-        background: @select-bg;
+        background: color-mix(in srgb, @accent 12%, @stage-bg) !important;
+
+        td {
+            color: @accent !important;
+        }
+
+        .cellSize,
+        .cellTime,
+        .cellMode {
+            color: color-mix(in srgb, @accent 80%, @text-dim) !important;
+        }
     }
 }
 
-.colName {
+.cellName {
     display: flex;
     align-items: center;
     gap: 7px;
-    .fill();
+    overflow: hidden;
 }
 
 .fileName {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    user-select: text;
 }
 
 .fileIcon {
-    display: flex;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: @text-dim;
+    flex-shrink: 0;
 
     &.dir {
         color: #e3b341;
     }
 }
 
-.colSize,
-.colTime,
-.colMode {
+.cellSize,
+.cellTime,
+.cellMode {
     color: @text-dim;
     font-size: 11.5px;
     white-space: nowrap;
@@ -115,30 +297,55 @@
     text-overflow: ellipsis;
 }
 
-.colSize {
+.cellSize {
     text-align: right;
+    font-family: @font-mono;
+}
+
+.cellTime,
+.cellMode {
+    font-family: @font-mono;
 }
 
 .fileEmpty {
-    padding: 28px 12px;
-    text-align: center;
-    color: @text-dim;
+    padding: 36px 12px !important;
+    text-align: center !important;
+    color: @text-dim !important;
+    font-size: 12.5px !important;
+    border-right: none !important;
 }
 
+/* ==================== 底部极简统一状态栏 ==================== */
 .fileStatus {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 5px 10px;
+    justify-content: space-between;
+    height: 28px;
+    min-height: 28px;
+    padding: 0 10px;
     border-top: 1px solid @border;
     background: @stage-bg;
     color: @text-dim;
     font-size: 11.5px;
     flex: none;
+    box-sizing: border-box;
+    position: relative;
+    user-select: none;
+}
 
-    .hint {
-        opacity: .8;
-    }
+.statusLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.statusSelected {
+    color: @accent;
+    font-weight: 500;
 }
 
 .dropHint {
@@ -153,5 +360,5 @@
     border: 2px dashed @accent;
     color: @accent;
     pointer-events: none;
-    z-index: 5;
+    z-index: 50;
 }

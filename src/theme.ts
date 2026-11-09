@@ -62,7 +62,11 @@ export function getAntdTheme(themeMode: 'dark' | 'light' | 'system' = 'dark'): T
                 headerBg: isDark ? '#1e2228' : '#ffffff',
             },
             Table: {
-                borderRadius: 10,
+                borderRadius: 0,
+                borderRadiusLG: 0,
+                borderRadiusSM: 0,
+                borderRadiusXS: 0,
+                headerBorderRadius: 0,
                 colorBgContainer: isDark ? '#181a1f' : '#ffffff',
                 headerBg: isDark ? '#20242b' : '#e9edf2',
             },

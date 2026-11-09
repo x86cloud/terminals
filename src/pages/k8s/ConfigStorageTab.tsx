@@ -266,18 +266,18 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('ConfigMap', record.namespace, record.name)}
                     >
-                        {t('common.edit')}
+                        {t('common:edit')}
                     </Button>
                     <Popconfirm
                         title={t('k8s:storage.deleteConfigConfirm', { name: record.name })}
                         description={t('k8s:storage.deleteConfigDesc', { namespace: record.namespace })}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
+                        okText={t('common:confirm')}
+                        cancelText={t('common:cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteConfigMap(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            {t('common.delete')}
+                            {t('common:delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -355,18 +355,18 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('Secret', record.namespace, record.name)}
                     >
-                        {t('common.edit')}
+                        {t('common:edit')}
                     </Button>
                     <Popconfirm
                         title={t('k8s:storage.deleteSecretConfirm', { name: record.name })}
                         description={t('k8s:storage.deleteSecretDesc', { namespace: record.namespace })}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
+                        okText={t('common:confirm')}
+                        cancelText={t('common:cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeleteSecret(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            {t('common.delete')}
+                            {t('common:delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -462,18 +462,18 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         icon={<Code size={12} />}
                         onClick={() => openEditYaml('PersistentVolumeClaim', record.namespace, record.name)}
                     >
-                        {t('common.edit')}
+                        {t('common:edit')}
                     </Button>
                     <Popconfirm
                         title={t('k8s:storage.deletePvcConfirm', { name: record.name })}
                         description={t('k8s:storage.deletePvcDesc', { namespace: record.namespace })}
-                        okText={t('common.confirm')}
-                        cancelText={t('common.cancel')}
+                        okText={t('common:confirm')}
+                        cancelText={t('common:cancel')}
                         okButtonProps={{ danger: true }}
                         onConfirm={() => handleDeletePVC(record)}
                     >
                         <Button size="small" danger icon={<Trash2 size={12} />}>
-                            {t('common.delete')}
+                            {t('common:delete')}
                         </Button>
                     </Popconfirm>
                 </Space>
@@ -551,14 +551,14 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         size="small"
                         onClick={() => openCreateYaml(getResourceKindName())}
                     >
-                        {`${t('common.create')} ${subTab === 'configmap' ? 'ConfigMap' : subTab === 'secret' ? 'Secret' : 'PVC'}`}
+                        {`${t('common:create')} ${subTab === 'configmap' ? 'ConfigMap' : subTab === 'secret' ? 'Secret' : 'PVC'}`}
                     </Button>
                     <Button
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
                         size="small"
                         onClick={fetchData}
                     >
-                        {t('common.refresh')}
+                        {t('common:refresh')}
                     </Button>
                 </div>
             </div>
@@ -577,7 +577,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         total: filteredConfigMaps.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                        showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)
@@ -597,7 +597,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         total: filteredSecrets.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                        showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)
@@ -617,7 +617,7 @@ export default function ConfigStorageTab({ serverId, currentNamespace, initialSe
                         total: filteredPvcs.length,
                         showSizeChanger: true,
                         pageSizeOptions: ['10', '20', '50', '100'],
-                        showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                        showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                         onChange: (p, ps) => {
                             setPage(p)
                             setPageSize(ps)
