@@ -204,6 +204,27 @@ pub fn join_remote(base: &str, child: &str) -> String {
     }
 }
 
+/// Joins a relative sub-path onto a normalized remote base directory,
+/// normalizing separators and rejecting directory traversal (`..`) segments.
+pub fn join_remote_relative(base: &str, rel: &str) -> Result<String, String> {
+    let base_norm = normalize_remote(base);
+    let replaced = rel.trim().replace('\\', "/");
+    let mut parts: Vec<&str> = Vec::new();
+    for seg in replaced.split('/') {
+        let s = seg.trim();
+        match s {
+            "" | "." => {}
+            ".." => return Err(format!("非法相对路径（不允许包含 '..'）: {}", rel)),
+            valid => parts.push(valid),
+        }
+    }
+    if parts.is_empty() {
+        Ok(base_norm)
+    } else {
+        Ok(join_remote(&base_norm, &parts.join("/")))
+    }
+}
+
 pub fn parent_remote(p: &str) -> String {
     let norm = normalize_remote(p);
     if norm == "/" {
@@ -361,4 +382,29 @@ pub fn is_cron_expression(fields: &[&str]) -> bool {
     }
     true
 }
+
+#[cfg(test)]
+mod tests {
+    use super::join_remote_relative;
+
+    #[test]
+    fn test_join_remote_relative_normalizes_separators() {
+        assert_eq!(
+            join_remote_relative("/home/user", "my-dir\\sub\\file.txt").unwrap(),
+            "/home/user/my-dir/sub/file.txt"
+        );
+        assert_eq!(
+            join_remote_relative("/", "./dir/./inner/").unwrap(),
+            "/dir/inner"
+        );
+        assert_eq!(join_remote_relative("/var/www", "").unwrap(), "/var/www");
+    }
+
+    #[test]
+    fn test_join_remote_relative_rejects_traversal() {
+        assert!(join_remote_relative("/home/user", "../etc/passwd").is_err());
+        assert!(join_remote_relative("/home/user", "a/../../b").is_err());
+    }
+}
+
 

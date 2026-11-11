@@ -228,6 +228,31 @@ export const API = {
         invoke<void>('sftp_upload_paths', { sessionId, remoteDir, localPaths }),
     uploadData: (sessionId: string, remoteDir: string, name: string, base64Data: string): Promise<void> =>
         invoke<void>('sftp_upload_data', { sessionId, remoteDir, name, base64Data }),
+    beginDropUpload: (
+        sessionId: string,
+        remoteDir: string,
+        name: string,
+        totalSize: number
+    ): Promise<string> =>
+        invoke<string>('sftp_begin_drop_upload', { sessionId, remoteDir, name, totalSize }),
+    dropUploadMkdir: (uploadId: string, relativeDir: string): Promise<void> =>
+        invoke<void>('sftp_drop_upload_mkdir', { uploadId, relativeDir }),
+    dropUploadWriteChunk: (
+        uploadId: string,
+        relativePath: string,
+        dataBase64: string,
+        isFirstChunk: boolean,
+        isLastChunk: boolean
+    ): Promise<void> =>
+        invoke<void>('sftp_drop_upload_write_chunk', {
+            uploadId,
+            relativePath,
+            dataBase64,
+            isFirstChunk,
+            isLastChunk,
+        }),
+    finishDropUpload: (uploadId: string, errorMsg?: string | null): Promise<void> =>
+        invoke<void>('sftp_finish_drop_upload', { uploadId, errorMsg: errorMsg ?? null }),
     estimateUpload: (sessionId: string, remoteDir: string, localPaths: string[]): Promise<UploadEstimate> =>
         invoke<UploadEstimate>('sftp_estimate_upload', { sessionId, remoteDir, localPaths }),
     estimateUploadData: (sessionId: string, remoteDir: string, dataSize: number): Promise<UploadEstimate> =>

@@ -1,13 +1,15 @@
 use crate::core::ServerConfig;
 use crate::ssh::tunnel::{connect_russh, exec_ssh_command, SshClientHandler};
 use crate::ssh::types::{
-    join_remote, normalize_remote, parent_remote, shell_quote, SessionInfo, Transfer,
+    join_remote, join_remote_relative, normalize_remote, parent_remote, shell_quote, SessionInfo,
+    Transfer,
 };
 use base64::engine::general_purpose::STANDARD as BASE64;
 use base64::Engine;
 use chrono::Utc;
 use russh::client;
 use russh::ChannelMsg;
+use russh_sftp::client::fs::File as SftpFile;
 use russh_sftp::client::SftpSession;
 use serde_json::json;
 use std::collections::HashMap;
@@ -166,9 +168,28 @@ pub struct TransferInner {
     pub last_emit: HashMap<String, Instant>,
 }
 
+pub struct DropUploadFileHandle {
+    pub remote_path: String,
+    pub file: SftpFile,
+}
+
+pub struct DropUploadInner {
+    pub sftp: SftpSession,
+    pub current_file: Option<DropUploadFileHandle>,
+}
+
+pub struct DropUploadSession {
+    pub id: String,
+    pub session_id: String,
+    pub remote_dir: String,
+    pub cancel_rx: TokioMutex<watch::Receiver<bool>>,
+    pub inner: TokioMutex<DropUploadInner>,
+}
+
 pub struct SshManager {
     pub sessions: RwLock<HashMap<String, Arc<SshSession>>>,
     pub transfers: StdMutex<TransferInner>,
+    pub drop_uploads: TokioMutex<HashMap<String, Arc<DropUploadSession>>>,
 }
 
 impl Default for SshManager {
@@ -187,6 +208,7 @@ impl SshManager {
                 cancels: HashMap::new(),
                 last_emit: HashMap::new(),
             }),
+            drop_uploads: TokioMutex::new(HashMap::new()),
         }
     }
 
@@ -212,12 +234,41 @@ impl SshManager {
             let mut guard = self.sessions.write().await;
             guard.remove(id)
         };
+        let stale_uploads: Vec<Arc<DropUploadSession>> = {
+            let mut guard = self.drop_uploads.lock().await;
+            let keys: Vec<String> = guard
+                .iter()
+                .filter(|(_, v)| v.session_id == id)
+                .map(|(k, _)| k.clone())
+                .collect();
+            keys.into_iter().filter_map(|k| guard.remove(&k)).collect()
+        };
+        for up in stale_uploads {
+            self.cancel_transfer(&up.id);
+            let mut inner = up.inner.lock().await;
+            if let Some(mut f) = inner.current_file.take() {
+                let _ = f.file.shutdown().await;
+            }
+            let _ = inner.sftp.close().await;
+        }
         if let Some(s) = removed {
             s.close().await;
         }
     }
 
     pub async fn close_all(&self) {
+        let stale_uploads: Vec<Arc<DropUploadSession>> = {
+            let mut guard = self.drop_uploads.lock().await;
+            guard.drain().map(|(_, v)| v).collect()
+        };
+        for up in stale_uploads {
+            self.cancel_transfer(&up.id);
+            let mut inner = up.inner.lock().await;
+            if let Some(mut f) = inner.current_file.take() {
+                let _ = f.file.shutdown().await;
+            }
+            let _ = inner.sftp.close().await;
+        }
         let all: Vec<Arc<SshSession>> = {
             let mut guard = self.sessions.write().await;
             guard.drain().map(|(_, v)| v).collect()
@@ -727,6 +778,200 @@ impl SshManager {
         if let Some(a) = app {
             self.notify_dir_changed(a, session_id, &target_dir);
         }
+        Ok(())
+    }
+
+    async fn get_drop_upload(&self, upload_id: &str) -> Result<Arc<DropUploadSession>, String> {
+        let guard = self.drop_uploads.lock().await;
+        guard
+            .get(upload_id)
+            .cloned()
+            .ok_or_else(|| format!("上传会话不存在或已结束: {}", upload_id))
+    }
+
+    async fn check_drop_canceled(drop: &DropUploadSession) -> Result<(), String> {
+        let rx = drop.cancel_rx.lock().await;
+        if *rx.borrow() {
+            return Err("已取消".to_string());
+        }
+        Ok(())
+    }
+
+    /// Starts an aggregated drop upload transfer reusing a single dedicated SFTP session.
+    pub async fn begin_drop_upload(
+        &self,
+        app: &AppHandle,
+        session_id: &str,
+        remote_dir: &str,
+        name: &str,
+        total_size: i64,
+    ) -> Result<String, String> {
+        let session = self.get_session(session_id).await?;
+        let remote_dir_norm = session.resolve_remote_path(remote_dir);
+        let sftp = session.open_new_sftp().await?;
+        if let Err(err) = mkdir_all_remote(&sftp, &remote_dir_norm).await {
+            let _ = sftp.close().await;
+            return Err(err);
+        }
+
+        let display_name = name.trim();
+        let transfer_name = if display_name.is_empty() {
+            "upload".to_string()
+        } else {
+            display_name.to_string()
+        };
+        let remote_path = join_remote_relative(&remote_dir_norm, &transfer_name)
+            .unwrap_or_else(|_| remote_dir_norm.clone());
+
+        let (tid, cancel_rx) = self.create_transfer(
+            app,
+            session_id,
+            "upload",
+            &transfer_name,
+            "",
+            &remote_path,
+            total_size.max(0),
+        );
+
+        let drop_sess = Arc::new(DropUploadSession {
+            id: tid.clone(),
+            session_id: session_id.to_string(),
+            remote_dir: remote_dir_norm,
+            cancel_rx: TokioMutex::new(cancel_rx),
+            inner: TokioMutex::new(DropUploadInner {
+                sftp,
+                current_file: None,
+            }),
+        });
+
+        let mut guard = self.drop_uploads.lock().await;
+        guard.insert(tid.clone(), drop_sess);
+        Ok(tid)
+    }
+
+    /// Creates a directory (including nested empty directories) inside an active drop upload session.
+    pub async fn drop_upload_mkdir(
+        &self,
+        upload_id: &str,
+        relative_dir: &str,
+    ) -> Result<(), String> {
+        let drop = self.get_drop_upload(upload_id).await?;
+        Self::check_drop_canceled(&drop).await?;
+        let target_dir = join_remote_relative(&drop.remote_dir, relative_dir)?;
+        let inner = drop.inner.lock().await;
+        mkdir_all_remote(&inner.sftp, &target_dir).await
+    }
+
+    /// Streams a file chunk (supports empty 0-byte files) on the reused SFTP session.
+    pub async fn drop_upload_write_chunk(
+        &self,
+        app: &AppHandle,
+        upload_id: &str,
+        relative_path: &str,
+        data_base64: &str,
+        is_first_chunk: bool,
+        is_last_chunk: bool,
+    ) -> Result<(), String> {
+        let drop = self.get_drop_upload(upload_id).await?;
+        Self::check_drop_canceled(&drop).await?;
+
+        let raw = if data_base64.trim().is_empty() {
+            Vec::new()
+        } else {
+            BASE64
+                .decode(data_base64.trim())
+                .map_err(|e| format!("分块数据解码失败: {}", e))?
+        };
+
+        let mut inner = drop.inner.lock().await;
+        if is_first_chunk {
+            if let Some(mut stale) = inner.current_file.take() {
+                let _ = stale.file.flush().await;
+                let _ = stale.file.shutdown().await;
+            }
+            let target_path = join_remote_relative(&drop.remote_dir, relative_path)?;
+            if target_path == drop.remote_dir {
+                return Err("非法文件路径：文件名不能为空".to_string());
+            }
+            let parent_dir = parent_remote(&target_path);
+            mkdir_all_remote(&inner.sftp, &parent_dir).await?;
+            let dst = inner
+                .sftp
+                .create(&target_path)
+                .await
+                .map_err(|e| format!("创建远程文件 {} 失败: {}", target_path, e))?;
+            inner.current_file = Some(DropUploadFileHandle {
+                remote_path: target_path,
+                file: dst,
+            });
+        }
+
+        if !raw.is_empty() {
+            let handle = inner
+                .current_file
+                .as_mut()
+                .ok_or_else(|| "文件句柄未打开，请先发送首块".to_string())?;
+            handle
+                .file
+                .write_all(&raw)
+                .await
+                .map_err(|e| format!("写入远程文件 {} 失败: {}", handle.remote_path, e))?;
+            self.add_transfer_progress(app, upload_id, raw.len() as i64);
+        }
+
+        if is_last_chunk {
+            if let Some(mut handle) = inner.current_file.take() {
+                handle
+                    .file
+                    .flush()
+                    .await
+                    .map_err(|e| format!("刷新远程文件 {} 失败: {}", handle.remote_path, e))?;
+                handle
+                    .file
+                    .shutdown()
+                    .await
+                    .map_err(|e| format!("关闭远程文件 {} 失败: {}", handle.remote_path, e))?;
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Finalizes a drop upload session, closing SFTP resources and emitting transfer completion.
+    pub async fn finish_drop_upload(
+        &self,
+        app: &AppHandle,
+        upload_id: &str,
+        error_msg: Option<String>,
+    ) -> Result<(), String> {
+        let drop_opt = {
+            let mut guard = self.drop_uploads.lock().await;
+            guard.remove(upload_id)
+        };
+        let Some(drop) = drop_opt else {
+            return Ok(());
+        };
+
+        let canceled = *drop.cancel_rx.lock().await.borrow();
+        {
+            let mut inner = drop.inner.lock().await;
+            if let Some(mut stale) = inner.current_file.take() {
+                let _ = stale.file.flush().await;
+                let _ = stale.file.shutdown().await;
+            }
+            let _ = inner.sftp.close().await;
+        }
+
+        let res = if canceled {
+            Err("已取消".to_string())
+        } else if let Some(err) = error_msg.filter(|s| !s.trim().is_empty()) {
+            Err(err)
+        } else {
+            Ok(())
+        };
+
+        self.finish_transfer(app, upload_id, res);
+        self.notify_dir_changed(app, &drop.session_id, &drop.remote_dir);
         Ok(())
     }
 }

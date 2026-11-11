@@ -1,15 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Checkbox, Tooltip, Dropdown, App } from 'antd'
 import { useTranslation } from 'react-i18next'
-import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload, Search, SlidersHorizontal } from 'lucide-react'
+import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FolderUp, FileText, Upload, Search, SlidersHorizontal } from 'lucide-react'
+import type { MenuProps } from 'antd'
 import ContextMenu, { closedMenu, MenuItem, MenuState } from '@/components/ContextMenu'
 import { ConfirmModal, ConfirmState, PromptModal, PromptState } from '@/components/Modal'
 import FileEditorModal from '@/pages/ssh/file/FileEditorModal'
 import TransferBar from '@/components/TransferBar'
 import ResizableTable, { ColDef } from '@/components/ResizableTable'
 import { API, subscribe } from '@/api'
-import { FileItem, Transfer } from '@/types'
-import { bytesToBase64, copyText, errorMessage, formatSize, formatTime, parentRemote } from '@/utils'
+import { FileItem, Transfer, UploadEstimate } from '@/types'
+import { copyText, errorMessage, formatSize, formatTime, parentRemote } from '@/utils'
+import {
+    buildDropBatches,
+    extractDroppedEntriesSync,
+    streamDropBatches,
+} from '@/pages/ssh/file/dropTree'
 import fp from '@/pages/ssh/file/FilePanel.module.less'
 import { useFileDropActive } from '@/contexts/DragDropContext'
 
@@ -206,43 +212,57 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         }
     }
 
-    const safeUploadPaths = async (remoteDir: string, localPaths: string[]) => {
-        if (!localPaths.length) return
-        try {
-            const est = await API.estimateUpload(sessionId, remoteDir, localPaths)
-            if (est.isInsufficient) {
-                setConfirm({
-                    open: true,
-                    title: t('file:insufficientSpaceTitle'),
-                    danger: true,
-                    message: t('file:insufficientSpaceDesc', {
-                        totalSize: formatSize(est.totalSize),
-                        remoteFree: formatSize(est.remoteFree),
-                    }),
-                    confirmText: t('file:confirmUpload'),
-                    cancelText: t('common:cancel'),
-                    onConfirm: async () => {
-                        setConfirm(emptyConfirm)
-                        try {
-                            await API.uploadPaths(sessionId, remoteDir, localPaths)
-                        } catch (err) {
-                            message.error(errorMessage(err))
-                        }
-                    },
-                })
-                return
-            }
-            await API.uploadPaths(sessionId, remoteDir, localPaths)
-        } catch {
+    const confirmSpaceAndRun = useCallback(
+        async (
+            estimateFn: () => Promise<UploadEstimate>,
+            runUpload: () => Promise<void>
+        ) => {
             try {
-                await API.uploadPaths(sessionId, remoteDir, localPaths)
-            } catch (err) {
-                message.error(errorMessage(err))
+                const est = await estimateFn()
+                if (est.isInsufficient) {
+                    setConfirm({
+                        open: true,
+                        title: t('file:insufficientSpaceTitle'),
+                        danger: true,
+                        message: t('file:insufficientSpaceDesc', {
+                            totalSize: formatSize(est.totalSize),
+                            remoteFree: formatSize(est.remoteFree),
+                        }),
+                        confirmText: t('file:confirmUpload'),
+                        cancelText: t('common:cancel'),
+                        onConfirm: async () => {
+                            setConfirm(emptyConfirm)
+                            await runUpload()
+                        },
+                    })
+                    return
+                }
+            } catch {
+                // 磁盘空间预估失败时不阻塞正常上传
             }
-        }
-    }
+            await runUpload()
+        },
+        [t]
+    )
 
-    const uploadViaDialog = async () => {
+    const safeUploadPaths = useCallback(
+        async (remoteDir: string, localPaths: string[]) => {
+            if (!localPaths.length) return
+            await confirmSpaceAndRun(
+                () => API.estimateUpload(sessionId, remoteDir, localPaths),
+                async () => {
+                    try {
+                        await API.uploadPaths(sessionId, remoteDir, localPaths)
+                    } catch (err) {
+                        message.error(errorMessage(err))
+                    }
+                }
+            )
+        },
+        [sessionId, confirmSpaceAndRun, message]
+    )
+
+    const uploadViaDialog = useCallback(async () => {
         try {
             const files = await API.chooseLocalFiles()
             if (files && files.length) {
@@ -251,16 +271,16 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         } catch (err) {
             message.error(errorMessage(err))
         }
-    }
+    }, [path, safeUploadPaths, message])
 
-    const uploadFolderViaDialog = async () => {
+    const uploadFolderViaDialog = useCallback(async () => {
         try {
             const dir = await API.chooseLocalFolder()
             if (dir) await safeUploadPaths(path, [dir])
         } catch (err) {
             message.error(errorMessage(err))
         }
-    }
+    }, [path, safeUploadPaths, message])
 
     const askNewFile = () => {
         setPrompt({
@@ -346,6 +366,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         { key: 'copy', label: t('file:copyPath'), icon: 'copy', onClick: async () => { if (await copyText(targets.join('\n'))) message.success(t('file:copiedPath')) } },
         { key: 'd1', label: '', divider: true },
         { key: 'upload', label: t('file:uploadToCurrent'), icon: 'upload', onClick: uploadViaDialog },
+        { key: 'uploadDir', label: t('file:uploadFolderToCurrent', { defaultValue: '上传文件夹到当前目录' }), icon: 'uploadDir', onClick: uploadFolderViaDialog },
         { key: 'newFile', label: t('file:newFile'), icon: 'edit', onClick: askNewFile },
         { key: 'mkdir', label: t('file:newFolder'), icon: 'newFolder', onClick: askNewFolder },
         { key: 'd2', label: '', divider: true },
@@ -354,7 +375,7 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
 
     const blankMenu = (): MenuItem[] => [
         { key: 'upload', label: t('file:uploadFile'), icon: 'upload', onClick: uploadViaDialog },
-        { key: 'uploadDir', label: t('file:uploadFolder'), icon: 'folder', onClick: uploadFolderViaDialog },
+        { key: 'uploadDir', label: t('file:uploadFolder'), icon: 'uploadDir', onClick: uploadFolderViaDialog },
         { key: 'newFile', label: t('file:newFile'), icon: 'edit', onClick: askNewFile },
         { key: 'mkdir', label: t('file:newFolder'), icon: 'newFolder', onClick: askNewFolder },
         { key: 'd1', label: '', divider: true },
@@ -362,54 +383,65 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         { key: 'refresh', label: t('common:refresh'), icon: 'refresh', onClick: () => load(path) },
     ]
 
-    /* ---------------- 浏览器降级拖拽 ---------------- */
+    /* ---------------- 浏览器降级拖拽（支持文件与文件夹目录树流式分块上传） ---------------- */
 
     const onDrop = async (e: React.DragEvent) => {
         if (nativeDrop) return
         e.preventDefault()
+        e.stopPropagation()
         setDragOver(false)
-        const files = Array.from(e.dataTransfer.files || [])
-        for (const file of files) {
-            try {
-                const doUpload = async () => {
-                    const buffer = await file.arrayBuffer()
-                    await API.uploadData(sessionId, path, file.name, bytesToBase64(buffer))
-                }
-                const est = await API.estimateUploadData(sessionId, path, file.size)
-                if (est.isInsufficient) {
-                    setConfirm({
-                        open: true,
-                        title: t('file:insufficientSpaceTitle'),
-                        danger: true,
-                        message: t('file:insufficientSpaceDesc', {
-                            totalSize: formatSize(est.totalSize),
-                            remoteFree: formatSize(est.remoteFree),
-                        }),
-                        confirmText: t('file:confirmUpload'),
-                        cancelText: t('common:cancel'),
-                        onConfirm: async () => {
-                            setConfirm(emptyConfirm)
-                            try {
-                                await doUpload()
-                            } catch (err) {
-                                message.error(errorMessage(err))
-                            }
-                        },
-                    })
-                    continue
-                }
-                await doUpload()
-            } catch {
+
+        // 必须在首个 await 前同步捕获 webkitGetAsEntry 与 fallback files
+        const extracted = extractDroppedEntriesSync(e.dataTransfer)
+        if (!extracted.entries.length && !extracted.fallbackFiles.length) return
+
+        const targetDir = path
+        let batches
+        try {
+            batches = await buildDropBatches(extracted)
+        } catch (err) {
+            message.error(
+                t('file:dropReadDirFailed', {
+                    error: errorMessage(err),
+                    defaultValue: `读取拖入目录内容失败: ${errorMessage(err)}`,
+                })
+            )
+            return
+        }
+        if (!batches.length) return
+
+        const totalSize = batches.reduce((sum, b) => sum + b.totalSize, 0)
+        await confirmSpaceAndRun(
+            () => API.estimateUploadData(sessionId, targetDir, totalSize),
+            async () => {
                 try {
-                    const buffer = await file.arrayBuffer()
-                    await API.uploadData(sessionId, path, file.name, bytesToBase64(buffer))
+                    await streamDropBatches(sessionId, targetDir, batches)
                 } catch (err) {
                     message.error(errorMessage(err))
+                } finally {
+                    void load(targetDir, true)
                 }
             }
-        }
-        void load(path, true)
+        )
     }
+
+    const uploadMenuItems: MenuProps['items'] = useMemo(
+        () => [
+            {
+                key: 'uploadFile',
+                icon: <Upload size={13} />,
+                label: t('file:uploadFile'),
+                onClick: () => void uploadViaDialog(),
+            },
+            {
+                key: 'uploadFolder',
+                icon: <FolderUp size={13} />,
+                label: t('file:uploadFolder'),
+                onClick: () => void uploadFolderViaDialog(),
+            },
+        ],
+        [t, uploadViaDialog, uploadFolderViaDialog]
+    )
 
     return (
         <section
@@ -482,6 +514,16 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                         allowClear
                         onChange={(e) => setFilter(e.target.value)}
                     />
+                    <Dropdown trigger={['click']} placement="bottomRight" menu={{ items: uploadMenuItems }}>
+                        <Tooltip title={t('file:uploadBtnTip', { defaultValue: '上传文件或文件夹' })}>
+                            <Button
+                                size="small"
+                                type="text"
+                                className={fp.iconBtn}
+                                icon={<Upload size={14} />}
+                            />
+                        </Tooltip>
+                    </Dropdown>
                     <Dropdown
                         trigger={['click']}
                         placement="bottomRight"

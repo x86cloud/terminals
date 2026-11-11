@@ -479,7 +479,8 @@ pub async fn sftp_upload_data(
     tokio::spawn(async move {
         let res = async {
             let sftp = session.open_new_sftp().await?;
-            mkdir_all_remote(&sftp, &rdir_clone).await?;
+            let target_parent = parent_remote(&remote_path);
+            mkdir_all_remote(&sftp, &target_parent).await?;
             let mut dst = sftp
                 .create(&remote_path)
                 .await
@@ -505,6 +506,66 @@ pub async fn sftp_upload_data(
     });
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn sftp_begin_drop_upload(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    session_id: String,
+    remote_dir: String,
+    name: String,
+    total_size: i64,
+) -> Result<String, String> {
+    state
+        .ssh
+        .begin_drop_upload(&app, &session_id, &remote_dir, &name, total_size)
+        .await
+}
+
+#[tauri::command]
+pub async fn sftp_drop_upload_mkdir(
+    state: State<'_, AppState>,
+    upload_id: String,
+    relative_dir: String,
+) -> Result<(), String> {
+    state.ssh.drop_upload_mkdir(&upload_id, &relative_dir).await
+}
+
+#[tauri::command]
+pub async fn sftp_drop_upload_write_chunk(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    upload_id: String,
+    relative_path: String,
+    data_base64: String,
+    is_first_chunk: bool,
+    is_last_chunk: bool,
+) -> Result<(), String> {
+    state
+        .ssh
+        .drop_upload_write_chunk(
+            &app,
+            &upload_id,
+            &relative_path,
+            &data_base64,
+            is_first_chunk,
+            is_last_chunk,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn sftp_finish_drop_upload(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    upload_id: String,
+    error_msg: Option<String>,
+) -> Result<(), String> {
+    state
+        .ssh
+        .finish_drop_upload(&app, &upload_id, error_msg)
+        .await
 }
 
 #[tauri::command]
