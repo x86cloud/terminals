@@ -8,6 +8,7 @@ import {
 import { useTranslation } from 'react-i18next'
 import CodeEditor from '@/components/CodeEditor'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 
 interface Props {
     open: boolean
@@ -147,10 +148,11 @@ export default function K8sResourceYamlModal({
                 <Button
                     key="copy"
                     icon={<Copy size={13} />}
-                    onClick={() => {
+                    onClick={async () => {
                         if (!content) return
-                        navigator.clipboard.writeText(content)
-                        message.success(t('k8s:yamlModal.copiedYaml'))
+                        if (await copyText(content)) {
+                            message.success(t('k8s:yamlModal.copiedYaml'))
+                        }
                     }}
                 >
                     {t('k8s:yamlModal.copyYaml')}

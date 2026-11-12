@@ -13,7 +13,7 @@ import { FitAddon } from '@xterm/addon-fit'
 import { WebLinksAddon } from '@xterm/addon-web-links'
 import '@xterm/xterm/css/xterm.css'
 import { API, subscribe } from '@/api'
-import { base64ToBytes } from '@/utils'
+import { base64ToBytes, copyText } from '@/utils'
 import { useTheme } from '@/contexts/ThemeContext'
 import { getTerminalTheme } from '@/theme'
 
@@ -195,25 +195,28 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
             // 快捷键复制与粘贴支持
             term.attachCustomKeyEventHandler((e: KeyboardEvent) => {
                 if (e.type !== 'keydown') return true
-                const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0
+                const isMac = /mac/i.test(navigator.userAgent)
                 const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey
 
                 if (ctrlOrCmd && (e.key === 'c' || e.key === 'C')) {
                     if (term.hasSelection()) {
-                        navigator.clipboard.writeText(term.getSelection())
+                        void copyText(term.getSelection())
                         return false
                     }
                 }
                 if (ctrlOrCmd && (e.key === 'v' || e.key === 'V')) {
-                    navigator.clipboard.readText().then((text) => {
-                        if (text && execIdRef.current) {
-                            if (target.type === 'docker') {
-                                API.dockerExecWrite(execIdRef.current, text).catch(() => undefined)
-                            } else if (target.type === 'k8s') {
-                                API.k8sExecWrite(execIdRef.current, text).catch(() => undefined)
+                    navigator.clipboard
+                        .readText()
+                        .then((text) => {
+                            if (text && execIdRef.current) {
+                                if (target.type === 'docker') {
+                                    API.dockerExecWrite(execIdRef.current, text).catch(() => undefined)
+                                } else if (target.type === 'k8s') {
+                                    API.k8sExecWrite(execIdRef.current, text).catch(() => undefined)
+                                }
                             }
-                        }
-                    })
+                        })
+                        .catch(() => undefined)
                     return false
                 }
                 return true
@@ -256,10 +259,12 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
         termRef.current?.focus()
     }
 
-    const handleCopy = () => {
+    const handleCopy = async () => {
         if (termRef.current && termRef.current.hasSelection()) {
-            navigator.clipboard.writeText(termRef.current.getSelection())
-            message.success(t('copiedSelected', '已复制选中终端内容'))
+            const ok = await copyText(termRef.current.getSelection())
+            if (ok) {
+                message.success(t('copiedSelected', '已复制选中终端内容'))
+            }
         } else {
             message.info(t('selectTextFirst', '请先用鼠标划选终端文本内容'))
         }

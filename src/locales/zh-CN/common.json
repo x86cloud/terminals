@@ -148,5 +148,9 @@
       "is_not_null": "非 NULL"
     }
   },
-  "paginationTotal": "第 {{from}}-{{to}} 条 / 共 {{total}} 条"
+  "paginationTotal": "第 {{from}}-{{to}} 条 / 共 {{total}} 条",
+  "welcomeSubtitle": "从左侧选择一台服务器发起连接，或创建一个新会话",
+  "actions": "操作",
+  "total": "共",
+  "unnamed": "未命名"
 }

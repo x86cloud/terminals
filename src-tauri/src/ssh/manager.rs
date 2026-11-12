@@ -1,5 +1,7 @@
 use crate::core::ServerConfig;
-use crate::ssh::tunnel::{connect_russh, exec_ssh_command, SshClientHandler};
+use crate::ssh::tunnel::{
+    connect_russh_session, exec_ssh_command, SshClientHandler, SshTransportDisconnect,
+};
 use crate::ssh::types::{
     join_remote, join_remote_relative, normalize_remote, parent_remote, shell_quote, SessionInfo,
     Transfer,
@@ -46,8 +48,10 @@ pub struct SshSession {
     pub home_dir: String,
     pub os_info: String,
     pub shell_tx: mpsc::UnboundedSender<ShellCmd>,
+    pub disconnect_tx: mpsc::UnboundedSender<SshTransportDisconnect>,
     pub sftp_cache: TokioMutex<Option<Arc<SftpSession>>>,
     pub closed: AtomicBool,
+    pub user_closed: AtomicBool,
     pub buf_state: Arc<StdMutex<TerminalBufferState>>,
 }
 
@@ -70,11 +74,28 @@ impl SshSession {
         self.closed.load(Ordering::SeqCst)
     }
 
+    pub fn is_user_closed(&self) -> bool {
+        self.user_closed.load(Ordering::SeqCst)
+    }
+
+    pub fn mark_user_closed(&self) {
+        self.user_closed.store(true, Ordering::SeqCst);
+    }
+
     pub fn mark_closed(&self) -> bool {
         !self.closed.swap(true, Ordering::SeqCst)
     }
 
+    pub fn notify_disconnect(&self, code: &'static str, reason: String) {
+        if !self.is_user_closed() {
+            let _ = self
+                .disconnect_tx
+                .send(SshTransportDisconnect { code, reason });
+        }
+    }
+
     pub async fn close(&self) {
+        self.mark_user_closed();
         if self.mark_closed() {
             let _ = self.shell_tx.send(ShellCmd::Close);
             let mut sftp_guard = self.sftp_cache.lock().await;
@@ -95,23 +116,43 @@ impl SshSession {
         if self.is_closed() {
             return Err("会话已断开".to_string());
         }
-        let channel = self
-            .handle
-            .channel_open_session()
-            .await
-            .map_err(|e| format!("打开 SFTP 会话通道失败: {}", e))?;
+        if self.handle.is_closed() {
+            self.notify_disconnect("transport_error", "SSH transport closed".to_string());
+            return Err("会话已断开，请重新连接".to_string());
+        }
+        let channel = self.handle.channel_open_session().await.map_err(|e| {
+            let msg = format!("打开 SFTP 会话通道失败: {}", e);
+            if self.handle.is_closed() {
+                self.notify_disconnect("transport_error", e.to_string());
+            }
+            msg
+        })?;
         channel
             .request_subsystem(true, "sftp")
             .await
-            .map_err(|e| format!("请求 SFTP 子系统失败: {}", e))?;
-        SftpSession::new(channel.into_stream())
-            .await
-            .map_err(|e| format!("初始化 SFTP 会话失败: {}", e))
+            .map_err(|e| {
+                let msg = format!("请求 SFTP 子系统失败: {}", e);
+                if self.handle.is_closed() {
+                    self.notify_disconnect("transport_error", e.to_string());
+                }
+                msg
+            })?;
+        SftpSession::new(channel.into_stream()).await.map_err(|e| {
+            let msg = format!("初始化 SFTP 会话失败: {}", e);
+            if self.handle.is_closed() {
+                self.notify_disconnect("transport_error", e.to_string());
+            }
+            msg
+        })
     }
 
     pub async fn sftp_conn(&self) -> Result<Arc<SftpSession>, String> {
         if self.is_closed() {
             return Err("会话已断开".to_string());
+        }
+        if self.handle.is_closed() {
+            self.notify_disconnect("transport_error", "SSH transport closed".to_string());
+            return Err("会话已断开，请重新连接".to_string());
         }
         let mut guard = self.sftp_cache.lock().await;
         if let Some(existing) = guard.as_ref() {
@@ -143,6 +184,10 @@ impl SshSession {
         if self.is_closed() {
             return Err("会话已断开".to_string());
         }
+        if self.handle.is_closed() {
+            self.notify_disconnect("transport_error", "SSH transport closed".to_string());
+            return Err("会话已断开，请重新连接".to_string());
+        }
         let safe_cmd = format!("exec 0</dev/null; {}", cmd);
         let fut = exec_ssh_command(&self.handle, &safe_cmd);
         match tokio::time::timeout(Duration::from_secs(60), fut).await {
@@ -152,7 +197,12 @@ impl SshSession {
                 }
                 Ok(out)
             }
-            Ok(Err(e)) => Err(e),
+            Ok(Err(e)) => {
+                if self.handle.is_closed() {
+                    self.notify_disconnect("transport_error", e.clone());
+                }
+                Err(e)
+            }
             Err(_) => Err(format!(
                 "命令执行超时 (超过 60 秒上限)，已终止在服务器上运行: {}",
                 cmd
@@ -224,21 +274,20 @@ impl SshManager {
         Ok(s)
     }
 
-    pub async fn list_sessions(&self) -> Vec<SessionInfo> {
+    pub async fn get_session_cfg(&self, id: &str) -> Result<ServerConfig, String> {
         let guard = self.sessions.read().await;
-        guard.values().map(|s| s.info()).collect()
+        guard
+            .get(id)
+            .map(|s| s.cfg.clone())
+            .ok_or_else(|| format!("会话不存在: {}", id))
     }
 
-    pub async fn remove_session(&self, id: &str) {
-        let removed = {
-            let mut guard = self.sessions.write().await;
-            guard.remove(id)
-        };
+    async fn cleanup_stale_drop_uploads(&self, session_id: &str) {
         let stale_uploads: Vec<Arc<DropUploadSession>> = {
             let mut guard = self.drop_uploads.lock().await;
             let keys: Vec<String> = guard
                 .iter()
-                .filter(|(_, v)| v.session_id == id)
+                .filter(|(_, v)| v.session_id == session_id)
                 .map(|(k, _)| k.clone())
                 .collect();
             keys.into_iter().filter_map(|k| guard.remove(&k)).collect()
@@ -251,6 +300,19 @@ impl SshManager {
             }
             let _ = inner.sftp.close().await;
         }
+    }
+
+    pub async fn list_sessions(&self) -> Vec<SessionInfo> {
+        let guard = self.sessions.read().await;
+        guard.values().map(|s| s.info()).collect()
+    }
+
+    pub async fn remove_session(&self, id: &str) {
+        let removed = {
+            let mut guard = self.sessions.write().await;
+            guard.remove(id)
+        };
+        self.cleanup_stale_drop_uploads(id).await;
         if let Some(s) = removed {
             s.close().await;
         }
@@ -278,17 +340,36 @@ impl SshManager {
         }
     }
 
-    pub async fn connect(
+    async fn open_sftp_with_handle(
+        handle: &client::Handle<SshClientHandler>,
+    ) -> Result<SftpSession, String> {
+        let channel = handle
+            .channel_open_session()
+            .await
+            .map_err(|e| format!("打开 SFTP 会话通道失败: {}", e))?;
+        channel
+            .request_subsystem(true, "sftp")
+            .await
+            .map_err(|e| format!("请求 SFTP 子系统失败: {}", e))?;
+        SftpSession::new(channel.into_stream())
+            .await
+            .map_err(|e| format!("初始化 SFTP 会话失败: {}", e))
+    }
+
+    async fn establish_session(
         &self,
         app: AppHandle,
+        session_id: String,
         cfg: ServerConfig,
         cols: u32,
         rows: u32,
+        fallback_home: Option<String>,
     ) -> Result<SessionInfo, String> {
         cfg.validate()?;
         let port = cfg.display_port() as u16;
+        let (disconnect_tx, mut disconnect_rx) = mpsc::unbounded_channel::<SshTransportDisconnect>();
         let handle = Arc::new(
-            connect_russh(
+            connect_russh_session(
                 &cfg.host,
                 port,
                 &cfg.username,
@@ -297,6 +378,7 @@ impl SshManager {
                 &cfg.private_key,
                 &cfg.passphrase,
                 15,
+                disconnect_tx.clone(),
             )
             .await?,
         );
@@ -319,42 +401,34 @@ impl SshManager {
             .await
             .map_err(|e| format!("启动远程 shell 失败: {}", e))?;
 
-        let session_id = Uuid::new_v4().to_string();
         let (shell_tx, mut shell_rx) = mpsc::unbounded_channel::<ShellCmd>();
         let buf_state = Arc::new(StdMutex::new(TerminalBufferState {
             buffer: Vec::new(),
             attached: false,
         }));
 
-        let session = Arc::new(SshSession {
-            id: session_id.clone(),
-            cfg: cfg.clone(),
-            handle: handle.clone(),
-            home_dir: "/".to_string(),
-            os_info: String::new(),
-            shell_tx,
-            sftp_cache: TokioMutex::new(None),
-            closed: AtomicBool::new(false),
-            buf_state: buf_state.clone(),
-        });
-
-        // Detect home directory via SFTP or pwd fallback
-        let detected_home = match session.sftp_conn().await {
-            Ok(sftp) => sftp
-                .canonicalize(".")
-                .await
-                .unwrap_or_else(|_| "/".to_string()),
+        // 通过 SFTP 或 pwd 检测家目录，失败时回退既有 home_dir 或根目录
+        let fallback = fallback_home.unwrap_or_else(|| "/".to_string());
+        let (detected_home, initial_sftp) = match Self::open_sftp_with_handle(&handle).await {
+            Ok(sftp) => {
+                let home = sftp
+                    .canonicalize(".")
+                    .await
+                    .unwrap_or_else(|_| fallback.clone());
+                (home, Some(Arc::new(sftp)))
+            }
             Err(_) => {
-                if let Ok((out, 0)) = exec_ssh_command(&handle, "pwd").await {
+                let home = if let Ok((out, 0)) = exec_ssh_command(&handle, "pwd").await {
                     let trimmed = out.trim();
                     if !trimmed.is_empty() {
                         trimmed.to_string()
                     } else {
-                        "/".to_string()
+                        fallback.clone()
                     }
                 } else {
-                    "/".to_string()
-                }
+                    fallback.clone()
+                };
+                (home, None)
             }
         };
 
@@ -368,9 +442,11 @@ impl SshManager {
                 detected_home
             },
             os_info: String::new(),
-            shell_tx: session.shell_tx.clone(),
-            sftp_cache: TokioMutex::new(session.sftp_cache.lock().await.clone()),
+            shell_tx,
+            disconnect_tx,
+            sftp_cache: TokioMutex::new(initial_sftp),
             closed: AtomicBool::new(false),
+            user_closed: AtomicBool::new(false),
             buf_state: buf_state.clone(),
         });
 
@@ -386,12 +462,19 @@ impl SshManager {
 
         tokio::spawn(async move {
             let mut channel = shell_channel;
+            let mut disconnect_info: Option<SshTransportDisconnect> = None;
+            let mut received_clean_shell_end = false;
+
             loop {
                 tokio::select! {
                     cmd_opt = shell_rx.recv() => {
                         match cmd_opt {
                             Some(ShellCmd::Data(data)) => {
-                                if channel.data(&data[..]).await.is_err() {
+                                if let Err(e) = channel.data(&data[..]).await {
+                                    disconnect_info = Some(SshTransportDisconnect {
+                                        code: "transport_error",
+                                        reason: e.to_string(),
+                                    });
                                     break;
                                 }
                             }
@@ -402,6 +485,12 @@ impl SshManager {
                                 let _ = channel.close().await;
                                 break;
                             }
+                        }
+                    }
+                    dc_opt = disconnect_rx.recv() => {
+                        if let Some(dc) = dc_opt {
+                            disconnect_info = Some(dc);
+                            break;
                         }
                     }
                     msg_opt = channel.wait() => {
@@ -424,7 +513,10 @@ impl SshManager {
                                     );
                                 }
                             }
-                            Some(ChannelMsg::Eof) | Some(ChannelMsg::Close) | None => {
+                            Some(ChannelMsg::ExitStatus { .. }) | Some(ChannelMsg::Eof) => {
+                                received_clean_shell_end = true;
+                            }
+                            Some(ChannelMsg::Close) | None => {
                                 break;
                             }
                             _ => {}
@@ -432,7 +524,23 @@ impl SshManager {
                     }
                 }
             }
+
+            if disconnect_info.is_none() {
+                if let Ok(dc) = disconnect_rx.try_recv() {
+                    disconnect_info = Some(dc);
+                } else if !session_clone.is_user_closed()
+                    && (!received_clean_shell_end || session_clone.handle.is_closed())
+                {
+                    if let Ok(Some(dc)) =
+                        tokio::time::timeout(Duration::from_millis(60), disconnect_rx.recv()).await
+                    {
+                        disconnect_info = Some(dc);
+                    }
+                }
+            }
+
             session_clone.mark_closed();
+            session_clone.invalidate_sftp().await;
             let _ = app_clone.emit(
                 &format!("session:closed:{}", session_id_clone),
                 json!({
@@ -440,23 +548,135 @@ impl SshManager {
                     "reason": "remote shell exited",
                 }),
             );
+
+            if !session_clone.is_user_closed() {
+                let payload = if let Some(dc) = disconnect_info {
+                    json!({
+                        "sessionId": session_id_clone,
+                        "code": dc.code,
+                        "reason": dc.reason,
+                        "normalExit": false,
+                    })
+                } else if !received_clean_shell_end || session_clone.handle.is_closed() {
+                    json!({
+                        "sessionId": session_id_clone,
+                        "code": "transport_error",
+                        "reason": "",
+                        "normalExit": false,
+                    })
+                } else {
+                    json!({
+                        "sessionId": session_id_clone,
+                        "code": "shell_exit",
+                        "reason": "",
+                        "normalExit": true,
+                    })
+                };
+                let _ = app_clone.emit("ssh:disconnected", payload);
+            }
         });
 
         Ok(session.info())
     }
 
+    pub async fn connect(
+        &self,
+        app: AppHandle,
+        cfg: ServerConfig,
+        cols: u32,
+        rows: u32,
+    ) -> Result<SessionInfo, String> {
+        let session_id = Uuid::new_v4().to_string();
+        self.establish_session(app, session_id, cfg, cols, rows, None)
+            .await
+    }
+
+    pub async fn reconnect(
+        &self,
+        app: AppHandle,
+        session_id: &str,
+        cfg: ServerConfig,
+        cols: u32,
+        rows: u32,
+    ) -> Result<SessionInfo, String> {
+        let old_session = {
+            let guard = self.sessions.read().await;
+            guard.get(session_id).cloned()
+        };
+        let fallback_home = old_session.as_ref().map(|s| s.home_dir.clone());
+        self.cleanup_stale_drop_uploads(session_id).await;
+        if let Some(old) = old_session {
+            old.close().await;
+        }
+        self.establish_session(app, session_id.to_string(), cfg, cols, rows, fallback_home)
+            .await
+    }
+
+    pub async fn check_connection(&self, session_id: &str) -> Result<bool, String> {
+        let session = {
+            let guard = self.sessions.read().await;
+            guard.get(session_id).cloned()
+        };
+        let Some(session) = session else {
+            return Ok(false);
+        };
+        if session.is_closed() {
+            return Ok(false);
+        }
+        if session.handle.is_closed() {
+            session.notify_disconnect("transport_error", "SSH transport closed".to_string());
+            return Ok(false);
+        }
+        match tokio::time::timeout(
+            Duration::from_secs(3),
+            session.handle.channel_open_session(),
+        )
+        .await
+        {
+            Ok(Ok(ch)) => {
+                let _ = ch.close().await;
+                Ok(true)
+            }
+            Ok(Err(e)) => {
+                session.notify_disconnect("transport_error", e.to_string());
+                Ok(false)
+            }
+            Err(_) => {
+                session.notify_disconnect(
+                    "keepalive_timeout",
+                    "Connection health check timed out".to_string(),
+                );
+                Ok(false)
+            }
+        }
+    }
+
     pub async fn send_input(&self, session_id: &str, data: &str) -> Result<(), String> {
         let s = self.get_session(session_id).await?;
+        if s.handle.is_closed() {
+            s.notify_disconnect("transport_error", "SSH transport closed".to_string());
+            return Err("会话已断开，请重新连接".to_string());
+        }
         s.shell_tx
             .send(ShellCmd::Data(data.as_bytes().to_vec()))
-            .map_err(|_| "终端未就绪或已关闭".to_string())
+            .map_err(|_| {
+                s.notify_disconnect("transport_error", "Terminal channel closed".to_string());
+                "终端未就绪或已关闭".to_string()
+            })
     }
 
     pub async fn resize_terminal(&self, session_id: &str, cols: u32, rows: u32) -> Result<(), String> {
         let s = self.get_session(session_id).await?;
+        if s.handle.is_closed() {
+            s.notify_disconnect("transport_error", "SSH transport closed".to_string());
+            return Err("会话已断开，请重新连接".to_string());
+        }
         s.shell_tx
             .send(ShellCmd::Resize(cols, rows))
-            .map_err(|_| "终端未就绪或已关闭".to_string())
+            .map_err(|_| {
+                s.notify_disconnect("transport_error", "Terminal channel closed".to_string());
+                "终端未就绪或已关闭".to_string()
+            })
     }
 
     pub async fn attach_terminal(

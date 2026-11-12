@@ -44,7 +44,8 @@ export function getOpLabel(op: FilterOp): string {
 
 
 function isNumeric(val: string): boolean {
-    return val.trim() !== '' && !isNaN(Number(val))
+    const trimmed = val.trim()
+    return /^-?\d+(\.\d+)?$/.test(trimmed)
 }
 
 /**

@@ -148,5 +148,9 @@
       "is_not_null": "Is Not NULL"
     }
   },
-  "paginationTotal": "{{from}}-{{to}} of {{total}}"
+  "paginationTotal": "{{from}}-{{to}} of {{total}}",
+  "welcomeSubtitle": "Select a server from the left sidebar to connect, or create a new session",
+  "actions": "Actions",
+  "total": "Total",
+  "unnamed": "Unnamed"
 }

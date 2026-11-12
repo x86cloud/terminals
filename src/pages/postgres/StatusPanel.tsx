@@ -3,6 +3,7 @@ import { Table, Button, Tag, Input, Switch, Tooltip, Popconfirm, Space, Segmente
 import { RotateCw, Activity, HardDrive, ShieldCheck, Clock, Search, Copy, Check } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
+import { copyText } from '@/utils'
 import { useSession } from '@/contexts/SessionContext'
 import { PgStatus, PgSession } from './postgresTypes'
 import pg from './StatusPanel.module.less'
@@ -72,9 +73,11 @@ export default function StatusPanel({
     }
 
     const copySql = (pid: number, text: string) => {
-        navigator.clipboard.writeText(text).then(() => {
-            setCopiedPid(pid)
-            setTimeout(() => setCopiedPid(null), 1500)
+        void copyText(text).then((ok) => {
+            if (ok) {
+                setCopiedPid(pid)
+                setTimeout(() => setCopiedPid(null), 1500)
+            }
         })
     }
 

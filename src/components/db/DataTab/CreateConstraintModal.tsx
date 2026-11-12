@@ -276,7 +276,7 @@ export const CreateConstraintModal: React.FC<CreateConstraintModalProps> = ({
             okText={t('common:ok')}
             cancelText={t('common:cancel')}
             width={680}
-            destroyOnClose
+            destroyOnHidden
             maskClosable={false}
         >
             <Form layout="vertical" style={{ marginTop: 16 }}>

@@ -3,6 +3,7 @@ import MarkdownIt from 'markdown-it'
 import hljs from 'highlight.js'
 import 'highlight.js/styles/atom-one-dark.css'
 import i18n from '@/i18n'
+import { copyText as writeClipboardText } from '@/utils'
 import s from './MarkdownViewer.module.less'
 
 interface MarkdownViewerProps {
@@ -40,13 +41,17 @@ function renderCodeCard(content: string, rawLang: string): string {
     const lineCount = lines.length
     const isLongCode = lineCount > 25
     const langDisplay = validLang || (rawLang ? rawLang.toLowerCase() : 'code')
+    const safeLang = md.utils.escapeHtml(langDisplay)
+    const safeClassLang = validLang ? `language-${md.utils.escapeHtml(validLang)}` : ''
     const rawCodeAttr = encodeURIComponent(cleanContent)
-    const copyTitle = i18n.t('common:copyCode', '复制代码')
-    const copyText = i18n.t('common:copy', '复制')
-    const expandText = i18n.t('common:expandAllCode', '展开全部代码 ({{count}} 行)', { count: lineCount })
+    const copyTitle = md.utils.escapeHtml(i18n.t('common:copyCode', '复制代码'))
+    const copyLabel = md.utils.escapeHtml(i18n.t('common:copy', '复制'))
+    const expandText = md.utils.escapeHtml(
+        i18n.t('common:expandAllCode', '展开全部代码 ({{count}} 行)', { count: lineCount })
+    )
 
     // 注意：整个 HTML 必须保持单行紧凑无多余模板换行与制表符缩进，避免在 pre/code 内被解析为实际空行
-    return `<div class="${s.codeBlockContainer} ${isLongCode ? s.collapsibleCode : ''}"><div class="${s.codeHeader}"><span class="${s.langTag}">${langDisplay}</span><button type="button" class="${s.copyCodeBtn}" data-raw-code="${rawCodeAttr}" title="${copyTitle}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>${copyText}</span></button></div><div class="${s.codeContentWrap}"><pre class="${s.codePre}"><code class="hljs ${s.wrapCode} ${validLang ? 'language-' + validLang : ''}">${highlighted}</code></pre>${isLongCode ? `<div class="${s.codeExpandOverlay}"><button type="button" class="${s.expandCodeBtn}">${expandText}</button></div>` : ''}</div></div>\n`
+    return `<div class="${s.codeBlockContainer} ${isLongCode ? s.collapsibleCode : ''}"><div class="${s.codeHeader}"><span class="${s.langTag}">${safeLang}</span><button type="button" class="${s.copyCodeBtn}" data-raw-code="${rawCodeAttr}" title="${copyTitle}"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg><span>${copyLabel}</span></button></div><div class="${s.codeContentWrap}"><pre class="${s.codePre}"><code class="hljs ${s.wrapCode} ${safeClassLang}">${highlighted}</code></pre>${isLongCode ? `<div class="${s.codeExpandOverlay}"><button type="button" class="${s.expandCodeBtn}">${expandText}</button></div>` : ''}</div></div>\n`
 }
 
 // 自定义代码块 (fence 语法 ```lang ... ```) 渲染器
@@ -89,6 +94,15 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(({
     const containerRef = useRef<HTMLDivElement>(null)
     const [renderedHtml, setRenderedHtml] = useState<string>('')
     const rafIdRef = useRef<number | null>(null)
+    const copyTimersRef = useRef<Set<number>>(new Set())
+
+    useEffect(() => {
+        const timers = copyTimersRef.current
+        return () => {
+            timers.forEach((id) => window.clearTimeout(id))
+            timers.clear()
+        }
+    }, [])
 
     // 流式防抖渲染 (通过 requestAnimationFrame 避免超高频 token 更新引起的 DOM 重排卡顿)
     useEffect(() => {
@@ -128,16 +142,23 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(({
             const encoded = copyBtn.getAttribute('data-raw-code')
             if (encoded) {
                 const code = decodeURIComponent(encoded)
-                navigator.clipboard.writeText(code).then(() => {
+                void writeClipboardText(code).then((ok) => {
+                    if (!ok || !copyBtn.isConnected) return
                     const span = copyBtn.querySelector('span')
                     if (span) {
                         const originalText = span.textContent
                         span.textContent = i18n.t('common:copied', '已复制')
                         copyBtn.classList.add(s.copied)
-                        setTimeout(() => {
-                            if (span) span.textContent = originalText
-                            copyBtn.classList.remove(s.copied)
+                        const timerId = window.setTimeout(() => {
+                            copyTimersRef.current.delete(timerId)
+                            if (span.isConnected) {
+                                span.textContent = originalText
+                            }
+                            if (copyBtn.isConnected) {
+                                copyBtn.classList.remove(s.copied)
+                            }
                         }, 2000)
+                        copyTimersRef.current.add(timerId)
                     }
                 })
             }

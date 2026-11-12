@@ -183,6 +183,10 @@ export const API = {
         ),
     disconnect: (sessionId: string): Promise<void> =>
         invoke<void>('ssh_disconnect', { sessionId }),
+    reconnect: (sessionId: string, cols: number, rows: number): Promise<SessionInfo> =>
+        invoke<SessionInfo>('ssh_reconnect', { sessionId, cols, rows }),
+    sshCheckConnection: (sessionId: string): Promise<boolean> =>
+        invoke<boolean>('ssh_check_connection', { sessionId }),
     sendInput: (sessionId: string, data: string): Promise<void> =>
         invoke<void>('ssh_send_input', { sessionId, data }),
     resizeTerminal: (sessionId: string, cols: number, rows: number): Promise<void> =>

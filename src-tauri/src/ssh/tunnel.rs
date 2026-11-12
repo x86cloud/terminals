@@ -5,9 +5,28 @@ use std::fs;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
-use tokio::sync::oneshot;
+use tokio::sync::{mpsc, oneshot};
 
-pub struct SshClientHandler;
+#[derive(Debug, Clone)]
+pub struct SshTransportDisconnect {
+    pub code: &'static str,
+    pub reason: String,
+}
+
+#[derive(Clone, Default)]
+pub struct SshClientHandler {
+    disconnect_tx: Option<mpsc::UnboundedSender<SshTransportDisconnect>>,
+}
+
+impl SshClientHandler {
+    pub fn with_disconnect_tx(
+        disconnect_tx: mpsc::UnboundedSender<SshTransportDisconnect>,
+    ) -> Self {
+        Self {
+            disconnect_tx: Some(disconnect_tx),
+        }
+    }
+}
 
 #[async_trait]
 impl client::Handler for SshClientHandler {
@@ -19,6 +38,42 @@ impl client::Handler for SshClientHandler {
     ) -> Result<bool, Self::Error> {
         Ok(true)
     }
+
+    async fn disconnected(
+        &mut self,
+        reason: client::DisconnectReason<Self::Error>,
+    ) -> Result<(), Self::Error> {
+        match reason {
+            client::DisconnectReason::ReceivedDisconnect(info) => {
+                if let Some(tx) = &self.disconnect_tx {
+                    let msg = if info.message.trim().is_empty() {
+                        format!("{:?}", info.reason_code)
+                    } else {
+                        info.message.clone()
+                    };
+                    let _ = tx.send(SshTransportDisconnect {
+                        code: "remote_disconnect",
+                        reason: msg,
+                    });
+                }
+                Ok(())
+            }
+            client::DisconnectReason::Error(e) => {
+                if let Some(tx) = &self.disconnect_tx {
+                    let code = if matches!(e, russh::Error::KeepaliveTimeout) {
+                        "keepalive_timeout"
+                    } else {
+                        "transport_error"
+                    };
+                    let _ = tx.send(SshTransportDisconnect {
+                        code,
+                        reason: e.to_string(),
+                    });
+                }
+                Err(e)
+            }
+        }
+    }
 }
 
 pub fn load_pem_or_file(str_or_path: &str) -> Result<String, String> {
@@ -29,7 +84,8 @@ pub fn load_pem_or_file(str_or_path: &str) -> Result<String, String> {
     fs::read_to_string(trimmed).map_err(|e| format!("读取密钥/证书文件失败 [{}]: {}", trimmed, e))
 }
 
-pub async fn connect_russh(
+#[allow(clippy::too_many_arguments)]
+async fn connect_russh_with_handler(
     host: &str,
     port: u16,
     user: &str,
@@ -38,14 +94,19 @@ pub async fn connect_russh(
     key_data_or_path: &str,
     passphrase: &str,
     timeout_secs: u64,
+    handler: SshClientHandler,
+    inactivity_timeout: Option<Duration>,
+    keepalive_interval: Option<Duration>,
+    keepalive_max: usize,
 ) -> Result<client::Handle<SshClientHandler>, String> {
     let mut config = client::Config::default();
-    config.inactivity_timeout = Some(Duration::from_secs(3600));
-    config.keepalive_interval = Some(Duration::from_secs(30));
+    config.inactivity_timeout = inactivity_timeout;
+    config.keepalive_interval = keepalive_interval;
+    config.keepalive_max = keepalive_max;
     let config = Arc::new(config);
     let addr = format!("{}:{}", host.trim(), if port > 0 { port } else { 22 });
 
-    let connect_fut = client::connect(config, &addr, SshClientHandler);
+    let connect_fut = client::connect(config, &addr, handler);
     let mut session = tokio::time::timeout(
         Duration::from_secs(if timeout_secs > 0 { timeout_secs } else { 15 }),
         connect_fut,
@@ -86,6 +147,64 @@ pub async fn connect_russh(
     }
 
     Ok(session)
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn connect_russh(
+    host: &str,
+    port: u16,
+    user: &str,
+    auth_type: &str,
+    password: &str,
+    key_data_or_path: &str,
+    passphrase: &str,
+    timeout_secs: u64,
+) -> Result<client::Handle<SshClientHandler>, String> {
+    connect_russh_with_handler(
+        host,
+        port,
+        user,
+        auth_type,
+        password,
+        key_data_or_path,
+        passphrase,
+        timeout_secs,
+        SshClientHandler::default(),
+        Some(Duration::from_secs(3600)),
+        Some(Duration::from_secs(30)),
+        3,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+pub async fn connect_russh_session(
+    host: &str,
+    port: u16,
+    user: &str,
+    auth_type: &str,
+    password: &str,
+    key_data_or_path: &str,
+    passphrase: &str,
+    timeout_secs: u64,
+    disconnect_tx: mpsc::UnboundedSender<SshTransportDisconnect>,
+) -> Result<client::Handle<SshClientHandler>, String> {
+    connect_russh_with_handler(
+        host,
+        port,
+        user,
+        auth_type,
+        password,
+        key_data_or_path,
+        passphrase,
+        timeout_secs,
+        SshClientHandler::with_disconnect_tx(disconnect_tx),
+        None,
+        // 每 5s 探测一次，连续 2 次无响应（alive_timeouts > 1，约 10~15s）触发 KeepaliveTimeout
+        Some(Duration::from_secs(5)),
+        1,
+    )
+    .await
 }
 
 pub async fn exec_ssh_command(

@@ -31,7 +31,7 @@ import {
     Copy,
 } from 'lucide-react'
 import { API } from '@/api'
-import { errorMessage, copyText } from '@/utils'
+import { errorMessage, copyText, formatBytes } from '@/utils'
 import { MongoSessionInfo, MongoHealthInfo, MongoServerStatus } from '@/types'
 import s from './StatusPanel.module.less'
 
@@ -50,14 +50,6 @@ interface ParsedCurrentOp {
     client?: string
     commandSummary: string
     raw: any
-}
-
-function fmtBytes(bytes: number): string {
-    if (!bytes || isNaN(bytes)) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
 }
 
 function fmtMb(mb?: number): string {
@@ -383,12 +375,12 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                         <HardDrive size={13} style={{ color: '#eab308' }} />
                     </div>
                     <div className={s.kpiValue}>
-                        {memResident > 0 ? fmtMb(memResident) : (wtCacheUsed > 0 ? fmtBytes(wtCacheUsed) : '-')}
+                        {memResident > 0 ? fmtMb(memResident) : (wtCacheUsed > 0 ? formatBytes(wtCacheUsed) : '-')}
                     </div>
                     <div className={s.kpiSub}>
                         {memVirtual > 0
                             ? t('mongo.status.health.memVirtual', { mem: fmtMb(memVirtual), defaultValue: `虚拟内存: ${fmtMb(memVirtual)}` })
-                            : (wtCacheUsed > 0 ? t('mongo.status.health.wtCache', { cache: fmtBytes(wtCacheUsed), defaultValue: `WT 缓存: ${fmtBytes(wtCacheUsed)}` }) : t('mongo.status.health.memVirtual', { mem: '-', defaultValue: '虚拟内存: -' }))}
+                            : (wtCacheUsed > 0 ? t('mongo.status.health.wtCache', { cache: formatBytes(wtCacheUsed), defaultValue: `WT 缓存: ${formatBytes(wtCacheUsed)}` }) : t('mongo.status.health.memVirtual', { mem: '-', defaultValue: '虚拟内存: -' }))}
                     </div>
                 </div>
 
@@ -463,8 +455,8 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                     </h4>
                                     <table className={s.kvTable}>
                                         <tbody>
-                                            <tr><th>{t('mongo.status.overview.bytesIn', '入站流量 (bytesIn)')}</th><td>{fmtBytes(status.network?.bytesIn)}</td></tr>
-                                            <tr><th>{t('mongo.status.overview.bytesOut', '出站流量 (bytesOut)')}</th><td>{fmtBytes(status.network?.bytesOut)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.bytesIn', '入站流量 (bytesIn)')}</th><td>{formatBytes(status.network?.bytesIn)}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.bytesOut', '出站流量 (bytesOut)')}</th><td>{formatBytes(status.network?.bytesOut)}</td></tr>
                                             <tr><th>{t('mongo.status.overview.numRequests', '请求总数 (numRequests)')}</th><td>{String(status.network?.numRequests ?? '-')}</td></tr>
                                             <tr><th>{t('mongo.status.overview.globalReadLock', '全局读锁')}</th><td>{String(status.globalLock?.currentQueue?.readers ?? 0)}</td></tr>
                                             <tr><th>{t('mongo.status.overview.globalWriteLock', '全局写锁')}</th><td>{String(status.globalLock?.currentQueue?.writers ?? 0)}</td></tr>
@@ -479,8 +471,8 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                         <tbody>
                                             <tr><th>{t('mongo.status.overview.resident', '物理常驻 (Resident)')}</th><td>{fmtMb(status.mem?.resident)}</td></tr>
                                             <tr><th>{t('mongo.status.overview.virtual', '虚拟内存 (Virtual)')}</th><td>{fmtMb(status.mem?.virtual)}</td></tr>
-                                            <tr><th>{t('mongo.status.overview.wtCacheUsed', 'WiredTiger 缓存已用')}</th><td>{fmtBytes(status.wiredTiger?.cache?.['bytes currently in the cache'])}</td></tr>
-                                            <tr><th>{t('mongo.status.overview.wtCacheMax', 'WiredTiger 缓存上限')}</th><td>{fmtBytes(status.wiredTiger?.cache?.['maximum bytes configured'])}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.wtCacheUsed', 'WiredTiger 缓存已用')}</th><td>{formatBytes(status.wiredTiger?.cache?.['bytes currently in the cache'])}</td></tr>
+                                            <tr><th>{t('mongo.status.overview.wtCacheMax', 'WiredTiger 缓存上限')}</th><td>{formatBytes(status.wiredTiger?.cache?.['maximum bytes configured'])}</td></tr>
                                             <tr><th>{t('mongo.status.overview.pageFaults', '缺页异常 (Page Faults)')}</th><td>{String(status.extra_info?.page_faults ?? '-')}</td></tr>
                                         </tbody>
                                     </table>
@@ -576,7 +568,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                                     <Popconfirm
                                         title={t('mongo.status.currentOps.killConfirm', { opid: record.opid, defaultValue: `确定要强行终止该操作 (OpID: ${record.opid}) 吗？` })}
                                         okText={t('mongo.status.currentOps.killOk', '强行终止')}
-                                        cancelText={t('common.cancel', '取消')}
+                                        cancelText={t('common:cancel', '取消')}
                                         okButtonProps={{ danger: true }}
                                         onConfirm={() => handleKillOp(record.opid)}
                                     >
@@ -846,7 +838,7 @@ export default function StatusPanel({ session, databases = [] }: Props) {
                 onOk={handleSaveProfiler}
                 confirmLoading={savingProfiler}
                 okText={t('mongo.status.slowQueries.saveConfig', '保存配置')}
-                cancelText={t('common.cancel', '取消')}
+                cancelText={t('common:cancel', '取消')}
                 width={480}
             >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '10px 0' }}>

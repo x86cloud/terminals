@@ -1,28 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Progress, Checkbox, Table, Tag, Alert, Space, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { RotateCw, Server, Terminal, Database, Plug } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { SSHDashboardInfo } from '@/types'
-import { errorMessage } from '@/utils'
+import { errorMessage, formatBytes } from '@/utils'
 import d from '@/pages/ssh/dashboard/DashboardPanel.module.less'
 
 interface Props {
     sessionId: string
     active: boolean
-}
-
-function fmtBytes(bytes: number): string {
-    if (!bytes || bytes <= 0) return '0 B'
-    const units = ['B', 'KB', 'MB', 'GB', 'TB']
-    let val = bytes
-    let i = 0
-    while (val >= 1024 && i < units.length - 1) {
-        val /= 1024
-        i++
-    }
-    return `${val.toFixed(1)} ${units[i]}`
+    reconnectSeq?: number
 }
 
 function getProgressColor(pct: number): string {
@@ -44,7 +33,7 @@ function cleanUptime(str: string): string {
     return str
 }
 
-export default function DashboardPanel({ sessionId, active }: Props) {
+export default function DashboardPanel({ sessionId, active, reconnectSeq = 0 }: Props) {
     const { t } = useTranslation(['ssh', 'common'])
     const { message } = App.useApp()
     const [data, setData] = useState<SSHDashboardInfo | null>(null)
@@ -60,6 +49,17 @@ export default function DashboardPanel({ sessionId, active }: Props) {
         setData(null)
         setError('')
     }, [sessionId])
+
+    const prevReconnectSeqRef = useRef(reconnectSeq)
+    useEffect(() => {
+        if (reconnectSeq > 0 && reconnectSeq !== prevReconnectSeqRef.current) {
+            prevReconnectSeqRef.current = reconnectSeq
+            setError('')
+            setLoaded(false)
+        } else {
+            prevReconnectSeqRef.current = reconnectSeq
+        }
+    }, [reconnectSeq])
 
     const fetchStats = useCallback(async () => {
         setBusy(true)
@@ -121,19 +121,19 @@ export default function DashboardPanel({ sessionId, active }: Props) {
             title: t('ssh:dashboard.total'),
             dataIndex: 'total',
             key: 'total',
-            render: (total) => fmtBytes(total),
+            render: (total) => formatBytes(total),
         },
         {
             title: t('ssh:dashboard.used'),
             dataIndex: 'used',
             key: 'used',
-            render: (used) => fmtBytes(used),
+            render: (used) => formatBytes(used),
         },
         {
             title: t('ssh:dashboard.available'),
             dataIndex: 'available',
             key: 'available',
-            render: (avail) => fmtBytes(avail),
+            render: (avail) => formatBytes(avail),
         },
         {
             title: t('ssh:dashboard.usagePercent'),
@@ -173,13 +173,13 @@ export default function DashboardPanel({ sessionId, active }: Props) {
             title: t('ssh:dashboard.rx'),
             dataIndex: 'rxBytes',
             key: 'rxBytes',
-            render: (rx) => fmtBytes(rx),
+            render: (rx) => formatBytes(rx),
         },
         {
             title: t('ssh:dashboard.tx'),
             dataIndex: 'txBytes',
             key: 'txBytes',
-            render: (tx) => fmtBytes(tx),
+            render: (tx) => formatBytes(tx),
         },
     ]
 
@@ -264,7 +264,7 @@ export default function DashboardPanel({ sessionId, active }: Props) {
                             <div className={d.card}>
                                 <div className={d.cardHeader}>
                                     <span className={d.cardTitle}>{t('ssh:dashboard.physicalMemory')}</span>
-                                    <span className={d.cardSubtitle}>{fmtBytes(data.mem.used)} / {fmtBytes(data.mem.total)}</span>
+                                    <span className={d.cardSubtitle}>{formatBytes(data.mem.used)} / {formatBytes(data.mem.total)}</span>
                                 </div>
                                 <div className={d.cardStatRow}>
                                     <span className={d.statLabel}>{t('ssh:dashboard.memory')}</span>
@@ -278,9 +278,9 @@ export default function DashboardPanel({ sessionId, active }: Props) {
                                     />
                                 </div>
                                 <div className={d.subDetails}>
-                                    <span>{t('ssh:dashboard.available')}: {fmtBytes(data.mem.available)}</span>
+                                    <span>{t('ssh:dashboard.available')}: {formatBytes(data.mem.available)}</span>
                                     {data.mem.swapTotal > 0 && (
-                                        <span>Swap {t('ssh:dashboard.used')}: {fmtBytes(data.mem.swapUsed)} / {fmtBytes(data.mem.swapTotal)}</span>
+                                        <span>Swap {t('ssh:dashboard.used')}: {formatBytes(data.mem.swapUsed)} / {formatBytes(data.mem.swapTotal)}</span>
                                     )}
                                 </div>
                             </div>

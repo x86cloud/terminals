@@ -152,7 +152,7 @@ impl Store {
             Err(_) => return Vec::new(),
         };
         let mut out = guard.servers.clone();
-        out.sort_by(|a, b| a.label().to_lowercase().cmp(&b.label().to_lowercase()));
+        out.sort_by_key(|a| a.label().to_lowercase());
         out
     }
 

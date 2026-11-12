@@ -86,8 +86,10 @@ pub fn run() {
                         restore_main_window(app);
                     }
                     "quit" => {
-                        core::set_app_quitting(true);
-                        app.exit(0);
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            system::app::close_active_connections_and_exit(app_handle).await;
+                        });
                     }
                     _ => {}
                 })
@@ -129,8 +131,11 @@ pub fn run() {
                         let _ = window.hide();
                     }
                     "quit" => {
-                        core::set_app_quitting(true);
-                        app.exit(0);
+                        api.prevent_close();
+                        let app_handle = app.clone();
+                        tauri::async_runtime::spawn(async move {
+                            system::app::close_active_connections_and_exit(app_handle).await;
+                        });
                     }
                     _ => {
                         api.prevent_close();
@@ -182,6 +187,8 @@ pub fn run() {
             ssh_sftp::ssh_connect_with_config,
             ssh_sftp::ssh_test_connection,
             ssh_sftp::ssh_disconnect,
+            ssh_sftp::ssh_reconnect,
+            ssh_sftp::ssh_check_connection,
             ssh_sftp::ssh_send_input,
             ssh_sftp::ssh_resize_terminal,
             ssh_sftp::ssh_terminal_attach,

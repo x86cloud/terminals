@@ -22,11 +22,14 @@ export default function SessionTabs() {
         const list: TabItem[] = []
 
         sessions.ssh.forEach((s) => {
+            const dotStatus =
+                s.reconnectState ?? (s.connected ? 'connected' : 'disconnected')
             list.push({
                 key: `ssh:${s.id}`,
                 label: s.title,
                 icon: <ClientIcon kind="ssh" size={14} />,
                 dotOn: s.connected,
+                dotStatus,
                 closable: true,
             })
         })

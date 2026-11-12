@@ -3,6 +3,7 @@ use regex::Regex;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 pub(crate) fn str_field(v: &Value, keys: &[&str]) -> String {
     for k in keys {
@@ -105,6 +106,19 @@ pub(crate) fn compute_service_config_hash(svc: &ComposeServiceSpec) -> String {
     hex::encode(hasher.finalize())
 }
 
+fn env_braced_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| {
+        Regex::new(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?:(:[-?+]|[-?+])([^}]*))?\}")
+            .expect("valid braced env regex")
+    })
+}
+
+fn env_simple_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"\$([a-zA-Z_][a-zA-Z0-9_]*)").expect("valid simple env regex"))
+}
+
 pub(crate) fn interpolate_env(content: &str, env_vars: &HashMap<String, String>) -> String {
     let mut merged: HashMap<String, String> = std::env::vars().collect();
     for (k, v) in env_vars {
@@ -112,8 +126,7 @@ pub(crate) fn interpolate_env(content: &str, env_vars: &HashMap<String, String>)
     }
 
     let escaped = content.replace("$$", "\x00ESCAPED_DOLLAR\x00");
-    let re =
-        Regex::new(r"\$\{([a-zA-Z_][a-zA-Z0-9_]*)(?:(:[-?+]|[-?+])([^}]*))?\}").unwrap();
+    let re = env_braced_regex();
 
     let step1 = re
         .replace_all(&escaped, |caps: &regex::Captures| {
@@ -152,7 +165,7 @@ pub(crate) fn interpolate_env(content: &str, env_vars: &HashMap<String, String>)
         })
         .to_string();
 
-    let re_simple = Regex::new(r"\$([a-zA-Z_][a-zA-Z0-9_]*)").unwrap();
+    let re_simple = env_simple_regex();
     let step2 = re_simple
         .replace_all(&step1, |caps: &regex::Captures| {
             let var_name = caps.get(1).map(|m| m.as_str()).unwrap_or("");

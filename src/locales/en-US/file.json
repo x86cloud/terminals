@@ -17,7 +17,6 @@
   "uploadFolderToCurrent": "Upload Folder to Current Folder",
   "uploadFile": "Upload Files",
   "uploadFolder": "Upload Folder",
-  "uploadBtnTip": "Upload Files or Folder",
   "dropReadDirFailed": "Failed to read dropped folder: {{error}}",
   "newFile": "New File",
   "newFolder": "New Folder",
@@ -58,5 +57,7 @@
     "readingRemote": "Reading remote file content..."
   },
   "itemsCount": "{{count}} item(s)",
+  "selectedCount": "{{count}} selected",
+  "viewOptions": "View Options",
   "dropToUpload": "Drop to upload to {{path}}"
 }

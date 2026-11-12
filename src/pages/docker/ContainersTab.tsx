@@ -427,7 +427,7 @@ export default function ContainersTab({ serverId }: Props) {
                         size="small"
                         onClick={fetchContainers}
                     >
-                        {t('common.refresh', { defaultValue: '刷新' })}
+                        {t('common:refresh', { defaultValue: '刷新' })}
                     </Button>
                 </div>
             </div>
@@ -445,7 +445,7 @@ export default function ContainersTab({ serverId }: Props) {
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                    showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -493,7 +493,7 @@ export default function ContainersTab({ serverId }: Props) {
                                     if (logDrawer.container) fetchLogs(logDrawer.container.id, logTail, logTimestamps)
                                 }}
                             >
-                                {t('common.refresh', { defaultValue: '刷新' })}
+                                {t('common:refresh', { defaultValue: '刷新' })}
                             </Button>
                             <Button
                                 size="small"

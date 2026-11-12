@@ -120,7 +120,7 @@ export const CreateIndexModal: React.FC<CreateIndexModalProps> = ({
             okText={t('common:ok')}
             cancelText={t('common:cancel')}
             width={620}
-            destroyOnClose
+            destroyOnHidden
             maskClosable={false}
         >
             <Form layout="vertical" style={{ marginTop: 16 }}>

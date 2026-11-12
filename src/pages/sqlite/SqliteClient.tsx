@@ -16,7 +16,7 @@ import DbDataTab from '@/components/db/DataTab'
 import DbSqlEditor from '@/components/db/SqlEditor'
 import { createSqliteAdapter, createSqliteSqlAdapter } from '@/components/db/adapters'
 import { API } from '@/api'
-import { errorMessage } from '@/utils'
+import { errorMessage, copyText } from '@/utils'
 import { SqliteSessionInfo, SqliteTableInfo } from '@/types'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import ObjModal from '@/pages/mysql/ObjModal'
@@ -105,8 +105,9 @@ export default function SqliteClient({ session, onClose }: Props) {
             message.warning(t('sqlite.noFilePath'))
             return
         }
-        navigator.clipboard.writeText(info.path)
-        message.success(t('sqlite.filePathCopied'))
+        void copyText(info.path).then((ok) => {
+            if (ok) message.success(t('sqlite.filePathCopied'))
+        })
     }
 
     // 打开数据表 Tab

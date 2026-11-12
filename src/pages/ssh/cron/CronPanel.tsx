@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Input, Button, Switch, Table, Modal, Alert, Space, Tooltip, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Plus, Search, RotateCw, Play, Edit, Trash2 } from 'lucide-react'
@@ -13,9 +13,10 @@ import c from '@/pages/ssh/cron/CronPanel.module.less'
 interface Props {
     sessionId: string
     active: boolean
+    reconnectSeq?: number
 }
 
-export default function CronPanel({ sessionId, active }: Props) {
+export default function CronPanel({ sessionId, active, reconnectSeq = 0 }: Props) {
     const { t } = useTranslation(['ssh', 'common'])
     const { message } = App.useApp()
     const [items, setItems] = useState<SSHCronItem[]>([])
@@ -48,6 +49,17 @@ export default function CronPanel({ sessionId, active }: Props) {
         setItems([])
         setError('')
     }, [sessionId])
+
+    const prevReconnectSeqRef = useRef(reconnectSeq)
+    useEffect(() => {
+        if (reconnectSeq > 0 && reconnectSeq !== prevReconnectSeqRef.current) {
+            prevReconnectSeqRef.current = reconnectSeq
+            setError('')
+            setLoaded(false)
+        } else {
+            prevReconnectSeqRef.current = reconnectSeq
+        }
+    }, [reconnectSeq])
 
     const fetchCrons = useCallback(async () => {
         setBusy(true)

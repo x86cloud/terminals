@@ -655,8 +655,8 @@ export default function ComposeTab({ serverId }: Props) {
                         title={t('compose.deleteConfirm', { defaultValue: '确定清理删除此项目？' })}
                         description={t('compose.deleteConfirmDesc', { defaultValue: '将联动停止并删除关联的远程容器。' })}
                         onConfirm={() => handleDelete(record)}
-                        okText={t('common.confirm', { defaultValue: '确认' })}
-                        cancelText={t('common.cancel', { defaultValue: '取消' })}
+                        okText={t('common:confirm', { defaultValue: '确认' })}
+                        cancelText={t('common:cancel', { defaultValue: '取消' })}
                         okButtonProps={{ danger: true }}
                     >
                         <AntTooltip title={t('compose.deleteTooltip', { defaultValue: '强力联动删除 (Down & Clean)' })}>
@@ -842,7 +842,7 @@ export default function ComposeTab({ serverId }: Props) {
                         size="small"
                         onClick={fetchData}
                     >
-                        {t('common.refresh', { defaultValue: '刷新' })}
+                        {t('common:refresh', { defaultValue: '刷新' })}
                     </AntButton>
                 </div>
             </div>
@@ -877,7 +877,7 @@ export default function ComposeTab({ serverId }: Props) {
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => t('common.paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
+                    showTotal: (total, range) => t('common:paginationTotal', { defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条`, from: range[0], to: range[1], total }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)
@@ -922,7 +922,7 @@ export default function ComposeTab({ serverId }: Props) {
                             onClick={() => setEditorOpen(false)}
                             disabled={updating}
                         >
-                            {t('common.cancel', { defaultValue: '取消' })}
+                            {t('common:cancel', { defaultValue: '取消' })}
                         </AntButton>
                         <AntButton
                             type="primary"
@@ -1319,7 +1319,7 @@ export default function ComposeTab({ serverId }: Props) {
                                     )
                                 }
                             >
-                                {t('common.refresh', { defaultValue: '刷新' })}
+                                {t('common:refresh', { defaultValue: '刷新' })}
                             </AntButton>
                             <AntButton
                                 size="small"

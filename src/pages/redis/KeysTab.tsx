@@ -14,6 +14,7 @@ import SetViewer from '@/pages/redis/viewers/SetViewer'
 import ZSetViewer from '@/pages/redis/viewers/ZSetViewer'
 import StreamViewer from '@/pages/redis/viewers/StreamViewer'
 import { appStorage, StorageKey } from '@/utils/storage'
+import { copyText } from '@/utils'
 import k from '@/pages/redis/KeysTab.module.less'
 
 interface KeysTabProps {
@@ -136,9 +137,10 @@ export default function KeysTab({
         return buildKeyTree(filteredKeyItems, ':')
     }, [keyTree, localFilter, filteredKeyItems])
 
-    const copyKeyName = (keyName: string) => {
-        navigator.clipboard.writeText(keyName)
-        message.success(t('keys.copiedKey'))
+    const copyKeyName = async (keyName: string) => {
+        if (await copyText(keyName)) {
+            message.success(t('keys.copiedKey'))
+        }
     }
 
     return (

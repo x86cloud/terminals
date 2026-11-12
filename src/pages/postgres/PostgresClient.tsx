@@ -247,7 +247,7 @@ export default function PostgresClient({ session, onClose: _onClose, onChange: _
                 icon = <Play size={13} />
                 if (tItem.dbName) {
                     label = `${tItem.dbName} (SQL)`
-                } else if (tItem.label === 'SQL 编辑器' || tItem.label === 'SQL Editor') {
+                } else {
                     label = t('postgres.tabSql')
                 }
             } else if (tItem.type === 'data') {

@@ -20,6 +20,7 @@
     "closeSplit": "关闭当前分屏",
     "disconnected": "连接已断开",
     "reconnecting": "正在重新连接...",
+    "reconnectedBanner": "已重新连接至 {{host}}",
     "searchPlaceholder": "查找终端内容...",
     "caseSensitive": "区分大小写",
     "prevMatch": "查找上一个 (Shift+Enter)",
@@ -27,11 +28,6 @@
     "close": "关闭 (Esc)",
     "askAi": "问AI",
     "askAiPrompt": "请分析并解答以下远程服务器上终端选中的内容：\n```\n{{text}}\n```"
-  },
-  "workspace": {
-    "maximizePanel": "侧栏面板占满",
-    "restorePanel": "还原侧栏面板",
-    "collapsePanel": "收起侧栏面板"
   },
   "dashboard": {
     "title": "系统监控仪表盘",
@@ -127,5 +123,20 @@
     "presetDaily": "每天0点 (Daily)",
     "presetWeekly": "每周一0点 (Weekly)",
     "presetMonthly": "每月1日0点 (Monthly)"
+  },
+  "disconnectOverlay": {
+    "title": "SSH 连接已断开",
+    "autoReconnectingProgress": "正在自动重连 ({{attempt}}/{{max}})...",
+    "manualReconnecting": "正在重新连接...",
+    "reconnectNow": "立即重试",
+    "reconnect": "重新连接",
+    "close": "关闭",
+    "reason": {
+      "keepalive_timeout": "服务器长时间未响应心跳保活探测",
+      "remote_disconnect": "远端服务器主动断开了连接",
+      "transport_error": "网络连接异常或传输已中断",
+      "shell_exit": "远程 Shell 会话已退出",
+      "unknown": "连接已意外中断"
+    }
   }
 }

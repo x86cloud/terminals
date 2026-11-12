@@ -19,9 +19,20 @@ import t from '@/pages/ssh/terminal/Terminal.module.less'
 interface Props {
     sessionId: string
     active: boolean
+    disabled?: boolean
+    reconnectSeq?: number
+    reconnectHost?: string
+    onDimensionsChange?: (cols: number, rows: number) => void
 }
 
-export default function TerminalView({ sessionId, active }: Props) {
+export default function TerminalView({
+    sessionId,
+    active,
+    disabled = false,
+    reconnectSeq = 0,
+    reconnectHost = '',
+    onDimensionsChange,
+}: Props) {
     const { t: tr } = useTranslation(['ssh', 'common'])
     const { isDark } = useTheme()
     const hostRef = useRef<HTMLDivElement>(null)
@@ -31,6 +42,11 @@ export default function TerminalView({ sessionId, active }: Props) {
     const searchInputRef = useRef<HTMLInputElement>(null)
     const activeRef = useRef<boolean>(active)
     activeRef.current = active
+    const disabledRef = useRef<boolean>(disabled)
+    disabledRef.current = disabled
+    const onDimensionsChangeRef = useRef(onDimensionsChange)
+    onDimensionsChangeRef.current = onDimensionsChange
+    const prevReconnectSeqRef = useRef<number>(reconnectSeq)
 
     const flushOutputRef = useRef<(() => void) | null>(null)
     const tryAttachRendererRef = useRef<(() => void) | null>(null)
@@ -44,7 +60,9 @@ export default function TerminalView({ sessionId, active }: Props) {
     const handleCloseMenu = useCallback(() => {
         setMenu(closedMenu)
         setTimeout(() => {
-            termRef.current?.focus()
+            if (!disabledRef.current) {
+                termRef.current?.focus()
+            }
         }, 10)
     }, [])
 
@@ -74,6 +92,7 @@ export default function TerminalView({ sessionId, active }: Props) {
 
     const lastPasteTimeRef = useRef<number>(0)
     const paste = useCallback(async () => {
+        if (disabledRef.current) return
         const now = Date.now()
         if (now - lastPasteTimeRef.current < 200) {
             return
@@ -174,12 +193,15 @@ export default function TerminalView({ sessionId, active }: Props) {
         } catch {
             /* ignore */
         }
+        onDimensionsChangeRef.current?.(term.cols, term.rows)
 
         term.onData((data) => {
+            if (disabledRef.current) return
             API.sendInput(sessionId, data).catch(() => undefined)
         })
 
         term.onResize(({ cols, rows }) => {
+            onDimensionsChangeRef.current?.(cols, rows)
             debouncedResize(cols, rows)
         })
 
@@ -291,11 +313,6 @@ export default function TerminalView({ sessionId, active }: Props) {
             }
         })
 
-        const offClosed = subscribe(`terminal:closed:${sessionId}`, (reason: string) => {
-            flushOutput()
-            term.writeln(`\r\n\x1b[33m[${reason || tr('ssh:terminal.disconnected')}]\x1b[0m`)
-        })
-
         // 通知后端终端视图已挂载就绪，立即同步实际视口尺寸并回放缓冲的早期 Prompt 与 MOTD
         API.terminalAttach(sessionId, term.cols, term.rows).catch(() => undefined)
 
@@ -320,7 +337,6 @@ export default function TerminalView({ sessionId, active }: Props) {
 
         return () => {
             offData()
-            offClosed()
             observer.disconnect()
             if (resizeRaf !== null) {
                 cancelAnimationFrame(resizeRaf)
@@ -356,6 +372,37 @@ export default function TerminalView({ sessionId, active }: Props) {
     }, [sessionId, debouncedResize, copySelection, paste])
 
     useEffect(() => {
+        if (disabled) {
+            termRef.current?.blur()
+            return
+        }
+        if (active) {
+            termRef.current?.focus()
+        }
+    }, [disabled, active])
+
+    useEffect(() => {
+        if (!reconnectSeq || reconnectSeq <= prevReconnectSeqRef.current) return
+        prevReconnectSeqRef.current = reconnectSeq
+        const term = termRef.current
+        if (!term) return
+
+        flushOutputRef.current?.()
+        term.writeln(
+            `\r\n\x1b[32m[${tr('ssh:terminal.reconnectedBanner', { host: reconnectHost || '' })}]\x1b[0m\r\n`
+        )
+        try {
+            fitRef.current?.fit()
+        } catch {
+            /* ignore */
+        }
+        API.terminalAttach(sessionId, term.cols, term.rows).catch(() => undefined)
+        if (activeRef.current && !disabledRef.current) {
+            term.focus()
+        }
+    }, [reconnectSeq, reconnectHost, sessionId, tr])
+
+    useEffect(() => {
         if (!active) return
         // 切换到当前活动 Tab 时，立即将后台累积的输出刷出，确保硬件加速渲染器已就绪，并重新校准 fit
         flushOutputRef.current?.()
@@ -366,7 +413,9 @@ export default function TerminalView({ sessionId, active }: Props) {
             } catch {
                 /* ignore */
             }
-            termRef.current?.focus()
+            if (!disabledRef.current) {
+                termRef.current?.focus()
+            }
         }, 40)
         return () => window.clearTimeout(timer)
     }, [active])
@@ -416,7 +465,12 @@ export default function TerminalView({ sessionId, active }: Props) {
     }
 
     return (
-        <div className={t.terminalWrap} onClick={() => termRef.current?.focus()}>
+        <div
+            className={t.terminalWrap}
+            onClick={() => {
+                if (!disabledRef.current) termRef.current?.focus()
+            }}
+        >
             {searchOpen && (
                 <div
                     className={t.searchBar}
@@ -477,7 +531,9 @@ export default function TerminalView({ sessionId, active }: Props) {
             <div
                 ref={hostRef}
                 className={t.terminalHost}
-                onClick={() => termRef.current?.focus()}
+                onClick={() => {
+                    if (!disabledRef.current) termRef.current?.focus()
+                }}
                 onContextMenu={(e) => {
                     e.preventDefault()
                     const hasSelection = termRef.current?.hasSelection() ?? false

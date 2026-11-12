@@ -20,6 +20,7 @@
     "closeSplit": "Close Split Pane",
     "disconnected": "Connection disconnected",
     "reconnecting": "Reconnecting...",
+    "reconnectedBanner": "Reconnected to {{host}}",
     "searchPlaceholder": "Find in terminal...",
     "caseSensitive": "Match Case",
     "prevMatch": "Previous match (Shift+Enter)",
@@ -27,11 +28,6 @@
     "close": "Close (Esc)",
     "askAi": "Ask AI",
     "askAiPrompt": "Please analyze and explain the following selected terminal text from the remote server:\n```\n{{text}}\n```"
-  },
-  "workspace": {
-    "maximizePanel": "Maximize side panel",
-    "restorePanel": "Restore side panel",
-    "collapsePanel": "Collapse side panel"
   },
   "dashboard": {
     "title": "System Monitor Dashboard",
@@ -127,5 +123,20 @@
     "presetDaily": "Daily 00:00 (Daily)",
     "presetWeekly": "Weekly Mon 00:00 (Weekly)",
     "presetMonthly": "Monthly 1st 00:00 (Monthly)"
+  },
+  "disconnectOverlay": {
+    "title": "SSH Connection Lost",
+    "autoReconnectingProgress": "Auto-reconnecting ({{attempt}}/{{max}})...",
+    "manualReconnecting": "Reconnecting...",
+    "reconnectNow": "Retry Now",
+    "reconnect": "Reconnect",
+    "close": "Close",
+    "reason": {
+      "keepalive_timeout": "Server stopped responding to SSH keepalive probes",
+      "remote_disconnect": "Remote server closed the connection",
+      "transport_error": "Network connection lost or transport interrupted",
+      "shell_exit": "Remote shell session exited",
+      "unknown": "Connection terminated unexpectedly"
+    }
   }
 }

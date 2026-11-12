@@ -172,6 +172,20 @@ export interface ServerConfig {
     updatedAt: number
 }
 
+export type SshDisconnectCode =
+    | 'keepalive_timeout'
+    | 'remote_disconnect'
+    | 'transport_error'
+    | 'shell_exit'
+    | 'unknown'
+
+export interface SshDisconnectedEvent {
+    sessionId: string
+    code: SshDisconnectCode
+    reason: string
+    normalExit: boolean
+}
+
 export interface SessionInfo {
     id: string
     serverId: string
@@ -181,6 +195,7 @@ export interface SessionInfo {
     username: string
     connected: boolean
     homeDir: string
+    reconnectState?: 'connected' | 'reconnecting' | 'disconnected'
 }
 
 export interface FileItem {

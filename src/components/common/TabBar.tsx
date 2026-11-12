@@ -11,6 +11,7 @@ export interface TabItem {
     icon?: React.ReactNode
     closable?: boolean // 默认为 true
     dotOn?: boolean
+    dotStatus?: 'connected' | 'reconnecting' | 'disconnected'
     extra?: React.ReactNode
     disabled?: boolean
 }
@@ -160,6 +161,21 @@ export default function TabBar({
         ]
     }
 
+    const renderTabDot = (item: TabItem) => {
+        if (item.dotStatus === undefined && item.dotOn === undefined) {
+            return null
+        }
+        let statusClass = ''
+        if (item.dotStatus === 'reconnecting') {
+            statusClass = ' ' + s.reconnecting
+        } else if (item.dotStatus === 'disconnected') {
+            statusClass = ' ' + s.disconnected
+        } else if (item.dotStatus === 'connected' || item.dotOn) {
+            statusClass = ' ' + s.on
+        }
+        return <span className={`${s.dot}${statusClass}`} />
+    }
+
     // 构建右侧下拉溢出菜单
     const overflowMenuItems: MenuProps['items'] = useMemo(() => {
         return items.map((item) => {
@@ -172,9 +188,7 @@ export default function TabBar({
                     <div className={s.dropdownMenuItem}>
                         <div className={s.itemLeft}>
                             {item.icon}
-                            {item.dotOn !== undefined && (
-                                <span className={`${s.dot}${item.dotOn ? ' ' + s.on : ''}`} />
-                            )}
+                            {renderTabDot(item)}
                             <span className={s.itemTitle} style={{ fontWeight: isActive ? 600 : 400 }}>
                                 {item.label}
                             </span>
@@ -224,9 +238,7 @@ export default function TabBar({
                                 onClick={() => !item.disabled && onChange(item.key)}
                             >
                                 {item.icon}
-                                {item.dotOn !== undefined && (
-                                    <span className={`${s.dot}${item.dotOn ? ' ' + s.on : ''}`} />
-                                )}
+                                {renderTabDot(item)}
                                 <span className={s.tabTitle}>{item.label}</span>
                                 {item.extra}
                                 {isClosable && <Button

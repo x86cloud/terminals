@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Segmented, Input, Button, Table, Badge, Modal, Alert, Space, Spin, Tooltip, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Play, Power, FileText } from 'lucide-react'
@@ -11,11 +11,12 @@ import s from '@/pages/ssh/service/ServicePanel.module.less'
 interface Props {
     sessionId: string
     active: boolean
+    reconnectSeq?: number
 }
 
 type FilterTab = 'all' | 'active' | 'inactive' | 'failed'
 
-export default function ServicePanel({ sessionId, active }: Props) {
+export default function ServicePanel({ sessionId, active, reconnectSeq = 0 }: Props) {
     const { t } = useTranslation(['ssh', 'common'])
     const { message } = App.useApp()
     const [services, setServices] = useState<SSHServiceInfo[]>([])
@@ -34,6 +35,17 @@ export default function ServicePanel({ sessionId, active }: Props) {
         setServices([])
         setError('')
     }, [sessionId])
+
+    const prevReconnectSeqRef = useRef(reconnectSeq)
+    useEffect(() => {
+        if (reconnectSeq > 0 && reconnectSeq !== prevReconnectSeqRef.current) {
+            prevReconnectSeqRef.current = reconnectSeq
+            setError('')
+            setLoaded(false)
+        } else {
+            prevReconnectSeqRef.current = reconnectSeq
+        }
+    }, [reconnectSeq])
 
     useEffect(() => {
         setPage(1)

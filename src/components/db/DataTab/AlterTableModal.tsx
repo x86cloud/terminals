@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Modal, Alert, Button, Space, App } from 'antd'
 import { Copy, AlertTriangle, Database } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
+import { copyText } from '@/utils'
 import { AlterTablePlan } from '../types'
 
 interface AlterTableModalProps {
@@ -31,10 +32,11 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
         return plan.sqls.join('\n\n')
     }, [plan, t])
 
-    const handleCopy = () => {
+    const handleCopy = async () => {
         if (!sqlText) return
-        navigator.clipboard.writeText(sqlText)
-        message.success(t('db:modals.alterTable.copiedSql'))
+        if (await copyText(sqlText)) {
+            message.success(t('db:modals.alterTable.copiedSql'))
+        }
     }
 
     const hasDestructiveOps = Boolean(
@@ -54,7 +56,7 @@ export const AlterTableModal: React.FC<AlterTableModalProps> = ({
             open={open}
             onCancel={loading ? undefined : onCancel}
             width={780}
-            destroyOnClose
+            destroyOnHidden
             maskClosable={false}
             footer={
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

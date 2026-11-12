@@ -782,7 +782,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                             <Popconfirm
                                 title={t('mongo.data.actions.truncatePopConfirm', '确定要清空该集合中的所有文档吗？')}
                                 okText={t('mongo.data.actions.confirmTruncate', '确定清空')}
-                                cancelText={t('common.cancel', '取消')}
+                                cancelText={t('common:cancel', '取消')}
                                 okButtonProps={{ danger: true }}
                                 onConfirm={truncateCollection}
                             >
@@ -1082,7 +1082,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                     onOk={handleSaveDocModal}
                     confirmLoading={editorBusy}
                     okText={editOpen.mode === 'insert' ? t('mongo.data.actions.insertBtn', '插入') : t('mongo.data.actions.saveUpdate', '保存更新')}
-                    cancelText={t('common.cancel', '取消')}
+                    cancelText={t('common:cancel', '取消')}
                     width={600}
                 >
                     <div style={{ marginTop: 8 }}>
@@ -1201,7 +1201,7 @@ export default function DataTab({ session, db, collection, initialSubTab = 'docu
                             {t('mongo.data.actions.formatJson', '格式化 JSON')}
                         </Button>,
                         <Button key="cancel" onClick={() => setCellModal(null)}>
-                            {t('common.cancel', '取消')}
+                            {t('common:cancel', '取消')}
                         </Button>,
                         <Button
                             key="save"

@@ -1,8 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Input, Checkbox, Tooltip, Dropdown, App } from 'antd'
 import { useTranslation } from 'react-i18next'
-import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FolderUp, FileText, Upload, Search, SlidersHorizontal } from 'lucide-react'
-import type { MenuProps } from 'antd'
+import { ChevronUp, Home, RotateCw, Link as LinkIcon, Folder, FileText, Upload, Search, SlidersHorizontal } from 'lucide-react'
 import ContextMenu, { closedMenu, MenuItem, MenuState } from '@/components/ContextMenu'
 import { ConfirmModal, ConfirmState, PromptModal, PromptState } from '@/components/Modal'
 import FileEditorModal from '@/pages/ssh/file/FileEditorModal'
@@ -23,13 +22,14 @@ interface Props {
     sessionId: string
     homeDir: string
     nativeDrop: boolean
+    reconnectSeq?: number
     onPathChange: (path: string) => void
 }
 
 const emptyPrompt: PromptState = { open: false, title: '', value: '' }
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
 
-export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange }: Props) {
+export default function FilePanel({ sessionId, homeDir, nativeDrop, reconnectSeq = 0, onPathChange }: Props) {
     const { t } = useTranslation(['file', 'common'])
     const { message } = App.useApp()
     const [path, setPath] = useState(homeDir || '/')
@@ -113,6 +113,16 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         void load(homeDir || '/')
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionId])
+
+    const prevReconnectSeqRef = useRef(reconnectSeq)
+    useEffect(() => {
+        if (reconnectSeq > 0 && reconnectSeq !== prevReconnectSeqRef.current) {
+            prevReconnectSeqRef.current = reconnectSeq
+            void load(pathRef.current || homeDir || '/', true)
+        } else {
+            prevReconnectSeqRef.current = reconnectSeq
+        }
+    }, [reconnectSeq, homeDir, load])
 
     useEffect(() => {
         return subscribe('sftp:changed', (payload: { sessionId: string; path: string }) => {
@@ -425,24 +435,6 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
         )
     }
 
-    const uploadMenuItems: MenuProps['items'] = useMemo(
-        () => [
-            {
-                key: 'uploadFile',
-                icon: <Upload size={13} />,
-                label: t('file:uploadFile'),
-                onClick: () => void uploadViaDialog(),
-            },
-            {
-                key: 'uploadFolder',
-                icon: <FolderUp size={13} />,
-                label: t('file:uploadFolder'),
-                onClick: () => void uploadFolderViaDialog(),
-            },
-        ],
-        [t, uploadViaDialog, uploadFolderViaDialog]
-    )
-
     return (
         <section
             className={`${fp.filePanel}${isDropActive ? ' ' + fp.dragOver : ''}`}
@@ -514,20 +506,10 @@ export default function FilePanel({ sessionId, homeDir, nativeDrop, onPathChange
                         allowClear
                         onChange={(e) => setFilter(e.target.value)}
                     />
-                    <Dropdown trigger={['click']} placement="bottomRight" menu={{ items: uploadMenuItems }}>
-                        <Tooltip title={t('file:uploadBtnTip', { defaultValue: '上传文件或文件夹' })}>
-                            <Button
-                                size="small"
-                                type="text"
-                                className={fp.iconBtn}
-                                icon={<Upload size={14} />}
-                            />
-                        </Tooltip>
-                    </Dropdown>
                     <Dropdown
                         trigger={['click']}
                         placement="bottomRight"
-                        dropdownRender={() => (
+                        popupRender={() => (
                             <div className={fp.viewDropdownCard}>
                                 <Checkbox
                                     checked={showHidden}

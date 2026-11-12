@@ -92,6 +92,43 @@ pub async fn ssh_disconnect(
 }
 
 #[tauri::command]
+pub async fn ssh_reconnect(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    session_id: String,
+    cols: u32,
+    rows: u32,
+) -> Result<SessionInfo, String> {
+    let old_cfg = state.ssh.get_session_cfg(&session_id).await?;
+    // 若用户已在服务器列表中修改过配置（如密码/密钥/端口），重连时自动同步最新配置
+    let cfg = state
+        .store
+        .get(&old_cfg.id)
+        .unwrap_or(old_cfg);
+    storage::log_info(format!(
+        "发起 SSH 原地重连: SessionID={}, 主机={}:{}, 用户={}",
+        session_id,
+        cfg.host,
+        cfg.display_port(),
+        cfg.username
+    ));
+    let info = state
+        .ssh
+        .reconnect(app, &session_id, cfg, cols, rows)
+        .await?;
+    storage::log_info(format!("SSH 原地重连成功: SessionID={}", info.id));
+    Ok(info)
+}
+
+#[tauri::command]
+pub async fn ssh_check_connection(
+    state: State<'_, AppState>,
+    session_id: String,
+) -> Result<bool, String> {
+    state.ssh.check_connection(&session_id).await
+}
+
+#[tauri::command]
 pub async fn ssh_send_input(
     state: State<'_, AppState>,
     session_id: String,

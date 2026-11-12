@@ -689,7 +689,7 @@ pub async fn ws_send(
     let conn = state.mqtt_api.get_ws(&id).await?;
 
     conn.tx
-        .send(WsMessage::Text(message.clone().into()))
+        .send(WsMessage::Text(message.clone()))
         .map_err(|e| format!("WebSocket 发送失败: {}", e))?;
 
     let msg_event = format!("ws:message:{}", id);

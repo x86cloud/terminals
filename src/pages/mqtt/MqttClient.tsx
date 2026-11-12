@@ -26,10 +26,10 @@ import {
     Filter,
     Layers,
 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { Trans, useTranslation } from 'react-i18next'
 import { API, subscribe } from '@/api'
 import CodeEditor from '@/components/CodeEditor'
-import { errorMessage } from '@/utils'
+import { errorMessage, copyText } from '@/utils'
 import { MqttMessage, MqttSessionInfo, MqttSubscription } from '@/types'
 import m from '@/pages/mqtt/MqttClient.module.less'
 
@@ -292,10 +292,11 @@ export default function MqttClient({ session, onClose }: Props) {
         }
     }
 
-    const copyPayload = (payload: string, id: string) => {
-        navigator.clipboard.writeText(payload)
-        setCopiedId(id)
-        setTimeout(() => setCopiedId(null), 1500)
+    const copyPayload = async (payload: string, id: string) => {
+        if (await copyText(payload)) {
+            setCopiedId(id)
+            setTimeout(() => setCopiedId(null), 1500)
+        }
     }
 
     const fillToPublish = (topic: string, payload?: string) => {
@@ -489,9 +490,13 @@ export default function MqttClient({ session, onClose }: Props) {
                             allowClear
                         />
 
-                        <span style={{ fontSize: 11.5, color: 'var(--text-dim)', whiteSpace: 'nowrap' }} dangerouslySetInnerHTML={{
-                            __html: t('mqtt.client.showingCount', { count: filteredMessages.length, total: messages.length })
-                        }} />
+                        <span style={{ fontSize: 11.5, color: 'var(--text-dim)', whiteSpace: 'nowrap' }}>
+                            <Trans
+                                i18nKey="server:mqtt.client.showingCount"
+                                values={{ count: filteredMessages.length, total: messages.length }}
+                                components={{ strong: <strong /> }}
+                            />
+                        </span>
                     </div>
 
                     <div className={m.streamRightControls}>

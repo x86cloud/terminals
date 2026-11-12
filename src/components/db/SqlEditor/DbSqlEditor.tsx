@@ -13,6 +13,7 @@ import {
 } from 'lucide-react'
 import CodeEditor from '@/components/CodeEditor'
 import TabBar, { TabItem } from '@/components/common/TabBar'
+import { copyText } from '@/utils'
 import { DbSqlEditorAdapter, DbQueryResult, ExplainPlanResult } from '../types'
 import s from './DbSqlEditor.module.less'
 
@@ -190,8 +191,9 @@ export default function DbSqlEditor({ adapter, initialSql }: DbSqlEditorProps) {
                 cols.map((c) => JSON.stringify(r[c] ?? '')).join(',')
             ),
         ].join('\n')
-        navigator.clipboard.writeText(csv)
-        message.success(t('db:sql.copiedCsv'))
+        void copyText(csv).then((ok) => {
+            if (ok) message.success(t('db:sql.copiedCsv'))
+        })
     }
 
     const planTreeData = useMemo(() => {

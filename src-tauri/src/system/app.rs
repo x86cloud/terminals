@@ -148,29 +148,46 @@ pub async fn check_for_updates() -> Result<UpdateCheckResult, String> {
 
 #[tauri::command]
 pub async fn open_browser(target_url: String) -> Result<(), String> {
-    storage::log_info(format!("调用系统浏览器打开 URL: {}", target_url));
+    let trimmed = target_url.trim();
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("http://") && !lower.starts_with("https://") {
+        return Err("仅支持通过系统浏览器打开 http:// 或 https:// 协议链接".to_string());
+    }
+    storage::log_info(format!("调用系统浏览器打开 URL: {}", trimmed));
     #[cfg(target_os = "windows")]
     {
         std::process::Command::new("rundll32")
-            .args(["url.dll,FileProtocolHandler", &target_url])
+            .args(["url.dll,FileProtocolHandler", trimmed])
             .spawn()
             .map_err(|e| e.to_string())?;
     }
     #[cfg(target_os = "macos")]
     {
         std::process::Command::new("open")
-            .arg(&target_url)
+            .arg(trimmed)
             .spawn()
             .map_err(|e| e.to_string())?;
     }
     #[cfg(target_os = "linux")]
     {
         std::process::Command::new("xdg-open")
-            .arg(&target_url)
+            .arg(trimmed)
             .spawn()
             .map_err(|e| e.to_string())?;
     }
     Ok(())
+}
+
+pub async fn close_active_connections_and_exit(app: AppHandle) {
+    set_app_quitting(true);
+    if let Some(state) = app.try_state::<AppState>() {
+        let _ = tokio::time::timeout(
+            std::time::Duration::from_millis(800),
+            state.ssh.close_all(),
+        )
+        .await;
+    }
+    app.exit(0);
 }
 
 #[tauri::command]
@@ -183,8 +200,7 @@ pub async fn hide_window(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn quit_app(app: AppHandle) -> Result<(), String> {
-    set_app_quitting(true);
-    app.exit(0);
+    close_active_connections_and_exit(app).await;
     Ok(())
 }
 

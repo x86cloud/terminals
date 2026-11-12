@@ -2,6 +2,7 @@ import React from 'react'
 import { Button, Tooltip, Dropdown, App } from 'antd'
 import { FileText, Folder, Trash2, Copy } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { copyText } from '@/utils'
 import { KeyTreeNode, TYPE_COLOR, TYPE_SHORT_LABEL } from './redisTypes'
 import t from './KeyItemTree.module.less'
 
@@ -26,9 +27,10 @@ export default function KeyItemTree({
 }) {
     const { t: tr } = useTranslation('redis')
     const { message } = App.useApp()
-    const handleCopy = (keyName: string) => {
-        navigator.clipboard.writeText(keyName)
-        message.success(tr('keys.copiedKey'))
+    const handleCopy = async (keyName: string) => {
+        if (await copyText(keyName)) {
+            message.success(tr('keys.copiedKey'))
+        }
     }
 
     return (

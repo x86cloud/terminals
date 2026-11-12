@@ -286,6 +286,7 @@
     "dashboard": "监控仪表盘",
     "sqlEditor": "SQL 编辑器",
     "erDiagram": "ER 图 ({{dbName}})",
+    "dbNotFound": "未找到指定的默认数据库: {{db}}",
     "erDiagramTitle": "ER 关系图",
     "usersGrants": "用户与权限",
     "connectFailed": "连接 MySQL 失败: {{error}}",
@@ -313,6 +314,7 @@
     "viewsLoading": "视图 (加载中...)",
     "viewsCount": "视图 ({{count}})",
     "menu": {
+      "newQuery": "新建查询",
       "newTable": "新建数据表",
       "viewEr": "查看 ER 关系图",
       "backupDb": "备份数据库 (SQL)",
@@ -616,6 +618,7 @@
   },
   "postgres": {
     "connectFailed": "连接 PostgreSQL 失败: {{error}}",
+    "dbNotFound": "未找到指定的默认数据库: {{db}}",
     "loadSchemaFailed": "加载 Schemas 失败: {{error}}",
     "loadTableFailed": "加载 Tables 失败: {{error}}",
     "loadFuncFailed": "加载函数失败: {{error}}",
@@ -628,6 +631,7 @@
     "tabFuncs": "函数 ({{schema}})",
     "tabRoles": "角色与权限",
     "menu": {
+      "newQuery": "新建查询",
       "newSchema": "新建 Schema",
       "refreshMeta": "刷新元数据",
       "dropDb": "删除数据库 (DROP)",
@@ -1107,6 +1111,7 @@
         "totalDocs": "{{count}} 文档",
         "emptyDocsMatch": "暂无文档（或当前过滤条件无匹配数据）",
         "pageFooter": "共 {{total}} 条文档 · 每页 {{pageSize}} 条",
+        "editDoc": "编辑",
         "editDocSet": "编辑文档 ($set)",
         "replaceWholeDoc": "替换整个文档",
         "copyCellVal": "复制当前单元格值",
@@ -1269,6 +1274,7 @@
     },
     "client": {
       "statusTab": "性能监控",
+      "dbNotFound": "未找到指定的默认数据库: {{db}}",
       "usersTab": "用户与权限",
       "mqlTab": "MQL 编辑器",
       "refreshTree": "刷新数据库列表",

@@ -278,8 +278,6 @@
   },
   "deleteTitle": "删除服务器",
   "deleteConfirm": "确定要删除“{{name}}”的连接配置吗？",
-  "connectedTo": "已连接 {{title}}",
-  "openedSqlite": "已打开 SQLite 文件：{{title}}",
   "connectFailK8s": "Kubernetes 集群连接失败",
   "connectFailDocker": "Docker 守护进程连接失败",
   "connectFailRedis": "Redis 连接失败",

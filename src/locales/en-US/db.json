@@ -286,6 +286,7 @@
     "dashboard": "Dashboard",
     "sqlEditor": "SQL Editor",
     "erDiagram": "ER Diagram ({{dbName}})",
+    "dbNotFound": "Specified default database not found: {{db}}",
     "erDiagramTitle": "ER Diagram",
     "usersGrants": "Users & Privileges",
     "connectFailed": "Failed to connect to MySQL: {{error}}",
@@ -313,6 +314,7 @@
     "viewsLoading": "Views (Loading...)",
     "viewsCount": "Views ({{count}})",
     "menu": {
+      "newQuery": "New Query",
       "newTable": "New Table",
       "viewEr": "View ER Diagram",
       "backupDb": "Backup Database (SQL)",
@@ -616,6 +618,7 @@
   },
   "postgres": {
     "connectFailed": "Failed to connect to PostgreSQL: {{error}}",
+    "dbNotFound": "Specified default database not found: {{db}}",
     "loadSchemaFailed": "Failed to load schemas: {{error}}",
     "loadTableFailed": "Failed to load tables: {{error}}",
     "loadFuncFailed": "Failed to load functions: {{error}}",
@@ -628,6 +631,7 @@
     "tabFuncs": "Functions ({{schema}})",
     "tabRoles": "Roles & Permissions",
     "menu": {
+      "newQuery": "New Query",
       "newSchema": "New Schema",
       "refreshMeta": "Refresh Metadata",
       "dropDb": "Drop Database (DROP)",
@@ -1107,6 +1111,7 @@
         "totalDocs": "{{count}} Documents",
         "emptyDocsMatch": "No documents found (or no data matching current filter)",
         "pageFooter": "Total {{total}} documents · {{pageSize}} per page",
+        "editDoc": "Edit",
         "editDocSet": "Edit Document ($set)",
         "replaceWholeDoc": "Replace Whole Document",
         "copyCellVal": "Copy Cell Value",
@@ -1269,6 +1274,7 @@
     },
     "client": {
       "statusTab": "Monitoring",
+      "dbNotFound": "Specified default database not found: {{db}}",
       "usersTab": "Users & Roles",
       "mqlTab": "MQL Editor",
       "refreshTree": "Refresh Databases",

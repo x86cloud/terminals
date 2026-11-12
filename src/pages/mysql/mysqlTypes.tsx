@@ -102,7 +102,7 @@ export function formatCell(v: any) {
 
 export function Grid({ columns, rows }: { columns: string[]; rows: Record<string, any>[] }) {
     if (!columns.length) {
-        return <div className={db.dbEmpty}>{i18n.t('common:empty')}</div>
+        return <div className={db.dbEmpty}>{i18n.t('common:noData')}</div>
     }
     return (
         <div className={my.mysqlGridWrap}>

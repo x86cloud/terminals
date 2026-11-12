@@ -34,9 +34,17 @@ pub async fn sftp_list_dir(
 
     let read_dir = match sftp.read_dir(&target).await {
         Ok(rd) => rd,
-        Err(e) => {
+        Err(_e) => {
+            // SFTP 通道可能在空闲或休眠后失效，清理缓存并重建通道透明重试一次
             session.invalidate_sftp().await;
-            return Err(format!("读取目录 {} 失败: {}", target, e));
+            let retry_sftp = session.sftp_conn().await?;
+            match retry_sftp.read_dir(&target).await {
+                Ok(rd) => rd,
+                Err(e2) => {
+                    session.invalidate_sftp().await;
+                    return Err(format!("读取目录 {} 失败: {}", target, e2));
+                }
+            }
         }
     };
 
@@ -321,7 +329,11 @@ pub async fn sftp_estimate_upload(
         return Ok(UploadEstimate::default());
     }
     let session = state.ssh.get_session(&session_id).await?;
-    let (total_size, file_count, folder_count) = calc_local_paths_stats(&local_paths)?;
+    let paths_for_stats = local_paths.clone();
+    let (total_size, file_count, folder_count) =
+        tokio::task::spawn_blocking(move || calc_local_paths_stats(&paths_for_stats))
+            .await
+            .map_err(|e| format!("统计本地路径失败: {}", e))??;
     let target_dir = session.resolve_remote_path(&remote_dir);
     let (free, total, supported) = query_remote_space(&session, &target_dir).await;
     let is_insufficient = supported && free > 0 && (total_size.max(0) as u64) > free;
@@ -376,13 +388,14 @@ pub async fn sftp_upload_paths(
 
     for local_str in local_paths {
         let local_path = PathBuf::from(&local_str);
-        let meta = std::fs::metadata(&local_path)
+        let meta = tokio::fs::metadata(&local_path)
+            .await
             .map_err(|e| format!("读取本地文件状态失败 [{}]: {}", local_str, e))?;
         let name = local_path
             .file_name()
-            .and_then(|s| s.to_str())
-            .unwrap_or("file")
-            .to_string();
+            .map(|s| s.to_string_lossy().into_owned())
+            .filter(|s| !s.is_empty())
+            .unwrap_or_else(|| "file".to_string());
         let remote_path = join_remote(&remote_dir_norm, &name);
         let initial_size = if meta.is_file() { meta.len() as i64 } else { 0 };
         let is_dir = meta.is_dir();
@@ -407,8 +420,10 @@ pub async fn sftp_upload_paths(
             let res = async {
                 let sftp = session_clone.open_new_sftp().await?;
                 if is_dir {
-                    if let Ok((sz, _, _)) =
-                        calc_local_paths_stats(&[local_path.to_string_lossy().to_string()])
+                    let stat_path = local_path.to_string_lossy().into_owned();
+                    if let Ok(Ok((sz, _, _))) =
+                        tokio::task::spawn_blocking(move || calc_local_paths_stats(&[stat_path]))
+                            .await
                     {
                         ssh_mgr.set_transfer_size(&app_clone, &tid, sz);
                     }

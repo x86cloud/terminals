@@ -341,7 +341,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                     total: filtered.length,
                     showSizeChanger: true,
                     pageSizeOptions: ['10', '20', '50', '100'],
-                    showTotal: (total, range) => t('common:pagination.totalRange', { from: range[0], to: range[1], total, defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条` }),
+                    showTotal: (total, range) => t('common:paginationTotal', { from: range[0], to: range[1], total, defaultValue: `第 ${range[0]}-${range[1]} 条 / 共 ${total} 条` }),
                     onChange: (p, ps) => {
                         setPage(p)
                         setPageSize(ps)

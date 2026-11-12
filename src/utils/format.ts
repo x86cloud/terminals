@@ -14,8 +14,8 @@ export function formatSize(bytes: number): string {
 /**
  * 格式化字节大小（formatSize 别名，统一全项目数据量展示）
  */
-export function formatBytes(bytes: number): string {
-    if (!bytes || bytes <= 0) return '0 B'
+export function formatBytes(bytes?: number | null): string {
+    if (!bytes || Number.isNaN(bytes) || bytes <= 0) return '0 B'
     return formatSize(bytes)
 }
 

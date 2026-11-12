@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ConfigProvider, App as AntdApp } from 'antd'
+import { ConfigProvider, App as AntdApp, message as antdMessage } from 'antd'
 import { useTranslation } from 'react-i18next'
 import { getAntdLocale, changeAppLanguage } from '@/i18n'
 import { getAntdTheme } from './theme'
@@ -29,6 +29,7 @@ import {
     ServerConfig,
     ServerGroup,
     AppSettings,
+    SshDisconnectedEvent,
     emptyServer,
 } from '@/types'
 import { errorMessage, formatSize } from '@/utils'
@@ -48,11 +49,25 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     const { t } = useTranslation(['common', 'sidebar', 'server'])
     const { message } = AntdApp.useApp()
     const {
+        sessions,
         activeTarget,
         addSession,
+        updateSession,
         closeSession,
         sidebarOpen,
     } = useSession()
+
+    const sshSessionsRef = useRef(sessions.ssh)
+    const pathsRef = useRef<Record<string, string>>({})
+    useEffect(() => {
+        sshSessionsRef.current = sessions.ssh
+        const activeIds = new Set(sessions.ssh.map((s) => s.id))
+        for (const id of Object.keys(pathsRef.current)) {
+            if (!activeIds.has(id)) {
+                delete pathsRef.current[id]
+            }
+        }
+    }, [sessions.ssh])
 
     const [servers, setServers] = useState<ServerConfig[]>([])
     const [groups, setGroups] = useState<ServerGroup[]>([])
@@ -68,7 +83,6 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
     const [nativeDrop, setNativeDrop] = useState(false)
 
     const activeIdRef = useRef<string | null>(null)
-    const pathsRef = useRef<Record<string, string>>({})
     const connectingRef = useRef<Set<string>>(new Set())
     const pendingCloseActionRef = useRef<'minimize' | null>(null)
 
@@ -189,17 +203,50 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
 
     useEffect(() => {
         const offClosed = subscribe('session:closed', (sessionId: string) => {
+            delete pathsRef.current[sessionId]
             void closeSession('ssh', sessionId)
+        })
+        const offSshDisconnected = subscribe('ssh:disconnected', (ev: SshDisconnectedEvent) => {
+            if (!ev?.sessionId) return
+            if (ev.normalExit) {
+                void closeSession('ssh', ev.sessionId)
+                return
+            }
+            updateSession('ssh', ev.sessionId, {
+                connected: false,
+                reconnectState: 'reconnecting',
+            })
         })
         const offCloseReq = subscribe('app:request-close', () => {
             handleRequestClose()
         })
 
+        // 系统休眠唤醒或网络状态波动时，主动探活当前仍在线的 SSH 会话
+        const probeAllSsh = () => {
+            const activeList = sshSessionsRef.current.filter((s) => s.connected)
+            if (activeList.length === 0) return
+            for (const s of activeList) {
+                void API.sshCheckConnection(s.id).catch(() => false)
+            }
+        }
+        const onVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                probeAllSsh()
+            }
+        }
+        window.addEventListener('online', probeAllSsh)
+        window.addEventListener('offline', probeAllSsh)
+        document.addEventListener('visibilitychange', onVisibility)
+
         return () => {
             offClosed()
+            offSshDisconnected()
             offCloseReq()
+            window.removeEventListener('online', probeAllSsh)
+            window.removeEventListener('offline', probeAllSsh)
+            document.removeEventListener('visibilitychange', onVisibility)
         }
-    }, [closeSession, handleRequestClose])
+    }, [closeSession, updateSession, handleRequestClose])
 
     const activeSshId = activeTarget?.kind === 'ssh' ? (activeTarget.id ?? null) : null
     useEffect(() => {
@@ -254,7 +301,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         })
         setNativeDrop(ok)
         return () => {
-            if (ok) unregisterNativeFileDrop()
+            unregisterNativeFileDrop()
         }
     }, [t])
 
@@ -347,31 +394,26 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                     case 'redis': {
                         const info = await connectRedisHelper(cfg)
                         addSession('redis', info)
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Redis ${info.title}` }))
                         break
                     }
                     case 'mysql': {
                         const info = await connectMysqlHelper(cfg)
                         addSession('mysql', info)
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MySQL ${info.title}` }))
                         break
                     }
                     case 'postgres': {
                         const info = await connectPostgresHelper(cfg)
                         addSession('postgres', info)
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `PostgreSQL ${info.title}` }))
                         break
                     }
                     case 'mqtt': {
                         const info = await connectMqttHelper(cfg)
                         addSession('mqtt', info)
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MQTT ${info.title}` }))
                         break
                     }
                     case 'mongo': {
                         const info = await connectMongoHelper(cfg)
                         addSession('mongo', info)
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `MongoDB ${info.title}` }))
                         break
                     }
                     case 'sqlite': {
@@ -381,26 +423,22 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                             return
                         }
                         addSession('sqlite', info)
-                        message.success(t('server:openedSqlite', '已打开 SQLite 文件：{{title}}', { title: info.title }))
                         break
                     }
                     case 'docker': {
                         const info = await connectDockerHelper(cfg)
                         addSession('docker', info)
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Docker ${info.title}` }))
                         break
                     }
                     case 'k8s': {
                         const info = await connectK8sHelper(cfg)
                         addSession('k8s', info)
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: `Kubernetes ${info.title}` }))
                         break
                     }
                     default: {
                         const info = await API.connect(cfg.id, 120, 32)
                         addSession('ssh', info)
                         pathsRef.current[info.id] = info.homeDir || '/'
-                        message.success(t('server:connectedTo', '已连接 {{title}}', { title: info.title }))
                         break
                     }
                 }
@@ -501,6 +539,44 @@ export default function App() {
         return cached
     })
 
+    const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() =>
+        typeof window !== 'undefined' &&
+        !!window.matchMedia &&
+        window.matchMedia('(prefers-color-scheme: dark)').matches
+    )
+
+    useEffect(() => {
+        let alive = true
+        API.getAppSettings()
+            .then((remote) => {
+                if (!alive || !remote) return
+                setCachedSettings(remote)
+                setSettings(remote)
+                applyThemeMode(remote.themeMode)
+                applyGlobalFont(remote.fontFamily)
+                void changeAppLanguage(remote.language)
+            })
+            .catch(() => {
+                /* 后端尚未就绪时保持本地缓存设置 */
+            })
+        return () => {
+            alive = false
+        }
+    }, [])
+
+    useEffect(() => {
+        if (typeof window === 'undefined' || !window.matchMedia) return
+        const mql = window.matchMedia('(prefers-color-scheme: dark)')
+        const onChange = (e: MediaQueryListEvent) => {
+            setSystemPrefersDark(e.matches)
+            if (settings.themeMode === 'system') {
+                applyThemeMode('system')
+            }
+        }
+        mql.addEventListener('change', onChange)
+        return () => mql.removeEventListener('change', onChange)
+    }, [settings.themeMode])
+
     const handleUpdateSettings = useCallback(async (newSettings: AppSettings) => {
         setCachedSettings(newSettings)
         setSettings(newSettings)
@@ -509,16 +585,12 @@ export default function App() {
         void changeAppLanguage(newSettings.language)
         try {
             await API.saveAppSettings(newSettings)
-        } catch {
-            /* 忽略保存失败 */
+        } catch (err) {
+            antdMessage.error(errorMessage(err))
         }
     }, [])
 
-    const prefersDark =
-        typeof window !== 'undefined' &&
-        window.matchMedia &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches
-    const isDark = settings.themeMode === 'dark' || (settings.themeMode === 'system' && !!prefersDark)
+    const isDark = settings.themeMode === 'dark' || (settings.themeMode === 'system' && systemPrefersDark)
 
     const handleToggleTheme = useCallback(() => {
         const nextMode: 'light' | 'dark' = isDark ? 'light' : 'dark'

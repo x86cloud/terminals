@@ -278,8 +278,6 @@
   },
   "deleteTitle": "Delete Server",
   "deleteConfirm": "Are you sure you want to delete server config \"{{name}}\"?",
-  "connectedTo": "Connected to {{title}}",
-  "openedSqlite": "Opened SQLite file: {{title}}",
   "connectFailK8s": "Failed to connect to Kubernetes cluster",
   "connectFailDocker": "Failed to connect to Docker daemon",
   "connectFailRedis": "Failed to connect to Redis",

@@ -115,6 +115,28 @@
         background: @ok;
         box-shadow: 0 0 6px color-mix(in srgb, @ok 50%, transparent);
     }
+
+    &.reconnecting {
+        background: @warn;
+        box-shadow: 0 0 6px color-mix(in srgb, @warn 60%, transparent);
+        animation: tabDotPulse 1.2s ease-in-out infinite;
+    }
+
+    &.disconnected {
+        background: @danger;
+        box-shadow: 0 0 6px color-mix(in srgb, @danger 55%, transparent);
+    }
+}
+
+@keyframes tabDotPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.45;
+        transform: scale(0.85);
+    }
 }
 
 .actionArea {

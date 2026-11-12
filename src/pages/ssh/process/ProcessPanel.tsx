@@ -1,34 +1,23 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Input, Button, Table, Tag, Tooltip, Alert, App } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Search, RotateCw, Power } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { API } from '@/api'
 import { SSHProcessInfo } from '@/types'
-import { errorMessage } from '@/utils'
+import { errorMessage, formatBytes } from '@/utils'
 import { ConfirmModal, ConfirmState } from '@/components/Modal'
 import p from '@/pages/ssh/process/ProcessPanel.module.less'
 
 interface Props {
     sessionId: string
     active: boolean
+    reconnectSeq?: number
 }
 
 const emptyConfirm: ConfirmState = { open: false, title: '', message: '' }
 
-function fmtBytes(bytes: number): string {
-    if (!bytes || bytes <= 0) return '0 B'
-    const units = ['B', 'KB', 'MB', 'GB', 'TB']
-    let val = bytes
-    let i = 0
-    while (val >= 1024 && i < units.length - 1) {
-        val /= 1024
-        i++
-    }
-    return `${val.toFixed(1)} ${units[i]}`
-}
-
-export default function ProcessPanel({ sessionId, active }: Props) {
+export default function ProcessPanel({ sessionId, active, reconnectSeq = 0 }: Props) {
     const { t } = useTranslation(['ssh', 'common'])
     const { message } = App.useApp()
     const [procs, setProcs] = useState<SSHProcessInfo[]>([])
@@ -46,6 +35,17 @@ export default function ProcessPanel({ sessionId, active }: Props) {
         setProcs([])
         setError('')
     }, [sessionId])
+
+    const prevReconnectSeqRef = useRef(reconnectSeq)
+    useEffect(() => {
+        if (reconnectSeq > 0 && reconnectSeq !== prevReconnectSeqRef.current) {
+            prevReconnectSeqRef.current = reconnectSeq
+            setError('')
+            setLoaded(false)
+        } else {
+            prevReconnectSeqRef.current = reconnectSeq
+        }
+    }, [reconnectSeq])
 
     useEffect(() => {
         setPage(1)
@@ -150,7 +150,7 @@ export default function ProcessPanel({ sessionId, active }: Props) {
             key: 'rss',
             width: 100,
             sorter: (a, b) => a.rss - b.rss,
-            render: (rss) => fmtBytes(rss),
+            render: (rss) => formatBytes(rss),
         },
         {
             title: t('ssh:process.command'),

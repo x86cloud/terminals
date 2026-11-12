@@ -234,7 +234,7 @@ export const MqttForm: React.FC<ServerFormProps> = ({
 
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                                     <div>
-                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mqtt.keepAlive')}</div>
+                                        <div style={{ fontSize: 12, marginBottom: 4 }}>{t('server:mqtt.keepalive')}</div>
                                         <InputNumber
                                             min={5}
                                             max={3600}
