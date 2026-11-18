@@ -49,9 +49,6 @@ export default function TransferBar({ transfers, onCancel, onClear }: Props) {
                 onClick={() => setOpen((v) => !v)}
                 title={t('transfers.title', { defaultValue: '传输列表' })}
             >
-                <span className={`${tb.capsuleIcon}${running.length > 0 ? ' ' + tb.spinIcon : ''}`}>
-                    {running.length ? <Upload size={12} /> : <Download size={12} />}
-                </span>
                 <span className={tb.capsuleLabel}>
                     {running.length
                         ? t('transfers.inProgress', { count: running.length, defaultValue: `${running.length} 传输中` })
