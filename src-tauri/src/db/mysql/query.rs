@@ -5,10 +5,11 @@ use crate::db::mysql::manager::{
 use crate::storage;
 use crate::AppState;
 use serde_json::{Map, Value};
-use tauri::State;
+use tauri::{AppHandle, State};
 
 #[tauri::command]
 pub async fn mysql_connect(
+    app: AppHandle,
     state: State<'_, AppState>,
     server_id: String,
 ) -> Result<MysqlSessionInfo, String> {
@@ -27,6 +28,10 @@ pub async fn mysql_connect(
 
     state.mysql.open(&server_id, cfg.clone()).await?;
     storage::log_info(format!("MySQL 连接成功: ServerID={}", server_id));
+    state
+        .agent
+        .emit_subagents_sync(&app, &state.ssh, &state.mysql)
+        .await;
 
     Ok(MysqlSessionInfo {
         id: server_id.clone(),
@@ -46,9 +51,18 @@ pub async fn mysql_test_connection(cfg: ServerConfig) -> Result<Value, String> {
 }
 
 #[tauri::command]
-pub async fn mysql_close(state: State<'_, AppState>, server_id: String) -> Result<(), String> {
+pub async fn mysql_close(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    server_id: String,
+) -> Result<(), String> {
     storage::log_info(format!("关闭 MySQL 连接: ServerID={}", server_id));
     state.mysql.close(&server_id).await;
+    state.agent.on_mysql_disconnected(&app, &server_id).await;
+    state
+        .agent
+        .emit_subagents_sync(&app, &state.ssh, &state.mysql)
+        .await;
     Ok(())
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Modal, Space, Tag, Button, Tooltip, App } from 'antd'
+import { Modal, Space, Tag, Button, Tooltip, Select, Input, App } from 'antd'
 import { useTranslation } from 'react-i18next'
 import {
     Terminal as TerminalIcon,
@@ -44,30 +44,49 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
     const termRef = useRef<Terminal | null>(null)
     const fitRef = useRef<FitAddon | null>(null)
     const execIdRef = useRef<string | null>(null)
+    const activeTypeRef = useRef<'docker' | 'k8s' | null>(null)
+    const connectSeqRef = useRef(0)
+    const mountedRef = useRef(true)
     const unsubsRef = useRef<Array<() => void>>([])
 
     const [status, setStatus] = useState<'connecting' | 'connected' | 'closed'>('connecting')
+    const [shellPreset, setShellPreset] = useState<string>('/bin/sh')
+    const [customShell, setCustomShell] = useState<string>('/bin/bash')
+
+    const resolvedShell = (shellPreset === 'custom' ? customShell.trim() : shellPreset) || '/bin/sh'
+
+    useEffect(() => {
+        mountedRef.current = true
+        return () => {
+            mountedRef.current = false
+        }
+    }, [])
 
     // 清理并断开终端会话
     const cleanSession = useCallback(() => {
+        connectSeqRef.current += 1
         unsubsRef.current.forEach((u) => u())
         unsubsRef.current = []
         if (execIdRef.current) {
             const id = execIdRef.current
+            const kind = activeTypeRef.current || target?.type
             execIdRef.current = null
-            if (target?.type === 'docker') {
+            activeTypeRef.current = null
+            if (kind === 'docker') {
                 API.dockerExecClose(id).catch(() => undefined)
-            } else if (target?.type === 'k8s') {
+            } else if (kind === 'k8s') {
                 API.k8sExecClose(id).catch(() => undefined)
             }
         }
-    }, [target])
+    }, [target?.type])
 
     // 建立终端连接
-    const connectTerminal = useCallback(async () => {
+    const connectTerminal = useCallback(async (shellOverride?: string) => {
         if (!open || !target || !target.serverId) return
 
         cleanSession()
+        const seq = ++connectSeqRef.current
+        const shellCmd = (shellOverride ?? resolvedShell).trim() || '/bin/sh'
         setStatus('connecting')
 
         if (termRef.current) {
@@ -86,7 +105,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                 execId = await API.dockerExecStart(
                     target.serverId,
                     target.containerId,
-                    '/bin/sh',
+                    shellCmd,
                     cols,
                     rows
                 )
@@ -99,13 +118,25 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                     target.namespace,
                     target.podName,
                     target.containerName,
-                    '/bin/sh',
+                    shellCmd,
                     cols,
                     rows
                 )
             }
 
+            if (!mountedRef.current || connectSeqRef.current !== seq) {
+                if (execId) {
+                    if (target.type === 'docker') {
+                        API.dockerExecClose(execId).catch(() => undefined)
+                    } else if (target.type === 'k8s') {
+                        API.k8sExecClose(execId).catch(() => undefined)
+                    }
+                }
+                return
+            }
+
             execIdRef.current = execId
+            activeTypeRef.current = target.type
 
             // 获得会话 ID 后立即注册事件监听，确保初始欢迎信息与提示符不丢失
             unsubsRef.current.forEach((u) => u())
@@ -113,6 +144,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
 
             const eventPrefix = target.type === 'docker' ? 'docker:terminal' : 'k8s:terminal'
             const offData = subscribe(`${eventPrefix}:data:${execId}`, (payload: string) => {
+                if (connectSeqRef.current !== seq) return
                 if (termRef.current && payload) {
                     try {
                         const bytes = base64ToBytes(payload)
@@ -123,6 +155,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                 }
             })
             const offClosed = subscribe(`${eventPrefix}:closed:${execId}`, (reason: string) => {
+                if (connectSeqRef.current !== seq) return
                 setStatus('closed')
                 termRef.current?.writeln(`\r\n\x1b[33m[${t('sessionExited', '会话已退出')}] ${reason || t('containerClosed', '容器终端已关闭')}\x1b[0m\r\n`)
             })
@@ -133,10 +166,11 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                 termRef.current.focus()
             }
         } catch (err: any) {
+            if (!mountedRef.current || connectSeqRef.current !== seq) return
             setStatus('closed')
             termRef.current?.writeln(`\r\n\x1b[31m[${t('connectFailed', '连接终端失败')}] ${err?.message || err}\x1b[0m\r\n`)
         }
-    }, [open, target, cleanSession])
+    }, [open, target, resolvedShell, cleanSession, t])
 
     // 初始化 Terminal 实例
     useEffect(() => {
@@ -310,9 +344,34 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                             {target.title}
                         </span>
 
-                        <Tag color="default" style={{ fontFamily: 'var(--font-mono)' }}>
-                            /bin/sh
-                        </Tag>
+                        <Select
+                            size="small"
+                            value={shellPreset}
+                            style={{ width: 110, fontFamily: 'var(--font-mono)' }}
+                            onChange={(val) => {
+                                setShellPreset(val)
+                                if (val !== 'custom') {
+                                    void connectTerminal(val)
+                                }
+                            }}
+                            options={[
+                                { label: '/bin/sh', value: '/bin/sh' },
+                                { label: '/bin/bash', value: '/bin/bash' },
+                                { label: '/bin/ash', value: '/bin/ash' },
+                                { label: '/bin/zsh', value: '/bin/zsh' },
+                                { label: t('customShell', '自定义'), value: 'custom' },
+                            ]}
+                        />
+                        {shellPreset === 'custom' && (
+                            <Input
+                                size="small"
+                                value={customShell}
+                                onChange={(e) => setCustomShell(e.target.value)}
+                                onPressEnter={() => void connectTerminal(customShell)}
+                                placeholder="/bin/bash"
+                                style={{ width: 120, fontFamily: 'var(--font-mono)' }}
+                            />
+                        )}
                     </Space>
 
                     <Space size={6}>
@@ -323,7 +382,7 @@ export default function ContainerTerminalModal({ open, onClose, target }: Props)
                             <Button size="small" icon={<Eraser size={12} />} onClick={handleClear} />
                         </Tooltip>
                         <Tooltip title={t('reconnect', '重新连接')}>
-                            <Button size="small" icon={<RotateCw size={12} />} onClick={connectTerminal} />
+                            <Button size="small" icon={<RotateCw size={12} />} onClick={() => void connectTerminal()} />
                         </Tooltip>
                         <Tooltip title={t('closeTerminal', '关闭终端')}>
                             <Button size="small" icon={<X size={13} />} onClick={onClose} />

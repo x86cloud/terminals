@@ -1,6 +1,7 @@
 use crate::core::ServerConfig;
 use crate::ssh::tunnel::{
-    connect_russh_session, exec_ssh_command, SshClientHandler, SshTransportDisconnect,
+    connect_russh_session, exec_ssh_command, exec_ssh_command_cancellable, SshClientHandler,
+    SshTransportDisconnect,
 };
 use crate::ssh::types::{
     join_remote, join_remote_relative, normalize_remote, parent_remote, shell_quote, SessionInfo,
@@ -19,9 +20,9 @@ use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex as StdMutex};
 use std::time::{Duration, Instant};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio::sync::{mpsc, watch, Mutex as TokioMutex, RwLock};
+use tokio::sync::{mpsc, watch, Mutex as TokioMutex, Notify, RwLock};
 use uuid::Uuid;
 
 pub const STATUS_RUNNING: &str = "running";
@@ -207,6 +208,40 @@ impl SshSession {
                 "命令执行超时 (超过 60 秒上限)，已终止在服务器上运行: {}",
                 cmd
             )),
+        }
+    }
+
+    pub async fn exec_with_timeout(
+        &self,
+        cmd: &str,
+        timeout: Duration,
+        cancel_flag: &AtomicBool,
+        cancel_notify: &Notify,
+    ) -> Result<(String, String, i32), String> {
+        if self.is_closed() {
+            return Err("会话已断开".to_string());
+        }
+        if self.handle.is_closed() {
+            self.notify_disconnect("transport_error", "SSH transport closed".to_string());
+            return Err("会话已断开，请重新连接".to_string());
+        }
+        let safe_cmd = format!("exec 0</dev/null; {}", cmd);
+        match exec_ssh_command_cancellable(
+            &self.handle,
+            &safe_cmd,
+            timeout,
+            cancel_flag,
+            cancel_notify,
+        )
+        .await
+        {
+            Ok(res) => Ok(res),
+            Err(e) => {
+                if self.handle.is_closed() {
+                    self.notify_disconnect("transport_error", e.clone());
+                }
+                Err(e)
+            }
         }
     }
 }
@@ -541,6 +576,18 @@ impl SshManager {
 
             session_clone.mark_closed();
             session_clone.invalidate_sftp().await;
+            if !session_clone.is_user_closed() {
+                if let Some(app_state) = app_clone.try_state::<crate::AppState>() {
+                    app_state
+                        .agent
+                        .on_ssh_disconnected(&app_clone, &session_id_clone)
+                        .await;
+                    app_state
+                        .agent
+                        .emit_subagents_sync(&app_clone, &app_state.ssh, &app_state.mysql)
+                        .await;
+                }
+            }
             let _ = app_clone.emit(
                 &format!("session:closed:{}", session_id_clone),
                 json!({

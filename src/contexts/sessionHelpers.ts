@@ -193,6 +193,7 @@ export function getAllOpenTabs(
     tools: ToolsState
 ): ActiveTarget[] {
     const openTabs: ActiveTarget[] = []
+    if (tools.agent.open) openTabs.push({ kind: 'agent', id: null })
     const kinds: ConnType[] = ['ssh', 'docker', 'k8s', 'redis', 'mysql', 'postgres', 'mqtt', 'mongo', 'sqlite']
     for (const k of kinds) {
         const sList = sessions[k]
@@ -204,6 +205,7 @@ export function getAllOpenTabs(
     }
     if (tools.devtools.open) openTabs.push({ kind: 'devtools', id: null })
     if (tools.api.open) openTabs.push({ kind: 'api', id: null })
+    if (tools.wiki.open) openTabs.push({ kind: 'wiki', id: null })
     return openTabs
 }
 

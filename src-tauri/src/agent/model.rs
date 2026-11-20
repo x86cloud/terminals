@@ -1,9 +1,8 @@
+use crate::agent::types::RunCancel;
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
 use std::time::Duration;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,6 +64,18 @@ impl ChatMessage {
     pub fn system(content: impl Into<String>) -> Self {
         Self {
             role: "system".to_string(),
+            content: content.into(),
+            reasoning_content: None,
+            tool_calls: Vec::new(),
+            tool_call_id: None,
+            name: None,
+            images: Vec::new(),
+        }
+    }
+
+    pub fn user(content: impl Into<String>) -> Self {
+        Self {
+            role: "user".to_string(),
             content: content.into(),
             reasoning_content: None,
             tool_calls: Vec::new(),
@@ -214,7 +225,7 @@ pub async fn stream_chat_turn<FChunk, FReasoning>(
     profile: &ModelProfile,
     messages: &[ChatMessage],
     tools: &[ToolDefinition],
-    cancel_flag: &Arc<AtomicBool>,
+    cancel: &RunCancel,
     in_think_tag: &mut bool,
     mut on_chunk: FChunk,
     mut on_reasoning: FReasoning,
@@ -223,7 +234,7 @@ where
     FChunk: FnMut(&str),
     FReasoning: FnMut(&str),
 {
-    if cancel_flag.load(Ordering::SeqCst) {
+    if cancel.is_cancelled() {
         return Err("用户手动停止了推导".to_string());
     }
 
@@ -265,11 +276,14 @@ where
         req = req.bearer_auth(profile.api_key.trim());
     }
 
-    let resp = req
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| format!("大模型请求异常: {}", e))?;
+    let resp = tokio::select! {
+        _ = cancel.notify.notified() => {
+            return Err("用户手动停止了推导".to_string());
+        }
+        res = req.json(&body).send() => {
+            res.map_err(|e| format!("大模型请求异常: {}", e))?
+        }
+    };
 
     if !resp.status().is_success() {
         let status = resp.status();
@@ -285,10 +299,21 @@ where
     let mut stream_reasoning_acc = String::new();
     let mut tool_calls_map: BTreeMap<usize, ToolCallItem> = BTreeMap::new();
 
-    while let Some(item) = stream.next().await {
-        if cancel_flag.load(Ordering::SeqCst) {
+    loop {
+        if cancel.is_cancelled() {
             return Err("用户手动停止了推导".to_string());
         }
+        let item = tokio::select! {
+            _ = cancel.notify.notified() => {
+                return Err("用户手动停止了推导".to_string());
+            }
+            next = stream.next() => {
+                match next {
+                    Some(v) => v,
+                    None => break,
+                }
+            }
+        };
 
         let bytes = item.map_err(|e| format!("读取大模型流式响应异常: {}", e))?;
         let chunk_str = String::from_utf8_lossy(&bytes);

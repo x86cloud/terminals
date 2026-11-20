@@ -1,11 +1,10 @@
 use crate::agent::store::AgentBrainStore;
-use crate::agent::tool::{AgentTool, ToolResult};
-use crate::core::AppSettings;
+use crate::agent::tool::{AgentTool, ToolCtx, ToolResult};
 use async_trait::async_trait;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 use std::time::Duration;
 use url::Url;
 
@@ -65,6 +64,7 @@ fn clean_ddg_url(raw_href: &str) -> String {
     full
 }
 
+#[allow(dead_code)]
 async fn search_tavily(
     client: &reqwest::Client,
     api_key: &str,
@@ -104,6 +104,7 @@ async fn search_tavily(
     Ok(items)
 }
 
+#[allow(dead_code)]
 async fn search_serper(
     client: &reqwest::Client,
     api_key: &str,
@@ -139,6 +140,7 @@ async fn search_serper(
     Ok(items)
 }
 
+#[allow(dead_code)]
 async fn search_searxng(
     client: &reqwest::Client,
     endpoint: &str,
@@ -276,13 +278,12 @@ async fn search_bing_html(
     Ok(items)
 }
 
-pub struct WebSearchTool {
-    settings: Arc<RwLock<AppSettings>>,
-}
+#[derive(Default)]
+pub struct WebSearchTool;
 
 impl WebSearchTool {
-    pub fn new(settings: Arc<RwLock<AppSettings>>) -> Self {
-        Self { settings }
+    pub fn new() -> Self {
+        Self
     }
 }
 
@@ -293,7 +294,7 @@ impl AgentTool for WebSearchTool {
     }
 
     fn description(&self) -> &str {
-        "搜索互联网实时网页信息，返回网页标题、URL 和摘要。需要进一步阅读全文时，可配合 web_fetch 使用。"
+        "Search the internet for real-time web pages and return titles, URLs, and snippets. Pair with `web_fetch` when you need to read the full page content."
     }
 
     fn parameters_schema(&self) -> Value {
@@ -302,18 +303,32 @@ impl AgentTool for WebSearchTool {
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "搜索关键词或查询语句"
+                    "description": "Search keywords or query string"
                 },
                 "max_results": {
                     "type": "integer",
-                    "description": "返回结果数量上限（默认 6，最大 10）"
+                    "description": "Maximum number of results to return (default 6, max 10)"
                 }
             },
             "required": ["query"]
         })
     }
 
-    async fn execute(&self, _session_id: &str, arguments: &str) -> ToolResult {
+    fn format_title(&self, arguments: &str) -> String {
+        let args: Value = serde_json::from_str(arguments).unwrap_or_else(|_| json!({}));
+        let q = args
+            .get("query")
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+            .trim();
+        if q.is_empty() {
+            "Searched the web".to_string()
+        } else {
+            format!("Searched the web for \"{}\"", q)
+        }
+    }
+
+    async fn execute(&self, _ctx: &ToolCtx, arguments: &str) -> ToolResult {
         let args: Value = serde_json::from_str(arguments).unwrap_or_else(|_| json!({}));
         let query = args
             .get("query")
@@ -330,51 +345,12 @@ impl AgentTool for WebSearchTool {
             .unwrap_or(6)
             .clamp(1, 10) as usize;
 
-        let (provider, api_key, endpoint) = {
-            let guard = self.settings.read();
-            match guard {
-                Ok(cfg) => (
-                    cfg.ai_search_provider.trim().to_lowercase(),
-                    cfg.ai_search_api_key.trim().to_string(),
-                    cfg.ai_search_endpoint.trim().to_string(),
-                ),
-                Err(_) => ("builtin".to_string(), String::new(), String::new()),
-            }
-        };
-
         let client = match build_http_client() {
             Ok(c) => c,
             Err(e) => return ToolResult::err(e),
         };
 
-        // Try configured external provider first if selected
-        if provider == "tavily" && !api_key.is_empty() {
-            match search_tavily(&client, &api_key, &query, max_results).await {
-                Ok(res) if !res.is_empty() => {
-                    return ToolResult::success(json!({ "provider": "tavily", "results": res }));
-                }
-                Ok(_) => {}
-                Err(e) => return ToolResult::err(e),
-            }
-        } else if provider == "serper" && !api_key.is_empty() {
-            match search_serper(&client, &api_key, &query, max_results).await {
-                Ok(res) if !res.is_empty() => {
-                    return ToolResult::success(json!({ "provider": "serper", "results": res }));
-                }
-                Ok(_) => {}
-                Err(e) => return ToolResult::err(e),
-            }
-        } else if provider == "searxng" && !endpoint.is_empty() {
-            match search_searxng(&client, &endpoint, &query, max_results).await {
-                Ok(res) if !res.is_empty() => {
-                    return ToolResult::success(json!({ "provider": "searxng", "results": res }));
-                }
-                Ok(_) => {}
-                Err(e) => return ToolResult::err(e),
-            }
-        }
-
-        // Built-in zero-config search: try Bing CN/Global & DuckDuckGo HTML
+        // Built-in zero-config search: DuckDuckGo HTML -> Bing fallback
         if let Ok(items) = search_duckduckgo_html(&client, &query, max_results).await {
             if !items.is_empty() {
                 return ToolResult::success(json!({
@@ -393,6 +369,72 @@ impl AgentTool for WebSearchTool {
     }
 }
 
+/// Fetched and stripped web page content shared by WebFetchTool and Wiki URL ingest.
+pub struct FetchedWebPage {
+    pub url: String,
+    pub title: String,
+    pub content: String,
+}
+
+/// Fetches an HTTP/HTTPS web page and returns its stripped plain-text content.
+pub async fn fetch_url_text(raw_url: &str, max_chars: usize) -> Result<FetchedWebPage, String> {
+    let trimmed = raw_url.trim().to_string();
+    let lower = trimmed.to_ascii_lowercase();
+    if !lower.starts_with("http://") && !lower.starts_with("https://") {
+        return Err("仅支持抓取 http:// 或 https:// 协议的网页".to_string());
+    }
+
+    let client = build_http_client()?;
+    let resp = client
+        .get(&trimmed)
+        .header("Accept", "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8")
+        .send()
+        .await
+        .map_err(|e| format!("请求网页失败: {}", e))?;
+
+    if !resp.status().is_success() {
+        return Err(format!("网页返回异常状态: {}", resp.status()));
+    }
+
+    let bytes = resp
+        .bytes()
+        .await
+        .map_err(|e| format!("读取网页内容失败: {}", e))?;
+    let capped = if bytes.len() > 1024 * 1024 {
+        &bytes[..1024 * 1024]
+    } else {
+        &bytes[..]
+    };
+    let raw_html = String::from_utf8_lossy(capped).to_string();
+
+    let re_title = Regex::new(r"(?is)<title[^>]*>(.*?)</title>").expect("title regex");
+    let title = re_title
+        .captures(&raw_html)
+        .and_then(|c| c.get(1))
+        .map(|m| strip_html_tags(m.as_str()))
+        .unwrap_or_default();
+
+    let mut cleaned_html = raw_html;
+    for tag in ["script", "style", "noscript", "svg", "nav", "footer"] {
+        let pat = format!(r"(?is)<{}[^>]*>.*?</{}>", tag, tag);
+        if let Ok(re) = Regex::new(&pat) {
+            cleaned_html = re.replace_all(&cleaned_html, " ").to_string();
+        }
+    }
+    let mut text = strip_html_tags(&cleaned_html);
+
+    if max_chars > 0 && text.chars().count() > max_chars {
+        let prefix: String = text.chars().take(max_chars).collect();
+        text = format!("{}...(正文已截断)", prefix);
+    }
+
+    Ok(FetchedWebPage {
+        url: trimmed,
+        title,
+        content: text,
+    })
+}
+
 pub struct WebFetchTool;
 
 #[async_trait]
@@ -402,7 +444,7 @@ impl AgentTool for WebFetchTool {
     }
 
     fn description(&self) -> &str {
-        "抓取指定 HTTP/HTTPS 网页的正文纯文本内容，适合精读搜索结果页面或技术文档。"
+        "Fetch and extract plain-text body content from an HTTP/HTTPS web page, suitable for reading search results or technical documentation."
     }
 
     fn parameters_schema(&self) -> Value {
@@ -411,82 +453,38 @@ impl AgentTool for WebFetchTool {
             "properties": {
                 "url": {
                     "type": "string",
-                    "description": "要抓取的网页完整 URL（仅支持 http:// 或 https://）"
+                    "description": "Full URL of the web page to fetch (http:// or https:// only)"
                 }
             },
             "required": ["url"]
         })
     }
 
-    async fn execute(&self, _session_id: &str, arguments: &str) -> ToolResult {
+    fn format_title(&self, arguments: &str) -> String {
+        let args: Value = serde_json::from_str(arguments).unwrap_or_else(|_| json!({}));
+        let url = args.get("url").and_then(|v| v.as_str()).unwrap_or("").trim();
+        if url.is_empty() {
+            "Read URL".to_string()
+        } else {
+            format!("Read {}", url)
+        }
+    }
+
+    async fn execute(&self, _ctx: &ToolCtx, arguments: &str) -> ToolResult {
         let args: Value = serde_json::from_str(arguments).unwrap_or_else(|_| json!({}));
         let raw_url = args
             .get("url")
             .and_then(|v| v.as_str())
             .unwrap_or("")
-            .trim()
-            .to_string();
-        let lower = raw_url.to_ascii_lowercase();
-        if !lower.starts_with("http://") && !lower.starts_with("https://") {
-            return ToolResult::err("仅支持抓取 http:// 或 https:// 协议的网页");
+            .trim();
+        match fetch_url_text(raw_url, 12000).await {
+            Ok(page) => ToolResult::success(json!({
+                "url": page.url,
+                "title": page.title,
+                "content": page.content,
+            })),
+            Err(e) => ToolResult::err(e),
         }
-
-        let client = match build_http_client() {
-            Ok(c) => c,
-            Err(e) => return ToolResult::err(e),
-        };
-        let resp = match client
-            .get(&raw_url)
-            .header("Accept", "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8")
-            .send()
-            .await
-        {
-            Ok(r) => r,
-            Err(e) => return ToolResult::err(format!("请求网页失败: {}", e)),
-        };
-
-        if !resp.status().is_success() {
-            return ToolResult::err(format!("网页返回异常状态: {}", resp.status()));
-        }
-
-        let bytes = match resp.bytes().await {
-            Ok(b) => b,
-            Err(e) => return ToolResult::err(format!("读取网页内容失败: {}", e)),
-        };
-        let capped = if bytes.len() > 1024 * 1024 {
-            &bytes[..1024 * 1024]
-        } else {
-            &bytes[..]
-        };
-        let raw_html = String::from_utf8_lossy(capped).to_string();
-
-        let re_title = Regex::new(r"(?is)<title[^>]*>(.*?)</title>").expect("title regex");
-        let title = re_title
-            .captures(&raw_html)
-            .and_then(|c| c.get(1))
-            .map(|m| strip_html_tags(m.as_str()))
-            .unwrap_or_default();
-
-        let mut cleaned_html = raw_html;
-        for tag in ["script", "style", "noscript", "svg", "nav", "footer"] {
-            let pat = format!(r"(?is)<{}[^>]*>.*?</{}>", tag, tag);
-            if let Ok(re) = Regex::new(&pat) {
-                cleaned_html = re.replace_all(&cleaned_html, " ").to_string();
-            }
-        }
-        let mut text = strip_html_tags(&cleaned_html);
-
-        const MAX_TEXT_CHARS: usize = 12000;
-        if text.chars().count() > MAX_TEXT_CHARS {
-            let prefix: String = text.chars().take(MAX_TEXT_CHARS).collect();
-            text = format!("{}...(正文已截断)", prefix);
-        }
-
-        ToolResult::success(json!({
-            "url": raw_url,
-            "title": title,
-            "content": text,
-        }))
     }
 }
 
@@ -507,7 +505,7 @@ impl AgentTool for KnowledgeSearchTool {
     }
 
     fn description(&self) -> &str {
-        "检索用户个人“第二大脑”知识库中的历史沉淀笔记与导入文档，返回匹配条目 ID、标题、标签、摘要与片段。"
+        "Search historical notes and imported documents in the user's personal knowledge base, returning matching IDs, titles, tags, summaries, and snippets."
     }
 
     fn parameters_schema(&self) -> Value {
@@ -516,22 +514,22 @@ impl AgentTool for KnowledgeSearchTool {
             "properties": {
                 "query": {
                     "type": "string",
-                    "description": "检索关键词或问题主题"
+                    "description": "Search keywords or topic"
                 },
                 "tag": {
                     "type": "string",
-                    "description": "可选：按标签精确过滤"
+                    "description": "Optional: filter by exact tag"
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "最多返回条数（默认 5）"
+                    "description": "Maximum number of results to return (default 5)"
                 }
             },
             "required": ["query"]
         })
     }
 
-    async fn execute(&self, _session_id: &str, arguments: &str) -> ToolResult {
+    async fn execute(&self, _ctx: &ToolCtx, arguments: &str) -> ToolResult {
         let args: Value = serde_json::from_str(arguments).unwrap_or_else(|_| json!({}));
         let query = args.get("query").and_then(|v| v.as_str()).unwrap_or("");
         let tag = args.get("tag").and_then(|v| v.as_str());
@@ -565,7 +563,7 @@ impl AgentTool for KnowledgeGetTool {
     }
 
     fn description(&self) -> &str {
-        "根据知识条目 ID 读取第二大脑知识库笔记的完整 Markdown 正文与元数据。"
+        "Read the full Markdown content and metadata of a knowledge base note by its entry ID."
     }
 
     fn parameters_schema(&self) -> Value {
@@ -574,14 +572,14 @@ impl AgentTool for KnowledgeGetTool {
             "properties": {
                 "id": {
                     "type": "string",
-                    "description": "知识条目 ID"
+                    "description": "Knowledge entry ID"
                 }
             },
             "required": ["id"]
         })
     }
 
-    async fn execute(&self, _session_id: &str, arguments: &str) -> ToolResult {
+    async fn execute(&self, _ctx: &ToolCtx, arguments: &str) -> ToolResult {
         let args: Value = serde_json::from_str(arguments).unwrap_or_else(|_| json!({}));
         let id = args.get("id").and_then(|v| v.as_str()).unwrap_or("").trim();
         if id.is_empty() {

@@ -21,6 +21,7 @@
   "connecting": "连接中…",
   "session": "会话 {{id}}",
   "tools": {
+    "agent": "AI 智能体",
     "aiAgent": "AI 智能体",
     "devTools": "开发工具",
     "apiDebug": "API 调试",

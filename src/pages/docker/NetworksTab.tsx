@@ -21,13 +21,16 @@ import s from './DockerClient.module.less'
 
 interface Props {
     serverId: string
+    refreshSignal?: number
+    onMutate?: () => void
 }
 
-export default function NetworksTab({ serverId }: Props) {
+export default function NetworksTab({ serverId, refreshSignal = 0, onMutate }: Props) {
     const { t } = useTranslation(['docker', 'common'])
     const { message } = App.useApp()
     const [networks, setNetworks] = useState<DockerNetworkInfo[]>([])
     const [loading, setLoading] = useState(false)
+    const [busyMap, setBusyMap] = useState<Record<string, boolean>>({})
     const [searchKw, setSearchKw] = useState('')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
@@ -54,6 +57,12 @@ export default function NetworksTab({ serverId }: Props) {
         fetchNetworks()
     }, [serverId])
 
+    useEffect(() => {
+        if (refreshSignal > 0) {
+            fetchNetworks()
+        }
+    }, [refreshSignal])
+
     const handleCreate = async () => {
         if (!netName.trim()) {
             message.warning(t('networks.reqName', '请输入网络名称'))
@@ -62,9 +71,11 @@ export default function NetworksTab({ serverId }: Props) {
         setCreating(true)
         try {
             await API.dockerCreateNetwork(serverId, netName.trim(), netDriver.trim() || 'bridge')
+            message.success(t('networks.createSuccess', { defaultValue: '网络 [{{name}}] 已创建', name: netName.trim() }))
             setCreateModal(false)
             setNetName('')
             fetchNetworks()
+            onMutate?.()
         } catch (err: any) {
             message.error(t('networks.createFail', { defaultValue: '创建网络失败: {{error}}', error: err.message || String(err) }))
         } finally {
@@ -72,12 +83,24 @@ export default function NetworksTab({ serverId }: Props) {
         }
     }
 
-    const handleDelete = async (id: string) => {
+    const handleDelete = async (id: string, name: string) => {
+        if (busyMap[id]) return
+        setBusyMap((prev) => ({ ...prev, [id]: true }))
+        const hide = message.loading(t('networks.deleting', { defaultValue: '正在删除网络 [{{name}}]...', name }), 0)
         try {
             await API.dockerRemoveNetwork(serverId, id)
+            message.success(t('networks.deleteSuccess', { defaultValue: '已删除网络 [{{name}}]', name }))
             fetchNetworks()
+            onMutate?.()
         } catch (err: any) {
             message.error(t('networks.deleteFail', { defaultValue: '删除网络失败: {{error}}', error: err.message || String(err) }))
+        } finally {
+            hide()
+            setBusyMap((prev) => {
+                const next = { ...prev }
+                delete next[id]
+                return next
+            })
         }
     }
 
@@ -184,17 +207,19 @@ export default function NetworksTab({ serverId }: Props) {
                 if (isDefault) {
                     return <span style={{ color: 'var(--text-faint)', fontSize: 11 }}>{t('networks.systemPreset', '系统预置')}</span>
                 }
+                const isBusy = !!busyMap[record.id]
                 return (
                     <Popconfirm
                         title={t('networks.confirmDelete', '确定要删除此网络吗？')}
                         description={t('networks.deleteDesc', '如果仍有容器连接在该网络上，删除将会失败')}
-                        onConfirm={() => handleDelete(record.id)}
+                        onConfirm={() => handleDelete(record.id, record.name)}
                         okText={t('networks.deleteBtn', '删除')}
                         cancelText={t('networks.cancelBtn', '取消')}
                         okButtonProps={{ danger: true }}
+                        disabled={isBusy}
                     >
                         <Tooltip title={t('networks.deleteTooltip', '删除自定义网络')}>
-                            <Button size="small" type="text" danger icon={<Trash2 size={13} />} />
+                            <Button size="small" type="text" danger loading={isBusy} disabled={isBusy} icon={<Trash2 size={13} />} />
                         </Tooltip>
                     </Popconfirm>
                 )

@@ -20,13 +20,16 @@ import s from './DockerClient.module.less'
 
 interface Props {
     serverId: string
+    refreshSignal?: number
+    onMutate?: () => void
 }
 
-export default function VolumesTab({ serverId }: Props) {
+export default function VolumesTab({ serverId, refreshSignal = 0, onMutate }: Props) {
     const { t } = useTranslation(['docker', 'common'])
     const { message } = App.useApp()
     const [volumes, setVolumes] = useState<DockerVolumeInfo[]>([])
     const [loading, setLoading] = useState(false)
+    const [busyMap, setBusyMap] = useState<Record<string, boolean>>({})
     const [searchKw, setSearchKw] = useState('')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
@@ -53,6 +56,12 @@ export default function VolumesTab({ serverId }: Props) {
         fetchVolumes()
     }, [serverId])
 
+    useEffect(() => {
+        if (refreshSignal > 0) {
+            fetchVolumes()
+        }
+    }, [refreshSignal])
+
     const handleCreate = async () => {
         if (!volName.trim()) {
             message.warning(t('volumes.reqName', '请输入数据卷名称'))
@@ -61,9 +70,11 @@ export default function VolumesTab({ serverId }: Props) {
         setCreating(true)
         try {
             await API.dockerCreateVolume(serverId, volName.trim(), volDriver.trim() || 'local', {})
+            message.success(t('volumes.createSuccess', { defaultValue: '数据卷 [{{name}}] 已创建', name: volName.trim() }))
             setCreateModal(false)
             setVolName('')
             fetchVolumes()
+            onMutate?.()
         } catch (err: any) {
             message.error(t('volumes.createFail', { defaultValue: '创建数据卷失败: {{error}}', error: err.message || String(err) }))
         } finally {
@@ -72,11 +83,23 @@ export default function VolumesTab({ serverId }: Props) {
     }
 
     const handleDelete = async (name: string) => {
+        if (busyMap[name]) return
+        setBusyMap((prev) => ({ ...prev, [name]: true }))
+        const hide = message.loading(t('volumes.deleting', { defaultValue: '正在删除数据卷 [{{name}}]...', name }), 0)
         try {
             await API.dockerRemoveVolume(serverId, name, true)
+            message.success(t('volumes.deleteSuccess', { defaultValue: '已删除数据卷 [{{name}}]', name }))
             fetchVolumes()
+            onMutate?.()
         } catch (err: any) {
             message.error(t('volumes.deleteFail', { defaultValue: '删除数据卷失败: {{error}}', error: err.message || String(err) }))
+        } finally {
+            hide()
+            setBusyMap((prev) => {
+                const next = { ...prev }
+                delete next[name]
+                return next
+            })
         }
     }
 
@@ -143,20 +166,24 @@ export default function VolumesTab({ serverId }: Props) {
             key: 'actions',
             width: 100,
             fixed: 'right',
-            render: (_, record) => (
-                <Popconfirm
-                    title={t('volumes.confirmDelete', '确定要删除此数据卷吗？')}
-                    description={t('volumes.deleteDesc', '若数据卷内有持久化数据，删除将永久丢失')}
-                    onConfirm={() => handleDelete(record.name)}
-                    okText={t('volumes.deleteBtn', '删除')}
-                    cancelText={t('volumes.cancelBtn', '取消')}
-                    okButtonProps={{ danger: true }}
-                >
-                    <Tooltip title={t('volumes.deleteTooltip', '删除数据卷')}>
-                        <Button size="small" type="text" danger icon={<Trash2 size={13} />} />
-                    </Tooltip>
-                </Popconfirm>
-            ),
+            render: (_, record) => {
+                const isBusy = !!busyMap[record.name]
+                return (
+                    <Popconfirm
+                        title={t('volumes.confirmDelete', '确定要删除此数据卷吗？')}
+                        description={t('volumes.deleteDesc', '若数据卷内有持久化数据，删除将永久丢失')}
+                        onConfirm={() => handleDelete(record.name)}
+                        okText={t('volumes.deleteBtn', '删除')}
+                        cancelText={t('volumes.cancelBtn', '取消')}
+                        okButtonProps={{ danger: true }}
+                        disabled={isBusy}
+                    >
+                        <Tooltip title={t('volumes.deleteTooltip', '删除数据卷')}>
+                            <Button size="small" type="text" danger loading={isBusy} disabled={isBusy} icon={<Trash2 size={13} />} />
+                        </Tooltip>
+                    </Popconfirm>
+                )
+            },
         },
     ]
 

@@ -21,6 +21,7 @@ interface Props {
     aiEnableMultimodal: boolean
     aiEnableThinking?: boolean
     aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
+    aiSubAgentModelId?: string
     aiSystemPrompt: string
     onChange: (fields: Partial<AppSettings>) => void
 }
@@ -37,6 +38,7 @@ export default function AiAgentTab({
     aiEnableMultimodal,
     aiEnableThinking = false,
     aiReasoningEffort = 'medium',
+    aiSubAgentModelId = '',
     aiSystemPrompt,
     onChange,
 }: Props) {
@@ -439,6 +441,46 @@ export default function AiAgentTab({
                                             }),
                                             value: 'high',
                                         },
+                                    ]}
+                                />
+                            </div>
+
+                            <div
+                                style={{
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                }}
+                            >
+                                <div>
+                                    <div style={{ fontWeight: 500, fontSize: 13 }}>
+                                        {t('aiAgent.subAgentModelTitle', '子 Agent 模型 (Sub-Agent Model)')}
+                                    </div>
+                                    <Text type="secondary" style={{ fontSize: 12 }}>
+                                        {t(
+                                            'aiAgent.subAgentModelDesc',
+                                            '可选为底层子 Agent 指定更轻量/快速的模型，留空则跟随主 Agent 当前所选模型'
+                                        )}
+                                    </Text>
+                                </div>
+                                <Select
+                                    style={{ width: 220, flexShrink: 0 }}
+                                    value={aiSubAgentModelId || ''}
+                                    disabled={!aiEnabled}
+                                    onChange={(val) => onChange({ aiSubAgentModelId: val })}
+                                    options={[
+                                        {
+                                            label: t(
+                                                'aiAgent.subAgentModelFollowMain',
+                                                '跟随主 Agent 模型（默认）'
+                                            ),
+                                            value: '',
+                                        },
+                                        ...currentModels.map((m) => ({
+                                            label: m.name ? `${m.name} (${m.model})` : m.model,
+                                            value: m.id,
+                                        })),
                                     ]}
                                 />
                             </div>

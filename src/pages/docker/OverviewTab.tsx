@@ -20,9 +20,10 @@ interface Props {
     overview: DockerOverview | null
     loading: boolean
     onRefresh: () => void
+    onNavigateTab?: (tab: 'containers' | 'images' | 'volumes' | 'networks') => void
 }
 
-export default function OverviewTab({ serverId, overview, loading, onRefresh }: Props) {
+export default function OverviewTab({ serverId, overview, loading, onRefresh, onNavigateTab }: Props) {
     const { t } = useTranslation(['docker', 'common'])
     const { message } = App.useApp()
     const [pruneModal, setPruneModal] = useState(false)
@@ -63,7 +64,10 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
         <div>
             {/* 核心统计指标卡片 */}
             <div className={s.overviewGrid}>
-                <div className={s.statCard}>
+                <div
+                    className={`${s.statCard}${onNavigateTab ? ' ' + s.clickable : ''}`}
+                    onClick={() => onNavigateTab?.('containers')}
+                >
                     <div className={s.statCardHeader}>
                         <span>{t('overview.containersStatus', '容器运行状态')}</span>
                         <Box size={18} color="var(--accent)" />
@@ -76,7 +80,10 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     </div>
                 </div>
 
-                <div className={s.statCard}>
+                <div
+                    className={`${s.statCard}${onNavigateTab ? ' ' + s.clickable : ''}`}
+                    onClick={() => onNavigateTab?.('images')}
+                >
                     <div className={s.statCardHeader}>
                         <span>{t('overview.localImages', '本地镜像总数')}</span>
                         <Layers size={18} color="var(--accent)" />
@@ -87,7 +94,10 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     </div>
                 </div>
 
-                <div className={s.statCard}>
+                <div
+                    className={`${s.statCard}${onNavigateTab ? ' ' + s.clickable : ''}`}
+                    onClick={() => onNavigateTab?.('volumes')}
+                >
                     <div className={s.statCardHeader}>
                         <span>{t('overview.volumesTotal', '数据卷总数')}</span>
                         <HardDrive size={18} color="var(--accent)" />
@@ -98,7 +108,10 @@ export default function OverviewTab({ serverId, overview, loading, onRefresh }: 
                     </div>
                 </div>
 
-                <div className={s.statCard}>
+                <div
+                    className={`${s.statCard}${onNavigateTab ? ' ' + s.clickable : ''}`}
+                    onClick={() => onNavigateTab?.('networks')}
+                >
                     <div className={s.statCardHeader}>
                         <span>{t('overview.networksTotal', '网络桥接总数')}</span>
                         <Network size={18} color="var(--accent)" />

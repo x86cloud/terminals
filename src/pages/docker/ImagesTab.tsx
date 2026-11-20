@@ -19,31 +19,31 @@ import {
     Code,
     RefreshCw,
     Search,
-    Copy,
     HardDriveDownload,
 } from 'lucide-react'
 import { API } from '@/api'
-import { copyText } from '@/utils'
 import type { DockerImageInfo } from '@/types'
 import { useTranslation } from 'react-i18next'
+import InspectModal from './components/InspectModal'
 import s from './DockerClient.module.less'
 
 interface Props {
     serverId: string
+    refreshSignal?: number
+    onMutate?: () => void
     onRunImage?: (imageName: string) => void
 }
 
-export default function ImagesTab({ serverId, onRunImage }: Props) {
+export default function ImagesTab({ serverId, refreshSignal = 0, onMutate, onRunImage }: Props) {
     const { t } = useTranslation(['docker', 'common'])
-    const { message } = App.useApp()
+    const { message, modal } = App.useApp()
     const [images, setImages] = useState<DockerImageInfo[]>([])
     const [loading, setLoading] = useState(false)
+    const [busyMap, setBusyMap] = useState<Record<string, string>>({})
     const [searchKw, setSearchKw] = useState('')
     const [page, setPage] = useState(1)
     const [pageSize, setPageSize] = useState(10)
 
-    // 导出镜像状态
-    const [savingId, setSavingId] = useState<string | null>(null)
     // 导入镜像状态
     const [importing, setImporting] = useState(false)
 
@@ -76,6 +76,12 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         fetchImages()
     }, [serverId])
 
+    useEffect(() => {
+        if (refreshSignal > 0) {
+            fetchImages()
+        }
+    }, [refreshSignal])
+
     const handlePull = async () => {
         if (!pullImageName.trim()) {
             message.warning(t('images.reqName', '请输入要拉取的镜像名称'))
@@ -86,7 +92,9 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         try {
             const logs = await API.dockerPullImage(serverId, pullImageName.trim())
             setPullLogs(logs || t('images.pullDone', '镜像拉取完成！\n'))
+            message.success(t('images.pullSuccessToast', { defaultValue: '镜像 [{{name}}] 拉取完成', name: pullImageName.trim() }))
             fetchImages()
+            onMutate?.()
         } catch (err: any) {
             setPullLogs((prev) => prev + '\n' + t('images.pullFail', { defaultValue: '拉取镜像失败: {{error}}', error: err.message || String(err) }))
             message.error(t('images.pullFail', { defaultValue: '拉取镜像失败: {{error}}', error: err.message || String(err) }))
@@ -96,6 +104,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
     }
 
     const handleSaveImage = async (img: DockerImageInfo) => {
+        if (busyMap[img.id]) return
         const fullImage = (img.repository && img.tag && img.tag !== '<none>')
             ? `${img.repository}:${img.tag}`
             : (img.repository && img.repository !== '<none>')
@@ -105,18 +114,23 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         const tagClean = (img.tag || 'latest').replace(/[\/\\:]/g, '_')
         const defaultName = `${repoClean}_${tagClean}.tar`
 
-        setSavingId(img.id)
+        setBusyMap((prev) => ({ ...prev, [img.id]: 'save' }))
         const hide = message.loading(t('images.exportPreparing', { defaultValue: '正在准备导出镜像 {{name}} ...', name: fullImage }), 0)
         try {
             const savePath = await API.dockerSaveImage(serverId, fullImage, defaultName)
             hide()
             if (savePath) {
+                message.success(t('images.exportSuccess', { defaultValue: '镜像已导出至: {{path}}', path: savePath }))
             }
         } catch (err: any) {
             hide()
             message.error(t('images.exportFail', { defaultValue: '导出镜像失败: {{error}}', error: err.message || String(err) }))
         } finally {
-            setSavingId(null)
+            setBusyMap((prev) => {
+                const next = { ...prev }
+                delete next[img.id]
+                return next
+            })
         }
     }
 
@@ -127,7 +141,9 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             const result = await API.dockerLoadImage(serverId)
             hide()
             if (result) {
+                message.success(t('images.importSuccess', '镜像导入成功'))
                 fetchImages()
+                onMutate?.()
             }
         } catch (err: any) {
             hide()
@@ -137,16 +153,55 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
         }
     }
 
-    const handleDelete = async (imageId: string, force: boolean) => {
+    const handleDelete = async (img: DockerImageInfo, force: boolean) => {
+        if (busyMap[img.id]) return
+        const displayName =
+            img.repository && img.repository !== '<none>'
+                ? `${img.repository}:${img.tag || 'latest'}`
+                : img.shortId
+        setBusyMap((prev) => ({ ...prev, [img.id]: 'delete' }))
+        const hide = message.loading(t('images.deleting', { defaultValue: '正在删除镜像 [{{name}}]...', name: displayName }), 0)
         try {
-            await API.dockerRemoveImage(serverId, imageId, force)
+            await API.dockerRemoveImage(serverId, img.id, force)
+            message.success(t('images.deleteSuccess', { defaultValue: '已删除镜像 [{{name}}]', name: displayName }))
             fetchImages()
+            onMutate?.()
         } catch (err: any) {
-            message.error(t('images.deleteFail', { defaultValue: '删除镜像失败: {{error}}', error: err.message || String(err) }))
+            const errText = err?.message || String(err)
+            if (!force) {
+                modal.confirm({
+                    title: t('images.forceDeleteTitle', '常规删除失败，是否强制删除？'),
+                    content: t('images.forceDeleteContent', {
+                        defaultValue: '镜像 [{{name}}] 删除失败（{{error}}），是否使用强制模式 (-f) 删除？',
+                        name: displayName,
+                        error: errText,
+                    }),
+                    okText: t('images.forceDeleteOk', '强制删除 (-f)'),
+                    cancelText: t('common:cancel', '取消'),
+                    okButtonProps: { danger: true },
+                    onOk: async () => {
+                        await API.dockerRemoveImage(serverId, img.id, true)
+                        message.success(t('images.deleteSuccess', { defaultValue: '已删除镜像 [{{name}}]', name: displayName }))
+                        fetchImages()
+                        onMutate?.()
+                    },
+                })
+            } else {
+                message.error(t('images.deleteFail', { defaultValue: '删除镜像失败: {{error}}', error: errText }))
+            }
+        } finally {
+            hide()
+            setBusyMap((prev) => {
+                const next = { ...prev }
+                delete next[img.id]
+                return next
+            })
         }
     }
 
     const openInspect = async (img: DockerImageInfo) => {
+        if (busyMap[img.id]) return
+        setBusyMap((prev) => ({ ...prev, [img.id]: 'inspect' }))
         try {
             const json = await API.dockerInspectImage(serverId, img.id)
             setInspectModal({
@@ -156,6 +211,12 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             })
         } catch (err: any) {
             message.error(t('images.inspectFail', { defaultValue: '获取详情失败: {{error}}', error: err.message || String(err) }))
+        } finally {
+            setBusyMap((prev) => {
+                const next = { ...prev }
+                delete next[img.id]
+                return next
+            })
         }
     }
 
@@ -226,8 +287,16 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             width: 210,
             fixed: 'right',
             render: (_, record) => {
-                const fullImage = record.tag ? `${record.repository}:${record.tag}` : record.repository
-                const isSaving = savingId === record.id
+                const fullImage =
+                    record.repository && record.repository !== '<none>'
+                        ? record.tag && record.tag !== '<none>'
+                            ? `${record.repository}:${record.tag}`
+                            : record.repository
+                        : record.id
+                const busyAction = busyMap[record.id]
+                const isSaving = busyAction === 'save'
+                const isInspecting = busyAction === 'inspect'
+                const isDeleting = busyAction === 'delete'
                 return (
                     <Space size={4}>
                         {onRunImage && (
@@ -247,6 +316,7 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                                 size="small"
                                 type="text"
                                 loading={isSaving}
+                                disabled={!!busyAction && !isSaving}
                                 icon={<HardDriveDownload size={13} />}
                                 onClick={() => handleSaveImage(record)}
                             />
@@ -256,6 +326,8 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                             <Button
                                 size="small"
                                 type="text"
+                                loading={isInspecting}
+                                disabled={!!busyAction && !isInspecting}
                                 icon={<Code size={13} />}
                                 onClick={() => openInspect(record)}
                             />
@@ -264,13 +336,21 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
                         <Popconfirm
                             title={t('images.deleteConfirm', '确定要删除此镜像吗？')}
                             description={t('images.deleteDesc', '若镜像被容器使用，删除可能失败，可选择强制删除')}
-                            onConfirm={() => handleDelete(record.id, false)}
+                            onConfirm={() => handleDelete(record, false)}
                             okText={t('images.deleteBtn', '删除')}
                             cancelText={t('images.cancelBtn', '取消')}
                             okButtonProps={{ danger: true }}
+                            disabled={!!busyAction}
                         >
                             <Tooltip title={t('images.deleteTooltip', '删除镜像')}>
-                                <Button size="small" type="text" danger icon={<Trash2 size={13} />} />
+                                <Button
+                                    size="small"
+                                    type="text"
+                                    danger
+                                    loading={isDeleting}
+                                    disabled={!!busyAction && !isDeleting}
+                                    icon={<Trash2 size={13} />}
+                                />
                             </Tooltip>
                         </Popconfirm>
                     </Space>
@@ -400,31 +480,13 @@ export default function ImagesTab({ serverId, onRunImage }: Props) {
             </AntdModal>
 
             {/* Inspect 模态框 */}
-            <AntdModal
-                title={inspectModal.title}
+            <InspectModal
                 open={inspectModal.open}
-                onCancel={() => setInspectModal({ open: false, title: '', json: '' })}
-                footer={[
-                    <Button
-                        key="copy"
-                        icon={<Copy size={13} />}
-                        onClick={async () => {
-                            if (await copyText(inspectModal.json)) {
-                                message.success(t('images.copiedJson', '已复制 JSON'))
-                            }
-                        }}
-                    >
-                        {t('images.copyJson', '复制 JSON')}
-                    </Button>,
-                    <Button key="close" type="primary" onClick={() => setInspectModal({ open: false, title: '', json: '' })}>
-                        {t('images.close', '关闭')}
-                    </Button>,
-                ]}
-                width={800}
-                centered
-            >
-                <pre className={s.inspectJsonViewer}>{inspectModal.json}</pre>
-            </AntdModal>
+                title={inspectModal.title}
+                json={inspectModal.json}
+                kind="image"
+                onClose={() => setInspectModal({ open: false, title: '', json: '' })}
+            />
         </div>
     )
 }

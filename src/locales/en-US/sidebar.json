@@ -21,6 +21,7 @@
   "connecting": "Connecting…",
   "session": "Session {{id}}",
   "tools": {
+    "agent": "AI Agent",
     "aiAgent": "AI Agent",
     "devTools": "Dev Tools",
     "apiDebug": "API Debug",

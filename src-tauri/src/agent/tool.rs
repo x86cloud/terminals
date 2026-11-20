@@ -1,9 +1,23 @@
 use crate::agent::model::{FunctionDefinition, ToolDefinition};
+use crate::agent::types::{RunCancel, StepCollector};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
+use tauri::AppHandle;
+
+#[derive(Clone)]
+pub struct ToolCtx {
+    pub conversation_id: String,
+    pub run_id: String,
+    pub parent_run_id: Option<String>,
+    pub agent_id: String,
+    pub step_id: String,
+    pub cancel: Arc<RunCancel>,
+    pub app: Option<AppHandle>,
+    pub collector: Arc<StepCollector>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolResult {
@@ -58,7 +72,6 @@ impl ToolResult {
 }
 
 /// Abstract Tool interface for the ReAct orchestration loop.
-/// Concrete protocol tools (SSH, DB, Docker, K8s, etc.) implement this trait and register into `ToolRegistry`.
 #[async_trait]
 pub trait AgentTool: Send + Sync {
     fn name(&self) -> &str;
@@ -69,7 +82,16 @@ pub trait AgentTool: Send + Sync {
             "properties": {},
         })
     }
-    async fn execute(&self, session_id: &str, arguments: &str) -> ToolResult;
+    /// Short human-readable verb phrase for the step line (e.g. "Searched the web for ...").
+    fn format_title(&self, _arguments: &str) -> String {
+        self.name().to_string()
+    }
+    /// Returns true if the tool manages and pushes its own specialized StepNode(s)
+    /// (e.g. `exec`, `subagent_run`, `plan`, `ask_user`) into `ctx.collector`.
+    fn records_own_step(&self) -> bool {
+        false
+    }
+    async fn execute(&self, ctx: &ToolCtx, arguments: &str) -> ToolResult;
 }
 
 #[derive(Default)]
@@ -96,6 +118,13 @@ impl ToolRegistry {
         }
     }
 
+    pub fn get(&self, name: &str) -> Option<Arc<dyn AgentTool>> {
+        self.tools
+            .read()
+            .ok()
+            .and_then(|guard| guard.get(name).cloned())
+    }
+
     pub fn definitions(&self) -> Vec<ToolDefinition> {
         let guard = match self.tools.read() {
             Ok(g) => g,
@@ -116,19 +145,10 @@ impl ToolRegistry {
         defs
     }
 
-    pub async fn invoke(&self, session_id: &str, name: &str, arguments: &str) -> ToolResult {
-        let tool_opt = {
-            let guard = match self.tools.read() {
-                Ok(g) => g,
-                Err(_) => return ToolResult::err("工具注册表读取锁异常"),
-            };
-            guard.get(name).cloned()
-        };
-
-        match tool_opt {
-            Some(tool) => tool.execute(session_id, arguments).await,
+    pub async fn invoke(&self, ctx: &ToolCtx, name: &str, arguments: &str) -> ToolResult {
+        match self.get(name) {
+            Some(tool) => tool.execute(ctx, arguments).await,
             None => ToolResult::err(format!("未找到工具: {}", name)),
         }
     }
 }
-

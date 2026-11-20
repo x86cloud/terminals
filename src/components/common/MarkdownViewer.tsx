@@ -10,6 +10,24 @@ interface MarkdownViewerProps {
     content?: string
     streaming?: boolean
     className?: string
+    onWikiLinkClick?: (target: string) => void
+}
+
+function preprocessWikiLinks(raw: string): string {
+    // Preserve fenced code blocks and inline code spans untouched
+    const segments = raw.split(/(```[\s\S]*?```|`[^`\n]+`)/g)
+    return segments
+        .map((seg, idx) => {
+            if (idx % 2 === 1) return seg
+            return seg.replace(/\[\[([^[\]\n]+?)\]\]/g, (_match, inner: string) => {
+                const parts = inner.split('|')
+                const target = parts[0].split('#')[0].trim()
+                const label = (parts[1] || parts[0]).trim()
+                if (!target) return _match
+                return `[${label}](#wiki-link:${encodeURIComponent(target)})`
+            })
+        })
+        .join('')
 }
 
 // 初始化全局单例 markdown-it 解析器，配置极致性能与 GFM 规则
@@ -73,8 +91,11 @@ const defaultRender = md.renderer.rules.link_open || function (tokens, idx, opti
     return self.renderToken(tokens, idx, options)
 }
 md.renderer.rules.link_open = function (tokens, idx, options, env, self) {
-    tokens[idx].attrSet('target', '_blank')
-    tokens[idx].attrSet('rel', 'noopener noreferrer')
+    const href = String(tokens[idx].attrGet('href') || '')
+    if (!href.startsWith('#wiki-link:')) {
+        tokens[idx].attrSet('target', '_blank')
+        tokens[idx].attrSet('rel', 'noopener noreferrer')
+    }
     return defaultRender(tokens, idx, options, env, self)
 }
 
@@ -90,51 +111,64 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(({
     content = '',
     streaming = false,
     className = '',
+    onWikiLinkClick,
 }) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const [renderedHtml, setRenderedHtml] = useState<string>('')
     const rafIdRef = useRef<number | null>(null)
+    const latestContentRef = useRef<string>(content)
     const copyTimersRef = useRef<Set<number>>(new Set())
+
+    latestContentRef.current = content
 
     useEffect(() => {
         const timers = copyTimersRef.current
         return () => {
             timers.forEach((id) => window.clearTimeout(id))
             timers.clear()
+            if (rafIdRef.current !== null) {
+                cancelAnimationFrame(rafIdRef.current)
+                rafIdRef.current = null
+            }
         }
     }, [])
 
-    // 流式防抖渲染 (通过 requestAnimationFrame 避免超高频 token 更新引起的 DOM 重排卡顿)
+    // 流式 60fps 节流渲染：不取消已排队的 rAF，确保高频 chunk 到达时持续平滑刷新
     useEffect(() => {
+        const renderText = (raw: string) =>
+            md.render(onWikiLinkClick ? preprocessWikiLinks(raw || '') : raw || '')
+
         if (!streaming) {
-            if (rafIdRef.current) {
+            if (rafIdRef.current !== null) {
                 cancelAnimationFrame(rafIdRef.current)
                 rafIdRef.current = null
             }
-            setRenderedHtml(md.render(content || ''))
+            setRenderedHtml(renderText(content))
             return
         }
 
-        if (rafIdRef.current) {
-            cancelAnimationFrame(rafIdRef.current)
-        }
-
-        rafIdRef.current = requestAnimationFrame(() => {
-            setRenderedHtml(md.render(content || ''))
-            rafIdRef.current = null
-        })
-
-        return () => {
-            if (rafIdRef.current) {
-                cancelAnimationFrame(rafIdRef.current)
+        if (rafIdRef.current === null) {
+            rafIdRef.current = requestAnimationFrame(() => {
                 rafIdRef.current = null
-            }
+                setRenderedHtml(renderText(latestContentRef.current))
+            })
         }
-    }, [content, streaming])
+    }, [content, streaming, onWikiLinkClick])
 
-    // 事件委托：处理复制代码按钮与展开超长代码块操作
+    // 事件委托：处理复制代码按钮、展开超长代码块与 Wiki 双向链接点击
     const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
         const target = e.target as HTMLElement
+        const wikiAnchor = target.closest('a[href^="#wiki-link:"]') as HTMLAnchorElement | null
+        if (wikiAnchor && onWikiLinkClick) {
+            e.preventDefault()
+            e.stopPropagation()
+            const href = wikiAnchor.getAttribute('href') || ''
+            const encoded = href.slice('#wiki-link:'.length)
+            if (encoded) {
+                onWikiLinkClick(decodeURIComponent(encoded))
+            }
+            return
+        }
         const copyBtn = target.closest(`.${s.copyCodeBtn}`) as HTMLButtonElement | null
         if (copyBtn) {
             e.stopPropagation()
@@ -187,7 +221,6 @@ export const MarkdownViewer: React.FC<MarkdownViewerProps> = React.memo(({
             onClick={handleClick}
         >
             <div dangerouslySetInnerHTML={{ __html: renderedHtml }} />
-            {streaming && <span className={s.streamCursor} />}
         </div>
     )
 })

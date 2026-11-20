@@ -11,6 +11,8 @@ import zhDocker from './zh-CN/docker.json'
 import zhK8s from './zh-CN/k8s.json'
 import zhApi from './zh-CN/api.json'
 import zhDevtools from './zh-CN/devtools.json'
+import zhAgent from './zh-CN/agent.json'
+import zhWiki from './zh-CN/wiki.json'
 
 import enCommon from './en-US/common.json'
 import enTitlebar from './en-US/titlebar.json'
@@ -25,6 +27,8 @@ import enDocker from './en-US/docker.json'
 import enK8s from './en-US/k8s.json'
 import enApi from './en-US/api.json'
 import enDevtools from './en-US/devtools.json'
+import enAgent from './en-US/agent.json'
+import enWiki from './en-US/wiki.json'
 
 export type SupportedLanguage = 'system' | 'zh-CN' | 'en-US'
 export type ConcreteLanguage = 'zh-CN' | 'en-US'
@@ -44,6 +48,8 @@ export const resources = {
         k8s: zhK8s,
         api: zhApi,
         devtools: zhDevtools,
+        agent: zhAgent,
+        wiki: zhWiki,
     },
     'en-US': {
         common: enCommon,
@@ -59,5 +65,7 @@ export const resources = {
         k8s: enK8s,
         api: enApi,
         devtools: enDevtools,
+        agent: enAgent,
+        wiki: enWiki,
     },
 } as const

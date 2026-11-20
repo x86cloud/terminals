@@ -1,0 +1,122 @@
+{
+  "title": "AI Agent",
+  "subAgentBadge": "Sub-Agents {{enabled}}/{{total}}",
+  "newChat": "New Chat",
+  "newChatTip": "New Conversation",
+  "expandSubPanelTip": "Show Sub-Agent Panel",
+  "collapseSubPanelTip": "Hide Sub-Agent Panel",
+  "aiDisabledBanner": "AI Agent is currently disabled. Please enable it in Settings → AI Agent first.",
+  "goToSettings": "Open Settings",
+  "empty": {
+    "title": "AI Agent",
+    "subtitle": "General-purpose agent supporting chat, planning, web search, Wiki knowledge base, local workspace files, and enabled sub-agents.",
+    "starters": [
+      "Summarize the project structure and key files in the workspace",
+      "Search existing Wiki notes and summarize key takeaways",
+      "Check status and resource usage on enabled hosts"
+    ]
+  },
+  "thinking": {
+    "running": "Thinking...",
+    "done": "Thought for {{sec}}s"
+  },
+  "stream": {
+    "planning": "Thinking and planning..."
+  },
+  "actions": {
+    "copy": "Copy",
+    "copied": "Copied",
+    "retry": "Retry",
+    "saveToWiki": "Save to Wiki",
+    "savingToWiki": "Archiving..."
+  },
+  "terminal": {
+    "copyCommand": "Copy command",
+    "running": "Running...",
+    "emptyOutput": "(no output)",
+    "truncated": "[Output truncated to 16KB head/tail]",
+    "statusRunning": "running",
+    "statusCancelled": "cancelled"
+  },
+  "approval": {
+    "pendingTitle": "Command Approval Required",
+    "sqlPendingTitle": "SQL Execution Approval Required",
+    "connCreatePendingTitle": "Confirm New Connection",
+    "connActivatePendingTitle": "Confirm Connection Activation",
+    "localWritePendingTitle": "Local File Write Approval",
+    "fileOverwrite": "Overwrite existing file",
+    "fileCreate": "Create new file",
+    "riskModify": "Modify",
+    "riskDanger": "Dangerous",
+    "reasonLabel": "Reason: ",
+    "mainVerdictLabel": "Main Agent note: ",
+    "allow": "Allow",
+    "deny": "Deny",
+    "alwaysAllow": "Always allow this command",
+    "resolvedWhitelist": "Auto-approved (Always allow)",
+    "resolvedMainDeny": "Rejected by Main Agent",
+    "resolvedMainAllow": "Approved by Main Agent",
+    "resolvedUserAlways": "Allowed (Always allow in this session)",
+    "resolvedUserAllow": "Allowed",
+    "resolvedUserDeny": "Denied"
+  },
+  "askUser": {
+    "waitingTitle": "Main Agent Needs Confirmation",
+    "cancelledTitle": "Question Cancelled",
+    "answeredTitle": "Response Submitted",
+    "customPlaceholder": "Or enter custom details...",
+    "answerLabel": "Answer: ",
+    "submit": "Submit"
+  },
+  "plan": {
+    "title": "Execution Plan"
+  },
+  "subRun": {
+    "running": "Running",
+    "awaiting_approval": "Awaiting Approval",
+    "completed": "Done",
+    "failed": "Failed",
+    "cancelled": "Cancelled"
+  },
+  "composer": {
+    "placeholderEnabled": "Ask anything or describe a task (type @ to mention enabled sub-agents)...",
+    "placeholderDisabled": "Enable AI Agent and configure an API key in Settings -> AI Agent first...",
+    "mentionHeader": "Select an enabled sub-agent to @mention",
+    "mentionEmpty": "No enabled sub-agents (enable one in the right panel)",
+    "planningTitle": "Planning mode: plan steps first, then dispatch sub-agents",
+    "fastTitle": "Fast mode: act directly on straightforward tasks",
+    "hint": "Enter to send · Shift+Enter for newline",
+    "send": "Send",
+    "stop": "Stop",
+    "workspaceUnset": "Workspace",
+    "workspaceUnsetTip": "Select a local workspace folder for the Main Agent",
+    "workspaceClearTip": "Clear workspace binding for this conversation"
+  },
+  "subPanel": {
+    "title": "Sub-Agents",
+    "sectionConnected": "Connected Instances",
+    "emptyConnected": "No active connections. Connect an SSH host or MySQL database on the left and switch it on here.",
+    "unauthorized": "Disabled",
+    "sectionOther": "Other Protocols",
+    "comingSoon": "Coming Soon",
+    "status": {
+      "idle": "Idle",
+      "running": "Running",
+      "awaiting_approval": "Awaiting Approval",
+      "offline": "Offline"
+    }
+  },
+  "history": {
+    "button": "History",
+    "tooltip": "Conversation History",
+    "header": "History ({{count}})",
+    "empty": "No conversations yet",
+    "countUnit": "{{count}} msgs",
+    "deleteConfirm": "Delete this conversation?",
+    "deleteOk": "Delete",
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago"
+  }
+}

@@ -1,10 +1,12 @@
-use crate::container::docker::manager::DockerClient;
+use crate::container::docker::manager::{DockerClient, DockerManager};
 use crate::container::docker::types::{DockerContainerInfo, DockerCreateContainerReq, DockerPortMapping};
 use crate::container::docker::utils::{i64_field, parse_port_strings, str_field, str_map_field};
 use crate::AppState;
 use futures_util::StreamExt;
 use serde_json::{json, Value};
-use tauri::State;
+use std::time::Duration;
+use tauri::{AppHandle, Emitter, State};
+use uuid::Uuid;
 
 impl DockerClient {
     pub async fn list_containers(&self, all: bool) -> Result<Vec<DockerContainerInfo>, String> {
@@ -282,6 +284,103 @@ impl DockerClient {
     }
 }
 
+impl DockerManager {
+    pub async fn start_log_stream(
+        &self,
+        app: AppHandle,
+        docker_cli: &DockerClient,
+        container_id: &str,
+        stream_id: &str,
+        tail: i64,
+        timestamps: bool,
+        follow: bool,
+    ) -> Result<String, String> {
+        let sid = if stream_id.trim().is_empty() {
+            Uuid::new_v4().to_string()
+        } else {
+            stream_id.trim().to_string()
+        };
+        let tail_str = if tail > 0 {
+            tail.to_string()
+        } else {
+            "all".to_string()
+        };
+        let opts = bollard::container::LogsOptions::<String> {
+            stdout: true,
+            stderr: true,
+            follow,
+            tail: tail_str,
+            timestamps,
+            ..Default::default()
+        };
+
+        let mut stream = docker_cli.cli.logs(container_id, Some(opts));
+        let streams_ref = self.log_streams.clone();
+        let sid_clone = sid.clone();
+        let server_id = docker_cli.cfg.id.clone();
+
+        let mut guard = self.log_streams.write().await;
+        if let Some((_, old_handle)) = guard.remove(&sid) {
+            old_handle.abort();
+        }
+
+        let join_handle = tokio::spawn(async move {
+            let data_ev = format!("docker:logs:data:{}", sid_clone);
+            let err_ev = format!("docker:logs:error:{}", sid_clone);
+            let closed_ev = format!("docker:logs:closed:{}", sid_clone);
+
+            let mut pending = String::new();
+            let mut ticker = tokio::time::interval(Duration::from_millis(50));
+            ticker.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
+            loop {
+                tokio::select! {
+                    item = stream.next() => {
+                        match item {
+                            Some(Ok(chunk)) => {
+                                pending.push_str(&chunk.to_string());
+                                if pending.len() >= 16 * 1024 {
+                                    let _ = app.emit(&data_ev, std::mem::take(&mut pending));
+                                }
+                            }
+                            Some(Err(e)) => {
+                                if !pending.is_empty() {
+                                    let _ = app.emit(&data_ev, std::mem::take(&mut pending));
+                                }
+                                let _ = app.emit(&err_ev, e.to_string());
+                                break;
+                            }
+                            None => {
+                                if !pending.is_empty() {
+                                    let _ = app.emit(&data_ev, std::mem::take(&mut pending));
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    _ = ticker.tick() => {
+                        if !pending.is_empty() {
+                            let _ = app.emit(&data_ev, std::mem::take(&mut pending));
+                        }
+                    }
+                }
+            }
+
+            streams_ref.write().await.remove(&sid_clone);
+            let _ = app.emit(&closed_ev, String::new());
+        });
+
+        guard.insert(sid.clone(), (server_id, join_handle.abort_handle()));
+        Ok(sid)
+    }
+
+    pub async fn stop_log_stream(&self, stream_id: &str) {
+        if let Some((_, handle)) = self.log_streams.write().await.remove(stream_id) {
+            handle.abort();
+        }
+    }
+}
+
 // ======================== Tauri Commands ========================
 
 #[tauri::command]
@@ -340,4 +439,31 @@ pub async fn docker_create_container(
     let parsed: DockerCreateContainerReq =
         serde_json::from_value(req).map_err(|e| format!("参数解析失败: {}", e))?;
     cli.create_container(parsed).await
+}
+
+#[tauri::command]
+pub async fn docker_logs_stream_start(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    id: String,
+    container_id: String,
+    stream_id: String,
+    tail: i64,
+    timestamps: bool,
+    follow: bool,
+) -> Result<String, String> {
+    let cli = state.docker.get_client(&id).await?;
+    state
+        .docker
+        .start_log_stream(app, &cli, &container_id, &stream_id, tail, timestamps, follow)
+        .await
+}
+
+#[tauri::command]
+pub async fn docker_logs_stream_stop(
+    state: State<'_, AppState>,
+    stream_id: String,
+) -> Result<(), String> {
+    state.docker.stop_log_stream(&stream_id).await;
+    Ok(())
 }

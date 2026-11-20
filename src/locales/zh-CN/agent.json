@@ -1,0 +1,122 @@
+{
+  "title": "AI Agent",
+  "subAgentBadge": "子 Agent {{enabled}}/{{total}}",
+  "newChat": "新对话",
+  "newChatTip": "新建对话",
+  "expandSubPanelTip": "展开子 Agent 栏",
+  "collapseSubPanelTip": "收起子 Agent 栏",
+  "aiDisabledBanner": "AI 智能体全局开关尚未开启，请先前往「设置 → AI 智能体」启用。",
+  "goToSettings": "前往设置",
+  "empty": {
+    "title": "AI Agent",
+    "subtitle": "通用智能体，支持对话问答、任务规划、联网检索、知识库读写、本地工作目录操作，以及按需调度已开启的子 Agent。",
+    "starters": [
+      "整理当前工作目录的项目结构与核心文件说明",
+      "检索知识库中已有笔记，并总结关键内容",
+      "检查已开启主机的运行状态与资源使用情况"
+    ]
+  },
+  "thinking": {
+    "running": "Thinking...",
+    "done": "Thought for {{sec}}s"
+  },
+  "stream": {
+    "planning": "正在思考与规划..."
+  },
+  "actions": {
+    "copy": "复制",
+    "copied": "已复制",
+    "retry": "重试",
+    "saveToWiki": "沉淀到 Wiki",
+    "savingToWiki": "归档中..."
+  },
+  "terminal": {
+    "copyCommand": "复制命令",
+    "running": "正在执行...",
+    "emptyOutput": "（无输出）",
+    "truncated": "[输出已按 16KB 头尾截断]",
+    "statusRunning": "running",
+    "statusCancelled": "cancelled"
+  },
+  "approval": {
+    "pendingTitle": "待审批远端命令",
+    "sqlPendingTitle": "待审批 SQL 语句",
+    "connCreatePendingTitle": "待确认创建连接",
+    "connActivatePendingTitle": "待确认激活连接",
+    "localWritePendingTitle": "待审批本地文件写入",
+    "fileOverwrite": "修改已有文件",
+    "fileCreate": "新建文件",
+    "riskModify": "修改操作",
+    "riskDanger": "高危操作",
+    "reasonLabel": "申请理由：",
+    "mainVerdictLabel": "主 Agent 意见：",
+    "allow": "允许",
+    "deny": "拒绝",
+    "alwaysAllow": "始终允许此类命令",
+    "resolvedWhitelist": "已自动放行（始终允许）",
+    "resolvedMainDeny": "主 Agent 已拒绝",
+    "resolvedMainAllow": "主 Agent 已批准",
+    "resolvedUserAlways": "已允许（本会话始终允许此类命令）",
+    "resolvedUserAllow": "已允许执行",
+    "resolvedUserDeny": "已拒绝执行"
+  },
+  "askUser": {
+    "waitingTitle": "主 Agent 需要你确认",
+    "cancelledTitle": "提问已取消",
+    "answeredTitle": "已提交回答",
+    "customPlaceholder": "或输入自定义补充说明...",
+    "answerLabel": "回答：",
+    "submit": "提交回答"
+  },
+  "plan": {
+    "title": "执行计划"
+  },
+  "subRun": {
+    "running": "运行中",
+    "awaiting_approval": "待审批",
+    "completed": "已完成",
+    "failed": "失败",
+    "cancelled": "已取消"
+  },
+  "composer": {
+    "placeholderEnabled": "输入任何问题或任务（输入 @ 可提及已开启的子 Agent）...",
+    "placeholderDisabled": "请先在「设置 -> AI 智能体」中启用 AI 智能体开关并配置 API Key...",
+    "mentionHeader": "选择要 @ 提及的已启用子 Agent",
+    "mentionEmpty": "暂无已启用的子 Agent（请在右侧面板开启）",
+    "planningTitle": "Planning 模式：先规划清单再派发子 Agent",
+    "fastTitle": "Fast 模式：直接执行简单明确的任务",
+    "hint": "Enter 发送 · Shift+Enter 换行",
+    "send": "发送",
+    "stop": "停止执行",
+    "workspaceUnset": "工作目录",
+    "workspaceUnsetTip": "选择本地工作目录（绑定后主 Agent 可读写该目录）",
+    "workspaceClearTip": "清除当前对话的工作目录绑定"
+  },
+  "subPanel": {
+    "title": "可调度子 Agent",
+    "sectionConnected": "已连接实例",
+    "emptyConnected": "暂无在线连接，请在左侧连接 SSH 或 MySQL 后在此开启子 Agent 授权。",
+    "unauthorized": "未授权调度",
+    "sectionOther": "其他协议",
+    "comingSoon": "即将支持",
+    "status": {
+      "idle": "空闲",
+      "running": "运行中",
+      "awaiting_approval": "待审批",
+      "offline": "已断开"
+    }
+  },
+  "history": {
+    "button": "历史",
+    "tooltip": "历史对话",
+    "header": "历史对话 ({{count}})",
+    "empty": "暂无历史对话",
+    "countUnit": "{{count}} 条",
+    "deleteConfirm": "确认删除该对话？",
+    "deleteOk": "删除",
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前"
+  }
+}

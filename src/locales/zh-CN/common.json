@@ -104,6 +104,7 @@
     "devtools": "开发工具页面渲染异常",
     "api": "API 调试页面渲染异常",
     "wiki": "知识库页面渲染异常",
+    "agent": "AI 智能体页面渲染异常",
     "aiAgent": "AI 智能体渲染异常"
   },
   "resizeColTooltip": "拖动调整列宽，双击自适应最佳宽度",

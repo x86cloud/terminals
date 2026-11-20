@@ -1368,6 +1368,7 @@ export interface AppSettings {
     aiEnableMultimodal?: boolean
     aiSystemPrompt?: string
     aiWorkspaceDir?: string
+    aiWikiDir?: string
     aiEnableWebSearch?: boolean
     aiEnablePermissionGuard?: boolean
     aiBlockHighRiskCommands?: boolean
@@ -1375,6 +1376,7 @@ export interface AppSettings {
     aiReasoningEffort?: 'none' | 'low' | 'medium' | 'high'
     aiEnableVerifier?: boolean
     aiMaxParallel?: number
+    aiSubAgentModelId?: string
     mcpServerEnabled?: boolean
     mcpServerPort?: number
     mcpServerHost?: string
@@ -1622,27 +1624,193 @@ export interface AgentStatusInfo {
     activeModelId: string
     activeModelName: string
     activeModel: string
+    subAgentModelId: string
     hasApiKey: boolean
 }
 
-export interface ReActStepRecord {
+export type AgentMode = 'planning' | 'fast'
+export type ApprovalDecision = 'allow' | 'deny' | 'always'
+
+export interface StepNode {
     id: string
-    turn: number
-    stepType: 'think' | 'action' | 'observation' | string
+    runId: string
+    parentRunId?: string | null
+    agentId: string
+    kind:
+        | 'thought'
+        | 'tool'
+        | 'exec'
+        | 'approval'
+        | 'ask_user'
+        | 'plan'
+        | 'subagent_run'
+        | 'content'
+        | string
     title: string
-    content: string
-    status: 'running' | 'completed' | 'failed' | string
+    status: 'running' | 'completed' | 'failed' | 'cancelled' | 'waiting' | string
+    data: Record<string, any>
     durationMs: number
-    timestamp: number
+    children: StepNode[]
 }
 
-export interface ReActRunResult {
+export interface PlanChecklistItem {
+    id: string
+    title: string
+    status: 'pending' | 'in_progress' | 'done' | 'failed' | string
+}
+
+export interface SubAgentInfo {
+    agentId: string
     sessionId: string
+    kind: 'ssh' | string
+    name: string
+    user: string
+    host: string
+    port: number
+    osInfo: string
+    enabled: boolean
+    status: 'idle' | 'running' | 'awaiting_approval' | 'offline' | string
+}
+
+export interface AgentSessionRecord {
+    id: string
+    title: string
+    modelId: string
+    mode: AgentMode | string
+    webSearch: boolean
+    useKnowledge: boolean
+    workspaceDir?: string
+    createdAt: number
+    updatedAt: number
+    messageCount: number
+    preview: string
+}
+
+export interface AgentMessageRecord {
+    id: string
+    sessionId: string
+    role: 'user' | 'assistant' | string
     content: string
     reasoningContent: string
-    steps: ReActStepRecord[]
-    turnsUsed: number
+    steps: StepNode[]
+    createdAt: number
 }
+
+export interface ConversationDetail {
+    session: AgentSessionRecord
+    messages: AgentMessageRecord[]
+}
+
+export interface ChatSendRequest {
+    conversationId?: string | null
+    text: string
+    modelId?: string | null
+    mode?: AgentMode
+    workspaceDir?: string | null
+    mentions?: string[]
+}
+
+export interface ChatSendResult {
+    conversationId: string
+    runId: string
+}
+
+export interface AgentEventEnvelope {
+    type: string
+    conversationId: string
+    runId: string
+    parentRunId?: string | null
+    agentId: string
+    ts: number
+    payload: Record<string, any>
+}
+
+export interface WikiInfo {
+    vaultRoot: string
+    isCustomDir: boolean
+    wikiCount: number
+    rawCount: number
+    linkCount: number
+    updatedAt: number
+}
+
+export interface WikiTreeNode {
+    id: string
+    name: string
+    relPath: string
+    kind: 'dir' | 'file' | string
+    category: string
+    title: string
+    children: WikiTreeNode[]
+}
+
+export interface WikiLinkRef {
+    relPath: string
+    title: string
+    raw: string
+    broken: boolean
+}
+
+export interface WikiPageDetail {
+    relPath: string
+    title: string
+    category: string
+    tags: string[]
+    sources: string[]
+    updated: string
+    content: string
+    body: string
+    readOnly: boolean
+    outboundLinks: WikiLinkRef[]
+    backlinks: WikiLinkRef[]
+}
+
+export interface WikiSearchHit {
+    relPath: string
+    title: string
+    category: string
+    tags: string[]
+    snippet: string
+}
+
+export interface WikiGraphNode {
+    id: string
+    title: string
+    category: string
+    degree: number
+}
+
+export interface WikiGraphEdge {
+    source: string
+    target: string
+    raw: string
+    broken: boolean
+}
+
+export interface WikiGraphData {
+    nodes: WikiGraphNode[]
+    edges: WikiGraphEdge[]
+}
+
+export interface WikiBrokenLink {
+    sourcePath: string
+    targetRaw: string
+}
+
+export interface WikiLintReport {
+    brokenLinks: WikiBrokenLink[]
+    orphanPages: string[]
+    unindexedPages: string[]
+    staleIndexLinks: string[]
+    uncompiledRaws: string[]
+}
+
+export interface WikiIngestResult {
+    relPath: string
+    title: string
+    bytes: number
+}
+
 
 
 

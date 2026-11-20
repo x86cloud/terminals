@@ -471,6 +471,28 @@ impl MysqlManager {
         list
     }
 
+    pub async fn list_sessions(&self) -> Vec<(MysqlSessionInfo, String)> {
+        let guard = self.conns.read().await;
+        let mut list = Vec::with_capacity(guard.len());
+        for (id, mc) in guard.iter() {
+            let cur_db = mc.cur_db.read().await.clone();
+            list.push((
+                MysqlSessionInfo {
+                    id: id.clone(),
+                    server_id: id.clone(),
+                    title: mc.cfg.label(),
+                    host: mc.cfg.host.clone(),
+                    port: mc.cfg.display_port(),
+                    database: cur_db,
+                    connected: true,
+                },
+                mc.cfg.username.clone(),
+            ));
+        }
+        list.sort_by(|a, b| a.0.title.cmp(&b.0.title).then_with(|| a.0.id.cmp(&b.0.id)));
+        list
+    }
+
     pub async fn resolve_id(&self, id_or_name: &str) -> Result<String, String> {
         let guard = self.conns.read().await;
         let trimmed = id_or_name.trim();

@@ -10,6 +10,8 @@ import {
     Edit,
     Trash2,
     BarChart2,
+    BookOpen,
+    Bot,
     Link as LinkIcon,
 } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
@@ -659,6 +661,22 @@ export default function Sidebar({
                         className={s.toolBtn}
                     >
                         {t('sidebar:tools.apiDebug')}
+                    </Button>
+                    <Button
+                        type="text"
+                        icon={<Bot size={15} />}
+                        onClick={() => openTool('agent')}
+                        className={s.toolBtn}
+                    >
+                        {t('sidebar:tools.agent', 'AI 智能体')}
+                    </Button>
+                    <Button
+                        type="text"
+                        icon={<BookOpen size={15} />}
+                        onClick={() => openTool('wiki')}
+                        className={s.toolBtn}
+                    >
+                        {t('sidebar:tools.wiki', '知识库')}
                     </Button>
                 </div>
             </div>

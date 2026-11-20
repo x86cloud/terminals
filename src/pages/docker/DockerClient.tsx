@@ -36,10 +36,30 @@ export default function DockerClient({ session, onClose }: Props) {
     const isActive = activeTarget?.kind === 'docker' && activeTarget.id === session.id
 
     const [activeTab, setActiveTab] = useState<TabKey>('overview')
+    const [mountedTabs, setMountedTabs] = useState<Set<TabKey>>(() => new Set(['overview']))
+    const [refreshCounters, setRefreshCounters] = useState<Record<TabKey, number>>({
+        overview: 0,
+        compose: 0,
+        containers: 0,
+        images: 0,
+        volumes: 0,
+        networks: 0,
+    })
+    const [pendingRunImage, setPendingRunImage] = useState<{ image: string; nonce: number } | null>(null)
     const [overview, setOverview] = useState<DockerOverview | null>(null)
     const [loading, setLoading] = useState(false)
     const [pingLatency, setPingLatency] = useState<number | null>(null)
     const timerRef = useRef<any>(null)
+
+    const selectTab = (tab: TabKey) => {
+        setActiveTab(tab)
+        setMountedTabs((prev) => {
+            if (prev.has(tab)) return prev
+            const next = new Set(prev)
+            next.add(tab)
+            return next
+        })
+    }
 
     const fetchOverview = async (quiet = false) => {
         if (!quiet) setLoading(true)
@@ -58,6 +78,16 @@ export default function DockerClient({ session, onClose }: Props) {
         }
     }
 
+    const handleGlobalRefresh = () => {
+        void fetchOverview(false)
+        if (activeTab !== 'overview') {
+            setRefreshCounters((prev) => ({
+                ...prev,
+                [activeTab]: prev[activeTab] + 1,
+            }))
+        }
+    }
+
     useEffect(() => {
         if (!isActive) return
         fetchOverview()
@@ -70,7 +100,8 @@ export default function DockerClient({ session, onClose }: Props) {
     }, [session.serverId, isActive])
 
     const handleRunImage = (imageName: string) => {
-        setActiveTab('containers')
+        setPendingRunImage({ image: imageName, nonce: Date.now() })
+        selectTab('containers')
     }
 
     const tabItems = [
@@ -158,7 +189,7 @@ export default function DockerClient({ session, onClose }: Props) {
                 <div className={s.headerRight}>
                     <Segmented
                         value={activeTab}
-                        onChange={(v) => setActiveTab(v as TabKey)}
+                        onChange={(v) => selectTab(v as TabKey)}
                         options={tabItems}
                         size="small"
                     />
@@ -167,37 +198,72 @@ export default function DockerClient({ session, onClose }: Props) {
                         type='primary'
                         size="small"
                         icon={<RefreshCw size={13} className={loading ? 'animate-spin' : ''} />}
-                        onClick={() => fetchOverview(false)}
+                        onClick={handleGlobalRefresh}
                     >
                         {t('common:refresh', '刷新')}
                     </Button>
                 </div>
             </div>
 
-            {/* 标签页视图 */}
+            {/* 标签页视图：已访问过的子 Tab 保持挂载以保留筛选与分页状态 */}
             <div className={s.tabContent}>
-                {activeTab === 'overview' && (
+                <div style={{ display: activeTab === 'overview' ? 'block' : 'none' }}>
                     <OverviewTab
                         serverId={session.serverId}
                         overview={overview}
                         loading={loading}
                         onRefresh={() => fetchOverview(false)}
+                        onNavigateTab={(tab) => selectTab(tab)}
                     />
+                </div>
+                {mountedTabs.has('compose') && (
+                    <div style={{ display: activeTab === 'compose' ? 'block' : 'none' }}>
+                        <ComposeTab
+                            serverId={session.serverId}
+                            refreshSignal={refreshCounters.compose}
+                            onMutate={() => fetchOverview(true)}
+                        />
+                    </div>
                 )}
-                {activeTab === 'compose' && (
-                    <ComposeTab serverId={session.serverId} />
+                {mountedTabs.has('containers') && (
+                    <div style={{ display: activeTab === 'containers' ? 'block' : 'none' }}>
+                        <ContainersTab
+                            serverId={session.serverId}
+                            isActive={isActive && activeTab === 'containers'}
+                            refreshSignal={refreshCounters.containers}
+                            onMutate={() => fetchOverview(true)}
+                            pendingRunImage={pendingRunImage}
+                            onConsumePendingRunImage={() => setPendingRunImage(null)}
+                        />
+                    </div>
                 )}
-                {activeTab === 'containers' && (
-                    <ContainersTab serverId={session.serverId} />
+                {mountedTabs.has('images') && (
+                    <div style={{ display: activeTab === 'images' ? 'block' : 'none' }}>
+                        <ImagesTab
+                            serverId={session.serverId}
+                            refreshSignal={refreshCounters.images}
+                            onMutate={() => fetchOverview(true)}
+                            onRunImage={handleRunImage}
+                        />
+                    </div>
                 )}
-                {activeTab === 'images' && (
-                    <ImagesTab serverId={session.serverId} onRunImage={handleRunImage} />
+                {mountedTabs.has('volumes') && (
+                    <div style={{ display: activeTab === 'volumes' ? 'block' : 'none' }}>
+                        <VolumesTab
+                            serverId={session.serverId}
+                            refreshSignal={refreshCounters.volumes}
+                            onMutate={() => fetchOverview(true)}
+                        />
+                    </div>
                 )}
-                {activeTab === 'volumes' && (
-                    <VolumesTab serverId={session.serverId} />
-                )}
-                {activeTab === 'networks' && (
-                    <NetworksTab serverId={session.serverId} />
+                {mountedTabs.has('networks') && (
+                    <div style={{ display: activeTab === 'networks' ? 'block' : 'none' }}>
+                        <NetworksTab
+                            serverId={session.serverId}
+                            refreshSignal={refreshCounters.networks}
+                            onMutate={() => fetchOverview(true)}
+                        />
+                    </div>
                 )}
             </div>
         </div>

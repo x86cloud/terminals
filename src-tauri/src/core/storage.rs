@@ -49,6 +49,22 @@ pub fn log_file_path() -> PathBuf {
     logs_dir().join("app.log")
 }
 
+pub fn agent_db_path() -> PathBuf {
+    data_dir().join("agent_brain.db")
+}
+
+pub fn knowledge_dir() -> PathBuf {
+    data_dir().join("knowledge")
+}
+
+pub fn wiki_dir() -> PathBuf {
+    data_dir().join("wiki")
+}
+
+pub fn wiki_cache_db_path() -> PathBuf {
+    data_dir().join("wiki_cache.db")
+}
+
 pub fn ensure_dirs() -> Result<(), String> {
     for dir in [config_dir(), data_dir(), logs_dir()] {
         fs::create_dir_all(&dir)

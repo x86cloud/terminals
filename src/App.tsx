@@ -220,6 +220,13 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
         const offCloseReq = subscribe('app:request-close', () => {
             handleRequestClose()
         })
+        const offServersChanged = subscribe('servers:changed', () => {
+            void reloadServers()
+        })
+        const offConnActivated = subscribe('conn:activated', (ev: { kind?: string; session?: any }) => {
+            if (!ev?.kind || !ev?.session) return
+            addSession(ev.kind as any, ev.session)
+        })
 
         // 系统休眠唤醒或网络状态波动时，主动探活当前仍在线的 SSH 会话
         const probeAllSsh = () => {
@@ -242,11 +249,13 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
             offClosed()
             offSshDisconnected()
             offCloseReq()
+            offServersChanged()
+            offConnActivated()
             window.removeEventListener('online', probeAllSsh)
             window.removeEventListener('offline', probeAllSsh)
             document.removeEventListener('visibilitychange', onVisibility)
         }
-    }, [closeSession, updateSession, handleRequestClose])
+    }, [closeSession, updateSession, addSession, reloadServers, handleRequestClose])
 
     const activeSshId = activeTarget?.kind === 'ssh' ? (activeTarget.id ?? null) : null
     useEffect(() => {
@@ -491,6 +500,7 @@ function AppContent({ settings, onUpdateSettings, onToggleTheme }: AppContentPro
                             onUpdateSettings={onUpdateSettings}
                             onPathChange={handlePathChange}
                             onNewServer={addServer}
+                            onOpenSettings={() => setSettingsOpen(true)}
                         />
                     </div>
                 </main>

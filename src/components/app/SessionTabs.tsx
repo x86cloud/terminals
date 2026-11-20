@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { BarChart2, Link as LinkIcon } from 'lucide-react'
+import { BarChart2, BookOpen, Bot, Link as LinkIcon } from 'lucide-react'
 import ClientIcon from '@/components/ClientIcon'
 import TabBar, { TabItem } from '@/components/common/TabBar'
 import { ConnType } from '@/types'
@@ -15,11 +15,24 @@ export default function SessionTabs() {
         if (!activeTarget) return ''
         if (activeTarget.kind === 'devtools') return 'devtools'
         if (activeTarget.kind === 'api') return 'api'
+        if (activeTarget.kind === 'agent') return 'agent'
+        if (activeTarget.kind === 'wiki') return 'wiki'
         return `${activeTarget.kind}:${activeTarget.id}`
     }, [activeTarget])
 
     const items: TabItem[] = useMemo(() => {
         const list: TabItem[] = []
+
+        if (tools.agent.open) {
+            list.push({
+                key: 'agent',
+                label: t('tools.agent', 'AI 智能体'),
+                icon: <Bot size={13} />,
+                dotOn: tools.agent.awaitingApproval,
+                dotStatus: tools.agent.awaitingApproval ? 'reconnecting' : undefined,
+                closable: false,
+            })
+        }
 
         sessions.ssh.forEach((s) => {
             const dotStatus =
@@ -132,6 +145,15 @@ export default function SessionTabs() {
             })
         }
 
+        if (tools.wiki.open) {
+            list.push({
+                key: 'wiki',
+                label: t('tools.wiki', '知识库'),
+                icon: <BookOpen size={13} />,
+                closable: true,
+            })
+        }
+
         return list
     }, [sessions, tools, t])
 
@@ -142,6 +164,14 @@ export default function SessionTabs() {
         }
         if (key === 'api') {
             activateTab('api')
+            return
+        }
+        if (key === 'agent') {
+            activateTab('agent')
+            return
+        }
+        if (key === 'wiki') {
+            activateTab('wiki')
             return
         }
 
@@ -160,6 +190,13 @@ export default function SessionTabs() {
         }
         if (key === 'api') {
             closeTool('api')
+            return
+        }
+        if (key === 'agent') {
+            return
+        }
+        if (key === 'wiki') {
+            closeTool('wiki')
             return
         }
 

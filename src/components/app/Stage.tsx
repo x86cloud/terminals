@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next'
 import { Button } from 'antd'
-import { Plus, Link as LinkIcon, BarChart2 } from 'lucide-react'
+import { Plus, Link as LinkIcon, BarChart2, Bot } from 'lucide-react'
 import ErrorBoundary from '@/components/ErrorBoundary'
 import AppLogo from '@/components/AppLogo'
 import SessionWorkspace from '@/pages/ssh/SessionWorkspace'
@@ -14,6 +14,8 @@ import DockerClient from '@/pages/docker/DockerClient'
 import K8sClient from '@/pages/k8s/K8sClient'
 import ApiClient from '@/pages/api/ApiClient'
 import DevTools from '@/components/DevTools'
+import AgentPage from '@/pages/agent/AgentPage'
+import WikiPage from '@/pages/wiki/WikiPage'
 import a from '@/components/app/Stage.module.less'
 import { AppSettings } from '@/types'
 import { useSession } from '@/contexts/SessionContext'
@@ -35,15 +37,19 @@ export interface StageProps {
     onUpdateSettings?: (newSettings: AppSettings) => Promise<void>
     onPathChange: (sessionId: string, p: string) => void
     onNewServer: () => void
+    onOpenSettings?: () => void
 }
 
 export default function Stage({
     nativeDrop,
+    settings,
+    onUpdateSettings,
     onPathChange,
     onNewServer,
+    onOpenSettings,
 }: StageProps) {
     const { t } = useTranslation(['common', 'sidebar'])
-    const { sessions, tools, activeTarget, closeSession, closeTool, updateSession, openTool } = useSession()
+    const { sessions, tools, activeTarget, closeSession, closeTool, updateSession, openTool, setAgentAwaitingApproval } = useSession()
 
     const activeId = activeTarget?.kind === 'ssh' ? activeTarget.id : null
     const activeDockerId = activeTarget?.kind === 'docker' ? activeTarget.id : null
@@ -86,6 +92,12 @@ export default function Stage({
                                 onClick={() => openTool('devtools')}
                             >
                                 {t('sidebar:tools.devTools', '开发工具')}
+                            </Button>
+                            <Button
+                                icon={<Bot size={15} />}
+                                onClick={() => openTool('agent')}
+                            >
+                                {t('sidebar:tools.agent', 'AI 智能体')}
                             </Button>
                         </div>
                     </div>
@@ -205,6 +217,26 @@ export default function Stage({
                 <div style={activeTarget?.kind === 'api' ? shownPane : hiddenPane}>
                     <ErrorBoundary title={t('errorBoundary.api', 'API 页面渲染异常')} onClose={() => closeTool('api')}>
                         <ApiClient onClose={() => closeTool('api')} />
+                    </ErrorBoundary>
+                </div>
+            )}
+
+            {tools.agent.open && (
+                <div style={activeTarget?.kind === 'agent' ? shownPane : hiddenPane}>
+                    <ErrorBoundary title={t('errorBoundary.agent', 'AI 智能体页面渲染异常')}>
+                        <AgentPage
+                            settings={settings}
+                            onOpenSettings={onOpenSettings}
+                            onAwaitingApprovalChange={setAgentAwaitingApproval}
+                        />
+                    </ErrorBoundary>
+                </div>
+            )}
+
+            {tools.wiki.open && (
+                <div style={activeTarget?.kind === 'wiki' ? shownPane : hiddenPane}>
+                    <ErrorBoundary title={t('errorBoundary.wiki', 'Wiki 知识库渲染异常')} onClose={() => closeTool('wiki')}>
+                        <WikiPage settings={settings} onUpdateSettings={onUpdateSettings} />
                     </ErrorBoundary>
                 </div>
             )}

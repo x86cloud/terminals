@@ -31,8 +31,12 @@ pub async fn ssh_connect(
         cfg.display_port(),
         cfg.username
     ));
-    let info = state.ssh.connect(app, cfg, cols, rows).await?;
+    let info = state.ssh.connect(app.clone(), cfg, cols, rows).await?;
     storage::log_info(format!("SSH 连接成功: SessionID={}", info.id));
+    state
+        .agent
+        .emit_subagents_sync(&app, &state.ssh, &state.mysql)
+        .await;
     Ok(info)
 }
 
@@ -50,7 +54,12 @@ pub async fn ssh_connect_with_config(
         cfg.display_port(),
         cfg.username
     ));
-    state.ssh.connect(app, cfg, cols, rows).await
+    let info = state.ssh.connect(app.clone(), cfg, cols, rows).await?;
+    state
+        .agent
+        .emit_subagents_sync(&app, &state.ssh, &state.mysql)
+        .await;
+    Ok(info)
 }
 
 #[tauri::command]
@@ -87,6 +96,11 @@ pub async fn ssh_disconnect(
 ) -> Result<(), String> {
     storage::log_info(format!("断开 SSH 会话: SessionID={}", session_id));
     state.ssh.remove_session(&session_id).await;
+    state.agent.on_ssh_disconnected(&app, &session_id).await;
+    state
+        .agent
+        .emit_subagents_sync(&app, &state.ssh, &state.mysql)
+        .await;
     let _ = app.emit("session:closed", &session_id);
     Ok(())
 }
@@ -114,9 +128,13 @@ pub async fn ssh_reconnect(
     ));
     let info = state
         .ssh
-        .reconnect(app, &session_id, cfg, cols, rows)
+        .reconnect(app.clone(), &session_id, cfg, cols, rows)
         .await?;
     storage::log_info(format!("SSH 原地重连成功: SessionID={}", info.id));
+    state
+        .agent
+        .emit_subagents_sync(&app, &state.ssh, &state.mysql)
+        .await;
     Ok(info)
 }
 

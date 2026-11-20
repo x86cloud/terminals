@@ -2,10 +2,11 @@ use async_trait::async_trait;
 use russh::client;
 use russh_keys::key;
 use std::fs;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::net::TcpListener;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::{mpsc, oneshot, Notify};
 
 #[derive(Debug, Clone)]
 pub struct SshTransportDisconnect {
@@ -248,6 +249,85 @@ pub async fn exec_ssh_command(
         combined.push_str(&String::from_utf8_lossy(&err_out));
     }
     Ok((combined, exit_code))
+}
+
+/// Executes a remote command on a fresh SSH exec channel with timeout and instant cancellation.
+/// On timeout or cancellation, closes the exec channel to terminate the remote command.
+pub async fn exec_ssh_command_cancellable(
+    session: &client::Handle<SshClientHandler>,
+    cmd: &str,
+    timeout: Duration,
+    cancel_flag: &AtomicBool,
+    cancel_notify: &Notify,
+) -> Result<(String, String, i32), String> {
+    if cancel_flag.load(Ordering::SeqCst) {
+        return Err("任务已取消".to_string());
+    }
+
+    let mut channel = session
+        .channel_open_session()
+        .await
+        .map_err(|e| format!("打开 SSH 会话通道失败: {}", e))?;
+
+    if cancel_flag.load(Ordering::SeqCst) {
+        let _ = channel.close().await;
+        return Err("任务已取消".to_string());
+    }
+
+    channel
+        .exec(true, cmd)
+        .await
+        .map_err(|e| format!("执行远程命令失败: {}", e))?;
+
+    let mut out = Vec::new();
+    let mut err_out = Vec::new();
+    let mut exit_code: i32 = 0;
+    let deadline = tokio::time::Instant::now() + timeout;
+    let sleep = tokio::time::sleep_until(deadline);
+    tokio::pin!(sleep);
+
+    loop {
+        if cancel_flag.load(Ordering::SeqCst) {
+            let _ = channel.close().await;
+            return Err("任务已取消".to_string());
+        }
+
+        tokio::select! {
+            _ = cancel_notify.notified() => {
+                let _ = channel.close().await;
+                return Err("任务已取消".to_string());
+            }
+            _ = &mut sleep => {
+                let _ = channel.close().await;
+                return Err(format!("命令执行超时（超过 {} 秒），已终止远端执行", timeout.as_secs()));
+            }
+            msg = channel.wait() => {
+                match msg {
+                    Some(russh::ChannelMsg::Data { ref data }) => {
+                        out.extend_from_slice(data);
+                    }
+                    Some(russh::ChannelMsg::ExtendedData { ref data, ext }) => {
+                        if ext == 1 {
+                            err_out.extend_from_slice(data);
+                        }
+                    }
+                    Some(russh::ChannelMsg::ExitStatus { exit_status }) => {
+                        exit_code = exit_status as i32;
+                    }
+                    Some(russh::ChannelMsg::Close) | None => {
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+        }
+    }
+
+    Ok((
+        String::from_utf8_lossy(&out).to_string(),
+        String::from_utf8_lossy(&err_out).to_string(),
+        exit_code,
+    ))
 }
 
 pub struct SshTunnel {

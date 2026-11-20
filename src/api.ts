@@ -73,8 +73,19 @@ import type {
     UpdateCheckResult,
     ConfigIOResult,
     AgentStatusInfo,
-    ReActRunResult,
-    AiMessage,
+    ApprovalDecision,
+    ChatSendRequest,
+    ChatSendResult,
+    SubAgentInfo,
+    AgentSessionRecord,
+    ConversationDetail,
+    WikiInfo,
+    WikiTreeNode,
+    WikiPageDetail,
+    WikiSearchHit,
+    WikiGraphData,
+    WikiLintReport,
+    WikiIngestResult,
 } from './types'
 
 type AnyFn = (...args: any[]) => void
@@ -1324,6 +1335,24 @@ export const API = {
         timestamps: boolean
     ): Promise<string> =>
         invoke<string>('docker_get_container_logs', { id, containerId, tail, timestamps }),
+    dockerStartLogStream: (
+        id: string,
+        containerId: string,
+        streamId: string,
+        tail: number,
+        timestamps: boolean,
+        follow: boolean
+    ): Promise<string> =>
+        invoke<string>('docker_logs_stream_start', {
+            id,
+            containerId,
+            streamId,
+            tail,
+            timestamps,
+            follow,
+        }),
+    dockerStopLogStream: (streamId: string): Promise<void> =>
+        invoke<void>('docker_logs_stream_stop', { streamId }),
     dockerCreateContainer: (id: string, req: any): Promise<string> =>
         invoke<string>('docker_create_container', { id, req }),
     dockerListImages: (id: string): Promise<DockerImageInfo[]> =>
@@ -1571,21 +1600,83 @@ export const API = {
     k8sDeleteOrchestrationRecordOnly: (recordId: string): Promise<void> =>
         invoke<void>('k8s_delete_orchestration_record_only', { recordId }),
 
-    // 11. AI Agent (ReAct Orchestration)
+    // 11. AI Agent (Multi-Layer Orchestration)
     agentGetStatus: (): Promise<AgentStatusInfo> =>
         invoke<AgentStatusInfo>('agent_get_status'),
-    agentRunReact: (
-        sessionId: string,
-        messages: AiMessage[],
-        maxTurns?: number
-    ): Promise<ReActRunResult> =>
-        invoke<ReActRunResult>('agent_run_react', {
-            sessionId,
-            messages,
-            maxTurns,
+    agentChatSend: (req: ChatSendRequest): Promise<ChatSendResult> =>
+        invoke<ChatSendResult>('agent_chat_send', { req }),
+    agentStop: (conversationId: string): Promise<void> =>
+        invoke<void>('agent_stop', { conversationId }),
+    agentApprovalRespond: (
+        approvalId: string,
+        decision: ApprovalDecision
+    ): Promise<void> =>
+        invoke<void>('agent_approval_respond', { approvalId, decision }),
+    agentAskUserRespond: (askId: string, answers: any): Promise<void> =>
+        invoke<void>('agent_ask_user_respond', { askId, answers }),
+    agentListSubagents: (): Promise<SubAgentInfo[]> =>
+        invoke<SubAgentInfo[]>('agent_list_subagents'),
+    agentSetSubagentEnabled: (
+        agentId: string,
+        enabled: boolean
+    ): Promise<SubAgentInfo[]> =>
+        invoke<SubAgentInfo[]>('agent_set_subagent_enabled', { agentId, enabled }),
+    agentListConversations: (): Promise<AgentSessionRecord[]> =>
+        invoke<AgentSessionRecord[]>('agent_list_conversations'),
+    agentGetConversation: (conversationId: string): Promise<ConversationDetail> =>
+        invoke<ConversationDetail>('agent_get_conversation', { conversationId }),
+    agentRenameConversation: (
+        conversationId: string,
+        title: string
+    ): Promise<void> =>
+        invoke<void>('agent_rename_conversation', { conversationId, title }),
+    agentDeleteConversation: (conversationId: string): Promise<void> =>
+        invoke<void>('agent_delete_conversation', { conversationId }),
+    agentUpdateConversationWorkspace: (
+        conversationId: string,
+        workspaceDir: string
+    ): Promise<void> =>
+        invoke<void>('agent_update_conversation_workspace', {
+            conversationId,
+            workspaceDir,
         }),
-    agentStopReact: (sessionId: string): Promise<void> =>
-        invoke<void>('agent_stop_react', { sessionId }),
+
+    // 12. LLM Wiki Knowledge Base
+    wikiGetInfo: (): Promise<WikiInfo> => invoke<WikiInfo>('wiki_get_info'),
+    wikiListTree: (): Promise<WikiTreeNode[]> =>
+        invoke<WikiTreeNode[]>('wiki_list_tree').then((r) => r || []),
+    wikiReadPage: (relPath: string): Promise<WikiPageDetail> =>
+        invoke<WikiPageDetail>('wiki_read_page', { relPath }),
+    wikiSavePage: (relPath: string, content: string): Promise<WikiPageDetail> =>
+        invoke<WikiPageDetail>('wiki_save_page', { relPath, content }),
+    wikiDeletePage: (relPath: string): Promise<void> =>
+        invoke<void>('wiki_delete_page', { relPath }),
+    wikiSearch: (
+        query: string,
+        scope?: 'wiki' | 'raw' | 'all',
+        limit?: number
+    ): Promise<WikiSearchHit[]> =>
+        invoke<WikiSearchHit[]>('wiki_search', { query, scope, limit }).then((r) => r || []),
+    wikiGetGraph: (): Promise<WikiGraphData> =>
+        invoke<WikiGraphData>('wiki_get_graph'),
+    wikiIngestFile: (localPath: string): Promise<WikiIngestResult> =>
+        invoke<WikiIngestResult>('wiki_ingest_file', { localPath }),
+    wikiIngestUrl: (url: string): Promise<WikiIngestResult> =>
+        invoke<WikiIngestResult>('wiki_ingest_url', { url }),
+    wikiIngestText: (
+        title: string,
+        content: string,
+        sourceLabel?: string
+    ): Promise<WikiIngestResult> =>
+        invoke<WikiIngestResult>('wiki_ingest_text', {
+            title,
+            content,
+            sourceLabel,
+        }),
+    wikiLint: (): Promise<WikiLintReport> => invoke<WikiLintReport>('wiki_lint'),
+    wikiRebuildIndex: (): Promise<WikiInfo> =>
+        invoke<WikiInfo>('wiki_rebuild_index'),
+    wikiOpenFolder: (): Promise<void> => invoke<void>('wiki_open_folder'),
 }
 
 /* ------------------------------------------------------------------ */

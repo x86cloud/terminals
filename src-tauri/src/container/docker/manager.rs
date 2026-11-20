@@ -346,6 +346,7 @@ pub struct DockerManager {
     pub(crate) clients: RwLock<HashMap<String, DockerClient>>,
     pub(crate) configs: RwLock<HashMap<String, ServerConfig>>,
     pub(crate) exec_sessions: Arc<RwLock<HashMap<String, Arc<crate::container::docker::exec::DockerExecSession>>>>,
+    pub(crate) log_streams: Arc<RwLock<HashMap<String, (String, tokio::task::AbortHandle)>>>,
 }
 
 impl Default for DockerManager {
@@ -360,6 +361,7 @@ impl DockerManager {
             clients: RwLock::new(HashMap::new()),
             configs: RwLock::new(HashMap::new()),
             exec_sessions: Arc::new(RwLock::new(HashMap::new())),
+            log_streams: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -387,6 +389,31 @@ impl DockerManager {
 
     pub async fn disconnect(&self, server_id: &str) -> Result<(), String> {
         self.configs.write().await.remove(server_id);
+        {
+            let mut guard = self.log_streams.write().await;
+            let keys: Vec<String> = guard
+                .iter()
+                .filter(|(_, (sid, _))| sid == server_id)
+                .map(|(k, _)| k.clone())
+                .collect();
+            for k in keys {
+                if let Some((_, handle)) = guard.remove(&k) {
+                    handle.abort();
+                }
+            }
+        }
+        let matching_execs: Vec<Arc<crate::container::docker::exec::DockerExecSession>> = {
+            let mut guard = self.exec_sessions.write().await;
+            let keys: Vec<String> = guard
+                .iter()
+                .filter(|(_, s)| s.server_id == server_id)
+                .map(|(k, _)| k.clone())
+                .collect();
+            keys.into_iter().filter_map(|k| guard.remove(&k)).collect()
+        };
+        for s in matching_execs {
+            s.close().await;
+        }
         if let Some(cli) = self.clients.write().await.remove(server_id) {
             cli.close().await;
         }
@@ -445,6 +472,12 @@ impl DockerManager {
     }
 
     pub async fn close_all(&self) {
+        {
+            let mut guard = self.log_streams.write().await;
+            for (_, (_, handle)) in guard.drain() {
+                handle.abort();
+            }
+        }
         let sessions: Vec<Arc<crate::container::docker::exec::DockerExecSession>> = {
             let mut guard = self.exec_sessions.write().await;
             guard.drain().map(|(_, s)| s).collect()

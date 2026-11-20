@@ -141,6 +141,14 @@
         border-color: @accent;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
+
+    &.clickable {
+        cursor: pointer;
+
+        &:hover {
+            transform: translateY(-1px);
+        }
+    }
 }
 
 .statCardHeader {
@@ -274,6 +282,12 @@
     border: 1px solid color-mix(in srgb, @danger 30%, transparent);
 }
 
+.statusPending {
+    background: @accent-soft;
+    color: @accent;
+    border: 1px solid color-mix(in srgb, @accent 35%, transparent);
+}
+
 .pulseDot {
     width: 6px;
     height: 6px;
@@ -324,10 +338,131 @@
     font-size: 12px;
     padding: 14px;
     border-radius: @radius-md;
-    max-height: 520px;
+    max-height: 460px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-all;
+    border: 1px solid @border;
+    margin: 0;
+}
+
+.batchBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 7px 12px;
+    margin-bottom: 10px;
+    border-radius: @radius-md;
+    background: @accent-soft;
+    border: 1px solid color-mix(in srgb, @accent 30%, @border);
+    flex-wrap: wrap;
+}
+
+.logToolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 10px;
+    border-radius: @radius-md;
+    background: @bg-2;
+    border: 1px solid @border;
+}
+
+.switchLabel {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: @text-dim;
+    cursor: pointer;
+}
+
+.logDrawerBody {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+
+.logPreFill {
+    flex: 1;
+    height: 100%;
+    margin: 0;
+}
+
+.logPreNoWrap {
+    white-space: pre;
+    word-break: normal;
+}
+
+.logScrollBottomBtn {
+    position: absolute;
+    right: 18px;
+    bottom: 16px;
+    z-index: 5;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.16);
+}
+
+.kvGroupHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.kvRow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+}
+
+.inspectSummaryWrap {
+    max-height: 500px;
+    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-right: 4px;
+}
+
+.inspectSummaryGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.inspectBlock {
+    background: @bg-2;
+    border: 1px solid @border;
+    border-radius: @radius-md;
+    padding: 10px 12px;
+}
+
+.inspectBlockTitle {
+    font-size: 12px;
+    font-weight: 600;
+    color: @text-dim;
+    margin-bottom: 8px;
+}
+
+.inspectList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.inspectListRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    padding: 4px 6px;
+    background: @stage-bg;
+    border-radius: @radius-sm;
     border: 1px solid @border;
 }
 

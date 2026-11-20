@@ -26,7 +26,6 @@ import {
     Drawer as AntDrawer,
     Popconfirm as AntPopconfirm,
     Radio as AntRadio,
-    Select as AntSelect,
     Switch as AntSwitch,
     App as AntApp,
     Tooltip as AntTooltip,
@@ -43,6 +42,7 @@ import type {
     DockerComposeRecord,
 } from '@/types'
 import ContainerTerminalModal, { ContainerExecTarget } from '@/components/common/ContainerTerminalModal'
+import ContainerLogsDrawer from './components/ContainerLogsDrawer'
 import s from './DockerClient.module.less'
 
 export interface ParsedEnvVar {
@@ -107,6 +107,8 @@ export function scanEnvVarsFromYaml(content: string): ParsedEnvVar[] {
 
 interface Props {
     serverId: string
+    refreshSignal?: number
+    onMutate?: () => void
 }
 
 interface MergedComposeItem {
@@ -133,11 +135,13 @@ const DEFAULT_COMPOSE_YAML = `services:
       - "8080:80"
 `
 
-export default function ComposeTab({ serverId }: Props) {
+export default function ComposeTab({ serverId, refreshSignal = 0, onMutate }: Props) {
     const { t } = useTranslation(['docker', 'common'])
     const { message } = AntApp.useApp()
     const [items, setItems] = useState<MergedComposeItem[]>([])
     const [loading, setLoading] = useState(false)
+    const [busyProjects, setBusyProjects] = useState<Record<string, string>>({})
+    const [busyContainers, setBusyContainers] = useState<Record<string, string>>({})
     const [filterState, setFilterState] = useState<'all' | 'running' | 'stopped' | 'not_deployed'>('all')
     const [searchKw, setSearchKw] = useState('')
     const [page, setPage] = useState(1)
@@ -169,10 +173,6 @@ export default function ComposeTab({ serverId }: Props) {
         containerId: '',
         containerName: '',
     })
-    const [containerLogContent, setContainerLogContent] = useState('')
-    const [containerLogTail, setContainerLogTail] = useState(200)
-    const [containerLogTimestamps, setContainerLogTimestamps] = useState(false)
-    const [containerLogLoading, setContainerLogLoading] = useState(false)
 
     // 容器 Exec 终端模态框
     const [execTarget, setExecTarget] = useState<ContainerExecTarget | null>(null)
@@ -263,6 +263,12 @@ export default function ComposeTab({ serverId }: Props) {
         fetchData()
     }, [fetchData])
 
+    useEffect(() => {
+        if (refreshSignal > 0) {
+            fetchData()
+        }
+    }, [refreshSignal, fetchData])
+
     // 打开新建抽屉：自动填充默认示例
     const openCreateDrawer = () => {
         setCurrentRecordId(null)
@@ -338,6 +344,7 @@ export default function ComposeTab({ serverId }: Props) {
             message.success(t('compose.upSuccess', { defaultValue: 'Compose 项目 [{{name}}] 实例已成功启动', name: cleanName }))
             setEditorOpen(false)
             fetchData()
+            onMutate?.()
         } catch (err: any) {
             hideLoading()
             AntModal.error({
@@ -374,6 +381,8 @@ export default function ComposeTab({ serverId }: Props) {
 
     // 强力联动删除：清理远程容器与网络，并移除本地记录
     const handleDelete = async (item: MergedComposeItem) => {
+        if (busyProjects[item.name]) return
+        setBusyProjects((prev) => ({ ...prev, [item.name]: 'delete' }))
         const hide = message.loading(t('compose.cleaningProject', { defaultValue: '正在清理并销毁项目 [{{name}}]...', name: item.name }), 0)
         try {
             if (item.isLocal && item.id) {
@@ -383,55 +392,60 @@ export default function ComposeTab({ serverId }: Props) {
             }
             message.success(t('compose.deleteSuccess', { defaultValue: '项目 [{{name}}] 已彻底清理并移除', name: item.name }))
             fetchData()
+            onMutate?.()
         } catch (err: any) {
             message.error(t('compose.deleteFail', { defaultValue: '删除清理失败: {{error}}', error: err.message || String(err) }))
         } finally {
             hide()
+            setBusyProjects((prev) => {
+                const next = { ...prev }
+                delete next[item.name]
+                return next
+            })
         }
     }
 
     // 控制操作（start, stop, restart, down）
     const handleControl = async (name: string, action: string) => {
+        if (busyProjects[name]) return
+        setBusyProjects((prev) => ({ ...prev, [name]: action }))
         const hide = message.loading(t('compose.executingOp', { defaultValue: '正在执行 {{action}} 操作...', action: action.toUpperCase() }), 0)
         try {
             await API.dockerControlComposeStack(serverId, name, action)
             message.success(t('compose.opSuccess', { defaultValue: '操作 {{action}} 成功', action }))
             fetchData()
+            onMutate?.()
         } catch (err: any) {
             message.error(t('compose.opFail', { defaultValue: '操作失败: {{error}}', error: err.message || String(err) }))
         } finally {
             hide()
+            setBusyProjects((prev) => {
+                const next = { ...prev }
+                delete next[name]
+                return next
+            })
         }
     }
 
     // 单个服务容器控制（启动、停止、重启）
     const handleContainerControl = async (containerId: string, action: string) => {
+        if (busyContainers[containerId]) return
+        setBusyContainers((prev) => ({ ...prev, [containerId]: action }))
         const hide = message.loading(t('compose.containerExecuting', { defaultValue: '正在对容器执行 {{action}}...', action: action.toUpperCase() }), 0)
         try {
             await API.dockerControlContainer(serverId, containerId, action)
             message.success(t('compose.containerOpSuccess', { defaultValue: '容器 {{action}} 操作成功', action }))
             fetchData()
+            onMutate?.()
         } catch (err: any) {
             message.error(t('compose.containerOpFail', { defaultValue: '容器操作失败: {{error}}', error: err.message || String(err) }))
         } finally {
             hide()
-        }
-    }
-
-    // 单个服务容器日志拉取
-    const fetchContainerLogs = async (
-        containerId: string,
-        tail = containerLogTail,
-        timestamps = containerLogTimestamps
-    ) => {
-        setContainerLogLoading(true)
-        try {
-            const content = await API.dockerGetContainerLogs(serverId, containerId, tail, timestamps)
-            setContainerLogContent(content || t('compose.noLogOutput', { defaultValue: '(无日志输出)' }))
-        } catch (err: any) {
-            message.error(t('compose.fetchContainerLogFail', { defaultValue: '获取容器日志失败: {{error}}', error: err.message || String(err) }))
-        } finally {
-            setContainerLogLoading(false)
+            setBusyContainers((prev) => {
+                const next = { ...prev }
+                delete next[containerId]
+                return next
+            })
         }
     }
 
@@ -442,8 +456,6 @@ export default function ComposeTab({ serverId }: Props) {
             containerId: svc.containerId,
             containerName: svc.containerName || svc.serviceName,
         })
-        setContainerLogContent('')
-        fetchContainerLogs(svc.containerId, containerLogTail, containerLogTimestamps)
     }
 
 
@@ -606,7 +618,9 @@ export default function ComposeTab({ serverId }: Props) {
             key: 'actions',
             width: 250,
             fixed: 'right',
-            render: (_, record) => (
+            render: (_, record) => {
+                const projBusy = busyProjects[record.name]
+                return (
                 <AntSpace size={4}>
                     <AntTooltip title={record.isLocal ? t('compose.editTooltip', { defaultValue: '编辑 YAML 配置并更新' }) : t('compose.claimTooltip', { defaultValue: '认领/导入为本地受管 Compose' })}>
                         <AntButton
@@ -625,6 +639,8 @@ export default function ComposeTab({ serverId }: Props) {
                                 <AntButton
                                     size="small"
                                     type="text"
+                                    loading={projBusy === 'start'}
+                                    disabled={!!projBusy && projBusy !== 'start'}
                                     icon={<Play size={13} color="var(--ok)" />}
                                     onClick={() => handleControl(record.name, 'start')}
                                 />
@@ -634,6 +650,8 @@ export default function ComposeTab({ serverId }: Props) {
                                 <AntButton
                                     size="small"
                                     type="text"
+                                    loading={projBusy === 'stop'}
+                                    disabled={!!projBusy && projBusy !== 'stop'}
                                     icon={<Square size={13} color="var(--warn)" />}
                                     onClick={() => handleControl(record.name, 'stop')}
                                 />
@@ -643,6 +661,8 @@ export default function ComposeTab({ serverId }: Props) {
                                 <AntButton
                                     size="small"
                                     type="text"
+                                    loading={projBusy === 'restart'}
+                                    disabled={!!projBusy && projBusy !== 'restart'}
                                     icon={<RotateCw size={13} color="var(--accent)" />}
                                     onClick={() => handleControl(record.name, 'restart')}
                                 />
@@ -658,13 +678,22 @@ export default function ComposeTab({ serverId }: Props) {
                         okText={t('common:confirm', { defaultValue: '确认' })}
                         cancelText={t('common:cancel', { defaultValue: '取消' })}
                         okButtonProps={{ danger: true }}
+                        disabled={!!projBusy}
                     >
                         <AntTooltip title={t('compose.deleteTooltip', { defaultValue: '强力联动删除 (Down & Clean)' })}>
-                            <AntButton size="small" type="text" danger icon={<Trash2 size={13} />} />
+                            <AntButton
+                                size="small"
+                                type="text"
+                                danger
+                                loading={projBusy === 'delete'}
+                                disabled={!!projBusy && projBusy !== 'delete'}
+                                icon={<Trash2 size={13} />}
+                            />
                         </AntTooltip>
                     </AntPopconfirm>
                 </AntSpace>
-            ),
+                )
+            },
         },
     ]
 
@@ -726,6 +755,7 @@ export default function ComposeTab({ serverId }: Props) {
             width: 160,
             render: (_, record) => {
                 const isRunning = record.state === 'running'
+                const svcBusy = busyContainers[record.containerId]
                 return (
                     <AntSpace size={4}>
                         {isRunning ? (
@@ -734,6 +764,8 @@ export default function ComposeTab({ serverId }: Props) {
                                     <AntButton
                                         size="small"
                                         type="text"
+                                        loading={svcBusy === 'stop'}
+                                        disabled={!!svcBusy && svcBusy !== 'stop'}
                                         icon={<Square size={13} color="var(--warn)" />}
                                         onClick={() => handleContainerControl(record.containerId, 'stop')}
                                     />
@@ -742,6 +774,8 @@ export default function ComposeTab({ serverId }: Props) {
                                     <AntButton
                                         size="small"
                                         type="text"
+                                        loading={svcBusy === 'restart'}
+                                        disabled={!!svcBusy && svcBusy !== 'restart'}
                                         icon={<RotateCw size={13} color="var(--accent)" />}
                                         onClick={() => handleContainerControl(record.containerId, 'restart')}
                                     />
@@ -752,6 +786,8 @@ export default function ComposeTab({ serverId }: Props) {
                                 <AntButton
                                     size="small"
                                     type="text"
+                                    loading={svcBusy === 'start'}
+                                    disabled={!!svcBusy && svcBusy !== 'start'}
                                     icon={<Play size={13} color="var(--ok)" />}
                                     onClick={() => handleContainerControl(record.containerId, 'start')}
                                 />
@@ -1277,65 +1313,11 @@ export default function ComposeTab({ serverId }: Props) {
             </AntDrawer>
 
             {/* 单个服务容器实时日志抽屉 */}
-            <AntDrawer
-                title={
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span>{t('compose.logDrawerTitle', { defaultValue: '容器日志: {{name}}', name: containerLogDrawer.containerName })}</span>
-                        <AntSpace size={8}>
-                            <AntSelect
-                                size="small"
-                                value={containerLogTail}
-                                onChange={(val) => {
-                                    setContainerLogTail(val)
-                                    fetchContainerLogs(containerLogDrawer.containerId, val, containerLogTimestamps)
-                                }}
-                                options={[
-                                    { value: 100, label: t('containers.logLines100', { defaultValue: '最近 100 行' }) },
-                                    { value: 200, label: t('containers.logLines200', { defaultValue: '最近 200 行' }) },
-                                    { value: 500, label: t('containers.logLines500', { defaultValue: '最近 500 行' }) },
-                                    { value: 1000, label: t('containers.logLines1000', { defaultValue: '最近 1000 行' }) },
-                                ]}
-                                style={{ width: 120 }}
-                            />
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
-                                <span>{t('containers.timestamps', { defaultValue: '时间戳' })}</span>
-                                <AntSwitch
-                                    size="small"
-                                    checked={containerLogTimestamps}
-                                    onChange={(checked) => {
-                                        setContainerLogTimestamps(checked)
-                                        fetchContainerLogs(containerLogDrawer.containerId, containerLogTail, checked)
-                                    }}
-                                />
-                            </div>
-                            <AntButton
-                                size="small"
-                                icon={<RefreshCw size={12} className={containerLogLoading ? 'animate-spin' : ''} />}
-                                onClick={() =>
-                                    fetchContainerLogs(
-                                        containerLogDrawer.containerId,
-                                        containerLogTail,
-                                        containerLogTimestamps
-                                    )
-                                }
-                            >
-                                {t('common:refresh', { defaultValue: '刷新' })}
-                            </AntButton>
-                            <AntButton
-                                size="small"
-                                icon={<Copy size={12} />}
-                                onClick={async () => {
-                                    if (await copyText(containerLogContent)) {
-                                        message.success(t('compose.copiedContainerLog', { defaultValue: '日志已复制' }))
-                                    }
-                                }}
-                            >
-                                {t('containers.copyLogs', { defaultValue: '复制' })}
-                            </AntButton>
-                        </AntSpace>
-                    </div>
-                }
+            <ContainerLogsDrawer
                 open={containerLogDrawer.open}
+                serverId={serverId}
+                containerId={containerLogDrawer.containerId}
+                containerName={containerLogDrawer.containerName}
                 onClose={() =>
                     setContainerLogDrawer({
                         open: false,
@@ -1343,10 +1325,7 @@ export default function ComposeTab({ serverId }: Props) {
                         containerName: '',
                     })
                 }
-                size={720}
-            >
-                <pre className={s.logTerminal}>{containerLogContent}</pre>
-            </AntDrawer>
+            />
 
             {/* 统一容器交互式终端 */}
             <ContainerTerminalModal

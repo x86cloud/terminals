@@ -13,7 +13,7 @@ import {
 } from '@/types'
 import { disconnectHelper, getAllOpenTabs, pickAdjacentFallback } from './sessionHelpers'
 
-export type ToolKind = 'api' | 'devtools'
+export type ToolKind = 'api' | 'devtools' | 'agent' | 'wiki'
 export type TabKind = ConnType | ToolKind
 
 export interface ActiveTarget {
@@ -36,6 +36,8 @@ export interface SessionsState {
 export interface ToolsState {
     api: { open: boolean; active: boolean }
     devtools: { open: boolean; active: boolean }
+    agent: { open: boolean; active: boolean; awaitingApproval: boolean }
+    wiki: { open: boolean; active: boolean }
 }
 
 export interface SessionContextValue {
@@ -51,6 +53,9 @@ export interface SessionContextValue {
     updateSession: <K extends keyof SessionsState>(kind: K, id: string, updater: Partial<SessionsState[K][number]>) => void
     openTool: (tool: ToolKind) => void
     closeTool: (tool: ToolKind) => void
+    setAgentAwaitingApproval: (waiting: boolean) => void
+    dispatchAgentPrompt: (prompt: string) => void
+    consumePendingAgentPrompt: () => string | null
 }
 
 const initialSessionsState: SessionsState = {
@@ -68,6 +73,8 @@ const initialSessionsState: SessionsState = {
 const initialToolsState: ToolsState = {
     api: { open: false, active: false },
     devtools: { open: false, active: false },
+    agent: { open: true, active: true, awaitingApproval: false },
+    wiki: { open: false, active: false },
 }
 
 export const SessionContext = createContext<SessionContextValue | null>(null)
@@ -83,12 +90,13 @@ export function useSession() {
 export function SessionProvider({ children }: { children: ReactNode }) {
     const [sessions, setSessions] = useState<SessionsState>(initialSessionsState)
     const [tools, setTools] = useState<ToolsState>(initialToolsState)
-    const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>(null)
+    const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>({ kind: 'agent', id: null })
     const [sidebarOpen, setSidebarOpen] = useState<boolean>(true)
 
     const sessionsRef = useRef(sessions)
     const toolsRef = useRef(tools)
     const closingSessionsRef = useRef<Set<string>>(new Set())
+    const pendingAgentPromptRef = useRef<string | null>(null)
     useEffect(() => {
         sessionsRef.current = sessions
         toolsRef.current = tools
@@ -100,25 +108,31 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
     const activateTab = useCallback((kind: TabKind | null, id: string | null = null) => {
         if (!kind) {
-            setActiveTarget(null)
+            setActiveTarget({ kind: 'agent', id: null })
             setTools((prev) => ({
                 api: { ...prev.api, active: false },
                 devtools: { ...prev.devtools, active: false },
+                agent: { ...prev.agent, open: true, active: true },
+                wiki: { ...prev.wiki, active: false },
             }))
             return
         }
 
-        if (kind === 'api' || kind === 'devtools') {
+        if (kind === 'api' || kind === 'devtools' || kind === 'agent' || kind === 'wiki') {
             setActiveTarget({ kind, id: null })
             setTools((prev) => ({
                 api: { open: kind === 'api' ? true : prev.api.open, active: kind === 'api' },
                 devtools: { open: kind === 'devtools' ? true : prev.devtools.open, active: kind === 'devtools' },
+                agent: { ...prev.agent, open: true, active: kind === 'agent' },
+                wiki: { open: kind === 'wiki' ? true : prev.wiki.open, active: kind === 'wiki' },
             }))
         } else {
             setActiveTarget({ kind, id })
             setTools((prev) => ({
                 api: { ...prev.api, active: false },
                 devtools: { ...prev.devtools, active: false },
+                agent: { ...prev.agent, open: true, active: false },
+                wiki: { ...prev.wiki, active: false },
             }))
         }
     }, [])
@@ -127,15 +141,38 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         activateTab(tool)
     }, [activateTab])
 
+    const dispatchAgentPrompt = useCallback((prompt: string) => {
+        const clean = prompt.trim()
+        if (!clean) return
+        pendingAgentPromptRef.current = clean
+        activateTab('agent')
+        window.dispatchEvent(new CustomEvent('agent:dispatch-prompt', { detail: { prompt: clean } }))
+    }, [activateTab])
+
+    const consumePendingAgentPrompt = useCallback(() => {
+        const val = pendingAgentPromptRef.current
+        pendingAgentPromptRef.current = null
+        return val
+    }, [])
+
+    const setAgentAwaitingApproval = useCallback((waiting: boolean) => {
+        setTools((prev) =>
+            prev.agent.awaitingApproval === waiting
+                ? prev
+                : { ...prev, agent: { ...prev.agent, awaitingApproval: waiting } }
+        )
+    }, [])
+
     const closeTool = useCallback((tool: ToolKind) => {
+        if (tool === 'agent') return
         const closedTarget: ActiveTarget = { kind: tool, id: null }
         const allTabs = getAllOpenTabs(sessionsRef.current, toolsRef.current)
-        const fallback = pickAdjacentFallback(closedTarget, allTabs)
+        const fallback = pickAdjacentFallback(closedTarget, allTabs) ?? { kind: 'agent', id: null }
 
         setTools((prev) => ({
             ...prev,
             [tool]: { open: false, active: false },
-            ...(fallback && (fallback.kind === 'api' || fallback.kind === 'devtools')
+            ...(fallback.kind === 'api' || fallback.kind === 'devtools' || fallback.kind === 'agent' || fallback.kind === 'wiki'
                 ? { [fallback.kind]: { ...prev[fallback.kind], active: true } }
                 : {}),
         }))
@@ -193,7 +230,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
         const closedTarget: ActiveTarget = { kind, id }
         const allTabs = getAllOpenTabs(sessionsRef.current, toolsRef.current)
-        const fallback = pickAdjacentFallback(closedTarget, allTabs)
+        const fallback = pickAdjacentFallback(closedTarget, allTabs) ?? { kind: 'agent', id: null }
 
         setSessions((prev) => {
             const currentList = prev[kind] as Array<{ id: string }>
@@ -214,11 +251,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             return curr
         })
 
-        if (fallback && (fallback.kind === 'api' || fallback.kind === 'devtools')) {
+        if (fallback.kind === 'api' || fallback.kind === 'devtools' || fallback.kind === 'agent' || fallback.kind === 'wiki') {
             setTools((prev) => ({
                 ...prev,
                 api: { ...prev.api, active: fallback.kind === 'api' },
                 devtools: { ...prev.devtools, active: fallback.kind === 'devtools' },
+                agent: { ...prev.agent, active: fallback.kind === 'agent' },
+                wiki: { ...prev.wiki, active: fallback.kind === 'wiki' },
             }))
         }
     }, [])
@@ -237,6 +276,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             updateSession,
             openTool,
             closeTool,
+            setAgentAwaitingApproval,
+            dispatchAgentPrompt,
+            consumePendingAgentPrompt,
         }),
         [
             sessions,
@@ -250,6 +292,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
             updateSession,
             openTool,
             closeTool,
+            setAgentAwaitingApproval,
+            dispatchAgentPrompt,
+            consumePendingAgentPrompt,
         ]
     )
 

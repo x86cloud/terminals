@@ -37,6 +37,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
     const [aiEnableMultimodal, setAiEnableMultimodal] = useState(false)
     const [aiEnableThinking, setAiEnableThinking] = useState(false)
     const [aiReasoningEffort, setAiReasoningEffort] = useState<'none' | 'low' | 'medium' | 'high'>('medium')
+    const [aiSubAgentModelId, setAiSubAgentModelId] = useState('')
     const [aiSystemPrompt, setAiSystemPrompt] = useState('')
 
     const prevOpenRef = useRef(false)
@@ -57,6 +58,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             setAiEnableMultimodal(!!settings.aiEnableMultimodal)
             setAiEnableThinking(!!settings.aiEnableThinking)
             setAiReasoningEffort(settings.aiReasoningEffort || 'medium')
+            setAiSubAgentModelId(settings.aiSubAgentModelId || '')
             setAiSystemPrompt(settings.aiSystemPrompt || '')
         }
         prevOpenRef.current = open
@@ -91,6 +93,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
             aiEnableMultimodal,
             aiEnableThinking,
             aiReasoningEffort,
+            aiSubAgentModelId,
             aiSystemPrompt,
             ...partial,
         })
@@ -111,6 +114,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         aiEnableMultimodal,
         aiEnableThinking,
         aiReasoningEffort,
+        aiSubAgentModelId,
         aiSystemPrompt,
         onSave,
     ])
@@ -151,6 +155,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
         if (fields.aiEnableMultimodal !== undefined) setAiEnableMultimodal(fields.aiEnableMultimodal)
         if (fields.aiEnableThinking !== undefined) setAiEnableThinking(fields.aiEnableThinking)
         if (fields.aiReasoningEffort !== undefined) setAiReasoningEffort(fields.aiReasoningEffort)
+        if (fields.aiSubAgentModelId !== undefined) setAiSubAgentModelId(fields.aiSubAgentModelId)
         if (fields.aiSystemPrompt !== undefined) setAiSystemPrompt(fields.aiSystemPrompt)
 
         persistSettings(fields)
@@ -230,6 +235,7 @@ export default function SettingsModal({ open, settings, onClose, onSave }: Props
                         aiEnableMultimodal={aiEnableMultimodal}
                         aiEnableThinking={aiEnableThinking}
                         aiReasoningEffort={aiReasoningEffort}
+                        aiSubAgentModelId={aiSubAgentModelId}
                         aiSystemPrompt={aiSystemPrompt}
                         onChange={handleAiAgentChange}
                     />

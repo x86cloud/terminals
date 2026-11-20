@@ -1,4 +1,4 @@
-use crate::agent::react::ReActStepRecord;
+use crate::agent::types::StepNode;
 use crate::core::storage;
 use chrono::Local;
 use rusqlite::{params, Connection};
@@ -36,8 +36,12 @@ pub struct AgentSessionRecord {
     pub id: String,
     pub title: String,
     pub model_id: String,
+    #[serde(default)]
+    pub mode: String,
     pub web_search: bool,
     pub use_knowledge: bool,
+    #[serde(default)]
+    pub workspace_dir: String,
     pub created_at: i64,
     pub updated_at: i64,
     pub message_count: usize,
@@ -54,7 +58,7 @@ pub struct AgentMessageRecord {
     #[serde(default)]
     pub reasoning_content: String,
     #[serde(default)]
-    pub steps: Vec<ReActStepRecord>,
+    pub steps: Vec<StepNode>,
     #[serde(default)]
     pub citations: Vec<KnowledgeCitation>,
     pub created_at: i64,
@@ -170,6 +174,15 @@ impl AgentBrainStore {
         )
         .map_err(|e| format!("初始化 Agent 数据表失败: {}", e))?;
 
+        let _ = conn.execute(
+            "ALTER TABLE agent_sessions ADD COLUMN mode TEXT NOT NULL DEFAULT 'fast'",
+            [],
+        );
+        let _ = conn.execute(
+            "ALTER TABLE agent_sessions ADD COLUMN workspace_dir TEXT NOT NULL DEFAULT ''",
+            [],
+        );
+
         let fts_enabled = conn
             .execute_batch(
                 r#"
@@ -239,8 +252,10 @@ impl AgentBrainStore {
                     s.id,
                     s.title,
                     s.model_id,
+                    s.mode,
                     s.web_search,
                     s.use_knowledge,
+                    s.workspace_dir,
                     s.created_at,
                     s.updated_at,
                     (SELECT COUNT(*) FROM agent_messages m WHERE m.session_id = s.id) AS msg_cnt,
@@ -258,16 +273,18 @@ impl AgentBrainStore {
 
         let rows = stmt
             .query_map([], |row| {
-                let raw_preview: String = row.get(8)?;
+                let raw_preview: String = row.get(10)?;
                 Ok(AgentSessionRecord {
                     id: row.get(0)?,
                     title: row.get(1)?,
                     model_id: row.get(2)?,
-                    web_search: row.get::<_, i64>(3)? != 0,
-                    use_knowledge: row.get::<_, i64>(4)? != 0,
-                    created_at: row.get(5)?,
-                    updated_at: row.get(6)?,
-                    message_count: row.get::<_, i64>(7)?.max(0) as usize,
+                    mode: row.get::<_, String>(3).unwrap_or_else(|_| "fast".to_string()),
+                    web_search: row.get::<_, i64>(4)? != 0,
+                    use_knowledge: row.get::<_, i64>(5)? != 0,
+                    workspace_dir: row.get::<_, String>(6).unwrap_or_default(),
+                    created_at: row.get(7)?,
+                    updated_at: row.get(8)?,
+                    message_count: row.get::<_, i64>(9)?.max(0) as usize,
                     preview: truncate_chars(&raw_preview.replace('\n', " "), 60),
                 })
             })
@@ -291,8 +308,10 @@ impl AgentBrainStore {
         &self,
         title: Option<String>,
         model_id: Option<String>,
+        mode: Option<String>,
         web_search: Option<bool>,
         use_knowledge: Option<bool>,
+        workspace_dir: Option<String>,
     ) -> Result<AgentSessionRecord, String> {
         let now = Local::now().timestamp_millis();
         let id = Uuid::new_v4().to_string();
@@ -301,21 +320,30 @@ impl AgentBrainStore {
             .filter(|s| !s.is_empty())
             .unwrap_or_else(|| "新对话".to_string());
         let model = model_id.unwrap_or_default();
+        let clean_mode = match mode.as_deref() {
+            Some("planning") => "planning".to_string(),
+            _ => "fast".to_string(),
+        };
         let ws = web_search.unwrap_or(true);
         let uk = use_knowledge.unwrap_or(true);
+        let wd = workspace_dir
+            .map(|s| s.trim().to_string())
+            .unwrap_or_default();
 
         let conn = self.lock_conn()?;
         conn.execute(
             r#"
-            INSERT INTO agent_sessions (id, title, model_id, web_search, use_knowledge, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            INSERT INTO agent_sessions (id, title, model_id, mode, web_search, use_knowledge, workspace_dir, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
             "#,
             params![
                 id,
                 clean_title,
                 model,
+                clean_mode,
                 if ws { 1 } else { 0 },
                 if uk { 1 } else { 0 },
+                wd,
                 now,
                 now
             ],
@@ -326,8 +354,10 @@ impl AgentBrainStore {
             id,
             title: clean_title,
             model_id: model,
+            mode: clean_mode,
             web_search: ws,
             use_knowledge: uk,
+            workspace_dir: wd,
             created_at: now,
             updated_at: now,
             message_count: 0,
@@ -354,8 +384,10 @@ impl AgentBrainStore {
         &self,
         session_id: &str,
         model_id: Option<String>,
+        mode: Option<String>,
         web_search: Option<bool>,
         use_knowledge: Option<bool>,
+        workspace_dir: Option<String>,
     ) -> Result<(), String> {
         let conn = self.lock_conn()?;
         if let Some(m) = model_id {
@@ -364,6 +396,14 @@ impl AgentBrainStore {
                 params![m, session_id],
             )
             .map_err(|e| format!("更新会话模型失败: {}", e))?;
+        }
+        if let Some(md) = mode {
+            let clean_mode = if md == "planning" { "planning" } else { "fast" };
+            conn.execute(
+                "UPDATE agent_sessions SET mode = ?1 WHERE id = ?2",
+                params![clean_mode, session_id],
+            )
+            .map_err(|e| format!("更新会话模式失败: {}", e))?;
         }
         if let Some(ws) = web_search {
             conn.execute(
@@ -378,6 +418,13 @@ impl AgentBrainStore {
                 params![if uk { 1 } else { 0 }, session_id],
             )
             .map_err(|e| format!("更新会话知识库配置失败: {}", e))?;
+        }
+        if let Some(wd) = workspace_dir {
+            conn.execute(
+                "UPDATE agent_sessions SET workspace_dir = ?1 WHERE id = ?2",
+                params![wd.trim(), session_id],
+            )
+            .map_err(|e| format!("更新会话工作目录失败: {}", e))?;
         }
         Ok(())
     }
@@ -442,7 +489,7 @@ impl AgentBrainStore {
         role: &str,
         content: &str,
         reasoning_content: &str,
-        steps: &[ReActStepRecord],
+        steps: &[StepNode],
         citations: &[KnowledgeCitation],
     ) -> Result<AgentMessageRecord, String> {
         let now = Local::now().timestamp_millis();

@@ -1,0 +1,94 @@
+{
+  "title": "LLM Wiki",
+  "stats": "{{wiki}} pages · {{raw}} raw sources · {{links}} links",
+  "vault": {
+    "custom": "Custom Vault",
+    "default": "Default Vault",
+    "switch": "Switch Folder",
+    "reset": "Use Default",
+    "openFolder": "Open Folder"
+  },
+  "view": {
+    "docs": "Documents",
+    "graph": "Knowledge Graph"
+  },
+  "actions": {
+    "ingest": "Ingest",
+    "lint": "AI Lint",
+    "rebuild": "Rebuild Index",
+    "newPage": "New Page",
+    "edit": "Edit",
+    "preview": "Preview",
+    "save": "Save",
+    "cancelEdit": "Cancel",
+    "delete": "Delete",
+    "deleteConfirm": "Delete \"{{path}}\"? This action cannot be undone.",
+    "saveSuccess": "Saved and index updated",
+    "rebuildSuccess": "Index rebuilt"
+  },
+  "tree": {
+    "searchPlaceholder": "Search wiki pages and raw sources...",
+    "clearSearch": "Clear",
+    "searchResults": "Search Results ({{count}})",
+    "noSearchResults": "No matching documents",
+    "categories": {
+      "entities": "Entities",
+      "concepts": "Concepts",
+      "runbooks": "Runbooks",
+      "summaries": "Summaries",
+      "wiki": "Wiki",
+      "raw": "Raw Sources"
+    }
+  },
+  "viewer": {
+    "emptyTitle": "LLM Wiki Knowledge Base",
+    "emptyHint": "Select a page on the left to read, or click Ingest to archive and compile new knowledge with the Main Agent.",
+    "readOnlyRaw": "raw/ is immutable original source storage. Ask the Main Agent to compile it into wiki/ pages.",
+    "unsavedPrompt": "Unsaved changes",
+    "newPageTitle": "New Wiki Page",
+    "newPageCategory": "Category",
+    "newPageName": "Slug Filename",
+    "newPageNamePlaceholder": "e.g. nginx-502-runbook",
+    "newPageHeading": "Page Title",
+    "newPageHeadingPlaceholder": "e.g. Nginx 502 Troubleshooting Runbook",
+    "create": "Create & Edit"
+  },
+  "meta": {
+    "title": "Page Metadata",
+    "path": "Relative Path",
+    "category": "Category",
+    "updated": "Updated",
+    "tags": "Tags",
+    "noTags": "No tags",
+    "outboundLinks": "Outbound Links ({{count}})",
+    "backlinks": "Backlinks ({{count}})",
+    "sources": "Sources ({{count}})",
+    "noLinks": "None",
+    "broken": "Broken"
+  },
+  "graph": {
+    "allCategories": "All Categories",
+    "resetZoom": "Reset View",
+    "filterPlaceholder": "Highlight node...",
+    "empty": "No wiki nodes yet. Ingest and compile some sources first.",
+    "degree": "Degree {{count}}",
+    "clickHint": "Click node to open page · Scroll to zoom · Drag canvas or nodes"
+  },
+  "ingest": {
+    "title": "Ingest Source into Wiki",
+    "tabFile": "Local File",
+    "tabUrl": "Web URL",
+    "tabText": "Paste Text",
+    "pickFile": "Choose Local Text/Markdown File",
+    "pickedFile": "Selected: {{path}}",
+    "urlLabel": "Web Page URL",
+    "urlPlaceholder": "https://example.com/article",
+    "textTitle": "Source Title",
+    "textTitlePlaceholder": "e.g. Production Redis Eviction Notes",
+    "textContent": "Content",
+    "textContentPlaceholder": "Paste docs, logs, or notes in plain text or Markdown...",
+    "autoCompile": "Switch to AI Agent after archiving to raw/ and compile into wiki/ automatically",
+    "submit": "Archive & Submit",
+    "ingestedOnly": "Archived to {{path}}"
+  }
+}

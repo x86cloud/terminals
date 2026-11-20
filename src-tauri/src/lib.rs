@@ -15,6 +15,7 @@ pub use ssh as ssh_sftp;
 pub use ssh::tunnel;
 pub use core::storage;
 pub mod system;
+pub mod wiki;
 
 use std::sync::Arc;
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
@@ -33,6 +34,7 @@ pub struct AppState {
     pub docker: Arc<docker::DockerManager>,
     pub k8s: Arc<k8s::K8sManager>,
     pub agent: Arc<agent::AgentRuntime>,
+    pub wiki: Arc<wiki::WikiManager>,
 }
 
 fn restore_main_window(app: &tauri::AppHandle) {
@@ -63,6 +65,9 @@ pub fn run() {
         docker: Arc::new(docker::DockerManager::new()),
         k8s: Arc::new(k8s::K8sManager::new()),
         agent: Arc::new(agent::AgentRuntime::new(initial_settings)),
+        wiki: Arc::new(
+            wiki::WikiManager::new(store.clone()).expect("failed to initialize wiki manager"),
+        ),
     };
 
     tauri::Builder::default()
@@ -440,6 +445,8 @@ pub fn run() {
             docker::docker_control_container,
             docker::docker_inspect_container,
             docker::docker_get_container_logs,
+            docker::docker_logs_stream_start,
+            docker::docker_logs_stream_stop,
             docker::docker_create_container,
             docker::docker_list_images,
             docker::docker_inspect_image,
@@ -508,10 +515,33 @@ pub fn run() {
             k8s::k8s_apply_orchestration,
             k8s::k8s_offline_orchestration,
             k8s::k8s_delete_orchestration_record_only,
-            // 11. AI Agent (ReAct Orchestration)
+            // 11. AI Agent (Multi-Layer Orchestration)
             agent::agent_get_status,
-            agent::agent_run_react,
-            agent::agent_stop_react,
+            agent::agent_chat_send,
+            agent::agent_stop,
+            agent::agent_approval_respond,
+            agent::agent_ask_user_respond,
+            agent::agent_list_subagents,
+            agent::agent_set_subagent_enabled,
+            agent::agent_list_conversations,
+            agent::agent_get_conversation,
+            agent::agent_rename_conversation,
+            agent::agent_delete_conversation,
+            agent::agent_update_conversation_workspace,
+            // 12. LLM Wiki Knowledge Base
+            wiki::commands::wiki_get_info,
+            wiki::commands::wiki_list_tree,
+            wiki::commands::wiki_read_page,
+            wiki::commands::wiki_save_page,
+            wiki::commands::wiki_delete_page,
+            wiki::commands::wiki_search,
+            wiki::commands::wiki_get_graph,
+            wiki::commands::wiki_ingest_file,
+            wiki::commands::wiki_ingest_url,
+            wiki::commands::wiki_ingest_text,
+            wiki::commands::wiki_lint,
+            wiki::commands::wiki_rebuild_index,
+            wiki::commands::wiki_open_folder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

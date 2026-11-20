@@ -1,0 +1,94 @@
+{
+  "title": "LLM Wiki 知识库",
+  "stats": "{{wiki}} 词条 · {{raw}} 原始资料 · {{links}} 链接",
+  "vault": {
+    "custom": "外部 Vault",
+    "default": "默认 Vault",
+    "switch": "切换目录",
+    "reset": "恢复默认",
+    "openFolder": "打开目录"
+  },
+  "view": {
+    "docs": "文档视图",
+    "graph": "关系图谱"
+  },
+  "actions": {
+    "ingest": "导入资料",
+    "lint": "AI 巡检",
+    "rebuild": "重建索引",
+    "newPage": "新建词条",
+    "edit": "编辑",
+    "preview": "预览",
+    "save": "保存",
+    "cancelEdit": "取消",
+    "delete": "删除",
+    "deleteConfirm": "确认删除「{{path}}」？该操作不可恢复。",
+    "saveSuccess": "已保存并更新索引",
+    "rebuildSuccess": "索引重建完成"
+  },
+  "tree": {
+    "searchPlaceholder": "全文搜索词条与资料...",
+    "clearSearch": "清空搜索",
+    "searchResults": "搜索结果 ({{count}})",
+    "noSearchResults": "未找到匹配条目",
+    "categories": {
+      "entities": "实体 (entities)",
+      "concepts": "概念 (concepts)",
+      "runbooks": "手册 (runbooks)",
+      "summaries": "摘要 (summaries)",
+      "wiki": "Wiki 词条",
+      "raw": "原始资料 (raw)"
+    }
+  },
+  "viewer": {
+    "emptyTitle": "LLM Wiki 知识库",
+    "emptyHint": "选择左侧任意词条开始阅读，或点击顶部「导入资料」让主 Agent 自动编译沉淀知识。",
+    "readOnlyRaw": "raw/ 为只读原始归档，禁止直接改写；如需提炼请交由主 Agent 编译为 wiki/ 词条。",
+    "unsavedPrompt": "有未保存修改",
+    "newPageTitle": "新建 Wiki 词条",
+    "newPageCategory": "分类目录",
+    "newPageName": "词条文件名（slug）",
+    "newPageNamePlaceholder": "例如 nginx-502-runbook",
+    "newPageHeading": "词条标题",
+    "newPageHeadingPlaceholder": "例如 Nginx 502 排查手册",
+    "create": "创建并编辑"
+  },
+  "meta": {
+    "title": "词条元信息",
+    "path": "相对路径",
+    "category": "分类",
+    "updated": "更新时间",
+    "tags": "标签",
+    "noTags": "无标签",
+    "outboundLinks": "出链 ({{count}})",
+    "backlinks": "反向链接 ({{count}})",
+    "sources": "原始出处 ({{count}})",
+    "noLinks": "暂无链接",
+    "broken": "断链"
+  },
+  "graph": {
+    "allCategories": "全部分类",
+    "resetZoom": "重置视角",
+    "filterPlaceholder": "高亮或定位节点...",
+    "empty": "暂无词条节点，先导入并编译一些知识吧",
+    "degree": "连接度 {{count}}",
+    "clickHint": "点击节点跳转到文档阅读 · 滚轮缩放 · 拖拽移动"
+  },
+  "ingest": {
+    "title": "导入资料到 Wiki (Ingest)",
+    "tabFile": "本地文件",
+    "tabUrl": "网页 URL",
+    "tabText": "粘贴文本",
+    "pickFile": "选择本地文本/Markdown 文件",
+    "pickedFile": "已选择：{{path}}",
+    "urlLabel": "网页地址",
+    "urlPlaceholder": "https://example.com/article",
+    "textTitle": "资料标题",
+    "textTitlePlaceholder": "例如：生产 Redis 内存淘汰策略调研",
+    "textContent": "正文内容",
+    "textContentPlaceholder": "粘贴技术文档、错误日志、排查笔记等纯文本或 Markdown...",
+    "autoCompile": "归档到 raw/ 后立即切换到 AI Agent 页签，由主 Agent 自动编译为 wiki 词条",
+    "submit": "归档并提交",
+    "ingestedOnly": "已原样归档至 {{path}}"
+  }
+}

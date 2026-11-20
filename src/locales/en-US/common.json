@@ -104,6 +104,7 @@
     "devtools": "DevTools page rendering error",
     "api": "API debugging page rendering error",
     "wiki": "Wiki page rendering error",
+    "agent": "AI Agent page rendering error",
     "aiAgent": "AI Agent rendering error"
   },
   "resizeColTooltip": "Drag to resize column, double click to auto-fit",
